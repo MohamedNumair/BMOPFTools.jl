@@ -10,9 +10,9 @@ b467 (SRC G1)
                 │   └── [SW]── b324
                 ├── b366
                 │   └── [SW]── b2794
-                ├── b752
-                │   ├── [SW]── b1255
-                │   ├── b3179 (L1)
+                └── b752
+                    ├── [SW]── b1255
+                    └── b3179 (L1)
 
 Loads (1 total):
   L1 = ld313_load_a       10.0 kW  SINGLE_PHASE  phases: 1

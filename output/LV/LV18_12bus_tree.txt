@@ -7,12 +7,12 @@ b1569 (SRC G1)
             └── b2156
                 ├── b1760
                 │   ├── b1012 (L1)
-                │   ├── [SW]── b526
+                │   └── [SW]── b526
                 ├── b2729
                 ├── b609
                 │   └── [SW]── b1819
-                ├── b83
-                │   └── [SW]── b3030
+                └── b83
+                    └── [SW]── b3030
 
 Loads (1 total):
   L1 = ld361_load_a       10.0 kW  SINGLE_PHASE  phases: 1

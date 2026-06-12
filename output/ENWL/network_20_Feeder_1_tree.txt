@@ -76,8 +76,8 @@ sourcebus (SRC G1)
                                                                                                     │                                                                                                       ├── 74 (L15)
                                                                                                     │                                                                                                       ├── 75 (L16)
                                                                                                     │                                                                                                       ├── 76 (L17)
-                                                                                                    │                                                                                                       ├── 77 (L18)
-                                                                                                    ├── 27
+                                                                                                    │                                                                                                       └── 77 (L18)
+                                                                                                    └── 27
 
 Loads (25 total):
   L1 = load1              1.97 kW  SINGLE_PHASE  phases: 1

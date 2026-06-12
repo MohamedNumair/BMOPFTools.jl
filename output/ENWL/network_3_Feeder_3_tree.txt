@@ -13,7 +13,7 @@ sourcebus (SRC G1)
         ├── 45
         │   ├── 48
         │   │   └── 53 (L13)
-        │   ├── 49 (L1)
+        │   └── 49 (L1)
         └── 46
             ├── 50
             │   ⋮  (3 buses)
@@ -34,7 +34,7 @@ sourcebus (SRC G1)
                         │   ├── 77
                         │   │   ⋮  (11 buses)
                         │   │   └── 149 (L2)
-                        │   ├── 78 (L57)
+                        │   └── 78 (L57)
                         └── 74
                             ├── 79
                             │   ⋮  (8 buses)
@@ -44,15 +44,15 @@ sourcebus (SRC G1)
                                 │   ├── 95
                                 │   │   ⋮  (11 buses)
                                 │   │   └── 168 (L5)
-                                │   ├── 96 (L68)
+                                │   └── 96 (L68)
                                 └── 91
                                     ├── 97
                                     │   ├── 103 [+12 buses, 1 loads]
                                     │   └── 104 (L79)
-                                    ├── 98
-                                    │   ⋮  (2 buses)
-                                    │   ├── 117 [+934 buses, 74 loads]
-                                    │   └── 118 [+175 buses, 14 loads]
+                                    └── 98
+                                        ⋮  (2 buses)
+                                        ├── 117 [+934 buses, 74 loads]
+                                        └── 118 [+175 buses, 14 loads]
 
 Loads (100 total):
   L1 = load1              1.97 kW  SINGLE_PHASE  phases: 3
