@@ -55,6 +55,38 @@ function _add_voltage_bounds!(model, net, bus_terminals, grounded, vars)
 end
 
 """
+    _add_wide_voltage_bounds!(model, net, bus_terminals, grounded, vars)
+
+Like `_add_voltage_bounds!` but uses 0.5× v_min and 2× v_max so the NLP is
+anchored in the physical operating region without ever being infeasible.
+Used by the feasibility OPF to prevent degenerate high/low-voltage solutions
+while keeping operational bounds as soft (post-solve) checks.
+"""
+function _add_wide_voltage_bounds!(model, net, bus_terminals, grounded, vars)
+    vr = vars[:vr]; vi = vars[:vi]
+    fixed = _source_fixed_terminals(net)
+
+    for (bid, bus) in get(net, "bus", Dict())
+        v_min = get(bus, "v_min", nothing)
+        v_max = get(bus, "v_max", nothing)
+        (v_min === nothing && v_max === nothing) && continue
+
+        terminals = get(bus_terminals, bid, String[])
+        neutral   = BMOPFTools._neutral_terminal(terminals)
+
+        for t in terminals
+            (bid, t) in grounded && continue
+            (bid, t) in fixed   && continue
+            t == neutral        && continue
+            vr_t = vr[(bid, t)]; vi_t = vi[(bid, t)]
+            v2 = @expression(model, vr_t^2 + vi_t^2)
+            v_min !== nothing && @constraint(model, v2 >= (Float64(v_min) * 0.5)^2)
+            v_max !== nothing && @constraint(model, v2 <= (Float64(v_max) * 2.0)^2)
+        end
+    end
+end
+
+"""
     _add_kcl_constraints!(model, kcl_r, kcl_i)
 
 Enforce KCL: for every (bus, terminal) accumulator, add == 0 constraints.

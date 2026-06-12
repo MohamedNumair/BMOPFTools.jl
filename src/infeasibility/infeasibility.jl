@@ -1,27 +1,157 @@
-# infeasibility/preflight.jl
-# The infeasibility_preflight function is defined in analysis/preflight.jl.
-# This file is reserved for the future TPIA integration.
+# infeasibility/infeasibility.jl
+#
+# Post-processing of solve_feasibility_opf results.
+#
+# The feasibility OPF adds elastic slack current injections (cs_r, cs_i) at
+# every non-source bus terminal so KCL can always balance. Non-zero slacks
+# reveal where the network cannot satisfy its physical constraints without
+# external intervention. This module turns that raw slack pattern into a
+# ranked, classified diagnosis.
 
 """
-    run_tpia(net; kwargs...) -> Dict{String,Any}
+    diagnose_infeasibility(fopf_result, net; top_n=10, slack_threshold=1e-3)
+        -> Dict{String,Any}
 
-Run Pandey et al.'s Three-Phase Infeasibility Analysis on the network.
+Interpret the result of [`solve_feasibility_opf`](@ref) and identify the root
+cause and location of network infeasibility.
 
-This function is a stub. Full implementation requires:
-- A circuit-theoretic Y-bus formulation from the BMOPF admittance data
-- A non-convex optimisation solver (e.g. Ipopt via JuMP)
-- Integration with PowerModelsDistribution's IVR formulation or equivalent
+# Arguments
+- `fopf_result` — output dict from `solve_feasibility_opf`
+- `net`          — the same BMOPF network dict passed to `solve_feasibility_opf`
+- `top_n`        — maximum number of buses to report in the ranked list
+- `slack_threshold` — minimum per-bus slack magnitude (A) to count as infeasible
 
-When implemented, returns:
-- `"infeasibility_magnitude"` — total slack injection needed (A)
-- `"weak_buses"` — ranked list of buses by slack current magnitude
-- `"suggested_remediation"` — load shedding / DER dispatch recommendations
-
-References:
-- Foster, Pandey, Pileggi (2022). "Three-Phase Infeasibility Analysis for
-  Distribution Grid Studies." Electric Power Systems Research, 212.
-- Ali & Pandey (2024). "Distributed Primal-Dual Interior Point Framework..."
+# Returns a dict with keys:
+- `"is_feasible"`            — `true` if total slack < `slack_threshold`
+- `"total_infeasibility_A"`  — L2 norm of all slack injections (A)
+- `"n_infeasible_buses"`     — number of buses with per-bus slack > threshold
+- `"top_buses"`              — list of up to `top_n` dicts, ranked by slack
+- `"failure_mode_summary"`   — count of `voltage_bound` vs `power_balance` buses
 """
-function run_tpia(net::Dict{String,Any}; kwargs...)::Dict{String,Any}
-    error("run_tpia is not yet implemented. See infeasibility/preflight.jl for the roadmap.")
+function diagnose_infeasibility(fopf_result::Dict{String,Any},
+                                 net::Dict{String,Any};
+                                 top_n::Int            = 10,
+                                 slack_threshold::Float64 = 1e-3)
+
+    get(fopf_result, "is_feasibility_opf", false) ||
+        error("fopf_result must come from solve_feasibility_opf " *
+              "(missing \"is_feasibility_opf\" key).")
+
+    total_mag  = Float64(get(fopf_result, "total_slack_magnitude_A", 0.0))
+    slack_data = get(fopf_result, "slack_injections", Dict())
+    bus_result = get(fopf_result, "bus", Dict())
+
+    # ── Per-bus aggregate slack (L2 over terminals) ───────────────────────────
+    bus_slack = Dict{String,Float64}()
+    for (bid, t_dict) in slack_data
+        mag = sqrt(sum(Float64(v["cs_mag"])^2 for v in values(t_dict); init=0.0))
+        mag > slack_threshold && (bus_slack[bid] = mag)
+    end
+
+    sorted_buses = sort(collect(bus_slack), by=last, rev=true)
+
+    # ── Analyse each top bus ──────────────────────────────────────────────────
+    bus_net  = get(net, "bus",       Dict())
+    load_net = get(net, "load",      Dict())
+    gen_net  = get(net, "generator", Dict())
+
+    top_buses      = Dict{String,Any}[]
+    voltage_driven = 0
+    power_driven   = 0
+
+    for (bid, mag) in first(sorted_buses, top_n)
+        bus     = get(bus_net, bid, Dict())
+        bus_res = get(bus_result, bid, Dict())
+        v_min   = get(bus, "v_min", nothing)
+        v_max   = get(bus, "v_max", nothing)
+        neutral = _neutral_terminal(Vector{String}(get(bus, "terminal_names", String[])))
+
+        # Check whether the solved voltage at each terminal is near a bound
+        viol = String[]
+        for (t, tv) in bus_res
+            t == neutral && continue
+            vm = get(tv, "vm", NaN)
+            isnan(vm) && continue
+            if v_min !== nothing && vm < Float64(v_min) * 1.005
+                push!(viol, "undervoltage:$t " *
+                            "$(round(vm, digits=1))V < $(round(Float64(v_min), digits=1))V")
+            end
+            if v_max !== nothing && vm > Float64(v_max) * 0.995
+                push!(viol, "overvoltage:$t " *
+                            "$(round(vm, digits=1))V > $(round(Float64(v_max), digits=1))V")
+            end
+        end
+
+        # Loads and generators at this bus
+        bus_loads = [(lid, l) for (lid, l) in load_net if get(l, "bus", "") == bid]
+        bus_gens  = [(gid, g) for (gid, g) in gen_net  if get(g, "bus", "") == bid]
+        p_load_kw = sum(sum(Float64.(get(l, "p_nom", Float64[])))
+                        for (_, l) in bus_loads; init=0.0) / 1000.0
+        p_cap_kw  = sum(sum(Float64.(get(g, "p_max", Float64[])))
+                        for (_, g) in bus_gens;  init=0.0) / 1000.0
+
+        mode = isempty(viol) ? "power_balance" : "voltage_bound"
+        mode == "voltage_bound" ? (voltage_driven += 1) : (power_driven += 1)
+
+        push!(top_buses, Dict{String,Any}(
+            "bus"               => bid,
+            "slack_A"           => round(mag, sigdigits=4),
+            "fraction_of_total" => total_mag > 0.0 ?
+                                   round(mag / total_mag, digits=4) : 0.0,
+            "failure_mode"      => mode,
+            "voltage_violations"=> viol,
+            "n_loads"           => length(bus_loads),
+            "total_load_kW"     => round(p_load_kw, digits=3),
+            "n_generators"      => length(bus_gens),
+            "total_gen_cap_kW"  => round(p_cap_kw, digits=3),
+        ))
+    end
+
+    # ── Voltage bound violations across ALL buses ─────────────────────────────
+    # The feasibility OPF does not enforce voltage bounds (so it always
+    # converges). Report all buses whose solved voltage violates the network's
+    # operational bounds — these are separate from KCL infeasibility.
+
+    volt_violations = Dict{String,Any}[]
+    for (bid, bus) in bus_net
+        bus_res = get(bus_result, bid, Dict())
+        v_min   = get(bus, "v_min", nothing)
+        v_max   = get(bus, "v_max", nothing)
+        (v_min === nothing && v_max === nothing) && continue
+        neutral = _neutral_terminal(Vector{String}(get(bus, "terminal_names", String[])))
+        for (t, tv) in bus_res
+            t == neutral && continue
+            vm = get(tv, "vm", NaN)
+            isnan(vm) && continue
+            if v_min !== nothing && vm < Float64(v_min)
+                push!(volt_violations, Dict{String,Any}(
+                    "bus" => bid, "terminal" => t, "type" => "undervoltage",
+                    "vm_V" => round(vm, digits=2),
+                    "limit_V" => round(Float64(v_min), digits=2),
+                    "margin_V" => round(vm - Float64(v_min), digits=2)))
+            elseif v_max !== nothing && vm > Float64(v_max)
+                push!(volt_violations, Dict{String,Any}(
+                    "bus" => bid, "terminal" => t, "type" => "overvoltage",
+                    "vm_V" => round(vm, digits=2),
+                    "limit_V" => round(Float64(v_max), digits=2),
+                    "margin_V" => round(vm - Float64(v_max), digits=2)))
+            end
+        end
+    end
+    sort!(volt_violations, by = v -> abs(Float64(v["margin_V"])), rev=true)
+
+    is_feasible = total_mag < slack_threshold && isempty(volt_violations)
+
+    Dict{String,Any}(
+        "is_feasible"            => is_feasible,
+        "total_infeasibility_A"  => round(total_mag, sigdigits=4),
+        "n_infeasible_buses"     => length(bus_slack),
+        "top_buses"              => top_buses,
+        "failure_mode_summary"   => Dict{String,Any}(
+            "voltage_bound" => voltage_driven,
+            "power_balance" => power_driven,
+        ),
+        "voltage_violations"     => volt_violations,
+        "n_voltage_violations"   => length(volt_violations),
+    )
 end

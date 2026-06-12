@@ -287,6 +287,28 @@ Returns a results dict with keys:
 function solve_opf end
 export solve_opf
 
+"""
+    solve_feasibility_opf(net::Dict{String,Any}; optimizer=nothing, t_index::Int=1)
+        -> Dict{String,Any}
+
+Feasibility-relaxed variant of [`solve_opf`](@ref). Adds elastic slack current
+injections at every non-source bus terminal so that KCL can always be satisfied,
+then minimises the L2² norm of those slacks.
+
+Because the problem is always feasible, the solver always converges. Non-zero
+slacks in the result indicate where the network cannot satisfy its physical
+constraints. Use [`diagnose_infeasibility`](@ref) to interpret the result.
+
+Requires JuMP and Ipopt (same as `solve_opf`).
+
+Additional result keys beyond `solve_opf`:
+- `"slack_injections"`        — per-bus, per-terminal `cs_r`, `cs_i`, `cs_mag` (A)
+- `"total_slack_magnitude_A"` — L2 norm of all slack injections (A)
+- `"is_feasibility_opf"`      — always `true`, used by `diagnose_infeasibility`
+"""
+function solve_feasibility_opf end
+export solve_feasibility_opf
+
 # ---------------------------------------------------------------------------
 # Exports
 # ---------------------------------------------------------------------------
@@ -314,6 +336,7 @@ export redundancy_check
 export integrity_check
 export spec_conformance_check
 export benchmark_readiness_check
-export render_markdown, render_terminal
+export render_markdown, render_terminal, render_ascii_tree
+export diagnose_infeasibility
 
 end # module BMOPFTools

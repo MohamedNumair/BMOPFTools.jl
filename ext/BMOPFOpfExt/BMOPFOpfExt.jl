@@ -13,6 +13,7 @@ include("load.jl")
 include("generator.jl")
 include("objective.jl")
 include("results.jl")
+include("feasibility_opf.jl")
 
 """
     BMOPFTools.solve_opf(net; optimizer=Ipopt.Optimizer, t_index=1) -> Dict
