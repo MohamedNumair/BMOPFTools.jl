@@ -180,6 +180,7 @@ include("validation/roundtrip.jl")
 include("report/formatting.jl")
 include("report/render_terminal.jl")
 include("report/render_markdown.jl")
+include("report/render_ascii_tree.jl")
 
 include("infeasibility/infeasibility.jl")
 
