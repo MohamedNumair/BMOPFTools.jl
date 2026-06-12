@@ -3,6 +3,23 @@
 # All physical quantities remain in SI: V, A, W, var.
 # Voltage magnitude and angle are derived from vr/vi for convenience.
 
+"""
+    _extract_results(model, net, bus_terminals, grounded, vars) -> Dict{String,Any}
+
+Pack the JuMP solution into a plain `Dict{String,Any}`.  All quantities are in SI
+units (V, A, W, var).
+
+Returned top-level keys:
+- `"termination_status"` — string form of `JuMP.termination_status`
+- `"objective"`          — objective value
+- `"solve_time"`         — solver wall-clock time (s)
+- `"bus"`                — `bus_id => terminal => {vr, vi, vm [V], va [rad]}`
+- `"line"`               — `line_id => conductor_index => {cr_fr, ci_fr, cr_to, ci_to, cm_fr [A]}`
+- `"generator"`          — `gen_id => terminal => {crg, cig [A], pg [W], qg [var]}`
+- `"voltage_source"`     — `src_id => terminal => {cr, ci [A]}`
+
+When the solver did not find a feasible point, all numeric fields contain `NaN`.
+"""
 function _extract_results(model, net, bus_terminals, grounded, vars)
     status = string(JuMP.termination_status(model))
     obj    = JuMP.objective_value(model)
