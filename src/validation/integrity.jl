@@ -1,0 +1,332 @@
+# validation/integrity.jl
+#
+# Structural integrity and degeneracy checks, motivated by the pitfalls in
+# Geth et al., "Considerations and design goals for unbalanced optimal power
+# flow benchmarks", EPSR 235 (2024) 110646:
+#   §5.1.1 small nonzero impedances  → low-impedance line detection
+#   §5.1.2 padding is inefficient    → zero row/col + dimension consistency
+#   §5.1.4 Kron tracking             → wye loads without a neutral
+#   §5.1.5 deficient datasets        → voltage reference per galvanic island
+#   §3     symmetry/degeneracy       → identical generator costs
+# plus referential integrity (dangling bus/linecode/terminal references).
+
+"""
+    integrity_check(net, findings) -> Dict{String,Any}
+
+Structural integrity checks:
+
+- **Referential integrity**: every `bus`/`bus_from`/`bus_to` exists; every
+  line's `linecode` exists; every terminal-map entry is a terminal of the
+  referenced bus (this also enforces that nodal elements never connect
+  directly to ground).
+- **Dimension consistency**: line terminal-map arity vs linecode matrix
+  size; `i_max` vector length vs conductor count; load setpoint length vs
+  configuration; source `v_magnitude`/`v_angle` lengths vs terminal map.
+- **Padded matrices**: all-zero row/column pairs in linecode impedances.
+- **Galvanic islands**: transformer windings are galvanic separations; each
+  island needs a voltage reference (source, perfect grounding, or a
+  grounding shunt) or its voltages are defined only up to a shift.
+- **Wye without neutral**: wye-configured loads/generators at buses with no
+  identifiable neutral imply an undeclared ground return.
+- **Low-impedance lines**: lines far below the network's typical series
+  impedance — model them as (lossless) switches instead.
+- **Generator cost symmetry**: identical cost vectors create dispatch
+  degeneracy (any split between them is optimal).
+"""
+function integrity_check(net::Dict{String,Any},
+                          findings::Vector{Finding})::Dict{String,Any}
+    result = Dict{String,Any}()
+    buses = get(net, "bus", Dict())
+    busset = Set(keys(buses))
+    n_ref_issues = 0
+
+    terminal_set(b) = Set(string.(get(get(buses, b, Dict()),
+                                      "terminal_names", String[])))
+
+    check_bus_ref(comp_type, id, bus) = begin
+        if !(bus in busset)
+            n_ref_issues += 1
+            push!(findings, Finding(ERROR, "E.INT.UNKNOWN_BUS", :integrity,
+                Symbol(comp_type), id,
+                "$comp_type '$id' references unknown bus '$bus'.",
+                Dict{String,Any}("bus" => bus)))
+            return false
+        end
+        true
+    end
+
+    check_tmap(comp_type, id, bus, tm) = begin
+        bad = [t for t in string.(tm) if !(t in terminal_set(bus))]
+        if !isempty(bad)
+            n_ref_issues += 1
+            push!(findings, Finding(ERROR, "E.INT.UNKNOWN_TERMINAL", :integrity,
+                Symbol(comp_type), id,
+                "$comp_type '$id' terminal map references terminal(s) " *
+                "$(bad) not defined at bus '$bus'.",
+                Dict{String,Any}("bus" => bus, "terminals" => bad)))
+        end
+    end
+
+    # --- referential integrity: branch elements ---
+    for comp_type in ("line", "switch")
+        for (id, c) in get(net, comp_type, Dict())
+            c isa Dict || continue
+            f = get(c, "bus_from", nothing); t = get(c, "bus_to", nothing)
+            f isa AbstractString && check_bus_ref(comp_type, id, f) &&
+                check_tmap(comp_type, id, f, get(c, "terminal_map_from", String[]))
+            t isa AbstractString && check_bus_ref(comp_type, id, t) &&
+                check_tmap(comp_type, id, t, get(c, "terminal_map_to", String[]))
+        end
+    end
+    xfmr = get(net, "transformer", Dict())
+    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+        sub = get(xfmr, subtype, nothing)
+        sub isa Dict || continue
+        for (id, c) in sub
+            c isa Dict || continue
+            f = get(c, "bus_from", nothing); t = get(c, "bus_to", nothing)
+            f isa AbstractString && check_bus_ref("transformer", id, f) &&
+                check_tmap("transformer", id, f, get(c, "terminal_map_from", String[]))
+            t isa AbstractString && check_bus_ref("transformer", id, t) &&
+                check_tmap("transformer", id, t, get(c, "terminal_map_to", String[]))
+        end
+    end
+
+    # --- referential integrity: nodal elements ---
+    for comp_type in ("load", "generator", "shunt", "voltage_source")
+        for (id, c) in get(net, comp_type, Dict())
+            c isa Dict || continue
+            b = get(c, "bus", nothing)
+            b isa AbstractString && check_bus_ref(comp_type, id, b) &&
+                check_tmap(comp_type, id, b, get(c, "terminal_map", String[]))
+        end
+    end
+
+    # --- linecode references + dimension consistency ---
+    linecodes = get(net, "linecode", Dict())
+    lc_dims = Dict{String,Int}()
+    for (id, lc) in linecodes
+        lc isa Dict || continue
+        R = _pattern_keys_to_matrix(lc, "R_series_")
+        R isa AbstractMatrix && (lc_dims[id] = size(R, 1))
+    end
+
+    n_dim_issues = 0
+    z_tot = Dict{String,Float64}()   # per-line total series impedance proxy
+    for (id, l) in get(net, "line", Dict())
+        l isa Dict || continue
+        lcid = get(l, "linecode", nothing)
+        lcid isa AbstractString || continue
+        if !haskey(linecodes, lcid)
+            n_ref_issues += 1
+            push!(findings, Finding(ERROR, "E.INT.UNKNOWN_LINECODE", :integrity,
+                :line, id,
+                "Line '$id' references unknown linecode '$lcid'.",
+                Dict{String,Any}("linecode" => lcid)))
+            continue
+        end
+        haskey(lc_dims, lcid) || continue
+        n = lc_dims[lcid]
+        nf = length(get(l, "terminal_map_from", String[]))
+        nt = length(get(l, "terminal_map_to",   String[]))
+        if nf != n || nt != n
+            n_dim_issues += 1
+            push!(findings, Finding(WARNING, "W.INT.DIM_MISMATCH", :integrity,
+                :line, id,
+                "Line '$id' has terminal maps of length ($nf, $nt) but its " *
+                "linecode '$lcid' is $n×$n.",
+                Dict{String,Any}("linecode" => lcid, "n" => n,
+                                 "from" => nf, "to" => nt)))
+        end
+        # total series impedance proxy: max self-resistance+reactance × length
+        lc = linecodes[lcid]
+        R = _pattern_keys_to_matrix(lc, "R_series_")
+        X = _pattern_keys_to_matrix(lc, "X_series_")
+        if R isa AbstractMatrix
+            len = Float64(get(l, "length", 1.0))
+            zd = maximum(hypot(R[i, i],
+                               X isa AbstractMatrix && size(X) == size(R) ?
+                                   X[i, i] : 0.0) for i in 1:size(R, 1))
+            z_tot[id] = zd * len
+        end
+    end
+
+    # i_max length vs conductor count
+    for (id, lc) in linecodes
+        lc isa Dict || continue
+        haskey(lc_dims, id) || continue
+        im = get(lc, "i_max", nothing)
+        if im isa AbstractVector && length(im) != lc_dims[id]
+            n_dim_issues += 1
+            push!(findings, Finding(WARNING, "W.INT.DIM_MISMATCH", :integrity,
+                :linecode, id,
+                "Linecode '$id': i_max has $(length(im)) entries but the " *
+                "impedance matrix is $(lc_dims[id])×$(lc_dims[id]).",
+                nothing))
+        end
+    end
+
+    # padded matrices: all-zero row+column pairs in R and X
+    padded = String[]
+    for (id, lc) in linecodes
+        lc isa Dict || continue
+        R = _pattern_keys_to_matrix(lc, "R_series_")
+        R isa AbstractMatrix || continue
+        n = size(R, 1)
+        n > 1 || continue
+        X = _pattern_keys_to_matrix(lc, "X_series_")
+        Xm = (X isa AbstractMatrix && size(X) == size(R)) ? X : zeros(n, n)
+        for i in 1:n
+            row_zero = all(R[i, j] == 0 && Xm[i, j] == 0 for j in 1:n)
+            col_zero = all(R[j, i] == 0 && Xm[j, i] == 0 for j in 1:n)
+            if row_zero && col_zero
+                push!(padded, id)
+                break
+            end
+        end
+    end
+    if !isempty(padded)
+        n_dim_issues += length(padded)
+        push!(findings, Finding(WARNING, "W.INT.PADDED_MATRIX", :integrity,
+            :linecode, nothing,
+            "$(length(padded)) linecode(s) contain all-zero row/column pairs " *
+            "— padded conductors slow NLP solvers substantially; shrink the " *
+            "matrix and use terminal maps: $(join(sort(padded), ", ")).",
+            Dict{String,Any}("linecodes" => sort(padded))))
+    end
+
+    # load setpoint length vs configuration; source vm/va lengths
+    for (id, l) in get(net, "load", Dict())
+        l isa Dict || continue
+        cfg = get(l, "configuration", nothing)
+        expected = cfg == "SINGLE_PHASE" ? 1 :
+                   cfg in ("WYE", "DELTA") ? 3 : nothing
+        expected === nothing && continue
+        for field in ("p_nom", "q_nom")
+            v = get(l, field, nothing)
+            if v isa AbstractVector && length(v) != expected
+                n_dim_issues += 1
+                push!(findings, Finding(WARNING, "W.INT.DIM_MISMATCH", :integrity,
+                    :load, id,
+                    "Load '$id' ($cfg): $field has $(length(v)) entries, " *
+                    "expected $expected.", nothing))
+            end
+        end
+    end
+    for (id, vs) in get(net, "voltage_source", Dict())
+        vs isa Dict || continue
+        ntm = length(get(vs, "terminal_map", String[]))
+        ntm == 0 && continue
+        for field in ("v_magnitude", "v_angle")
+            v = get(vs, field, nothing)
+            if v isa AbstractVector && length(v) != ntm
+                n_dim_issues += 1
+                push!(findings, Finding(WARNING, "W.INT.DIM_MISMATCH", :integrity,
+                    :voltage_source, id,
+                    "Voltage source '$id': $field has $(length(v)) entries " *
+                    "but the terminal map has $ntm.", nothing))
+            end
+        end
+    end
+
+    # --- galvanic islands: voltage reference required per island ---
+    src_buses = Set(get(vs, "bus", "") for (_, vs) in get(net, "voltage_source", Dict()))
+    grounded_buses = Set{String}()
+    for (id, b) in buses
+        isempty(get(b, "perfectly_grounded_terminals", String[])) ||
+            push!(grounded_buses, id)
+    end
+    # a shunt grounds its bus iff its admittance has nonzero row sums
+    # (a pure delta capacitor bank has zero row sums — no ground current)
+    for (_, s) in get(net, "shunt", Dict())
+        b = get(s, "bus", nothing)
+        b isa AbstractString || continue
+        G = _pattern_keys_to_matrix(s, "G_")
+        B = _pattern_keys_to_matrix(s, "B_")
+        Y = G isa AbstractMatrix ? complex.(G,
+                (B isa AbstractMatrix && size(B) == size(G)) ? B : zero(G)) :
+            B isa AbstractMatrix ? complex.(zero(B), B) : nothing
+        Y === nothing && continue
+        scaleY = max(maximum(abs.(Y)), 1e-300)
+        any(abs(sum(Y[i, :])) > 1e-9 * scaleY for i in 1:size(Y, 1)) &&
+            push!(grounded_buses, b)
+    end
+
+    islands = _galvanic_islands(net)
+    unreferenced = Vector{Vector{String}}()
+    for comp in islands
+        has_ref = any(b -> b in src_buses || b in grounded_buses, comp)
+        has_ref || push!(unreferenced, comp)
+    end
+    result["n_galvanic_islands"]  = length(islands)
+    result["n_without_reference"] = length(unreferenced)
+    for comp in unreferenced
+        push!(findings, Finding(ERROR, "E.INT.NO_VOLTAGE_REFERENCE", :integrity,
+            :network, nothing,
+            "Galvanic island of $(length(comp)) bus(es) has no voltage " *
+            "reference (no source, perfect grounding, or grounding shunt) — " *
+            "voltages are defined only up to a shift (rank-deficient): " *
+            "$(join(comp, ", ")).",
+            Dict{String,Any}("buses" => comp)))
+    end
+
+    # --- wye without neutral ---
+    neutral_of = _bus_neutral_map(buses)
+    for comp_type in ("load", "generator")
+        for (id, c) in get(net, comp_type, Dict())
+            c isa Dict || continue
+            get(c, "configuration", "") == "WYE" || continue
+            b = get(c, "bus", nothing)
+            b isa AbstractString && b in busset || continue
+            if get(neutral_of, b, nothing) === nothing
+                push!(findings, Finding(WARNING, "W.INT.WYE_WITHOUT_NEUTRAL",
+                    :integrity, Symbol(comp_type), id,
+                    "$comp_type '$id' is wye-configured at bus '$b' which has " *
+                    "no identifiable neutral — implies an undeclared ground " *
+                    "return (in 3-wire sections only delta connections are " *
+                    "expected).", nothing))
+            end
+        end
+    end
+
+    # --- low-impedance lines + spread ---
+    if length(z_tot) >= 3
+        vals = collect(values(z_tot))
+        med = median(vals)
+        zmin, zmax = extrema(vals)
+        result["impedance_spread"] = zmin > 0 ? zmax / zmin : Inf
+        low = sort([id for (id, z) in z_tot if z < 1e-3 * med])
+        if !isempty(low)
+            push!(findings, Finding(WARNING, "W.INT.LOW_IMPEDANCE_LINE",
+                :integrity, :line, nothing,
+                "$(length(low)) line(s) have total series impedance below " *
+                "10⁻³× the network median — they degrade NLP conditioning; " *
+                "model them as lossless switches: $(join(low, ", ")).",
+                Dict{String,Any}("lines" => low)))
+        end
+        result["n_low_impedance_lines"] = length(low)
+    end
+
+    # --- generator cost symmetry ---
+    cost_groups = Dict{String,Vector{String}}()
+    for (id, g) in get(net, "generator", Dict())
+        g isa Dict || continue
+        haskey(g, "cost") || continue
+        c = g["cost"]
+        key = c isa AbstractVector ? join(Float64.(c), ",") : string(Float64(c))
+        push!(get!(cost_groups, key, String[]), id)
+    end
+    dup_groups = [sort(ids) for (_, ids) in cost_groups if length(ids) > 1]
+    if !isempty(dup_groups)
+        push!(findings, Finding(INFO, "I.INT.UNIFORM_GEN_COST", :integrity,
+            :generator, nothing,
+            "$(length(dup_groups)) group(s) of generators share identical " *
+            "costs — dispatch between them is degenerate (any split is " *
+            "optimal); diversify costs for benchmark use.",
+            Dict{String,Any}("groups" => dup_groups)))
+    end
+
+    result["n_reference_issues"] = n_ref_issues
+    result["n_dimension_issues"] = n_dim_issues
+    result
+end
