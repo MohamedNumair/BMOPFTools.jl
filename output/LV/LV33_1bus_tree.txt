@@ -1,0 +1,10 @@
+# Network graph  (3 buses)
+
+b2577 (SRC G1)
+
+# Disconnected buses (2 — not reachable from source):
+  b2650
+  b2885
+
+Generators (1 total):
+  G1 = slack_source     max    0.0 kW
