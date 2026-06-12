@@ -39,12 +39,14 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     grounded      = _grounded_terminals(working)
 
     vars = _build_vars(model, working, bus_terminals, grounded)
-    _set_voltage_start_values!(vars, working, bus_terminals, grounded)
+    # Use level-aware start values so that LV buses are initialised at ~250 V
+    # rather than at the source voltage (~6350 V). Without voltage bounds the
+    # unconstrained NLP has a degenerate high-voltage local minimum; correct
+    # initialisation ensures Ipopt finds the physical solution instead.
+    _set_level_aware_start_values!(vars, working, bus_terminals, grounded)
 
     # Voltage bounds are NOT enforced as hard constraints — they are evaluated
     # post-solve by diagnose_infeasibility, which reports violations.
-    # Start values from _set_voltage_start_values! anchor Ipopt near the
-    # physical solution via the bilinear power balance equations.
 
     kcl_r, kcl_i = _init_kcl(bus_terminals, grounded)
     _add_source_constraints!(working, vars, kcl_r, kcl_i)
