@@ -8,20 +8,21 @@
 #   Current : N * cr_xf[fr,k] + cr_xf[to,k] = 0
 #   KCL     : bus_from -= cr_xf[fr,k], bus_to -= cr_xf[to,k]
 #
-# ── wye_delta ──────────────────────────────────────────────────────────────
-#   Primary (from) : n_ph phase terminals + 1 neutral; terminal_map_from
-#   Secondary (to) : n_ph delta terminals; terminal_map_to
-#   N = v_ref_from / v_ref_to  (treating both refs as same basis)
+# ── wye_delta / delta_wye ───────────────────────────────────────────────────
+#   Define n_eff such that the delta LINE voltage = n_eff × wye PHASE-TO-NEUTRAL
+#   voltage (measuring wye phases relative to the wye neutral terminal):
 #
-#   Voltage (k = 1..n_ph, k_next = k%n_ph + 1, phase positions in tmfr):
-#     N * vr[to, tmto[k]] = vr[from, tmfr_ph[k]] - vr[from, tmfr_ph[k_next]]
+#     Dy (delta=primary/HV): n_eff = N × √3   where N = v_ref_from/v_ref_to
+#     Yd (wye=primary/HV):   n_eff = √3 / N
 #
-#   Current (T^T of voltage transform, power-conservative):
-#     N * cr_xf[fr,ph_k] = cr_xf[to, k_prev] - cr_xf[to, k]
-#     cr_xf[fr, neutral_pos] = 0   (delta winding blocks zero-sequence current)
+#   Voltage (k cyclic 1..n_ph, k_next = k%n_ph+1):
+#     vr[del,k] − vr[del,k_next] = n_eff × (vr[wye,k] − vr[wye,neutral])
 #
-# ── delta_wye ──────────────────────────────────────────────────────────────
-#   Symmetric to wye_delta with from↔to swapped.
+#   Current (ampere-turns balance, k_prev = (k-2+n_ph)%n_ph+1):
+#     n_eff × cr[del,k] = cr[wye,k] − cr[wye,k_prev]
+#
+#   Neutral KCL at transformer star point:
+#     cr[wye,neutral] = −(cr[wye,1] + cr[wye,2] + cr[wye,3])
 
 function _add_transformer_constraints!(model, net, vars, kcl_r, kcl_i)
     vr = vars[:vr]; vi = vars[:vi]
@@ -72,65 +73,78 @@ end
 
 function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
                                wye_is_from::Bool)
+    N = _xfmr_turns_ratio(xfmr)   # v_ref_from / v_ref_to
+
     if wye_is_from
-        b_wye  = get(xfmr, "bus_from", "")
-        b_del  = get(xfmr, "bus_to",   "")
-        tm_wye = Vector{String}(get(xfmr, "terminal_map_from", String[]))
-        tm_del = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+        b_wye    = get(xfmr, "bus_from", "")
+        b_del    = get(xfmr, "bus_to",   "")
+        tm_wye   = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+        tm_del   = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
         side_wye = "fr"; side_del = "to"
+        n_eff    = sqrt(3.0) / N   # Yd: delta is LV secondary
     else
-        b_del  = get(xfmr, "bus_from", "")
-        b_wye  = get(xfmr, "bus_to",   "")
-        tm_del = Vector{String}(get(xfmr, "terminal_map_from", String[]))
-        tm_wye = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+        b_del    = get(xfmr, "bus_from", "")
+        b_wye    = get(xfmr, "bus_to",   "")
+        tm_del   = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+        tm_wye   = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
         side_del = "fr"; side_wye = "to"
+        n_eff    = N * sqrt(3.0)   # Dy: delta is HV primary
     end
 
-    N      = _xfmr_turns_ratio(xfmr)   # v_ref_from / v_ref_to
-    n_ph   = length(tm_del)             # number of delta (phase) conductors
-    n_wye  = length(tm_wye)
-
-    # Identify phase positions and neutral position on the wye side
-    n_pos  = _neutral_pos(tm_wye)       # position of neutral in tm_wye (or nothing)
-    ph_idx = _phase_positions(tm_wye)   # positions of phase conductors
-
-    length(ph_idx) < n_ph && @warn "Transformer '$tid': wye-side phase count < delta conductors."
+    n_ph     = length(tm_del)
+    n_wye    = length(tm_wye)
+    n_pos    = _neutral_pos(tm_wye)
+    ph_idx   = _phase_positions(tm_wye)
     n_ph_eff = min(n_ph, length(ph_idx))
 
-    # Voltage constraints:
-    #   N * vr_del[k] = vr_wye[ph_k] - vr_wye[ph_k_next]
+    length(ph_idx) < n_ph && @warn "Transformer '$tid': wye-side phase count < delta conductors."
+
+    t_wye_neutral = n_pos !== nothing ? tm_wye[n_pos] : nothing
+
+    # ── Voltage constraints ───────────────────────────────────────────────────
     for k in 1:n_ph_eff
-        k_next = (k % n_ph_eff) + 1
-        t_del  = tm_del[k]
+        k_next     = (k % n_ph_eff) + 1
+        t_del_k    = tm_del[k]
+        t_del_next = tm_del[k_next]
         t_wye_k    = tm_wye[ph_idx[k]]
-        t_wye_next = tm_wye[ph_idx[k_next]]
-        @constraint(model,
-            N * vr[(b_del, t_del)] == vr[(b_wye, t_wye_k)] - vr[(b_wye, t_wye_next)])
-        @constraint(model,
-            N * vi[(b_del, t_del)] == vi[(b_wye, t_wye_k)] - vi[(b_wye, t_wye_next)])
+
+        vr_pn = t_wye_neutral !== nothing ?
+            @expression(model, vr[(b_wye, t_wye_k)] - vr[(b_wye, t_wye_neutral)]) :
+            vr[(b_wye, t_wye_k)]
+        vi_pn = t_wye_neutral !== nothing ?
+            @expression(model, vi[(b_wye, t_wye_k)] - vi[(b_wye, t_wye_neutral)]) :
+            vi[(b_wye, t_wye_k)]
+
+        @constraint(model, vr[(b_del, t_del_k)] - vr[(b_del, t_del_next)] == n_eff * vr_pn)
+        @constraint(model, vi[(b_del, t_del_k)] - vi[(b_del, t_del_next)] == n_eff * vi_pn)
     end
 
-    # Current constraints (from T^T power-conservation derivation):
-    #   N * I_wye[k] = I_del[k_prev] - I_del[k]
-    #   where k_prev = ((k-2+n_ph)%n_ph) + 1
+    # ── Current constraints ───────────────────────────────────────────────────
     for k in 1:n_ph_eff
-        k_prev = ((k - 2 + n_ph_eff) % n_ph_eff) + 1
-        ph_pos = ph_idx[k]
+        k_prev  = ((k - 2 + n_ph_eff) % n_ph_eff) + 1
+        ph_pos  = ph_idx[k]
+        ph_prev = ph_idx[k_prev]
         @constraint(model,
-            N * cr_xf[(tid, side_wye, ph_pos)] ==
-            cr_xf[(tid, side_del, k_prev)] - cr_xf[(tid, side_del, k)])
+            n_eff * cr_xf[(tid, side_del, k)] ==
+            cr_xf[(tid, side_wye, ph_pos)] - cr_xf[(tid, side_wye, ph_prev)])
         @constraint(model,
-            N * ci_xf[(tid, side_wye, ph_pos)] ==
-            ci_xf[(tid, side_del, k_prev)] - ci_xf[(tid, side_del, k)])
+            n_eff * ci_xf[(tid, side_del, k)] ==
+            ci_xf[(tid, side_wye, ph_pos)] - ci_xf[(tid, side_wye, ph_prev)])
     end
 
-    # Neutral carries no current through delta winding
+    # ── Neutral: KCL at transformer star point ────────────────────────────────
     if n_pos !== nothing
-        fix(cr_xf[(tid, side_wye, n_pos)], 0.0; force=true)
-        fix(ci_xf[(tid, side_wye, n_pos)], 0.0; force=true)
+        cr_sum = JuMP.AffExpr(0.0)
+        ci_sum = JuMP.AffExpr(0.0)
+        for k in 1:n_ph_eff
+            JuMP.add_to_expression!(cr_sum, cr_xf[(tid, side_wye, ph_idx[k])])
+            JuMP.add_to_expression!(ci_sum, ci_xf[(tid, side_wye, ph_idx[k])])
+        end
+        @constraint(model, cr_xf[(tid, side_wye, n_pos)] + cr_sum == 0)
+        @constraint(model, ci_xf[(tid, side_wye, n_pos)] + ci_sum == 0)
     end
 
-    # KCL contributions
+    # ── KCL contributions ─────────────────────────────────────────────────────
     for k in 1:n_wye
         t = tm_wye[k]
         _kcl_add!(kcl_r, kcl_i, b_wye, t,
