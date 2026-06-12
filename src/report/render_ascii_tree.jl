@@ -7,43 +7,42 @@
 #
 #   fold_chains  – consecutive single-child un-annotated buses are collapsed
 #                  into a "⋮ (N buses)" stub, keeping the tree width narrow.
-#   max_depth    – subtrees beyond this depth (in compact mode) are replaced
-#                  with a one-line "[+N buses, M loads]" summary.
+#   max_depth    – subtrees beyond this depth are replaced with a one-line
+#                  "[+N buses, M loads]" summary.
 #
-# Example output (small LV network):
-#
-#   b1504 (SRC)
-#   └── [tx3270: Dyn1 11.0kV/433V]── b1080
-#       ├── b2165
-#       │   └── [SW]── b2836
-#       │       ├── b559 (L1,L2)
-#       │       └── b251 (L3)
-#       └── b683
-#
-#   Loads (3 total):
-#     L1 = ld123_load_a   3.50 kW  WYE  phases: 1,2,3
+# Multi-voltage split (split_by_level=true, the default):
+# When the network has ≥ 2 level-crossing transformer edges in the spanning
+# tree (e.g. an MV feeder with multiple LV subnetworks), the output is divided
+# into sections: a root section showing the MV backbone with section pointers,
+# followed by one independently-rendered section per distribution transformer.
+# Single-feeder networks (one HV→LV transformer only) are rendered as a single
+# tree to avoid a trivially 1-bus root section.
 
 """
-    render_ascii_tree(net, io; max_buses, max_depth, fold_chains)
+    render_ascii_tree(net, io; max_buses, max_depth, fold_chains, legend_limit,
+                               split_by_level)
 
 Write an ASCII tree of the network graph to `io`.
 
-**Node labels** – the source bus is tagged `SRC`; loads on a bus appear as
-`L1,L2,…` and generators as `G1,G2,…` (numbered globally, mapped in the
-legend printed after the tree). Transformer and switch edges are annotated.
+**Node labels** – the source bus is tagged `SRC`; loads appear as `L1,L2,…`
+and generators as `G1,G2,…` (numbered per section, mapped in the legend printed
+after each section). Transformer and switch edges are annotated.
 
-**Large-network handling** – when the bus count exceeds `max_buses`:
-- `fold_chains=true` (default) collapses unbranched corridors with no
-  attached loads or generators into a `⋮ (N buses)` stub.
-- Subtrees deeper than `max_depth` are replaced by a one-line summary.
+**Large-network handling** – when a section's bus count exceeds `max_buses`:
+- `fold_chains=true` (default) collapses unbranched corridors with no attached
+  loads or generators into `⋮ (N buses)` stubs.
+- Subtrees deeper than `max_depth` are replaced by a `[+N buses, M loads]` line.
 
-**Legend** – a load/generator index is appended after the tree.
+**Multi-voltage split** – when `split_by_level=true` (default) and the spanning
+tree crosses ≥ 2 voltage level boundaries, the file is split into a root section
+(MV backbone) and one LV section per distribution transformer.
 """
 function render_ascii_tree(net::Dict{String,Any}, io::IO;
-                            max_buses::Int    = 200,
-                            max_depth::Int    = 8,
-                            fold_chains::Bool = true,
-                            legend_limit::Int = 50)
+                            max_buses::Int       = 200,
+                            max_depth::Int       = 8,
+                            fold_chains::Bool    = true,
+                            legend_limit::Int    = 50,
+                            split_by_level::Bool = true)
 
     buses     = get(net, "bus",             Dict())
     lines     = get(net, "line",            Dict())
@@ -54,15 +53,11 @@ function render_ascii_tree(net::Dict{String,Any}, io::IO;
     xfmr_dict = get(net, "transformer",     Dict())
 
     n_buses = length(buses)
-    compact = n_buses > max_buses
 
     # ── 1. Adjacency list ────────────────────────────────────────────────────
-    # Each entry: (neighbor, edge_type, edge_id, is_open, edge_label)
 
     adj = Dict{String, Vector{NTuple{5,Any}}}()
-    for bid in keys(buses)
-        adj[bid] = NTuple{5,Any}[]
-    end
+    for bid in keys(buses); adj[bid] = NTuple{5,Any}[] end
 
     function add_edge!(a, b, etype, eid, is_open, label)
         (haskey(adj, a) && haskey(adj, b)) || return
@@ -101,18 +96,28 @@ function render_ascii_tree(net::Dict{String,Any}, io::IO;
         push!(get!(bus_gens, get(g,"bus",""), String[]), gid)
     end
 
-    all_load_ids = sort(collect(keys(loads)))
-    all_gen_ids  = sort(collect(keys(gens)))
-    load_num = Dict(lid => "L$i" for (i, lid) in enumerate(all_load_ids))
-    gen_num  = Dict(gid => "G$i" for (i, gid) in enumerate(all_gen_ids))
-
     function is_annotated(bid)
         bid in source_buses ||
         !isempty(get(bus_loads, bid, String[])) ||
         !isempty(get(bus_gens,  bid, String[]))
     end
 
-    # ── 3. BFS spanning tree ──────────────────────────────────────────────────
+    # ── 3. Identify level-crossing transformers ───────────────────────────────
+    level_xfmr_tids = Set{String}()
+    if split_by_level
+        for subtype in ("single_phase","center_tap","wye_delta","delta_wye")
+            for (tid, tx) in get(xfmr_dict, subtype, Dict())
+                vf = get(tx, "v_ref_from", nothing)
+                vt = get(tx, "v_ref_to",   nothing)
+                (vf === nothing || vt === nothing) && continue
+                vf_f, vt_f = Float64(vf), Float64(vt)
+                abs(vf_f - vt_f) / max(vf_f, vt_f, 1.0) > 0.05 &&
+                    push!(level_xfmr_tids, tid)
+            end
+        end
+    end
+
+    # ── 4. BFS spanning tree ──────────────────────────────────────────────────
     root = isempty(source_buses) ? first(sort(collect(keys(buses)))) :
                                    first(sort(collect(source_buses)))
 
@@ -140,7 +145,32 @@ function render_ascii_tree(net::Dict{String,Any}, io::IO;
 
     unreachable = [b for b in keys(buses) if !haskey(parent, b)]
 
-    # ── 4. Subtree statistics ─────────────────────────────────────────────────
+    # ── 5. Identify section roots ─────────────────────────────────────────────
+    # A section root is a bus reached via a level-crossing transformer edge.
+    # Only activate split mode when ≥ 2 such roots exist; otherwise a single
+    # head-end transformer would produce a trivially 1-bus root section.
+
+    sections_ordered = Tuple{String,String,String}[]   # (bus_to, tid, edge_label)
+    section_root_set = Set{String}()
+
+    for bid in bfs_order
+        pe = parent_edge[bid]
+        pe === nothing && continue
+        pe[2] == :transformer || continue
+        pe[3] in level_xfmr_tids || continue
+        push!(sections_ordered, (bid, pe[3], pe[5]))
+        push!(section_root_set, bid)
+    end
+
+    do_split = length(sections_ordered) >= 2
+    if !do_split
+        empty!(section_root_set)   # treat as single-section render
+    end
+
+    section_idx_map = Dict(sroot => i
+                           for (i, (sroot, _, _)) in enumerate(sections_ordered))
+
+    # ── 6. Subtree statistics ─────────────────────────────────────────────────
     subtree_buses = Dict{String,Int}()
     subtree_loads = Dict{String,Int}()
     for bid in reverse(bfs_order)
@@ -150,25 +180,22 @@ function render_ascii_tree(net::Dict{String,Any}, io::IO;
                              sum(subtree_loads[c] for c in get(children, bid, String[]); init=0)
     end
 
-    # ── 5. Chain detection ────────────────────────────────────────────────────
-    # A "chain" is a maximal run of buses where each internal bus has exactly
-    # one child, no annotations, and its incoming edge is a plain line.
-    # We replace each chain with: first_bus … ⋮ (N buses) … last_bus.
-    # (Only applied when compact && fold_chains.)
+    n_root_buses = n_buses -
+                   sum(get(subtree_buses, s, 0) for (s,_,_) in sections_ordered; init=0)
 
-    # chain_fold[bid] = number of un-annotated single-child buses to skip
-    # before the next interesting node.
-    chain_skip = Dict{String,Int}()  # bid → n buses folded after it
+    # ── 7. Chain detection ────────────────────────────────────────────────────
+    # Chains never cross transformer or switch edges, so section boundaries are
+    # automatically respected (section roots are reached via :transformer edges).
 
-    if compact && fold_chains
+    chain_skip = Dict{String,Int}()
+
+    if fold_chains
         for bid in bfs_order
             kids = get(children, bid, String[])
             length(kids) == 1 || continue
             is_annotated(bid) && continue
-            # Check the edge to this bus — don't fold across transformer/switch
             pe = parent_edge[bid]
             pe !== nothing && pe[2] != :line && continue
-            # Walk the chain forward
             n_folded = 0
             cur = bid
             while true
@@ -185,14 +212,14 @@ function render_ascii_tree(net::Dict{String,Any}, io::IO;
         end
     end
 
-    # ── 6. Formatting helpers ─────────────────────────────────────────────────
-    function fmt_bus(bid)
+    # ── 8. Formatting helpers ─────────────────────────────────────────────────
+    function fmt_bus(bid, load_num, gen_num)
         tags = String[]
         bid in source_buses && push!(tags, "SRC")
         ls = [load_num[l] for l in get(bus_loads, bid, String[]) if haskey(load_num, l)]
         gs = [gen_num[g]  for g in get(bus_gens,  bid, String[]) if haskey(gen_num, g)]
-        !isempty(ls) && push!(tags, join(ls, ","))
-        !isempty(gs) && push!(tags, join(gs, ","))
+        !isempty(ls) && push!(tags, join(sort(ls), ","))
+        !isempty(gs) && push!(tags, join(sort(gs), ","))
         isempty(tags) ? bid : "$bid ($(join(tags, " ")))"
     end
 
@@ -203,30 +230,35 @@ function render_ascii_tree(net::Dict{String,Any}, io::IO;
         return ""
     end
 
-    # ── 7. DFS renderer ──────────────────────────────────────────────────────
-    # skip_set: buses already consumed by a chain fold (don't render individually)
-    skip_set = Set{String}()
-
-    function dfs(bid, prefix, is_last, depth)
+    # ── 9. DFS renderer ──────────────────────────────────────────────────────
+    function dfs(bid, prefix, is_last, depth, compact_mode, skip_set, load_num, gen_num)
         bid in skip_set && return
 
-        edge  = parent_edge[bid]
-        bchar = is_last ? "└── " : "├── "
+        edge   = parent_edge[bid]
+        bchar  = is_last ? "└── " : "├── "
         elabel = edge !== nothing ? fmt_edge(edge) : ""
 
-        # Depth-based subtree collapse (compact mode)
-        if compact && depth > max_depth && subtree_buses[bid] > 1
-            nb = subtree_buses[bid]
-            nl = subtree_loads[bid]
-            println(io, "$(prefix)$(bchar)$(elabel)$(fmt_bus(bid)) [+$(nb-1) buses, $nl loads]")
+        # Split mode: section roots become pointer stubs
+        if bid in section_root_set
+            sec_idx = section_idx_map[bid]
+            nb = get(subtree_buses, bid, 1)
+            nl = get(subtree_loads, bid, 0)
+            _, stid, _ = sections_ordered[sec_idx]
+            println(io, "$(prefix)$(bchar)$(elabel)→ Section $sec_idx: $stid  ($nb buses, $nl loads)")
             return
         end
 
-        # Chain fold: skip N single-child un-annotated successors
+        # Depth-based subtree collapse
+        if compact_mode && depth > max_depth && get(subtree_buses, bid, 1) > 1
+            nb = subtree_buses[bid]; nl = subtree_loads[bid]
+            println(io, "$(prefix)$(bchar)$(elabel)$(fmt_bus(bid, load_num, gen_num)) [+$(nb-1) buses, $nl loads]")
+            return
+        end
+
+        # Chain fold
         n_fold = get(chain_skip, bid, 0)
-        if n_fold > 0
-            println(io, "$(prefix)$(bchar)$(elabel)$(fmt_bus(bid))")
-            # Walk n_fold buses and collect into skip_set
+        if compact_mode && n_fold > 0
+            println(io, "$(prefix)$(bchar)$(elabel)$(fmt_bus(bid, load_num, gen_num))")
             cur = bid
             for _ in 1:n_fold
                 child = get(children, cur, String[])[1]
@@ -234,74 +266,136 @@ function render_ascii_tree(net::Dict{String,Any}, io::IO;
                 cur = child
             end
             child_prefix = prefix * (is_last ? "    " : "│   ")
-            # Show fold stub, then continue from the end of the chain
             println(io, "$(child_prefix)⋮  ($n_fold buses)")
-            # The "end of chain" bus is `cur`; render it next
-            # Its children are the branches from the chain end
             chain_kids = get(children, cur, String[])
             for (i, ck) in enumerate(chain_kids)
-                ck_is_last = i == length(chain_kids)
-                dfs(ck, child_prefix, ck_is_last, depth + 1)
+                dfs(ck, child_prefix, i == length(chain_kids), depth + 1,
+                    compact_mode, skip_set, load_num, gen_num)
             end
             return
         end
 
-        println(io, "$(prefix)$(bchar)$(elabel)$(fmt_bus(bid))")
-
+        println(io, "$(prefix)$(bchar)$(elabel)$(fmt_bus(bid, load_num, gen_num))")
         kids = get(children, bid, String[])
         for (i, child) in enumerate(kids)
-            child_is_last = i == length(kids)
-            child_prefix  = prefix * (is_last ? "    " : "│   ")
-            dfs(child, child_prefix, child_is_last, depth + 1)
+            dfs(child, prefix * (is_last ? "    " : "│   "), i == length(kids),
+                depth + 1, compact_mode, skip_set, load_num, gen_num)
         end
     end
 
-    # ── 8. Render ─────────────────────────────────────────────────────────────
-    if compact
+    # ── 10. Legend printer ────────────────────────────────────────────────────
+    function print_legend(lids, gids, load_num, gen_num)
+        if !isempty(lids)
+            println(io, "\nLoads ($(length(lids)) total):")
+            shown = min(length(lids), legend_limit)
+            for lid in lids[1:shown]
+                l    = get(loads, lid, Dict())
+                p_w  = sum(Float64.(get(l, "p_nom", Float64[])); init=0.0)
+                p_kw = round(p_w / 1000, digits=2)
+                cfg  = get(l, "configuration", "WYE")
+                tm   = get(l, "terminal_map", [])
+                ph   = filter(t -> string(t) != "n", string.(tm))
+                println(io, "  $(load_num[lid]) = $(rpad(lid, 16)) $(lpad(p_kw, 6)) kW  $cfg  phases: $(join(ph,","))")
+            end
+            shown < length(lids) &&
+                println(io, "  … and $(length(lids) - shown) more (pass legend_limit= to show all)")
+        end
+        if !isempty(gids)
+            println(io, "\nGenerators ($(length(gids)) total):")
+            for gid in gids
+                g     = get(gens, gid, Dict())
+                p_max = sum(Float64.(get(g, "p_max", Float64[])); init=0.0)
+                p_kw  = round(p_max / 1000, digits=2)
+                println(io, "  $(gen_num[gid]) = $(rpad(gid, 16)) max $(lpad(p_kw, 6)) kW")
+            end
+        end
+    end
+
+    # ── 11. Section bus membership ────────────────────────────────────────────
+    function collect_subtree(bid)
+        result = Set{String}()
+        q = [bid]
+        while !isempty(q)
+            cur = popfirst!(q)
+            push!(result, cur)
+            append!(q, get(children, cur, String[]))
+        end
+        result
+    end
+
+    sec_bus_sets = Dict{String,Set{String}}()
+    if do_split
+        for (sroot, _, _) in sections_ordered
+            sec_bus_sets[sroot] = collect_subtree(sroot)
+        end
+    end
+    all_lv_buses = isempty(sec_bus_sets) ? Set{String}() : union(values(sec_bus_sets)...)
+
+    # ── 12. Root section ──────────────────────────────────────────────────────
+    root_load_ids = sort([lid for (lid, l) in loads
+                          if !(get(l, "bus", "") in all_lv_buses)])
+    root_gen_ids  = sort([gid for (gid, g) in gens
+                          if !(get(g, "bus", "") in all_lv_buses)])
+    root_load_num = Dict(lid => "L$i" for (i, lid) in enumerate(root_load_ids))
+    root_gen_num  = Dict(gid => "G$i" for (i, gid) in enumerate(root_gen_ids))
+
+    compact_root = (do_split ? n_root_buses : n_buses) > max_buses
+
+    if do_split
+        println(io, "# MV backbone  ($n_root_buses buses,  $(length(sections_ordered)) LV sections)")
+    elseif n_buses > max_buses
         println(io, "# Network graph  ($n_buses buses, compressed)")
     else
         println(io, "# Network graph  ($n_buses buses)")
     end
     println(io)
 
-    println(io, fmt_bus(root))
-    kids = get(children, root, String[])
-    for (i, child) in enumerate(kids)
-        dfs(child, "", i == length(kids), 1)
+    skip_root = Set{String}()
+    println(io, fmt_bus(root, root_load_num, root_gen_num))
+    root_kids = get(children, root, String[])
+    for (i, child) in enumerate(root_kids)
+        dfs(child, "", i == length(root_kids), 1, compact_root, skip_root,
+            root_load_num, root_gen_num)
     end
 
     if !isempty(unreachable)
         println(io, "\n# Disconnected buses ($(length(unreachable)) — not reachable from source):")
         for bid in sort(unreachable)[1:min(10, length(unreachable))]
-            println(io, "  $(fmt_bus(bid))")
+            println(io, "  $(fmt_bus(bid, root_load_num, root_gen_num))")
         end
         length(unreachable) > 10 && println(io, "  … and $(length(unreachable)-10) more")
     end
 
-    # ── 9. Legend ─────────────────────────────────────────────────────────────
-    if !isempty(loads)
-        println(io, "\nLoads ($(length(loads)) total):")
-        shown = min(length(all_load_ids), legend_limit)
-        for (i, lid) in enumerate(all_load_ids[1:shown])
-            l    = get(loads, lid, Dict())
-            p_w  = sum(Float64.(get(l, "p_nom", Float64[])); init=0.0)
-            p_kw = round(p_w / 1000, digits=2)
-            cfg  = get(l, "configuration", "WYE")
-            tm   = get(l, "terminal_map", [])
-            ph   = filter(t -> string(t) != "n", string.(tm))
-            println(io, "  L$i = $(rpad(lid, 16)) $(lpad(p_kw, 6)) kW  $cfg  phases: $(join(ph,","))")
-        end
-        shown < length(all_load_ids) &&
-            println(io, "  … and $(length(all_load_ids) - shown) more (pass legend_limit= to show all)")
-    end
+    print_legend(root_load_ids, root_gen_ids, root_load_num, root_gen_num)
 
-    if !isempty(gens)
-        println(io, "\nGenerators ($(length(gens)) total):")
-        for (i, gid) in enumerate(all_gen_ids)
-            g     = get(gens, gid, Dict())
-            p_max = sum(Float64.(get(g, "p_max", Float64[])); init=0.0)
-            p_kw  = round(p_max / 1000, digits=2)
-            println(io, "  G$i = $(rpad(gid, 16)) max $(lpad(p_kw, 6)) kW")
+    do_split || return
+
+    # ── 13. LV sections ───────────────────────────────────────────────────────
+    for (sec_idx, (sroot, stid, slabel)) in enumerate(sections_ordered)
+        println(io, "\n" * "─"^60)
+        sec_set = sec_bus_sets[sroot]
+        n_sec   = length(sec_set)
+
+        println(io, "# Section $sec_idx: $stid  ($slabel,  $n_sec buses)")
+        println(io)
+
+        sec_load_ids = sort([lid for (lid, l) in loads
+                             if get(l, "bus", "") in sec_set])
+        sec_gen_ids  = sort([gid for (gid, g) in gens
+                             if get(g, "bus", "") in sec_set])
+        sec_load_num = Dict(lid => "L$i" for (i, lid) in enumerate(sec_load_ids))
+        sec_gen_num  = Dict(gid => "G$i" for (i, gid) in enumerate(sec_gen_ids))
+
+        compact_sec = n_sec > max_buses
+        skip_sec    = Set{String}()
+
+        println(io, fmt_bus(sroot, sec_load_num, sec_gen_num))
+        sec_kids = get(children, sroot, String[])
+        for (i, child) in enumerate(sec_kids)
+            dfs(child, "", i == length(sec_kids), 1, compact_sec, skip_sec,
+                sec_load_num, sec_gen_num)
         end
+
+        print_legend(sec_load_ids, sec_gen_ids, sec_load_num, sec_gen_num)
     end
 end
