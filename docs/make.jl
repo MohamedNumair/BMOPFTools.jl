@@ -5,8 +5,8 @@ makedocs(
     sitename = "BMOPFTools.jl",
     modules  = [BMOPFTools],
     format   = Documenter.HTML(
-        prettyurls = false,          # browsable straight from the filesystem
-        edit_link  = nothing,        # subdirectory of a larger repo
+        prettyurls = get(ENV, "CI", nothing) == "true",  # pretty URLs on CI, plain files locally
+        edit_link  = nothing,
         size_threshold_ignore = ["findings.md"],
     ),
     remotes  = nothing,
@@ -21,4 +21,11 @@ makedocs(
     ],
     checkdocs = :exports,
     warnonly  = [:missing_docs],
+)
+
+deploydocs(
+    repo = "github.com/frederikgeth/BMOPFTools.jl.git",
+    devbranch = "main",
+    dirname = "docs",   # Pages serves gh-pages:/docs; changing that needs repo admin
+    push_preview = false,
 )
