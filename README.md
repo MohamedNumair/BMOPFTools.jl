@@ -6,7 +6,8 @@
 A Julia library for **parsing, validating, analysing and reporting** on
 BMOPF-format distribution network datasets — the JSON data model developed by
 the IEEE Task Force on *Benchmarking Multiconductor OPF for Distribution
-Systems* for up-to-four-wire optimal power flow.
+Systems* for up-to-four-wire optimal power flow currently hosted at 
+https://github.com/frederikgeth/bmopf-report
 
 The network data model is a plain `Dict{String,Any}` that mirrors the BMOPF
 JSON schema exactly: no wrapper types, so data flows naturally between JSON,
