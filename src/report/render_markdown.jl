@@ -50,8 +50,13 @@ function _md_inventory(r::SummaryReport, io::IO)
         elseif comp == "generator"
             notes = "capacity: $(_fmt_mw(get(info,"total_p_cap_w",0.0)))"
         elseif comp == "transformer"
-            bytype = get(info, "by_type", Dict())
-            isempty(bytype) || (notes = join(["$t×$c" for (t,c) in bytype], ", "))
+            byvg = get(info, "by_vector_group", Dict())
+            if !isempty(byvg)
+                notes = join(["$vg×$c" for (vg,c) in sort(collect(byvg))], ", ")
+            else
+                bytype = get(info, "by_type", Dict())
+                isempty(bytype) || (notes = join(["$t×$c" for (t,c) in bytype], ", "))
+            end
         end
         println(io, "| $comp | $n | $notes |")
     end
@@ -78,7 +83,9 @@ function _md_voltage_levels(r::SummaryReport, io::IO)
     if !isempty(transitions)
         println(io, "**Transformer transitions:**\n")
         for tr in transitions
-            println(io, "- `$(tr["id"])`: $(tr["level_from"]) → $(tr["level_to"]) ($(tr["subtype"]))")
+            vg = get(tr, "vector_group", "")
+            vg_str = isempty(vg) ? tr["subtype"] : "$(tr["subtype"]), $vg"
+            println(io, "- `$(tr["id"])`: $(tr["level_from"]) → $(tr["level_to"]) ($vg_str)")
         end
         println(io)
     end

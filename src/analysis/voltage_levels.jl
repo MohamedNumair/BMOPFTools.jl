@@ -218,14 +218,15 @@ function _transformer_transitions(net::Dict{String,Any},
             vf = get(assigned, f, nothing)
             vt = get(assigned, b, nothing)
             push!(transitions, Dict{String,Any}(
-                "id"          => id,
-                "subtype"     => subtype,
-                "bus_from"    => f,
-                "bus_to"      => b,
-                "v_from"      => vf,
-                "v_to"        => vt,
-                "level_from"  => vf !== nothing ? _voltage_level_label(vf) : "unknown",
-                "level_to"    => vt !== nothing ? _voltage_level_label(vt) : "unknown"
+                "id"           => id,
+                "subtype"      => subtype,
+                "vector_group" => _derive_vector_group(subtype, t),
+                "bus_from"     => f,
+                "bus_to"       => b,
+                "v_from"       => vf,
+                "v_to"         => vt,
+                "level_from"   => vf !== nothing ? _voltage_level_label(vf) : "unknown",
+                "level_to"     => vt !== nothing ? _voltage_level_label(vt) : "unknown"
             ))
         end
     end

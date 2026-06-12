@@ -1,4 +1,80 @@
 """
+    _yd_clock(tm_del, tm_wye) -> Int
+
+Derive IEC clock number from delta and wye terminal orderings.
+
+From the BMOPF constraint N·V_Δ[1] = V_Y[ph₁] − V_Y[ph₂], setting the first
+delta terminal as the 0° reference and solving for the angle of wye terminal '1':
+  ψ_wye1 = −(δ[p_HV] + δ[p1] + arg(1 − e^{jΔ}))
+where δ[t] ∈ {0°,−120°,+120°} for terminals {1,2,3} and clock = (−ψ_wye1/30) mod 12.
+"""
+function _yd_clock(tm_del::Vector{String}, tm_wye::Vector{String})::Int
+    ph_wye = filter(t -> t != "n", tm_wye)
+    (length(tm_del) < 1 || length(ph_wye) < 2) && return 0
+
+    p_HV = tm_del[1]
+    p1   = ph_wye[1]
+    p2   = ph_wye[2]
+
+    phase_angle = Dict{String,Int}("1" => 0, "2" => -120, "3" => 120)
+    all(haskey(phase_angle, t) for t in (p_HV, p1, p2)) || return 0
+
+    d_HV = phase_angle[p_HV]
+    d1   = phase_angle[p1]
+    d2   = phase_angle[p2]
+
+    # arg(1 − e^{jΔ}): −30° when Δ≡+120°, +30° when Δ≡+240° (≡−120°)
+    arg_t = mod(d2 - d1, 360) == 120 ? -30 : 30
+    psi_a = -(d_HV + d1 + arg_t)
+    return mod(round(Int, -psi_a / 30.0), 12)
+end
+
+"""
+    _derive_vector_group(subtype, xfmr) -> String
+
+Derive IEC 60076-style vector group from BMOPF transformer data.
+
+- D/Y = delta/wye (uppercase = HV primary; lowercase = LV secondary)
+- "n" suffix when neutral terminal is accessible on that winding
+- Clock number derived from terminal ordering using `_yd_clock`
+"""
+function _derive_vector_group(subtype::String, xfmr::Dict{String,Any})::String
+    tmfr = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+    tmto = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+    n_fr = "n" in tmfr
+    n_to = "n" in tmto
+
+    if subtype == "delta_wye"
+        lv    = n_to ? "yn" : "y"
+        clock = _yd_clock(tmfr, tmto)
+        return "D$(lv)$(clock)"
+
+    elseif subtype == "wye_delta"
+        hv    = n_fr ? "YN" : "Y"
+        # For Yd: secondary (delta) angle = −(wye angle from formula) → negate clock
+        clock = mod(-_yd_clock(tmto, tmfr), 12)
+        return "$(hv)d$(clock)"
+
+    elseif subtype == "single_phase"
+        ph_fr = count(t -> t != "n", tmfr)
+        ph_to = count(t -> t != "n", tmto)
+        if ph_fr >= 3 && ph_to >= 3
+            hv = n_fr ? "YN" : "Y"
+            lv = n_to ? "yn" : "y"
+            return "$(hv)$(lv)0"
+        else
+            return "Ii0"
+        end
+
+    elseif subtype == "center_tap"
+        return "Ii0"
+
+    else
+        return "—"
+    end
+end
+
+"""
     inventory_analysis(net, findings) -> Dict{String,Any}
 
 Count components and compute summary statistics for each component type.
@@ -67,9 +143,10 @@ function inventory_analysis(net::Dict{String,Any},
     )
 
     # --- Transformer ---
-    xfmr    = get(net, "transformer", Dict())
-    by_type = Dict{String,Int}()
-    total_xfmr = 0
+    xfmr          = get(net, "transformer", Dict())
+    by_type       = Dict{String,Int}()
+    by_vg         = Dict{String,Int}()
+    total_xfmr    = 0
     for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
@@ -77,10 +154,15 @@ function inventory_analysis(net::Dict{String,Any},
         n == 0 && continue
         by_type[subtype] = n
         total_xfmr += n
+        for (_, xf) in sub
+            vg = _derive_vector_group(subtype, xf)
+            by_vg[vg] = get(by_vg, vg, 0) + 1
+        end
     end
     result["transformer"] = Dict{String,Any}(
-        "total"   => total_xfmr,
-        "by_type" => by_type
+        "total"          => total_xfmr,
+        "by_type"        => by_type,
+        "by_vector_group" => by_vg
     )
 
     result
