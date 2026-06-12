@@ -1,0 +1,90 @@
+# BMOPFTools.jl
+
+A Julia library for **parsing, validating, analysing and reporting** on
+BMOPF-format distribution network datasets — the JSON data model developed by
+the IEEE Task Force on *Benchmarking Multiconductor OPF for Distribution
+Systems* for up-to-four-wire optimal power flow (OPF) benchmarks
+([ref. 1](methodology.md#refs)).
+
+The library serves two audiences:
+
+- **Dataset producers** converting utility-derived OpenDSS models into
+  clean, spec-conformant BMOPF JSON benchmark cases, and
+- **dataset consumers** who want to understand exactly what a case contains
+  — its modeling conventions, hidden assumptions, data-quality issues and
+  OPF-readiness — before building optimization models on it.
+
+## Design
+
+The network data model is a plain `Dict{String,Any}` mirroring the BMOPF
+JSON structure exactly. There are deliberately no wrapper types: data flows
+to and from JSON and PowerModelsDistribution without conversion layers, and
+the only structs in the library are the *outputs* — [`Finding`](@ref) and
+[`SummaryReport`](@ref) — which need stable shape for rendering and
+programmatic use.
+
+Every diagnostic is a `Finding` with a **stable dot-separated code**
+(`E.`/`W.`/`I.` for error/warning/info) — see the
+[finding-code reference](findings.md) for the complete catalogue. Match on
+codes, never on message text.
+
+## Quickstart
+
+Analysing an existing BMOPF JSON case:
+
+```julia
+using BMOPFTools
+
+net    = parse_bmopf("case.json")
+report = analyze(net)
+
+render(report, stdout)              # terminal report
+render(report, "case_report.md")    # Markdown report
+
+errors(report)                      # findings with ERROR severity
+report.results[:provenance]["convention"]
+report.results[:benchmark]["suggestions"]
+```
+
+Converting from OpenDSS via PowerModelsDistribution (PMD must be available
+in the active environment — it is *not* a dependency of BMOPFTools):
+
+```julia
+using BMOPFTools, PowerModelsDistribution
+
+eng = parse_file("Master.dss"; kron_reduce=false)   # keep 4-wire detail
+net = from_pmd(eng)        # adds an explicit slack generator by default
+write_bmopf(net, "case.json")
+analyze(net) |> r -> render(r, "case_report.md")
+```
+
+## The pipeline
+
+```
+OpenDSS .dss ──(PMD parse_file)──► ENGINEERING dict
+                                        │  from_pmd
+                                        ▼
+  BMOPF JSON ◄── write_bmopf ── BMOPF Dict{String,Any} ── to_pmd ──► PMD
+                                        │  analyze
+                                        ▼
+                                 SummaryReport ──► render
+```
+
+`analyze` runs fourteen passes (see [Analysis & reports](analysis.md)) and
+the report renders in nine sections, including a one-line **modeling
+convention statement** (wires per voltage level, grounding style,
+normalisations) so the case's assumptions are explicit rather than implied.
+
+## Where to go next
+
+- [Data model conventions](conventions.md) — units, terminal names,
+  transformer subtypes, grounding semantics.
+- [Conversion guide](conversion.md) — every deliberate decision in
+  `from_pmd`/`to_pmd`, with the impedance-base formulas.
+- [Analysis & reports](analysis.md) — what each pass computes and how to
+  read the report.
+- [Finding-code reference](findings.md) — all 80 codes, with triggers and
+  rationale.
+- [Methodology notes](methodology.md) — the physics and linear algebra
+  behind the provenance checks, with literature references.
+- [API reference](api.md).
