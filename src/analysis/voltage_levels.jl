@@ -281,3 +281,39 @@ function _check_transformer_ratio_consistency(net::Dict{String,Any},
         end
     end
 end
+
+"""
+    _assign_nominal_voltages(net) -> Dict{String,Float64}
+
+BFS from every voltage source to assign a phase-to-neutral nominal voltage (V)
+to every reachable bus. Transformer edges apply the v_ref_to/v_ref_from ratio.
+Used by `diagnose_infeasibility` to derive per-unit voltage thresholds for buses
+that have no explicit v_min/v_max.
+"""
+function _assign_nominal_voltages(net::Dict{String,Any})::Dict{String,Float64}
+    assigned = Dict{String,Float64}()
+
+    for (_, vs) in get(net, "voltage_source", Dict())
+        bus = get(vs, "bus", nothing)
+        bus isa AbstractString || continue
+        vm = get(vs, "v_magnitude", nothing)
+        vm === nothing && continue
+        vals = Float64.(vm)
+        isempty(vals) && continue
+        assigned[bus] = maximum(vals)
+    end
+
+    adjacency = _build_voltage_adjacency(net)
+    queue = collect(keys(assigned))
+    while !isempty(queue)
+        bus = popfirst!(queue)
+        v = assigned[bus]
+        for (neighbor, _, _, ratio) in get(adjacency, bus, [])
+            haskey(assigned, neighbor) && continue
+            assigned[neighbor] = v * ratio
+            push!(queue, neighbor)
+        end
+    end
+
+    assigned
+end

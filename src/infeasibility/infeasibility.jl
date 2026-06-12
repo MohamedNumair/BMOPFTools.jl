@@ -54,6 +54,7 @@ function diagnose_infeasibility(fopf_result::Dict{String,Any},
     bus_net  = get(net, "bus",       Dict())
     load_net = get(net, "load",      Dict())
     gen_net  = get(net, "generator", Dict())
+    v_nom_by_bus = _assign_nominal_voltages(net)
 
     top_buses      = Dict{String,Any}[]
     voltage_driven = 0
@@ -65,6 +66,12 @@ function diagnose_infeasibility(fopf_result::Dict{String,Any},
         v_min   = get(bus, "v_min", nothing)
         v_max   = get(bus, "v_max", nothing)
         neutral = _neutral_terminal(Vector{String}(get(bus, "terminal_names", String[])))
+
+        v_nom = get(v_nom_by_bus, bid, nothing)
+        if v_min === nothing && v_max === nothing && v_nom !== nothing
+            v_min = v_nom * 0.85
+            v_max = v_nom * 1.10
+        end
 
         # Check whether the solved voltage at each terminal is near a bound
         viol = String[]
@@ -109,16 +116,27 @@ function diagnose_infeasibility(fopf_result::Dict{String,Any},
 
     # ── Voltage bound violations across ALL buses ─────────────────────────────
     # The feasibility OPF does not enforce voltage bounds (so it always
-    # converges). Report all buses whose solved voltage violates the network's
-    # operational bounds — these are separate from KCL infeasibility.
+    # converges). Report all buses whose solved voltage violates:
+    #   1. Explicit v_min/v_max on the bus dict (operational limits), OR
+    #   2. Per-unit defaults [0.85, 1.1] of the nominal voltage derived from the
+    #      source voltage via BFS propagation (catches networks with no explicit
+    #      bounds, where voltage collapse still indicates infeasibility).
 
     volt_violations = Dict{String,Any}[]
     for (bid, bus) in bus_net
         bus_res = get(bus_result, bid, Dict())
         v_min   = get(bus, "v_min", nothing)
         v_max   = get(bus, "v_max", nothing)
-        (v_min === nothing && v_max === nothing) && continue
         neutral = _neutral_terminal(Vector{String}(get(bus, "terminal_names", String[])))
+
+        # Fall back to pu-based bounds when no explicit limits set
+        v_nom = get(v_nom_by_bus, bid, nothing)
+        if v_min === nothing && v_max === nothing && v_nom !== nothing
+            v_min = v_nom * 0.85
+            v_max = v_nom * 1.10
+        end
+        (v_min === nothing && v_max === nothing) && continue
+
         for (t, tv) in bus_res
             t == neutral && continue
             vm = get(tv, "vm", NaN)
