@@ -7,6 +7,12 @@ if _HAS_PMD
     @eval using PowerModelsDistribution
 end
 
+const _HAS_JUMP_IPOPT = !isnothing(Base.identify_package("JuMP")) &&
+                        !isnothing(Base.identify_package("Ipopt"))
+if _HAS_JUMP_IPOPT
+    @eval using JuMP, Ipopt
+end
+
 # ---------------------------------------------------------------------------
 # Minimal IEEE 13-bus inspired fixture — enough to exercise all analysis paths
 # ---------------------------------------------------------------------------
@@ -1443,6 +1449,17 @@ const IEEE13_FIXTURE = """
                              if info["is_lv"]]
                 @test !isempty(lv_levels) && all(l -> l["wires"] == "4-wire", lv_levels)
             end
+        end
+    end
+
+    # -----------------------------------------------------------------------
+    # OPF extension — requires JuMP and Ipopt
+    # -----------------------------------------------------------------------
+    @testset "OPF extension" begin
+        if !_HAS_JUMP_IPOPT
+            @test_skip "JuMP/Ipopt not in load path — skipping OPF tests"
+        else
+            include("opf_tests.jl")
         end
     end
 

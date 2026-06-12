@@ -1,6 +1,6 @@
 # BMOPF Network Summary: MV_LV_combined
 
-**Generated:** 2026-06-11 15:57:41  
+**Generated:** 2026-06-12 17:52:29  
 **Findings:** 0 errors · 14 warnings · 14 info  
 **Convention:** MV_6.4kV: mixed; LV_250V: 4-wire; 1289 grounding point(s)
 
@@ -18,7 +18,7 @@
 | generator | 1 | capacity: 0.0 W |
 | shunt | 1288 |  |
 | switch | 279 |  |
-| transformer | 33 | delta_wye×33 |
+| transformer | 33 | Dyn1×32, Dyn9×1 |
 
 ## 2. Voltage Levels
 
@@ -31,39 +31,39 @@
 
 **Transformer transitions:**
 
-- `tx3913`: MV_6.4kV → LV_240V (delta_wye)
-- `tx1777`: MV_6.4kV → LV_250V (delta_wye)
-- `tx848`: MV_6.4kV → LV_250V (delta_wye)
-- `tx269`: MV_6.4kV → LV_250V (delta_wye)
-- `tx3703`: MV_6.4kV → LV_250V (delta_wye)
-- `tx1632`: MV_6.4kV → LV_250V (delta_wye)
-- `tx1108`: MV_6.4kV → LV_250V (delta_wye)
-- `tx2620`: MV_6.4kV → LV_250V (delta_wye)
-- `tx215`: MV_6.4kV → LV_250V (delta_wye)
-- `tx2615`: MV_6.4kV → LV_250V (delta_wye)
-- `tx2458`: MV_6.4kV → LV_250V (delta_wye)
-- `tx3394`: MV_6.4kV → LV_250V (delta_wye)
-- `tx1941`: MV_6.4kV → LV_250V (delta_wye)
-- `tx1257`: MV_6.4kV → LV_250V (delta_wye)
-- `tx2177`: MV_6.4kV → LV_250V (delta_wye)
-- `tx1840`: MV_6.4kV → LV_250V (delta_wye)
-- `tx2187`: MV_6.4kV → LV_250V (delta_wye)
-- `tx3170`: MV_6.4kV → LV_250V (delta_wye)
-- `tx4271`: MV_6.4kV → LV_250V (delta_wye)
-- `tx1621`: MV_6.4kV → LV_250V (delta_wye)
-- `tx381`: MV_6.4kV → LV_250V (delta_wye)
-- `tx2831`: MV_6.4kV → LV_250V (delta_wye)
-- `tx2059`: MV_6.4kV → LV_250V (delta_wye)
-- `tx4279`: MV_6.4kV → LV_250V (delta_wye)
-- `tx2677`: MV_6.4kV → LV_250V (delta_wye)
-- `tx3831`: MV_6.4kV → LV_250V (delta_wye)
-- `tx475`: MV_6.4kV → LV_250V (delta_wye)
-- `tx4258`: MV_6.4kV → LV_250V (delta_wye)
-- `tx377`: MV_6.4kV → LV_250V (delta_wye)
-- `tx1902`: MV_6.4kV → LV_250V (delta_wye)
-- `tx3676`: MV_6.4kV → LV_250V (delta_wye)
-- `tx3270`: MV_6.4kV → LV_250V (delta_wye)
-- `tx2382`: MV_6.4kV → LV_250V (delta_wye)
+- `tx3913`: MV_6.4kV → LV_240V (delta_wye, Dyn1)
+- `tx1777`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx848`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx269`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx3703`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx1632`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx1108`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx2620`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx215`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx2615`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx2458`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx3394`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx1941`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx1257`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx2177`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx1840`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx2187`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx3170`: MV_6.4kV → LV_250V (delta_wye, Dyn9)
+- `tx4271`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx1621`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx381`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx2831`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx2059`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx4279`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx2677`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx3831`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx475`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx4258`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx377`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx1902`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx3676`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx3270`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
+- `tx2382`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
 
 ## 3. Connectivity & Topology
 

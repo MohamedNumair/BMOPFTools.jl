@@ -264,6 +264,30 @@ function render(report::SummaryReport, path::AbstractString; verbose::Bool=true)
 end
 
 # ---------------------------------------------------------------------------
+# OPF entry point — implementation lives in ext/BMOPFOpfExt (loaded when
+# JuMP and Ipopt are both available in the calling environment).
+# ---------------------------------------------------------------------------
+
+"""
+    solve_opf(net::Dict{String,Any}; optimizer=nothing, t_index::Int=1) -> Dict{String,Any}
+
+Solve the four-wire rectangular current-voltage (IVR-EN) optimal power flow
+on a BMOPF network dict. Requires JuMP and Ipopt to be loaded in the calling
+environment before calling this function.
+
+Returns a results dict with keys:
+- `"termination_status"` — JuMP termination status string
+- `"objective"` — optimal objective value (total generation cost, W·\$/W)
+- `"solve_time"` — wall-clock solve time (s)
+- `"bus"` — per-bus voltage results: `"vr"`, `"vi"`, `"vm"`, `"va"` per terminal
+- `"line"` — per-line from/to current results per conductor
+- `"generator"` — per-generator P/Q dispatch results
+- `"voltage_source"` — per-source current injection results
+"""
+function solve_opf end
+export solve_opf
+
+# ---------------------------------------------------------------------------
 # Exports
 # ---------------------------------------------------------------------------
 

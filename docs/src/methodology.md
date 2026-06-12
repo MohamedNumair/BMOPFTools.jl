@@ -166,8 +166,7 @@ current ratings.
 
 1. M. Deakin, A. Pandey, F. Geth, *Mathematical Model and Data Model for
    Up-To-Four-Wire Distribution System OPF*, IEEE Task Force on
-   Benchmarking Multiconductor OPF for Distribution Systems, draft V0.2,
-   2026.
+   Benchmarking Multiconductor OPF for Distribution Systems, draft V0.2, 2026.
 2. F. Geth, A. C. Chapman, R. Heidari, J. Clark, "Considerations and design
    goals for unbalanced optimal power flow benchmarks," *Electric Power
    Systems Research* 235 (2024) 110646.
@@ -175,8 +174,7 @@ current ratings.
    with Nonlinear Programming," *PSCC 2026*, Limassol.
 4. J. R. Carson, "Wave propagation in overhead wires with ground return,"
    *Bell System Technical Journal* 5 (1926) 539–554.
-5. W. H. Kersting, *Distribution System Modeling and Analysis*, CRC Press,
-   2002.
+5. W. H. Kersting, *Distribution System Modeling and Analysis*, CRC Press, 2002.
 6. S. Claeys, F. Geth, G. Deconinck, "Optimal power flow in four-wire
    distribution networks: Formulation and benchmarking," *Electric Power
    Systems Research* 213 (2022) 108522.
