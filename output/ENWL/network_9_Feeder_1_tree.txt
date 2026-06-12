@@ -1,0 +1,185 @@
+# Network graph  (2496 buses, compressed)
+
+sourcebus (SRC G1)
+└── 1
+    ⋮  (41 buses)
+    ├── 43
+    │   ⋮  (45 buses)
+    │   ├── 135
+    │   │   ├── 138
+    │   │   │   ⋮  (31 buses)
+    │   │   │   ├── 490
+    │   │   │   │   ⋮  (18 buses)
+    │   │   │   │   ├── 829
+    │   │   │   │   │   ⋮  (5 buses)
+    │   │   │   │   ├── 830
+    │   │   │   │   │   ⋮  (15 buses)
+    │   │   │   │   └── 831
+    │   │   │   │       ⋮  (16 buses)
+    │   │   │   └── 491
+    │   │   │       ⋮  (1 buses)
+    │   │   │       ├── 541
+    │   │   │       │   ⋮  (9 buses)
+    │   │   │       ├── 542
+    │   │   │       │   ⋮  (15 buses)
+    │   │   │       └── 543
+    │   │   │           ├── 567 (L3)
+    │   │   │           ├── 568 (L4)
+    │   │   │           ├── 569 (L5)
+    │   │   │           ├── 570 (L6)
+    │   │   ├── 139
+    │   └── 136
+    │       ⋮  (14 buses)
+    │       ├── 182
+    │       │   ├── 187
+    │       │   │   ⋮  (1 buses)
+    │       │   │   ├── 202
+    │       │   │   │   ⋮  (14 buses)
+    │       │   │   └── 203
+    │       │   │       ⋮  (12 buses)
+    │       │   │       └── 435 (L45)
+    │       │   ├── 188
+    │       │   │   ⋮  (6 buses)
+    │       └── 183
+    │           ⋮  (1 buses)
+    │           ├── 196
+    │           │   ⋮  (4 buses)
+    │           │   ├── 257
+    │           │   │   ⋮  (7 buses)
+    │           │   │   └── 407 (L34)
+    │           │   └── 258 (L1)
+    │           └── 197
+    │               ⋮  (1 buses)
+    │               ├── 217
+    │               ├── 218
+    │               │   ⋮  (6 buses)
+    │               │   ├── 320
+    │               │   │   ⋮  (7 buses)
+    │               │   │   └── 517 (L56)
+    │               │   └── 321 (L23)
+    │               └── 219
+    │                   ├── 231
+    │                   │   ⋮  (3 buses)
+    │                   └── 232
+    │                       ├── 245
+    │                       ├── 246
+    │                       │   ⋮  (3 buses)
+    │                       │   ├── 304
+    │                       │   │   ⋮  (8 buses)
+    │                       │   │   └── 518 (L67)
+    │                       │   └── 305 (L12)
+    │                       ├── 247
+    │                       │   ├── 262
+    │                       │   │   ⋮  (18 buses)
+    │                       │   └── 263
+    │                       │       ├── 277
+    │                       │       │   ⋮  (20 buses)
+    │                       │       │   ├── 721 [+870 buses, 28 loads]
+    │                       │       │   └── 722 [+736 buses, 30 loads]
+    │                       │       └── 278
+    │                       │           ⋮  (9 buses)
+    └── 44
+        ⋮  (60 buses)
+        ├── 184
+        │   ⋮  (3 buses)
+        │   ├── 220
+        │   │   ⋮  (4 buses)
+        │   │   ├── 293
+        │   │   │   ⋮  (10 buses)
+        │   │   │   └── 546 (L78)
+        │   │   └── 294
+        │   │       ├── 310
+        │   │       │   ⋮  (9 buses)
+        │   │       │   ├── 547 (L85)
+        │   │       │   └── 548 (L2)
+        │   │       ├── 311
+        │   │       │   ⋮  (2 buses)
+        │   │       │   ├── 366
+        │   │       │   │   ⋮  (10 buses)
+        │   │       │   │   └── 633 (L7)
+        │   │       │   └── 367
+        │   │       │       ⋮  (1 buses)
+        │   │       │       ├── 416
+        │   │       │       │   ⋮  (10 buses)
+        │   │       │       │   └── 671 (L8)
+        │   │       │       └── 417
+        │   │       │           ⋮  (4 buses)
+        │   └── 221
+        │       ⋮  (10 buses)
+        └── 185
+            ├── 191
+            │   ⋮  (7 buses)
+            └── 192
+                ⋮  (1 buses)
+                ├── 209
+                │   ├── 223
+                │   │   ├── 236
+                │   │   │   ├── 251
+                │   │   │   │   ├── 267
+                │   │   │   │   │   ├── 282
+                │   │   │   │   │   │   ├── 296 [+334 buses, 11 loads]
+                │   │   │   │   │   │   ├── 297
+                │   │   │   │   │   │   ├── 298 [+8 buses, 0 loads]
+                │   │   │   │   │   ├── 283
+                │   │   │   │   ├── 268
+                │   │   │   ├── 252
+                │   │   ├── 237
+                │   ├── 224
+                ├── 210
+                └── 211
+
+Loads (85 total):
+  L1 = load1              1.97 kW  SINGLE_PHASE  phases: 3
+  L2 = load10             0.27 kW  SINGLE_PHASE  phases: 1
+  L3 = load11             0.33 kW  SINGLE_PHASE  phases: 1
+  L4 = load12             0.33 kW  SINGLE_PHASE  phases: 2
+  L5 = load13             0.25 kW  SINGLE_PHASE  phases: 3
+  L6 = load14             2.04 kW  SINGLE_PHASE  phases: 1
+  L7 = load15             0.83 kW  SINGLE_PHASE  phases: 3
+  L8 = load16             0.11 kW  SINGLE_PHASE  phases: 2
+  L9 = load17             0.29 kW  SINGLE_PHASE  phases: 1
+  L10 = load18             0.32 kW  SINGLE_PHASE  phases: 2
+  L11 = load19             1.94 kW  SINGLE_PHASE  phases: 1
+  L12 = load2              0.31 kW  SINGLE_PHASE  phases: 1
+  L13 = load20             0.26 kW  SINGLE_PHASE  phases: 3
+  L14 = load21             0.34 kW  SINGLE_PHASE  phases: 2
+  L15 = load22             0.97 kW  SINGLE_PHASE  phases: 3
+  L16 = load23             0.25 kW  SINGLE_PHASE  phases: 3
+  L17 = load24             1.96 kW  SINGLE_PHASE  phases: 2
+  L18 = load25             0.29 kW  SINGLE_PHASE  phases: 2
+  L19 = load26             0.34 kW  SINGLE_PHASE  phases: 2
+  L20 = load27             0.27 kW  SINGLE_PHASE  phases: 1
+  L21 = load28             0.28 kW  SINGLE_PHASE  phases: 3
+  L22 = load29             0.35 kW  SINGLE_PHASE  phases: 3
+  L23 = load3              2.94 kW  SINGLE_PHASE  phases: 2
+  L24 = load30             0.26 kW  SINGLE_PHASE  phases: 1
+  L25 = load31             0.28 kW  SINGLE_PHASE  phases: 3
+  L26 = load32             0.34 kW  SINGLE_PHASE  phases: 1
+  L27 = load33             0.29 kW  SINGLE_PHASE  phases: 2
+  L28 = load34             2.75 kW  SINGLE_PHASE  phases: 2
+  L29 = load35             0.96 kW  SINGLE_PHASE  phases: 3
+  L30 = load36             0.32 kW  SINGLE_PHASE  phases: 1
+  L31 = load37             0.28 kW  SINGLE_PHASE  phases: 3
+  L32 = load38             0.28 kW  SINGLE_PHASE  phases: 2
+  L33 = load39             9.74 kW  SINGLE_PHASE  phases: 3
+  L34 = load4              0.32 kW  SINGLE_PHASE  phases: 3
+  L35 = load40             0.29 kW  SINGLE_PHASE  phases: 1
+  L36 = load41             0.29 kW  SINGLE_PHASE  phases: 1
+  L37 = load42             0.15 kW  SINGLE_PHASE  phases: 2
+  L38 = load43             0.32 kW  SINGLE_PHASE  phases: 3
+  L39 = load44             1.87 kW  SINGLE_PHASE  phases: 1
+  L40 = load45             5.59 kW  SINGLE_PHASE  phases: 2
+  L41 = load46             0.34 kW  SINGLE_PHASE  phases: 3
+  L42 = load47             0.35 kW  SINGLE_PHASE  phases: 1
+  L43 = load48             0.22 kW  SINGLE_PHASE  phases: 1
+  L44 = load49             0.32 kW  SINGLE_PHASE  phases: 3
+  L45 = load5              1.33 kW  SINGLE_PHASE  phases: 1
+  L46 = load50             0.32 kW  SINGLE_PHASE  phases: 3
+  L47 = load51             0.33 kW  SINGLE_PHASE  phases: 1
+  L48 = load52             0.23 kW  SINGLE_PHASE  phases: 2
+  L49 = load53             0.92 kW  SINGLE_PHASE  phases: 2
+  L50 = load54             0.29 kW  SINGLE_PHASE  phases: 3
+  … and 35 more (pass legend_limit= to show all)
+
+Generators (1 total):
+  G1 = slack_source     max    0.0 kW

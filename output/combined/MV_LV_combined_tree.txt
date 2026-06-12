@@ -1,0 +1,88 @@
+# Network graph  (3409 buses, compressed)
+
+b1726 (SRC G1)
+└── b224
+    ⋮  (7 buses)
+    └── [SW]── b503
+        └── b2389
+            ├── b175
+            │   └── [SW]── b655
+            │       └── b2025
+            │           ⋮  (1 buses)
+            │           └── [SW]── b96
+            │               └── b1714
+            │                   ├── b1127
+            │                   │   └── [SW]── b2534
+            │                   │       └── b1386 [+205 buses, 94 loads]
+            │                   ├── b3171
+            │                   │   └── [SW]── b1812
+            │                   │       └── b3029 [+2933 buses, 1040 loads]
+            ├── b712
+            │   └── [SW]── b479
+            │       └── b380
+            │           └── [tx2059: Dyn1 11.0kV/433V]── b255
+            │               ├── b1350
+            │               │   └── [SW]── b3034
+            │               │       └── b2727
+            │               │           ├── b2726 [+61 buses, 30 loads]
+            │               │           ├── b3028 [+59 buses, 31 loads]
+            │               │           ├── b732 [+57 buses, 31 loads]
+            │               │           └── b899 [+58 buses, 27 loads]
+            │               ├── b2889 (L194)
+            │               ├── b517 (L584)
+
+Loads (1255 total):
+  L1 = ld1000_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L2 = ld1003_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L3 = ld100_load_b       10.0 kW  SINGLE_PHASE  phases: 2
+  L4 = ld1010_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L5 = ld1014_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L6 = ld1017_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L7 = ld101_load_a       10.0 kW  SINGLE_PHASE  phases: 1
+  L8 = ld1023_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L9 = ld1025_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L10 = ld1028_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L11 = ld1031_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L12 = ld1032_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L13 = ld1036_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L14 = ld1037_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L15 = ld1039_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L16 = ld1049_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L17 = ld1056_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L18 = ld1058_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L19 = ld105_load_c       10.0 kW  SINGLE_PHASE  phases: 3
+  L20 = ld1063_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L21 = ld1064_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L22 = ld1065_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L23 = ld1066_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L24 = ld106_load_a       10.0 kW  SINGLE_PHASE  phases: 1
+  L25 = ld1070_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L26 = ld1073_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L27 = ld1077_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L28 = ld1082_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L29 = ld1084_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L30 = ld1085_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L31 = ld1086_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L32 = ld1092_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L33 = ld1102_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L34 = ld1103_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L35 = ld1104_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L36 = ld1106_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L37 = ld1109_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L38 = ld1119_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L39 = ld111_load_c       10.0 kW  SINGLE_PHASE  phases: 3
+  L40 = ld1121_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L41 = ld1125_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L42 = ld1126_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L43 = ld1127_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L44 = ld1128_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L45 = ld1129_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L46 = ld1132_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L47 = ld1136_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L48 = ld1137_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L49 = ld1139_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L50 = ld1140_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  … and 1205 more (pass legend_limit= to show all)
+
+Generators (1 total):
+  G1 = slack_source     max    0.0 kW

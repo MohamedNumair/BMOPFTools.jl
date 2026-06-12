@@ -1,0 +1,141 @@
+# Network graph  (316 buses, compressed)
+
+b271 (SRC G1)
+└── [tx1108: Dyn1 11.0kV/433V]── b468
+    ├── b2518
+    │   └── [SW]── b2284
+    │       └── b1328
+    │           ├── b1223
+    │           │   └── [SW]── b2904
+    │           │       └── b830
+    │           │           ├── b1583 (L86)
+    │           │           ├── b1694
+    │           │           │   ├── b1022
+    │           │           │   ├── b1355 (L123)
+    │           │           │   ├── b1401 (L142)
+    │           │           ├── b1950
+    │           │           │   ├── b159
+    │           │           │   ├── b2657 (L96)
+    │           │           │   ├── b2884
+    │           │           │   │   ├── b1573 (L103)
+    │           │           │   │   ├── b2012
+    │           │           │   │   │   ├── b143
+    │           │           │   │   │   ├── b1829 [+21 buses, 13 loads]
+    │           │           │   │   │   ├── b1859 (L40)
+    │           │           │   │   │   ├── b521 [+25 buses, 14 loads]
+    │           │           │   │   │   ├── b811 (L78)
+    │           │           │   │   ├── b2065 (L8)
+    │           │           │   │   ├── b264
+    │           │           │   │   │   ├── b1230
+    │           │           │   │   │   ├── b1994 (L38)
+    │           │           │   │   │   ├── b2309 (L43)
+    │           │           │   │   │   ├── b2544 (L104)
+    │           │           │   ├── b44
+    │           │           │   ├── b461
+    │           │           │   │   ├── b147 (L37)
+    │           │           │   │   ├── b2780
+    │           │           │   │   ├── b2805 (L143)
+    │           │           │   │   ├── b3114
+    │           │           │   │   │   ├── b1543
+    │           │           │   │   │   ├── b1545 (L60)
+    │           │           │   │   │   ├── b2117 [+48 buses, 28 loads]
+    │           │           │   │   │   ├── b3169 [+2 buses, 2 loads]
+    │           │           │   │   │   ├── b3260 (L135)
+    │           │           ├── b2893 (L19)
+    │           ├── b1705
+    │           │   └── [SW]── b3264
+    │           │       └── b626
+    │           │           └── [SW]── b25
+    │           │               └── b2317
+    │           │                   ├── b1895
+    │           │                   │   ├── b1032 (L131)
+    │           │                   │   ├── b1922 (L81)
+    │           │                   │   ├── b2099 [+27 buses, 5 loads]
+    │           │                   │   ├── b2682
+    │           │                   │   ├── b29 [+24 buses, 14 loads]
+    │           │                   ├── b2756
+    │           │                   ├── b2849
+    │           │                   │   ├── b1070 [+9 buses, 6 loads]
+    │           │                   │   ├── b1129 (L73)
+    │           │                   │   ├── b2254 (L109)
+    │           │                   │   ├── b3036 [+3 buses, 2 loads]
+    │           ├── b1785
+    │           │   └── [SW]── b818
+    │           │       └── b3107
+    │           │           └── [SW]── b990
+    │           │               └── b1487
+    │           │                   ├── b1132
+    │           │                   │   ├── b11 (L23)
+    │           │                   │   ├── b1614 [+3 buses, 2 loads]
+    │           │                   │   ├── b1788 [+2 buses, 2 loads]
+    │           │                   │   ├── b3186
+    │           │                   │   ├── b3296 (L61)
+    │           │                   ├── b1227 (L72)
+    │           │                   ├── b2433 (L121)
+    │           │                   ├── b2890
+    │           │                   │   ├── b1736 [+26 buses, 16 loads]
+    │           │                   │   ├── b2038 [+42 buses, 20 loads]
+    │           │                   │   ├── b2358 (L99)
+    │           │                   │   ├── b903 [+1 buses, 0 loads]
+    │           │                   ├── b2892
+    │           ├── b3307
+    │           │   └── [SW]── b2785
+    │           │       └── b1671
+    │           ├── b567 (L9)
+    ├── b316 (L62)
+
+Loads (151 total):
+  L1 = ld101_load_a       10.0 kW  SINGLE_PHASE  phases: 1
+  L2 = ld1063_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L3 = ld1127_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L4 = ld1178_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L5 = ld1197_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L6 = ld1248_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L7 = ld1267_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L8 = ld126_load_b       10.0 kW  SINGLE_PHASE  phases: 2
+  L9 = ld1308_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L10 = ld1315_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L11 = ld1368_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L12 = ld1389_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L13 = ld138_load_c       10.0 kW  SINGLE_PHASE  phases: 3
+  L14 = ld1415_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L15 = ld1449_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L16 = ld1479_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L17 = ld1480_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L18 = ld1496_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L19 = ld150_load_a       10.0 kW  SINGLE_PHASE  phases: 1
+  L20 = ld1511_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L21 = ld1559_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L22 = ld1561_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L23 = ld159_load_b       10.0 kW  SINGLE_PHASE  phases: 2
+  L24 = ld1603_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L25 = ld1607_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L26 = ld1622_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L27 = ld1638_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L28 = ld1654_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L29 = ld1660_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L30 = ld1678_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L31 = ld167_load_c       10.0 kW  SINGLE_PHASE  phases: 3
+  L32 = ld1707_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L33 = ld1730_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L34 = ld1898_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L35 = ld1943_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L36 = ld1945_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L37 = ld1953_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L38 = ld1973_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L39 = ld1993_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L40 = ld2011_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L41 = ld2092_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L42 = ld2096_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L43 = ld2138_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L44 = ld2139_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L45 = ld2172_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L46 = ld2179_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L47 = ld2192_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L48 = ld2201_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L49 = ld2260_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L50 = ld2300_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  … and 101 more (pass legend_limit= to show all)
+
+Generators (1 total):
+  G1 = slack_source     max    0.0 kW

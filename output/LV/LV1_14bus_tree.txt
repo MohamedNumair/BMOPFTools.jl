@@ -1,0 +1,24 @@
+# Network graph  (15 buses)
+
+b2577 (SRC G1)
+└── [tx3170: Dyn9 11.0kV/433V]── b179
+    ├── b1989
+    ├── b2984
+    │   └── [SW]── b2123
+    │       └── b2734
+    │           ├── b1133
+    │           │   ├── b2656 (L2)
+    │           │   ├── [SW]── b514
+    │           ├── b1977
+    │           ├── b2327
+    │           │   ├── [SW]── b232
+    │           │   ├── b3230 (L1)
+    │           ├── b3218
+    │           │   └── [SW]── b1149
+
+Loads (2 total):
+  L1 = ld3313_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L2 = ld3433_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+
+Generators (1 total):
+  G1 = slack_source     max    0.0 kW
