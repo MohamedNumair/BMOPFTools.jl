@@ -191,6 +191,50 @@ function _set_voltage_start_values!(vars, net, bus_terminals, grounded)
 end
 
 """
+    _set_level_aware_start_values!(vars, net, bus_terminals, grounded)
+
+Like `_set_voltage_start_values!` but uses per-bus nominal voltages derived
+from the BFS voltage propagation (`_assign_nominal_voltages`). This correctly
+initialises LV buses at ~250 V rather than at the source voltage (~6350 V),
+preventing Ipopt from converging to the degenerate high-voltage local minimum
+that arises in the unconstrained feasibility OPF.
+"""
+function _set_level_aware_start_values!(vars, net, bus_terminals, grounded)
+    vr = vars[:vr]; vi = vars[:vi]
+
+    t_angle = Dict{String,Float64}(
+        "1" => 0.0, "2" => -2.0944, "3" => 2.0944, "n" => 0.0)
+
+    for (_, vs) in get(net, "voltage_source", Dict())
+        tm   = Vector{String}(get(vs, "terminal_map", String[]))
+        vang = Float64.(get(vs, "v_angle", Float64[]))
+        for (k, t) in enumerate(tm)
+            k ≤ length(vang) && (t_angle[t] = vang[k])
+        end
+        break
+    end
+
+    v_nom_by_bus = BMOPFTools._assign_nominal_voltages(net)
+
+    for (bid, terminals) in bus_terminals
+        nt    = BMOPFTools._neutral_terminal(terminals)
+        v_nom = get(v_nom_by_bus, bid, 1000.0)
+        for t in terminals
+            (bid, t) in grounded && continue
+            key = (bid, t)
+            if t == nt
+                JuMP.set_start_value(vr[key], 0.0)
+                JuMP.set_start_value(vi[key], 0.0)
+            else
+                ang = get(t_angle, t, 0.0)
+                JuMP.set_start_value(vr[key], v_nom * cos(ang))
+                JuMP.set_start_value(vi[key], v_nom * sin(ang))
+            end
+        end
+    end
+end
+
+"""
     _build_vars(model, net, bus_terminals, grounded) -> Dict{Symbol,Any}
 
 Declare all JuMP variables and return them in a single dict.
