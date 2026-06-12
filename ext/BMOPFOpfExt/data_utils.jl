@@ -1,0 +1,108 @@
+# Helpers for extracting network data into OPF-ready structures.
+# All values remain in SI units: Ω, V, A, W, var.
+
+# Re-export the matrix builder from the parent package internals.
+const _pkm = BMOPFTools._pattern_keys_to_matrix
+
+"""
+    _bus_terminals(net) -> Dict{String, Vector{String}}
+
+Map each bus id to its ordered list of terminal names.
+"""
+function _bus_terminals(net::Dict{String,Any})
+    bt = Dict{String,Vector{String}}()
+    for (bid, bus) in get(net, "bus", Dict())
+        bt[bid] = Vector{String}(get(bus, "terminal_names", String[]))
+    end
+    bt
+end
+
+"""
+    _grounded_terminals(net) -> Set{Tuple{String,String}}
+
+Set of (bus_id, terminal) pairs that are perfectly grounded (vr=vi=0).
+Includes `perfectly_grounded_terminals` declared on buses.
+"""
+function _grounded_terminals(net::Dict{String,Any})
+    grounded = Set{Tuple{String,String}}()
+    for (bid, bus) in get(net, "bus", Dict())
+        for t in get(bus, "perfectly_grounded_terminals", String[])
+            push!(grounded, (bid, string(t)))
+        end
+    end
+    grounded
+end
+
+"""
+    _line_z_matrix(line, linecodes) -> (R::Matrix, X::Matrix, n::Int)
+
+Return the total series impedance matrices (Ω) for a line and the number
+of conductors. R = R_series_per_m × length, same for X.
+Returns (nothing, nothing, 0) if the linecode is missing.
+"""
+function _line_z_matrix(line::Dict{String,Any}, linecodes::Dict{String,Any})
+    lcid = get(line, "linecode", nothing)
+    lcid === nothing && return (nothing, nothing, 0)
+    lc = get(linecodes, lcid, nothing)
+    lc === nothing && return (nothing, nothing, 0)
+
+    R_pm = _pkm(lc, "R_series_")   # Ω/m
+    X_pm = _pkm(lc, "X_series_")   # Ω/m
+    len  = Float64(get(line, "length", 1.0))  # m
+
+    R_pm === nothing && (R_pm = zeros(1,1))
+    X_pm === nothing && (X_pm = zeros(size(R_pm)...))
+
+    n = size(R_pm, 1)
+    (R_pm .* len, X_pm .* len, n)
+end
+
+"""
+    _neutral_pos(terminal_map) -> Union{Int,Nothing}
+
+Return the 1-based position of the neutral terminal in `terminal_map`,
+or `nothing` if none is identified.
+"""
+function _neutral_pos(terminal_map::Vector{String})
+    nt = BMOPFTools._neutral_terminal(terminal_map)
+    nt === nothing && return nothing
+    findfirst(==(nt), terminal_map)
+end
+
+"""
+    _phase_positions(terminal_map) -> Vector{Int}
+
+Return the 1-based positions of the non-neutral conductors in `terminal_map`.
+"""
+function _phase_positions(terminal_map::Vector{String})
+    np = _neutral_pos(terminal_map)
+    [k for k in eachindex(terminal_map) if k != np]
+end
+
+"""
+    _source_fixed_terminals(net) -> Set{Tuple{String,String}}
+
+Collect all (bus_id, terminal) pairs whose voltage is fixed by a voltage source.
+These must be excluded from voltage bound constraints.
+"""
+function _source_fixed_terminals(net::Dict{String,Any})
+    fixed = Set{Tuple{String,String}}()
+    for (_, vs) in get(net, "voltage_source", Dict())
+        bus = get(vs, "bus", "")
+        for t in Vector{String}(get(vs, "terminal_map", String[]))
+            push!(fixed, (bus, t))
+        end
+    end
+    fixed
+end
+
+"""
+    _xfmr_turns_ratio(xfmr) -> Float64
+
+Return N = v_ref_from / v_ref_to, defaulting to 1.0 if either is missing or zero.
+"""
+function _xfmr_turns_ratio(xfmr::Dict{String,Any})
+    vf = Float64(get(xfmr, "v_ref_from", 1.0))
+    vt = Float64(get(xfmr, "v_ref_to",   1.0))
+    (vt == 0.0) ? 1.0 : vf / vt
+end
