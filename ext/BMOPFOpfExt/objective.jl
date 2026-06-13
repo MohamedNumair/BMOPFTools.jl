@@ -10,6 +10,19 @@
 # We accumulate a single QuadExpr (covers both linear and quadratic cases)
 # and set it as the objective once.
 
+"""
+    _add_objective!(model, net, vars)
+
+Set the JuMP objective to minimise total active-power generation cost.
+
+Cost coefficients per generator come from the `"cost"` field:
+- Scalar `c1`               → linear cost `c1·P` per phase
+- 3-vector `[c2, c1, c0]`   → `c2·P² + c1·P + c0` per phase
+
+Only the linear term `c1·P` is exact in the current IVR-EN variables because `P`
+is bilinear in voltage and current.  A non-zero quadratic coefficient `c2` emits
+a warning and is *not* added to the objective.
+"""
 function _add_objective!(model, net, vars)
     vr = vars[:vr]; vi = vars[:vi]
     crg = vars[:crg]; cig = vars[:cig]

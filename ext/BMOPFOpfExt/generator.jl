@@ -15,6 +15,21 @@
 # Fix vr[bus, t] = v_mag[k]*cos(v_ang[k]), vi = v_mag[k]*sin(v_ang[k]).
 # cr_src / ci_src are free variables that appear in KCL (slack injection).
 
+"""
+    _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
+
+Add constant-power P/Q bound constraints for all generators and register generator
+currents in the KCL accumulators.
+
+For WYE/SINGLE_PHASE generators, real and reactive power per phase `k` are
+related to the phase-to-neutral voltage and the current variables by:
+```
+  P_k = (vr_ph − vr_n)·crg[k] + (vi_ph − vi_n)·cig[k]
+  Q_k = (vi_ph − vi_n)·crg[k] − (vr_ph − vr_n)·cig[k]
+```
+with `p_min[k] ≤ P_k ≤ p_max[k]` and `q_min[k] ≤ Q_k ≤ q_max[k]`.
+DELTA generators use the same bilinear form with line-to-line voltage.
+"""
 function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
     vr = vars[:vr]; vi = vars[:vi]
     crg = vars[:crg]; cig = vars[:cig]
@@ -81,6 +96,16 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
     end
 end
 
+"""
+    _add_source_constraints!(net, vars, kcl_r, kcl_i)
+
+Fix bus voltages at voltage-source terminals and inject unconstrained slack current
+`cr_src / ci_src` into the KCL accumulators.
+
+Each terminal is fixed to the rectangular value `v_mag·cos(v_ang)`, `v_mag·sin(v_ang)`.
+The slack current absorbs whatever KCL imbalance the rest of the network demands,
+making the source bus the power-flow slack bus.
+"""
 function _add_source_constraints!(net, vars, kcl_r, kcl_i)
     vr = vars[:vr]; vi = vars[:vi]
     cr_src = vars[:cr_src]; ci_src = vars[:ci_src]

@@ -18,6 +18,21 @@
 #   Q_k = (vi[t_pos] - vi[t_neg]) * crd[k] - (vr[t_pos] - vr[t_neg]) * cid[k]
 # KCL: at t_pos -= crd[k], at t_neg += crd[k].
 
+"""
+    _add_load_constraints!(model, net, vars, kcl_r, kcl_i)
+
+Add constant-power (fixed P and Q) load constraints for all loads and register
+load currents in the KCL accumulators.
+
+Both WYE and DELTA topologies use the bilinear rectangular power equations:
+```
+  P_k = Δvr·crd[k] + Δvi·cid[k]  ==  p_nom[k]
+  Q_k = Δvi·crd[k] − Δvr·cid[k]  ==  q_nom[k]
+```
+where `Δv` is phase-to-neutral (WYE) or line-to-line (DELTA).
+Neutral return current flows through KCL automatically and is not an
+independent variable.
+"""
 function _add_load_constraints!(model, net, vars, kcl_r, kcl_i)
     vr = vars[:vr]; vi = vars[:vi]
     crd = vars[:crd]; cid = vars[:cid]

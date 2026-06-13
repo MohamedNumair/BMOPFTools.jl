@@ -14,6 +14,20 @@
 #   bus_from terminal tmfr[k] : -cr_fr[k]
 #   bus_to   terminal tmto[k] : +cr_to[k]   (= -cr_fr[k] via the above)
 
+"""
+    _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
+
+Add KVL, current-balance, and optional current-magnitude constraints for all lines,
+and register each conductor's current contribution in the KCL accumulators.
+
+Series impedance (total, Ω) per conductor `k`:
+```
+  vr[from,k] − vr[to,k]  =  Σⱼ ( R[k,j]·cr_fr[j] − X[k,j]·ci_fr[j] )
+  vi[from,k] − vi[to,k]  =  Σⱼ ( R[k,j]·ci_fr[j] + X[k,j]·cr_fr[j] )
+```
+No-shunt assumption: `cr_to = −cr_fr`.  Shunt admittance (G/B pi-model) is not
+modelled; most distribution linecodes do not specify it.
+"""
 function _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
     linecodes = get(net, "linecode", Dict())
     vr = vars[:vr]; vi = vars[:vi]
@@ -71,6 +85,17 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
     end
 end
 
+"""
+    _add_switch_constraints!(model, net, vars, kcl_r, kcl_i)
+
+Add constraints for all switches and register switch currents in the KCL accumulators.
+
+A *closed* switch short-circuits its two terminals (zero-impedance coupling):
+  `vr[from,k] == vr[to,k]`,  `vi[from,k] == vi[to,k]`
+
+An *open* switch has its current fixed to zero by `_add_switch_variables!`; no
+voltage coupling is imposed (terminals are electrically disconnected).
+"""
 function _add_switch_constraints!(model, net, vars, kcl_r, kcl_i)
     vr = vars[:vr]; vi = vars[:vi]
     cr_sw = vars[:cr_sw]; ci_sw = vars[:ci_sw]
