@@ -1,3 +1,54 @@
+"""
+    BMOPFOpfExt
+
+Julia package extension that implements the four-wire rectangular current-voltage
+(IVR-EN) optimal power flow for BMOPF networks.  Loaded automatically when both
+`JuMP` and `Ipopt` are present in the calling environment.
+
+## Formulation
+
+Variables (all rectangular, SI units — V and A):
+- `vr / vi`       — real/imaginary voltage at every bus terminal
+- `cr_fr / ci_fr` — series current leaving each line's from-terminal
+- `cr_to / ci_to` — series current entering each line's to-terminal
+- `crd / cid`     — load current (one per phase conductor)
+- `crg / cig`     — generator current (one per phase conductor)
+- `cr_src/ci_src` — slack-bus injection current (unconstrained)
+- `cr_xf / ci_xf` — transformer branch current (from- and to-side)
+- `cr_sw / ci_sw` — switch current (zeroed when open)
+
+KCL sign convention: positive current flows **into** the bus.  Every component
+function adds its contribution to the KCL accumulator dicts `(kcl_r, kcl_i)`;
+`_add_kcl_constraints!` then enforces `sum == 0` at every ungrounded terminal.
+
+## Build pipeline (solve_opf / solve_feasibility_opf)
+
+1. `_bus_terminals` / `_grounded_terminals`  — index network topology
+2. `_build_vars`                             — declare all JuMP variables
+3. `_set_voltage_start_values!`              — warm-start Ipopt
+4. `_add_voltage_bounds!`                    — operational V limits (solve_opf only)
+5. `_add_source_constraints!`                — fix slack-bus voltages; register cr_src in KCL
+6. `_add_line/switch/transformer_constraints!` — KVL + KCL contributions
+7. `_add_load/generator_constraints!`        — constant-power equations + KCL
+8. `_add_kcl_constraints!`                   — enforce KCL == 0 at every node
+9. `_add_objective!` / slack objective       — set JuMP objective
+10. `_extract_results`                       — pack solution into plain Dict
+
+## File layout
+
+| File                | Contents                                          |
+|---------------------|---------------------------------------------------|
+| `data_utils.jl`     | Network indexing helpers (`_bus_terminals`, etc.) |
+| `variables.jl`      | JuMP variable declarations and start-value init   |
+| `bus.jl`            | Voltage bounds, KCL accumulators, `_kcl_add!`     |
+| `branch.jl`         | Line KVL/current-balance; switch voltage-coupling |
+| `transformer.jl`    | YY, Dy, Yd transformer voltage + current coupling |
+| `load.jl`           | Constant-power load constraints (WYE / DELTA)     |
+| `generator.jl`      | Generator P/Q bounds; voltage-source fixing       |
+| `objective.jl`      | Generation-cost objective (linear + quadratic)    |
+| `results.jl`        | Solution extraction to `Dict{String,Any}`         |
+| `feasibility_opf.jl`| Elastic KCL-slack formulation (always feasible)   |
+"""
 module BMOPFOpfExt
 
 using BMOPFTools

@@ -10,6 +10,7 @@
 #   cr_xf/ci_xf  : Dict{Tuple{String,String,Int},VariableRef} (xfmr_id, "fr"/"to", k)
 #   cr_sw/ci_sw  : Dict{Tuple{String,Int},    VariableRef}  (sw_id,   conductor_pos)
 
+"Declare `vr`/`vi` voltage variables at every bus terminal; fix grounded terminals to 0."
 function _add_voltage_variables!(model, bus_terminals, grounded)
     vr = Dict{Tuple{String,String}, JuMP.VariableRef}()
     vi = Dict{Tuple{String,String}, JuMP.VariableRef}()
@@ -31,6 +32,7 @@ function _add_voltage_variables!(model, bus_terminals, grounded)
     vr, vi
 end
 
+"Declare `cr_fr`/`ci_fr` and `cr_to`/`ci_to` series current variables for each line conductor."
 function _add_line_variables!(model, net)
     cr_fr = Dict{Tuple{String,Int}, JuMP.VariableRef}()
     ci_fr = Dict{Tuple{String,Int}, JuMP.VariableRef}()
@@ -49,6 +51,7 @@ function _add_line_variables!(model, net)
     cr_fr, ci_fr, cr_to, ci_to
 end
 
+"Declare `cr_sw`/`ci_sw` switch current variables; fix open-switch currents to 0."
 function _add_switch_variables!(model, net)
     cr_sw = Dict{Tuple{String,Int}, JuMP.VariableRef}()
     ci_sw = Dict{Tuple{String,Int}, JuMP.VariableRef}()
@@ -68,6 +71,7 @@ function _add_switch_variables!(model, net)
     cr_sw, ci_sw
 end
 
+"Declare `crd`/`cid` load current variables (one per phase conductor; neutral excluded)."
 function _add_load_variables!(model, net)
     crd = Dict{Tuple{String,Int}, JuMP.VariableRef}()
     cid = Dict{Tuple{String,Int}, JuMP.VariableRef}()
@@ -86,6 +90,7 @@ function _add_load_variables!(model, net)
     crd, cid
 end
 
+"Declare `crg`/`cig` generator current variables (one per phase conductor; neutral excluded)."
 function _add_generator_variables!(model, net)
     crg = Dict{Tuple{String,Int}, JuMP.VariableRef}()
     cig = Dict{Tuple{String,Int}, JuMP.VariableRef}()
@@ -102,6 +107,7 @@ function _add_generator_variables!(model, net)
     crg, cig
 end
 
+"Declare `cr_src`/`ci_src` voltage-source slack current variables (one per terminal)."
 function _add_source_variables!(model, net)
     cr_src = Dict{Tuple{String,Int}, JuMP.VariableRef}()
     ci_src = Dict{Tuple{String,Int}, JuMP.VariableRef}()
@@ -116,6 +122,7 @@ function _add_source_variables!(model, net)
     cr_src, ci_src
 end
 
+"Declare `cr_xf`/`ci_xf` transformer branch current variables for both winding sides."
 function _add_transformer_variables!(model, net)
     cr_xf = Dict{Tuple{String,String,Int}, JuMP.VariableRef}()
     ci_xf = Dict{Tuple{String,String,Int}, JuMP.VariableRef}()
