@@ -48,6 +48,7 @@ analyze
 render
 render_terminal
 render_markdown
+render_ascii_tree
 ```
 
 ## Analysis passes
