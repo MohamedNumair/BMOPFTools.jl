@@ -353,8 +353,8 @@ function _render_spec_benchmark(r::SummaryReport, io::IO; color::Bool=false)
                 get(bench, "only_slack_generation", "?"); indent=4)
         _kv_row(io, "Buses with |V| bounds",
                 "$(get(bench, "pct_v_bounds", "?"))%"; indent=4)
-        _kv_row(io, "vpn/vpp/vsym bounds",
-                "$(get(bench,"n_vpn_bounds",0)) / $(get(bench,"n_vpp_bounds",0)) / $(get(bench,"n_vsym_bounds",0)) buses"; indent=4)
+        _kv_row(io, "vpn/vpp/vpos bounds",
+                "$(get(bench,"n_vpn_bounds",0)) / $(get(bench,"n_vpp_bounds",0)) / $(get(bench,"n_vpos_bounds",0)) buses"; indent=4)
         _kv_row(io, "Lines with thermal limits",
                 "$(get(bench, "pct_thermal_limits", "?"))%"; indent=4)
 

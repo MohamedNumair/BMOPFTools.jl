@@ -108,6 +108,7 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
 
     # Voltage bounds
     _add_voltage_bounds!(model, working, bus_terminals, grounded, vars)
+    _add_bus_limit_constraints!(model, working, bus_terminals, grounded, vars)
 
     # Voltage source: fix slack voltages and register slack current in KCL
     kcl_r, kcl_i = _init_kcl(bus_terminals, grounded)
@@ -115,6 +116,7 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
 
     # Branch constraints and KCL contributions
     _add_line_constraints!(model, working, vars, kcl_r, kcl_i)
+    _add_line_angle_constraints!(model, working, vars)
     _add_switch_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_transformer_constraints!(model, working, vars, kcl_r, kcl_i)
 

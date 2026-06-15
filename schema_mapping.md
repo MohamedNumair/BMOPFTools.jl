@@ -26,7 +26,7 @@ JSON schema and the PowerModelsDistribution (PMD) ENGINEERING data model.
 | `perfectly_grounded_terminals` | `grounded` + `rg=0` + `xg=0` | Perfect ground = zero impedance |
 | `v_min` (V) | `vm_lb` (p.u.) | Needs voltage base |
 | `v_max` (V) | `vm_ub` (p.u.) | Needs voltage base |
-| `vpn_min/max`, `vpp_min/max`, `vsym_min/max` | *(no equivalent)* | BMOPF-only constraints |
+| `vpn_min/max`, `vpp_min/max`, `vpos_min/max` | *(no equivalent)* | BMOPF-only constraints |
 
 ### line
 | BMOPF | PMD | Notes |
