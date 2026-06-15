@@ -196,20 +196,20 @@ function benchmark_readiness_check(net::Dict{String,Any},
     n_vb   = count(b -> haskey(b, "v_min")    || haskey(b, "v_max"),    values(buses))
     n_vpn  = count(b -> haskey(b, "vpn_min")  || haskey(b, "vpn_max"),  values(buses))
     n_vpp  = count(b -> haskey(b, "vpp_min")  || haskey(b, "vpp_max"),  values(buses))
-    n_vsym = count(b -> haskey(b, "vsym_min") || haskey(b, "vsym_max"), values(buses))
+    n_vpos = count(b -> haskey(b, "vpos_min") || haskey(b, "vpos_max"), values(buses))
     result["pct_v_bounds"]   = n_buses > 0 ? round(100.0 * n_vb / n_buses, digits=1) : 0.0
     result["n_vpn_bounds"]   = n_vpn
     result["n_vpp_bounds"]   = n_vpp
-    result["n_vsym_bounds"]  = n_vsym
+    result["n_vpos_bounds"]  = n_vpos
 
     if n_buses > 0 && n_vb == 0
         push!(suggestions,
             "no voltage magnitude bounds on any bus — voltage is " *
             "unconstrained; add v_min/v_max (phase-to-ground)")
     end
-    if n_buses > 0 && n_vsym == 0 && n_vpn == 0
+    if n_buses > 0 && n_vpos == 0 && n_vpn == 0
         push!(suggestions,
-            "no phase-to-neutral or sequence voltage bounds (vpn_*/vsym_*) — " *
+            "no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — " *
             "sequence bounds also improve solver robustness for 4-wire OPF")
     end
 

@@ -12,7 +12,7 @@ Terminal names are free strings (Table 11), but nothing in the data model
 identifies *which* terminal is the neutral, nor the phase *order*:
 
 - `vpn_min/max` bounds and Eq. (55) require knowing the neutral;
-- `vsym_min/max` bounds require the a→b→c rotation order (the Fortescue
+- `vpos_min/max` bounds require the a→b→c rotation order (the Fortescue
   matrix **F** in Eq. (62) is order-sensitive).
 
 Presumably the convention is positional (terminals listed in phase order,
@@ -61,7 +61,7 @@ phase-separation bounds (68), but §4.2 defines no fields to carry the θ
 limits. Companion numerical work (PSCC 2026) shows angle/sequence
 constraints are precisely what rescues NLP convergence under bad
 initialisation, so the data model should arguably carry them — or the spec
-should state that (68) is exercised only via the `vsym_*` route (Eq. 64,
+should state that (68) is exercised only via the `vpos_*` route (Eq. 64,
 which forcing `U_max,2 = U_max,1 = 0` makes equivalent).
 
 ## 4. Symmetric matrix storage: full or upper-triangular?
@@ -189,6 +189,96 @@ EPSR roadmap). Converter authors need guidance here either way.
   therefore be generated through converters with verified unit handling;
   consider adding representative magnitude ranges to the spec as a sanity
   appendix.
+
+## 14. Several limit types in the feasible set have no data model fields
+
+The V0.2 data model defines `v_min`/`v_max` (phase-to-ground), `vpn_min`/`vpn_max`
+(phase-to-neutral, Eq. 55), and `vpos_min`/`vpos_max` (positive-sequence, Eq. 64),
+but the following limit types appear in the math model or are natural engineering
+requirements with no assigned §4.2 field names.
+
+**Bus-level, voltage magnitude:**
+
+| Field | Constraint | Notes |
+|---|---|---|
+| `vpp_min` / `vpp_max` | `vpp_min² ≤ \|V_j − V_k\|² ≤ vpp_max²` per unordered phase pair (j,k) | Complements `vpn` and `v_min/max`; all three constrain distinct quantities on a 4-wire bus |
+| `vn_max` | `\|V_n\|² ≤ vn_max²` at the neutral terminal | Controls neutral displacement voltage; no counterpart in §4.2 |
+| `vneg_max` | `\|V₂\|² ≤ vneg_max²` | Negative-sequence counterpart to `vpos_max`; Eq. (62) defines V₂ but the spec bounds only V₁ |
+| `vzero_max` | `\|V₀\|² ≤ vzero_max²` | Zero-sequence counterpart; same issue |
+
+All four are quadratic in rectangular voltage variables and fit the IVR-EN formulation
+without approximation. `vneg_max` and `vzero_max` share the three-ordered-phase-terminal
+precondition of `vpos_min/max` (see item 1).
+
+**Bus-level, voltage angle separation (intra-bus):**
+
+Table 7 Eq. (68) bounds the angle between phase terminals at the same bus, but §4.2
+carries no field for it. The bilinear form is:
+
+> `tan(va_diff_min) · Re(V_j V_k*) ≤ Im(V_j V_k*) ≤ tan(va_diff_max) · Re(V_j V_k*)`
+
+**Suggested field:** `va_diff_min` / `va_diff_max` (radians) on the bus object, applied
+to every unordered pair of ungrounded phase terminals.
+
+**Line-level, voltage angle difference (cross-branch):**
+
+Table 7 Eq. (67) bounds the angle mismatch across a branch per conductor, but again
+§4.2 has no field. The same bilinear form applies with from- and to-end voltages:
+
+> `tan(va_diff_min) · Re(V_fr V_to*) ≤ Im(V_fr V_to*) ≤ tan(va_diff_max) · Re(V_fr V_to*)`
+
+**Suggested field:** `va_diff_min` / `va_diff_max` (radians) on the line object,
+applied per matched conductor pair in `terminal_map_from` / `terminal_map_to`.
+
+**Suggestion:** add the six field pairs above to §4.2. All are in the BMOPF JSON
+implementation and tested; the math is already in the spec, only the JSON field names
+are missing. For `vneg_max`/`vzero_max` the spec may also want to extend Eq. (64) with
+the corresponding negative- and zero-sequence inequality.
+
+## 15. `voltage_source` fixes both magnitude and angle; variable-magnitude sources have no representation
+
+The current `voltage_source` model (§3.8.1) requires both `v_magnitude` and `v_angle`
+per terminal, which the solver implementation maps to hard equalities:
+`Vre = |V|·cos θ`, `Vim = |V|·sin θ`.  This is correct for a stiff grid
+connection with a known Thevenin voltage, but it precludes two common modelling
+needs:
+
+**1. Angle-reference-only source (unknown magnitude)**
+
+The IVR rectangular formulation has a global rotational symmetry: if `(V, I)` is
+feasible then so is `(e^{jθ}V, e^{jθ}I)`.  The minimal fix is to pin only the
+angle of one reference terminal, leaving the magnitude free.  For a reference
+angle `θ_ref ∈ {0, π/2, π, −π/2}` this reduces to a pair of sign constraints
+on `(Vre, Vim)`:
+
+| `θ_ref` | constraint |
+|---|---|
+| 0 | `Vim = 0`, `Vre ≥ 0` |
+| π/2 | `Vre = 0`, `Vim ≥ 0` |
+| π | `Vim = 0`, `Vre ≤ 0` |
+| −π/2 | `Vre = 0`, `Vim ≤ 0` |
+
+Our current implementation satisfies these as a special case (strict equality is
+stronger than the inequalities), so no correctness issue arises — but a converter
+that wants to represent a source with automatic voltage regulation (AVR), or a
+network where the upstream voltage magnitude is itself an optimisation variable,
+has no data model hook.
+
+**2. Bounded-voltage source (controllable magnitude)**
+
+A controllable voltage source (e.g. a STATCOM or an ideal AVR set-point) has a
+magnitude that lies within a range `[|V|_min, |V|_max]` rather than being fixed.
+This cannot be expressed in the current model; the closest approximation is a
+generator with tight reactive-power bounds, which loses the "voltage behind
+impedance" semantics.
+
+**Suggestion:** extend `voltage_source` with optional `v_magnitude_min` /
+`v_magnitude_max` fields (defaulting to a fixed point when only `v_magnitude` is
+given).  When min ≠ max the solver should add the angle-reference inequalities
+above instead of the hard equalities, treating the magnitude as a free variable
+bounded within the range.  This also cleanly separates the *angle reference*
+role (one terminal, sign constraint only) from the *voltage magnitude reference*
+role (hard equality), which the current model conflates.
 
 ## Validation experience (what worked)
 

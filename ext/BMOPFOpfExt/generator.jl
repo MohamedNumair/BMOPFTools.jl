@@ -35,13 +35,15 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
     crg = vars[:crg]; cig = vars[:cig]
 
     for (gid, gen) in get(net, "generator", Dict())
-        bus   = get(gen, "bus", "")
-        tm    = Vector{String}(get(gen, "terminal_map", String[]))
-        cfg   = get(gen, "configuration", "WYE")
-        p_min = Float64.(get(gen, "p_min", Float64[]))
-        p_max = Float64.(get(gen, "p_max", Float64[]))
-        q_min = Float64.(get(gen, "q_min", Float64[]))
-        q_max = Float64.(get(gen, "q_max", Float64[]))
+        bus       = get(gen, "bus", "")
+        tm        = Vector{String}(get(gen, "terminal_map", String[]))
+        cfg       = get(gen, "configuration", "WYE")
+        p_min     = Float64.(get(gen, "p_min", Float64[]))
+        p_max     = Float64.(get(gen, "p_max", Float64[]))
+        q_min     = Float64.(get(gen, "q_min", Float64[]))
+        q_max     = Float64.(get(gen, "q_max", Float64[]))
+        i_max_g   = Float64.(get(gen, "i_max", Float64[]))
+        s_max_g   = Float64.(get(gen, "s_max", Float64[]))
 
         if cfg in ("WYE", "SINGLE_PHASE")
             ph_pos    = _phase_positions(tm)
@@ -66,6 +68,19 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
                 length(q_min) >= idx && @constraint(model, q_expr >= q_min[idx])
                 length(q_max) >= idx && @constraint(model, q_expr <= q_max[idx])
 
+                # Current magnitude limit
+                length(i_max_g) >= idx && @constraint(model,
+                    crg[(gid,idx)]^2 + cig[(gid,idx)]^2 <= i_max_g[idx]^2)
+
+                # Apparent power limit (via auxiliary variables to keep quadratic)
+                if length(s_max_g) >= idx
+                    pg_v = @variable(model, base_name = "pg_$(gid)_$(idx)")
+                    qg_v = @variable(model, base_name = "qg_$(gid)_$(idx)")
+                    @constraint(model, pg_v == p_expr)
+                    @constraint(model, qg_v == q_expr)
+                    @constraint(model, pg_v^2 + qg_v^2 <= s_max_g[idx]^2)
+                end
+
                 _kcl_add!(kcl_r, kcl_i, bus, t_ph,  crg[(gid,idx)],  cig[(gid,idx)])
                 if t_n !== nothing
                     _kcl_add!(kcl_r, kcl_i, bus, t_n, -crg[(gid,idx)], -cig[(gid,idx)])
@@ -86,6 +101,19 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
                 length(p_max) >= k && @constraint(model, p_expr <= p_max[k])
                 length(q_min) >= k && @constraint(model, q_expr >= q_min[k])
                 length(q_max) >= k && @constraint(model, q_expr <= q_max[k])
+
+                # Current magnitude limit
+                length(i_max_g) >= k && @constraint(model,
+                    crg[(gid,k)]^2 + cig[(gid,k)]^2 <= i_max_g[k]^2)
+
+                # Apparent power limit (via auxiliary variables to keep quadratic)
+                if length(s_max_g) >= k
+                    pg_v = @variable(model, base_name = "pg_$(gid)_$(k)")
+                    qg_v = @variable(model, base_name = "qg_$(gid)_$(k)")
+                    @constraint(model, pg_v == p_expr)
+                    @constraint(model, qg_v == q_expr)
+                    @constraint(model, pg_v^2 + qg_v^2 <= s_max_g[k]^2)
+                end
 
                 _kcl_add!(kcl_r, kcl_i, bus, t_pos,  crg[(gid,k)],  cig[(gid,k)])
                 _kcl_add!(kcl_r, kcl_i, bus, t_neg, -crg[(gid,k)], -cig[(gid,k)])
