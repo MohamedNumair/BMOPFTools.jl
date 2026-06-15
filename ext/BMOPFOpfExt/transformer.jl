@@ -69,12 +69,14 @@ With turns ratio N = v_ref_from / v_ref_to:
 Used for both `single_phase` and `center_tap` transformer subtypes.
 """
 function _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
-    b_fr  = get(xfmr, "bus_from", "")
-    b_to  = get(xfmr, "bus_to",   "")
-    tmfr  = Vector{String}(get(xfmr, "terminal_map_from", String[]))
-    tmto  = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
-    N     = _xfmr_turns_ratio(xfmr)
-    n_c   = min(length(tmfr), length(tmto))
+    b_fr      = get(xfmr, "bus_from", "")
+    b_to      = get(xfmr, "bus_to",   "")
+    tmfr      = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+    tmto      = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+    N         = _xfmr_turns_ratio(xfmr)
+    n_c       = min(length(tmfr), length(tmto))
+    i_max_fr  = Float64.(get(xfmr, "i_max_from", Float64[]))
+    i_max_to_v = Float64.(get(xfmr, "i_max_to",   Float64[]))
 
     for k in 1:n_c
         t_fr = tmfr[k]; t_to = tmto[k]
@@ -87,6 +89,11 @@ function _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
         # KCL
         _kcl_add!(kcl_r, kcl_i, b_fr, t_fr, -cr_xf[(tid,"fr",k)], -ci_xf[(tid,"fr",k)])
         _kcl_add!(kcl_r, kcl_i, b_to, t_to, -cr_xf[(tid,"to",k)], -ci_xf[(tid,"to",k)])
+        # Current magnitude limits
+        length(i_max_fr)  >= k && @constraint(model,
+            cr_xf[(tid,"fr",k)]^2 + ci_xf[(tid,"fr",k)]^2 <= i_max_fr[k]^2)
+        length(i_max_to_v) >= k && @constraint(model,
+            cr_xf[(tid,"to",k)]^2 + ci_xf[(tid,"to",k)]^2 <= i_max_to_v[k]^2)
     end
 end
 
@@ -125,6 +132,8 @@ Neutral KCL at the transformer star point:
 function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
                                wye_is_from::Bool)
     N = _xfmr_turns_ratio(xfmr)   # v_ref_from / v_ref_to
+    i_max_fr   = Float64.(get(xfmr, "i_max_from", Float64[]))
+    i_max_to_v = Float64.(get(xfmr, "i_max_to",   Float64[]))
 
     if wye_is_from
         b_wye    = get(xfmr, "bus_from", "")
@@ -216,5 +225,19 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
         t = tm_del[k]
         _kcl_add!(kcl_r, kcl_i, b_del, t,
                   -cr_xf[(tid, side_del, k)], -ci_xf[(tid, side_del, k)])
+    end
+
+    # ── Current magnitude limits ───────────────────────────────────────────────
+    for k in 1:n_wye
+        length(i_max_fr)   >= k && side_wye == "fr" && @constraint(model,
+            cr_xf[(tid,"fr",k)]^2 + ci_xf[(tid,"fr",k)]^2 <= i_max_fr[k]^2)
+        length(i_max_to_v) >= k && side_wye == "to" && @constraint(model,
+            cr_xf[(tid,"to",k)]^2 + ci_xf[(tid,"to",k)]^2 <= i_max_to_v[k]^2)
+    end
+    for k in 1:n_ph
+        length(i_max_fr)   >= k && side_del == "fr" && @constraint(model,
+            cr_xf[(tid,"fr",k)]^2 + ci_xf[(tid,"fr",k)]^2 <= i_max_fr[k]^2)
+        length(i_max_to_v) >= k && side_del == "to" && @constraint(model,
+            cr_xf[(tid,"to",k)]^2 + ci_xf[(tid,"to",k)]^2 <= i_max_to_v[k]^2)
     end
 end

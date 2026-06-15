@@ -10,14 +10,18 @@
 const _KNOWN_FIELDS = Dict{String,Set{String}}(
     "bus" => Set(["terminal_names", "neutral_terminal", "perfectly_grounded_terminals",
                   "v_min", "v_max", "vpn_min", "vpn_max",
-                  "vpp_min", "vpp_max", "vsym_min", "vsym_max"]),
+                  "vpp_min", "vpp_max", "vpos_min", "vpos_max",
+                  "vneg_max", "vzero_max",
+                  "vn_max", "va_diff_min", "va_diff_max"]),
     "line" => Set(["length", "linecode", "bus_from", "bus_to",
-                   "terminal_map_from", "terminal_map_to"]),
+                   "terminal_map_from", "terminal_map_to",
+                   "va_diff_min", "va_diff_max"]),
     "voltage_source" => Set(["v_magnitude", "v_angle", "bus", "terminal_map"]),
     "shunt" => Set(["bus", "terminal_map"]),
     "load" => Set(["p_nom", "q_nom", "bus", "configuration", "terminal_map"]),
     "generator" => Set(["p_min", "p_max", "q_min", "q_max", "cost",
-                        "bus", "configuration", "terminal_map"]),
+                        "bus", "configuration", "terminal_map",
+                        "i_max", "s_max"]),
     "linecode" => Set(["i_max", "s_max"]),
     "switch" => Set(["bus_from", "bus_to", "terminal_map_from",
                      "terminal_map_to", "open_switch", "i_max"])
@@ -27,18 +31,22 @@ const _KNOWN_TRANSFORMER_FIELDS = Dict{String,Set{String}}(
     "single_phase" => Set(["s_rating", "r_series_from", "x_series_from",
                            "r_series_to", "x_series_to", "bus_from", "bus_to",
                            "terminal_map_from", "terminal_map_to",
-                           "v_ref_from", "v_ref_to"]),
+                           "v_ref_from", "v_ref_to",
+                           "i_max_from", "i_max_to"]),
     "center_tap"   => Set(["s_rating", "r_series_from", "x_series_from",
                            "r_series_to", "x_series_to", "bus_from", "bus_to",
                            "terminal_map_from", "terminal_map_to",
-                           "v_ref_from", "v_ref_to"]),
+                           "v_ref_from", "v_ref_to",
+                           "i_max_from", "i_max_to"]),
     # Per TF spec: wye_delta/delta_wye carry a single wye-side impedance
     "wye_delta"    => Set(["s_rating", "r_series", "x_series", "bus_from",
                            "bus_to", "terminal_map_from", "terminal_map_to",
-                           "v_ref_from", "v_ref_to"]),
+                           "v_ref_from", "v_ref_to",
+                           "i_max_from", "i_max_to"]),
     "delta_wye"    => Set(["s_rating", "r_series", "x_series", "bus_from",
                            "bus_to", "terminal_map_from", "terminal_map_to",
-                           "v_ref_from", "v_ref_to"])
+                           "v_ref_from", "v_ref_to",
+                           "i_max_from", "i_max_to"])
 )
 
 # Pattern-matched (matrix) key prefixes per component type, matching the

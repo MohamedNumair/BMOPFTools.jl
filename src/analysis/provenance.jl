@@ -44,6 +44,11 @@ function provenance_analysis(net::Dict{String,Any},
     result["earthing_zones"]      = _earthing_zones(net, vl)
     _check_regulator_patterns(net, findings, vl)
     _check_bus_shunts(net, findings)
+    result["redundant_voltage_bounds"]    = _check_bus_voltage_bound_redundancy(net, findings)
+    result["inconsistent_bounds"]         = _check_bus_voltage_bound_consistency(net, findings)
+    result["inapplicable_voltage_bounds"] = _check_bus_voltage_bound_applicability(net, findings)
+    result["overlapping_voltage_bounds"]  = _check_bus_voltage_bound_overlap(net, findings)
+    result["i_max_incomplete"]            = _check_i_max_completeness(net, findings)
     result["convention"]          = _convention_statement(result)
     result
 end
@@ -634,6 +639,156 @@ function _check_bus_shunts(net::Dict{String,Any}, findings::Vector{Finding})
             end
         end
     end
+end
+
+function _check_bus_voltage_bound_redundancy(net::Dict{String,Any},
+                                              findings::Vector{Finding})::Dict{String,Any}
+    affected = String[]
+    for (bid, bus) in get(net, "bus", Dict())
+        has_ground = get(bus, "v_min",   nothing) !== nothing ||
+                     get(bus, "v_max",   nothing) !== nothing
+        has_pn     = get(bus, "vpn_min", nothing) !== nothing ||
+                     get(bus, "vpn_max", nothing) !== nothing
+        (has_ground && has_pn) || continue
+
+        grounded_set = Set(string.(get(bus, "perfectly_grounded_terminals", String[])))
+        nt = _neutral_terminal(bus)
+        (nt !== nothing && nt in grounded_set) || continue
+
+        push!(affected, bid)
+        push!(findings, Finding(WARNING, "W.PROV.REDUNDANT_VOLTAGE_BOUNDS",
+            :provenance, :bus, bid,
+            "Bus '$bid' has both phase-to-ground (`v_min`/`v_max`) and " *
+            "phase-to-neutral (`vpn_min`/`vpn_max`) voltage bounds, but its " *
+            "neutral terminal '$nt' is perfectly grounded — the two sets of " *
+            "bounds are equivalent. Remove one to avoid duplicate constraints.",
+            Dict{String,Any}("neutral_terminal" => nt)))
+    end
+    Dict{String,Any}("n" => length(affected), "ids" => affected)
+end
+
+function _check_i_max_completeness(net::Dict{String,Any},
+                                    findings::Vector{Finding})::Dict{String,Any}
+    linecodes  = get(net, "linecode", Dict())
+    incomplete = String[]
+    for (lid, line) in get(net, "line", Dict())
+        lcid = get(line, "linecode", nothing)
+        lcid === nothing && continue
+        lc = get(linecodes, lcid, nothing)
+        lc === nothing && continue
+        i_max = get(lc, "i_max", nothing)
+        i_max === nothing && continue   # no limit defined — not a violation
+
+        n_fr = length(get(line, "terminal_map_from", String[]))
+        n_to = length(get(line, "terminal_map_to",   String[]))
+        n_c  = min(n_fr, n_to)
+        length(i_max) < n_c && push!(incomplete, lid)
+    end
+    if !isempty(incomplete)
+        push!(findings, Finding(WARNING, "W.PROV.I_MAX_INCOMPLETE",
+            :provenance, :line, nothing,
+            "$(length(incomplete)) line(s) have fewer `i_max` entries in their " *
+            "linecode than conductors — current limits will not be enforced on " *
+            "all conductors (the neutral conductor may be unprotected).",
+            Dict{String,Any}("lines" => incomplete)))
+    end
+    Dict{String,Any}("n" => length(incomplete), "ids" => incomplete)
+end
+
+function _check_bus_voltage_bound_consistency(net::Dict{String,Any},
+                                               findings::Vector{Finding})::Dict{String,Any}
+    affected = String[]
+    pairs = [("v_min", "v_max"), ("vpn_min", "vpn_max"),
+             ("vpp_min", "vpp_max"), ("vpos_min", "vpos_max"),
+             ("va_diff_min", "va_diff_max")]
+    for (bid, bus) in get(net, "bus", Dict())
+        issues = String[]
+        for (lo, hi) in pairs
+            vlo = get(bus, lo, nothing)
+            vhi = get(bus, hi, nothing)
+            if vlo !== nothing && vhi !== nothing && Float64(vlo) > Float64(vhi)
+                push!(issues, "$lo ($vlo) > $hi ($vhi)")
+            end
+        end
+        if !isempty(issues)
+            push!(affected, bid)
+            push!(findings, Finding(ERROR, "E.PROV.INCONSISTENT_BOUNDS",
+                :provenance, :bus, bid,
+                "Bus '$bid' has voltage bounds where min > max — the OPF will be " *
+                "infeasible: " * join(issues, "; ") * ".",
+                Dict{String,Any}("issues" => issues)))
+        end
+    end
+    Dict{String,Any}("n" => length(affected), "ids" => affected)
+end
+
+function _check_bus_voltage_bound_applicability(net::Dict{String,Any},
+                                                 findings::Vector{Finding})::Dict{String,Any}
+    affected = String[]
+    for (bid, bus) in get(net, "bus", Dict())
+        all_terms    = string.(get(bus, "terminal_names", String[]))
+        grounded_set = Set(string.(get(bus, "perfectly_grounded_terminals", String[])))
+        nt           = _neutral_terminal(bus)
+        has_neutral  = nt !== nothing
+        n_phase      = count(t -> t ∉ grounded_set && t != nt, all_terms)
+
+        issues = String[]
+        if !has_neutral && (haskey(bus, "vpn_min") || haskey(bus, "vpn_max"))
+            push!(issues, "vpn_min/vpn_max requires a neutral terminal")
+        end
+        if !has_neutral && haskey(bus, "vn_max")
+            push!(issues, "vn_max requires a neutral terminal")
+        end
+        has_seq = any(k -> haskey(bus, k),
+                      ("vpos_min", "vpos_max", "vneg_max", "vzero_max"))
+        if has_seq && n_phase != 3
+            push!(issues, "sequence bounds (vpos/vneg/vzero) require exactly 3 phase " *
+                          "terminals (found $n_phase)")
+        end
+        if n_phase < 2 && (haskey(bus, "vpp_min") || haskey(bus, "vpp_max"))
+            push!(issues, "vpp_min/vpp_max requires at least 2 phase terminals")
+        end
+        if n_phase < 2 && (haskey(bus, "va_diff_min") || haskey(bus, "va_diff_max"))
+            push!(issues, "va_diff_min/va_diff_max (bus) requires at least 2 phase terminals")
+        end
+        if !isempty(issues)
+            push!(affected, bid)
+            push!(findings, Finding(WARNING, "W.PROV.INAPPLICABLE_VOLTAGE_BOUNDS",
+                :provenance, :bus, bid,
+                "Bus '$bid' has voltage bounds that cannot be enforced and will be " *
+                "silently ignored in the OPF: " * join(issues, "; ") * ".",
+                Dict{String,Any}("issues" => issues)))
+        end
+    end
+    Dict{String,Any}("n" => length(affected), "ids" => affected)
+end
+
+function _check_bus_voltage_bound_overlap(net::Dict{String,Any},
+                                           findings::Vector{Finding})::Dict{String,Any}
+    bound_groups = [
+        ("phase-to-ground",      ["v_min",     "v_max"]),
+        ("phase-to-neutral",     ["vpn_min",   "vpn_max"]),
+        ("phase-to-phase",       ["vpp_min",   "vpp_max"]),
+        ("positive-sequence",    ["vpos_min",  "vpos_max"]),
+        ("negative-sequence",    ["vneg_max"]),
+        ("zero-sequence",        ["vzero_max"]),
+        ("neutral-to-ground",    ["vn_max"]),
+        ("intra-bus-angle",      ["va_diff_min", "va_diff_max"]),
+    ]
+    affected = String[]
+    for (bid, bus) in get(net, "bus", Dict())
+        active = [label for (label, keys) in bound_groups
+                  if any(haskey(bus, k) for k in keys)]
+        length(active) <= 1 && continue
+        push!(affected, bid)
+        push!(findings, Finding(INFO, "I.PROV.OVERLAPPING_VOLTAGE_BOUNDS",
+            :provenance, :bus, bid,
+            "Bus '$bid' has $(length(active)) voltage bound types active " *
+            "($(join(active, ", "))) — all are enforced simultaneously, which is " *
+            "valid but adds constraints and may slow the solver.",
+            Dict{String,Any}("bound_types" => active)))
+    end
+    Dict{String,Any}("n" => length(affected), "ids" => affected)
 end
 
 # Per-bus neutral terminal name (or nothing), via the convention helper

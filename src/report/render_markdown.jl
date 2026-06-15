@@ -290,7 +290,7 @@ function _md_spec_benchmark(r::SummaryReport, io::IO)
         println(io, "| Objective well-posed | $(get(bench,"objective_wellposed","?")) |")
         println(io, "| Only slack generation | $(get(bench,"only_slack_generation","?")) |")
         println(io, "| Buses with \\|V\\| bounds | $(get(bench,"pct_v_bounds","?"))% |")
-        println(io, "| Buses with vpn / vpp / vsym bounds | $(get(bench,"n_vpn_bounds",0)) / $(get(bench,"n_vpp_bounds",0)) / $(get(bench,"n_vsym_bounds",0)) |")
+        println(io, "| Buses with vpn / vpp / vpos bounds | $(get(bench,"n_vpn_bounds",0)) / $(get(bench,"n_vpp_bounds",0)) / $(get(bench,"n_vpos_bounds",0)) |")
         println(io, "| Lines with thermal limits | $(get(bench,"pct_thermal_limits","?"))% |")
         println(io)
 

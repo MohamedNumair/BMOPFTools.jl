@@ -121,6 +121,47 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
 end
 
 """
+    _add_line_angle_constraints!(model, net, vars)
+
+Enforce per-line angle-difference bounds (`va_diff_min`, `va_diff_max`, radians) between
+the from- and to-end voltages on each conductor. Only called from `solve_opf` (operational
+limits, not the feasibility formulation).
+
+For each conductor k:
+  s = vr_fr·vi_to − vi_fr·vr_to   (imaginary part of V_fr · conj(V_to))
+  c = vr_fr·vr_to + vi_fr·vi_to   (real part)
+  tan(va_diff_min)·c ≤ s ≤ tan(va_diff_max)·c
+"""
+function _add_line_angle_constraints!(model, net, vars)
+    vr = vars[:vr]; vi = vars[:vi]
+
+    for (lid, line) in get(net, "line", Dict())
+        va_diff_min = get(line, "va_diff_min", nothing)
+        va_diff_max = get(line, "va_diff_max", nothing)
+        (va_diff_min === nothing && va_diff_max === nothing) && continue
+
+        tan_min = va_diff_min !== nothing ? tan(Float64(va_diff_min)) : nothing
+        tan_max = va_diff_max !== nothing ? tan(Float64(va_diff_max)) : nothing
+
+        b_fr  = line["bus_from"]
+        b_to  = line["bus_to"]
+        tmfr  = Vector{String}(get(line, "terminal_map_from", String[]))
+        tmto  = Vector{String}(get(line, "terminal_map_to",   String[]))
+        n_c   = min(length(tmfr), length(tmto))
+
+        for k in 1:n_c
+            t_fr = tmfr[k]; t_to = tmto[k]
+            haskey(vr, (b_fr, t_fr)) || continue
+            haskey(vr, (b_to, t_to)) || continue
+            s = @expression(model, vr[(b_fr,t_fr)]*vi[(b_to,t_to)] - vi[(b_fr,t_fr)]*vr[(b_to,t_to)])
+            c = @expression(model, vr[(b_fr,t_fr)]*vr[(b_to,t_to)] + vi[(b_fr,t_fr)]*vi[(b_to,t_to)])
+            tan_min !== nothing && @constraint(model, tan_min * c <= s)
+            tan_max !== nothing && @constraint(model, s <= tan_max * c)
+        end
+    end
+end
+
+"""
     _add_switch_constraints!(model, net, vars, kcl_r, kcl_i)
 
 Add constraints for all switches and register switch currents in the KCL

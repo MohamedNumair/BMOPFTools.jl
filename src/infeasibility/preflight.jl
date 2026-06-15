@@ -88,7 +88,7 @@ function _check_constraint_conflicts(net::Dict{String,Any},
     # phase-to-phase, sequence
     for (id, b) in get(net, "bus", Dict())
         for (lo_k, hi_k) in (("v_min", "v_max"), ("vpn_min", "vpn_max"),
-                              ("vpp_min", "vpp_max"), ("vsym_min", "vsym_max"))
+                              ("vpp_min", "vpp_max"), ("vpos_min", "vpos_max"))
             lo = get(b, lo_k, nothing)
             hi = get(b, hi_k, nothing)
             (lo === nothing || hi === nothing) && continue
