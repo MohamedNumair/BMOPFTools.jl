@@ -193,6 +193,8 @@ include("validation/integrity.jl")
 include("validation/spec_conformance.jl")
 include("validation/roundtrip.jl")
 
+include("network/simplify.jl")
+
 include("report/formatting.jl")
 include("report/render_terminal.jl")
 include("report/render_markdown.jl")
@@ -356,5 +358,8 @@ export spec_conformance_check
 export benchmark_readiness_check
 export render_markdown, render_terminal, render_ascii_tree
 export diagnose_infeasibility
+export merge_series_lines, remove_dangling_lines
+export remove_open_switches, collapse_closed_switches
+export simplify_network
 
 end # module BMOPFTools
