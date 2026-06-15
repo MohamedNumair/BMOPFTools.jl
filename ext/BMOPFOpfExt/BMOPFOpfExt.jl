@@ -58,6 +58,7 @@ using Ipopt
 include("data_utils.jl")
 include("variables.jl")
 include("bus.jl")
+include("shunt.jl")
 include("branch.jl")
 include("transformer.jl")
 include("load.jl")
@@ -79,8 +80,10 @@ The formulation follows the PMD IVRENPowerModel convention:
   declared in `perfectly_grounded_terminals` or fixed by a voltage source.
 - Transformer models: per-phase YY (single_phase/center_tap) and
   wye-delta / delta-wye with linear voltage-current transformation.
-
-Shunt line admittance (G/B pi-model) is not modelled in this version.
+- Shunt admittances: standalone `shunt` objects and the π-model half-sections
+  (`G_from/to`, `B_from/to`) of line linecodes. Shunt currents are linear in
+  voltage variables (no new variables). Thermal current limits are enforced on
+  the total (series + shunt) current at both line ends.
 """
 function BMOPFTools.solve_opf(net::Dict{String,Any};
                                optimizer=Ipopt.Optimizer,
@@ -114,6 +117,9 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
     _add_line_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_switch_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_transformer_constraints!(model, working, vars, kcl_r, kcl_i)
+
+    # Shunt admittances (standalone shunt objects)
+    _add_shunt_constraints!(working, vars, kcl_r, kcl_i)
 
     # Load and generator power equations and KCL contributions
     _add_load_constraints!(model, working, vars, kcl_r, kcl_i)

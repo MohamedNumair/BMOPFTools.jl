@@ -1,32 +1,52 @@
 # Line and switch constraints.
 #
-# Lines — KVL (rectangular form) and optional current magnitude limits.
-# Shunt admittance (G_from, B_from, G_to, B_to) is not modelled here;
-# most LV/MV distribution linecodes don't specify it.
+# ── Lines (nominal Π model) ───────────────────────────────────────────────────
 #
-# Series impedance (total, Ω) for conductor k, equation pair:
-#   vr_from[k] - vr_to[k] = sum_j ( R[k,j]*cr_fr[j] - X[k,j]*ci_fr[j] )
-#   vi_from[k] - vi_to[k] = sum_j ( R[k,j]*ci_fr[j] + X[k,j]*cr_fr[j] )
+# Each line is modelled as a nominal Π equivalent:
 #
-# No-shunt current balance: cr_to[k] = -cr_fr[k]
+#   from-bus ─┬─[Y_sh_fr/2]─ ─ ─[Z_series]─ ─ ─[Y_sh_to/2]─┬─ to-bus
+#             └──(to ground)                   (to ground)──┘
 #
-# KCL contributions:
-#   bus_from terminal tmfr[k] : -cr_fr[k]
-#   bus_to   terminal tmto[k] : +cr_to[k]   (= -cr_fr[k] via the above)
+# Series KVL (conductor k, total impedance Z = R + jX in Ω):
+#   vr_fr[k] − vr_to[k]  =  Σ_j ( R[k,j]·cr_fr[j] − X[k,j]·ci_fr[j] )
+#   vi_fr[k] − vi_to[k]  =  Σ_j ( R[k,j]·ci_fr[j] + X[k,j]·cr_fr[j] )
+#
+# Series current is identical at both ends (no current lost in the ideal
+# series element):
+#   cr_to[k] = −cr_fr[k],  ci_to[k] = −ci_fr[k]
+#
+# π-shunt current leaving bus b at conductor k (linear in voltage variables):
+#   I^r_k = Σ_j ( G_kj · vr[b,t_j] − B_kj · vi[b,t_j] )
+#   I^i_k = Σ_j ( G_kj · vi[b,t_j] + B_kj · vr[b,t_j] )
+#
+# KCL contributions (positive = into bus):
+#   bus_from, tmfr[k]: −cr_fr[k] − I^r_sh_fr[k]   (series + shunt leave)
+#   bus_to,   tmto[k]: −cr_to[k] − I^r_sh_to[k]   (series arrives, shunt leaves)
+#
+# Current magnitude limit (total current at each end):
+#   |cr_fr[k] + I^r_sh_fr[k]|² + |ci_fr[k] + I^i_sh_fr[k]|² ≤ I_max[k]²
+#   |cr_to[k] + I^r_sh_to[k]|² + |ci_to[k] + I^i_sh_to[k]|² ≤ I_max[k]²
+#
+# When G_from = B_from = G_to = B_to = 0 (no shunt), the π-shunt terms vanish,
+# the two magnitude constraints are identical (since cr_to = −cr_fr), and the
+# result reduces to the original series-only formulation.
 
 """
     _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
 
-Add KVL, current-balance, and optional current-magnitude constraints for all lines,
-and register each conductor's current contribution in the KCL accumulators.
+Add nominal Π-model constraints for all lines and register their KCL
+contributions.
 
-Series impedance (total, Ω) per conductor `k`:
-```
-  vr[from,k] − vr[to,k]  =  Σⱼ ( R[k,j]·cr_fr[j] − X[k,j]·ci_fr[j] )
-  vi[from,k] − vi[to,k]  =  Σⱼ ( R[k,j]·ci_fr[j] + X[k,j]·cr_fr[j] )
-```
-No-shunt assumption: `cr_to = −cr_fr`.  Shunt admittance (G/B pi-model) is not
-modelled; most distribution linecodes do not specify it.
+For each line this adds:
+- KVL across the series impedance (real and imaginary parts per conductor)
+- Series current balance: `cr_to = −cr_fr`
+- π-shunt KCL contributions at both buses (linear in voltage variables)
+- Thermal current magnitude limits on the **total** current (series + π-shunt)
+  at both the from- and to-ends
+
+Shunt conductance (`G_from`, `G_to`) and susceptance (`B_from`, `B_to`) are
+read from the linecode and scaled by line length. Missing or all-zero shunt
+fields are a no-op.
 """
 function _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
     linecodes = get(net, "linecode", Dict())
@@ -47,40 +67,55 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
         tmto  = Vector{String}(get(line, "terminal_map_to",   String[]))
         n_map = min(length(tmfr), length(tmto), n_c)
 
+        # ── KVL + series current balance ──────────────────────────────────────
         for k in 1:n_map
             t_fr = tmfr[k]; t_to = tmto[k]
-            # KVL — real part
             @constraint(model,
                 vr[(b_fr, t_fr)] - vr[(b_to, t_to)] ==
                 sum(R[k,j]*cr_fr[(lid,j)] - X[k,j]*ci_fr[(lid,j)] for j in 1:n_map))
-            # KVL — imaginary part
             @constraint(model,
                 vi[(b_fr, t_fr)] - vi[(b_to, t_to)] ==
                 sum(R[k,j]*ci_fr[(lid,j)] + X[k,j]*cr_fr[(lid,j)] for j in 1:n_map))
-            # No-shunt current balance
             @constraint(model, cr_to[(lid,k)] == -cr_fr[(lid,k)])
             @constraint(model, ci_to[(lid,k)] == -ci_fr[(lid,k)])
         end
 
-        # Current magnitude limits (per conductor, from the linecode)
+        # ── π-shunt currents (linear in voltage variables) ────────────────────
+        G_fr, B_fr, G_to, B_to = _line_pi_shunt(line, linecodes)
+
+        ish_fr_r = [JuMP.AffExpr(0.0) for _ in 1:n_map]
+        ish_fr_i = [JuMP.AffExpr(0.0) for _ in 1:n_map]
+        ish_to_r = [JuMP.AffExpr(0.0) for _ in 1:n_map]
+        ish_to_i = [JuMP.AffExpr(0.0) for _ in 1:n_map]
+
+        _shunt_current!(ish_fr_r, ish_fr_i, vr, vi, G_fr, B_fr, b_fr, tmfr[1:n_map])
+        _shunt_current!(ish_to_r, ish_to_i, vr, vi, G_to, B_to, b_to, tmto[1:n_map])
+
+        # ── KCL: series currents + π-shunt currents, both leaving their bus ───
+        for k in 1:n_map
+            _kcl_add!(kcl_r, kcl_i, b_fr, tmfr[k],
+                      -cr_fr[(lid,k)] - ish_fr_r[k],
+                      -ci_fr[(lid,k)] - ish_fr_i[k])
+            _kcl_add!(kcl_r, kcl_i, b_to, tmto[k],
+                      -cr_to[(lid,k)] - ish_to_r[k],
+                      -ci_to[(lid,k)] - ish_to_i[k])
+        end
+
+        # ── Thermal current limits on total current at each end ───────────────
         lc = get(linecodes, get(line, "linecode", ""), nothing)
         if lc !== nothing
             i_max = get(lc, "i_max", nothing)
             if i_max !== nothing
                 for k in 1:min(n_map, length(i_max))
                     ilim = Float64(i_max[k])
-                    @constraint(model,
-                        cr_fr[(lid,k)]^2 + ci_fr[(lid,k)]^2 <= ilim^2)
+                    cfr_r = @expression(model, cr_fr[(lid,k)] + ish_fr_r[k])
+                    cfr_i = @expression(model, ci_fr[(lid,k)] + ish_fr_i[k])
+                    cto_r = @expression(model, cr_to[(lid,k)] + ish_to_r[k])
+                    cto_i = @expression(model, ci_to[(lid,k)] + ish_to_i[k])
+                    @constraint(model, cfr_r^2 + cfr_i^2 <= ilim^2)
+                    @constraint(model, cto_r^2 + cto_i^2 <= ilim^2)
                 end
             end
-        end
-
-        # KCL contributions:
-        #   cr_fr leaves bus_from → subtract; cr_to leaves bus_to → subtract.
-        #   Since cr_to = -cr_fr, subtracting cr_to injects +cr_fr into bus_to.
-        for k in 1:n_map
-            _kcl_add!(kcl_r, kcl_i, b_fr, tmfr[k], -cr_fr[(lid,k)], -ci_fr[(lid,k)])
-            _kcl_add!(kcl_r, kcl_i, b_to, tmto[k], -cr_to[(lid,k)], -ci_to[(lid,k)])
         end
     end
 end
@@ -88,7 +123,8 @@ end
 """
     _add_switch_constraints!(model, net, vars, kcl_r, kcl_i)
 
-Add constraints for all switches and register switch currents in the KCL accumulators.
+Add constraints for all switches and register switch currents in the KCL
+accumulators.
 
 A *closed* switch short-circuits its two terminals (zero-impedance coupling):
   `vr[from,k] == vr[to,k]`,  `vi[from,k] == vi[to,k]`
@@ -110,11 +146,9 @@ function _add_switch_constraints!(model, net, vars, kcl_r, kcl_i)
 
         for k in 1:n_c
             if !is_open
-                # Closed: equate voltages (zero-impedance branch)
                 @constraint(model, vr[(b_fr, tmfr[k])] == vr[(b_to, tmto[k])])
                 @constraint(model, vi[(b_fr, tmfr[k])] == vi[(b_to, tmto[k])])
             end
-            # cr_sw leaves bus_from; bus_to receives the same current (closed switch).
             _kcl_add!(kcl_r, kcl_i, b_fr, tmfr[k], -cr_sw[(sid,k)], -ci_sw[(sid,k)])
             _kcl_add!(kcl_r, kcl_i, b_to, tmto[k],  cr_sw[(sid,k)],  ci_sw[(sid,k)])
         end
