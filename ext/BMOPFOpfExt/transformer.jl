@@ -167,13 +167,13 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
     # For Yd (wye_is_from=true):  V_del[k] - V_del[k_next] = n_eff*(V_wye[k] - V_n)
     # For Dy (wye_is_from=false): V_del[k] - V_del[k_prev] = n_eff*(V_wye[k] - V_n)
     # The Dy direction matches the ODS backward-delta convention.
-    for k in 1:n_ph_eff
+    for k in 1:n_ph
         t_del_k   = tm_del[k]
         t_wye_ph  = tm_wye[ph_idx[k]]
         if wye_is_from
-            k_other = (k % n_ph_eff) + 1          # k_next for Yd
+            k_other = (k % n_ph) + 1          # k_next for Yd
         else
-            k_other = ((k - 2 + n_ph_eff) % n_ph_eff) + 1  # k_prev for Dy
+            k_other = ((k - 2 + n_ph) % n_ph) + 1  # k_prev for Dy
         end
         t_del_other = tm_del[k_other]
 
@@ -199,12 +199,12 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
     # Current constraints (transpose of voltage transformation):
     # For Yd (wye_is_from=true):  n_eff*I_del[k] = I_wye[k] - I_wye[k_prev]
     # For Dy (wye_is_from=false): n_eff*I_del[k] = I_wye[k] - I_wye[k_next]
-    for k in 1:n_ph_eff
+    for k in 1:n_ph
         ph_pos = ph_idx[k]
         if wye_is_from
-            k_other = ((k - 2 + n_ph_eff) % n_ph_eff) + 1  # k_prev for Yd
+            k_other = ((k - 2 + n_ph) % n_ph) + 1  # k_prev for Yd
         else
-            k_other = (k % n_ph_eff) + 1                    # k_next for Dy
+            k_other = (k % n_ph) + 1                # k_next for Dy
         end
         ph_other = ph_idx[k_other]
         @constraint(model,

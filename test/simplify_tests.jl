@@ -1,0 +1,541 @@
+# test/simplify_tests.jl
+#
+# Unit tests for network/simplify.jl.
+# Each testset builds a minimal in-memory network Dict, runs one or more
+# simplification functions, and asserts structural and log outcomes.
+
+# ── Fixture helpers ────────────────────────────────────────────────────────────
+
+# Minimal 1-phase linecode entry (content irrelevant to topology tests).
+_lc(id) = Dict{String,Any}(id => Dict{String,Any}("R_series_1_1" => 1e-3))
+
+function _bus(; terminals=["1","n"], grounded=nothing)
+    b = Dict{String,Any}("terminal_names" => terminals)
+    grounded !== nothing && (b["perfectly_grounded_terminals"] = grounded)
+    b
+end
+
+function _line(from, to; lc="lc1", len=100.0, tmap=["1","n"])
+    Dict{String,Any}(
+        "bus_from"         => from,
+        "bus_to"           => to,
+        "terminal_map_from" => copy(tmap),
+        "terminal_map_to"   => copy(tmap),
+        "linecode"         => lc,
+        "length"           => len,
+    )
+end
+
+function _load(bus)
+    Dict{String,Any}(
+        "bus"           => bus,
+        "terminal_map"  => ["1","n"],
+        "configuration" => "SINGLE_PHASE",
+        "p_nom"         => [1000.0],
+        "q_nom"         => [0.0],
+    )
+end
+
+function _vsource(bus)
+    Dict{String,Any}(
+        "bus"          => bus,
+        "terminal_map" => ["1"],
+        "v_magnitude"  => [230.0],
+        "v_angle"      => [0.0],
+    )
+end
+
+function _switch(from, to; open=false, tmap=["1","n"])
+    Dict{String,Any}(
+        "bus_from"          => from,
+        "bus_to"            => to,
+        "open_switch"       => open,
+        "terminal_map_from" => copy(tmap),
+        "terminal_map_to"   => copy(tmap),
+    )
+end
+
+_log_codes(net) = [e["code"] for e in get(net, "_simplification_log", [])]
+_log_sevs(net)  = [e["severity"] for e in get(net, "_simplification_log", [])]
+
+# ── merge_series_lines ─────────────────────────────────────────────────────────
+
+@testset "merge_series_lines — basic two-line merge" begin
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus(), "C" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict(
+            "l1" => _line("A", "B"; len=100.0),
+            "l2" => _line("B", "C"; len=200.0)),
+        "load"     => Dict("ld" => _load("C")),
+    )
+    net′ = merge_series_lines(net)
+
+    # Bus B removed; A and C survive
+    @test !haskey(net′["bus"], "B")
+    @test  haskey(net′["bus"], "A")
+    @test  haskey(net′["bus"], "C")
+
+    # One line remains
+    @test length(net′["line"]) == 1
+    l = only(values(net′["line"]))
+    @test Set([l["bus_from"], l["bus_to"]]) == Set(["A", "C"])
+    @test l["length"]   ≈ 300.0
+
+    # Provenance: whichever line was absorbed is recorded
+    @test length(l["_merged_from"]) == 1
+
+    # Log
+    @test "LINES_MERGED" in _log_codes(net′)
+    @test all(s == "info" for s in _log_sevs(net′))
+
+    # Original is untouched
+    @test length(net["line"]) == 2
+    @test haskey(net["bus"], "B")
+end
+
+@testset "merge_series_lines — reversed orientation" begin
+    # l1: B→A, l2: B→C  (both depart from B — still a valid pass-through)
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus(), "C" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict(
+            "l1" => _line("B", "A"; len=50.0),
+            "l2" => _line("B", "C"; len=75.0)),
+        "load"     => Dict("ldA" => _load("A"), "ldC" => _load("C")),
+    )
+    net′ = merge_series_lines(net)
+
+    @test !haskey(net′["bus"], "B")
+    @test length(net′["line"]) == 1
+    l = only(values(net′["line"]))
+    @test l["length"] ≈ 125.0
+end
+
+@testset "merge_series_lines — chain of three collapses fully" begin
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus(), "C" => _bus(), "D" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict(
+            "l1" => _line("A", "B"; len=10.0),
+            "l2" => _line("B", "C"; len=20.0),
+            "l3" => _line("C", "D"; len=30.0)),
+        "load"     => Dict("ld" => _load("D")),
+        "voltage_source" => Dict("vs" => _vsource("A")),
+    )
+    net′ = merge_series_lines(net)
+
+    @test length(net′["line"]) == 1
+    @test length(net′["bus"])  == 2   # A and D only
+    l = only(values(net′["line"]))
+    @test l["length"] ≈ 60.0
+    @test length(l["_merged_from"]) == 2
+    @test count(e["code"] == "LINES_MERGED" for e in net′["_simplification_log"]) == 2
+end
+
+@testset "merge_series_lines — different linecodes blocked, LINECODE_MISMATCH logged" begin
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus(), "C" => _bus()),
+        "linecode" => merge(_lc("lc1"), _lc("lc2")),
+        "line"     => Dict(
+            "l1" => _line("A", "B"; lc="lc1"),
+            "l2" => _line("B", "C"; lc="lc2")),
+        "load"     => Dict("ld" => _load("C")),
+    )
+    net′ = merge_series_lines(net)
+
+    @test length(net′["line"]) == 2
+    @test haskey(net′["bus"], "B")
+    @test "LINECODE_MISMATCH" in _log_codes(net′)
+    @test all(s == "info" for s in _log_sevs(net′))
+end
+
+@testset "merge_series_lines — load on intermediate bus blocked, NON_LINE_ON_BUS logged" begin
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus(), "C" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict(
+            "l1" => _line("A", "B"),
+            "l2" => _line("B", "C")),
+        "load"     => Dict(
+            "ld_b" => _load("B"),   # blocks merge
+            "ld_c" => _load("C")),
+    )
+    net′ = merge_series_lines(net)
+
+    @test length(net′["line"]) == 2
+    @test haskey(net′["bus"], "B")
+    @test "NON_LINE_ON_BUS" in _log_codes(net′)
+    @test all(s == "info" for s in _log_sevs(net′))
+end
+
+@testset "merge_series_lines — switch on intermediate bus, SWITCH_IN_CHAIN warning" begin
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus(), "C" => _bus(), "D" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict(
+            "l1" => _line("A", "B"),
+            "l2" => _line("B", "C")),
+        "switch"   => Dict("sw1" => _switch("B", "D"; open=false)),
+        "load"     => Dict("ld" => _load("C")),
+    )
+    net′ = merge_series_lines(net)
+
+    @test length(net′["line"]) == 2
+    @test "SWITCH_IN_CHAIN" in _log_codes(net′)
+    @test any(e["severity"] == "warning" for e in net′["_simplification_log"])
+end
+
+@testset "merge_series_lines — terminal map mismatch, TERMINAL_MISMATCH warning" begin
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus(), "C" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict(
+            "l1" => Dict("bus_from" => "A", "bus_to" => "B",
+                         "terminal_map_from" => ["1","n"],
+                         "terminal_map_to"   => ["1","n"],
+                         "linecode" => "lc1", "length" => 100.0),
+            "l2" => Dict("bus_from" => "B", "bus_to" => "C",
+                         "terminal_map_from" => ["1"],       # different at B
+                         "terminal_map_to"   => ["1"],
+                         "linecode" => "lc1", "length" => 100.0)),
+        "load" => Dict("ld" => _load("C")),
+    )
+    net′ = merge_series_lines(net)
+
+    @test length(net′["line"]) == 2
+    @test "TERMINAL_MISMATCH" in _log_codes(net′)
+    @test any(e["severity"] == "warning" for e in net′["_simplification_log"])
+end
+
+# ── remove_dangling_lines ──────────────────────────────────────────────────────
+
+@testset "remove_dangling_lines — single stub removed" begin
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus(), "X" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict(
+            "main" => _line("A", "B"),
+            "stub" => _line("A", "X")),     # X is a leaf with nothing at it
+        "load"     => Dict("ld" => _load("B")),
+        "voltage_source" => Dict("vs" => _vsource("A")),
+    )
+    net′ = remove_dangling_lines(net)
+
+    @test !haskey(net′["bus"],  "X")
+    @test !haskey(net′["line"], "stub")
+    @test  haskey(net′["line"], "main")
+    @test "LINE_REMOVED" in _log_codes(net′)
+end
+
+@testset "remove_dangling_lines — chain of stubs pruned to convergence" begin
+    # A(source)—l1—B—l2—C—l3—D  (no load anywhere past B)
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus(),
+                           "C" => _bus(), "D" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict(
+            "l1" => _line("A", "B"),
+            "l2" => _line("B", "C"),
+            "l3" => _line("C", "D")),
+        "voltage_source" => Dict("vs" => _vsource("A")),
+    )
+    net′ = remove_dangling_lines(net)
+
+    # Everything past A should be gone (no load anywhere)
+    @test isempty(net′["line"])
+    @test length(net′["bus"]) == 1
+    @test haskey(net′["bus"], "A")
+    @test count(e["code"] == "LINE_REMOVED" for e in net′["_simplification_log"]) == 3
+end
+
+@testset "remove_dangling_lines — load at leaf prevents removal" begin
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict("l1" => _line("A", "B")),
+        "load"     => Dict("ld" => _load("B")),
+        "voltage_source" => Dict("vs" => _vsource("A")),
+    )
+    net′ = remove_dangling_lines(net)
+
+    @test length(net′["line"]) == 1
+    @test haskey(net′["bus"], "B")
+    @test isempty(_log_codes(net′))
+end
+
+# ── remove_open_switches ───────────────────────────────────────────────────────
+
+@testset "remove_open_switches — open switch removed, buses kept" begin
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict("l1" => _line("A", "B")),
+        "switch"   => Dict(
+            "sw_open"   => _switch("A", "B"; open=true),
+            "sw_closed" => _switch("A", "B"; open=false)),
+        "voltage_source" => Dict("vs" => _vsource("A")),
+        "load"           => Dict("ld" => _load("B")),
+    )
+    net′ = remove_open_switches(net)
+
+    @test !haskey(net′["switch"], "sw_open")
+    @test  haskey(net′["switch"], "sw_closed")
+    @test  haskey(net′["bus"], "A")
+    @test  haskey(net′["bus"], "B")
+    @test "SWITCH_REMOVED" in _log_codes(net′)
+    @test !("ISOLATED_BUS" in _log_codes(net′))
+end
+
+@testset "remove_open_switches — isolated bus after removal, ISOLATED_BUS warning" begin
+    # C is only connected via the open switch; nothing else touches it.
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus(), "C" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict("l1" => _line("A", "B")),
+        "switch"   => Dict("sw" => _switch("B", "C"; open=true)),
+        "voltage_source" => Dict("vs" => _vsource("A")),
+        "load"           => Dict("ld" => _load("B")),
+    )
+    net′ = remove_open_switches(net)
+
+    @test !haskey(net′["switch"], "sw")
+    @test "ISOLATED_BUS" in _log_codes(net′)
+    @test any(e["severity"] == "warning" for e in net′["_simplification_log"])
+end
+
+@testset "remove_open_switches — closed switch untouched" begin
+    net = Dict{String,Any}(
+        "bus"    => Dict("A" => _bus(), "B" => _bus()),
+        "switch" => Dict("sw" => _switch("A", "B"; open=false)),
+    )
+    net′ = remove_open_switches(net)
+
+    @test haskey(net′["switch"], "sw")
+    @test isempty(_log_codes(net′))
+end
+
+# ── collapse_closed_switches ───────────────────────────────────────────────────
+
+@testset "collapse_closed_switches — basic bus merge" begin
+    net = Dict{String,Any}(
+        "bus" => Dict(
+            "A" => _bus(; terminals=["1","n"], grounded=["n"]),
+            "B" => _bus(; terminals=["1","n"])),
+        "switch" => Dict("sw" => _switch("A", "B"; open=false)),
+        "load"   => Dict("ld" => _load("B")),
+        "voltage_source" => Dict("vs" => _vsource("A")),
+    )
+    net′ = collapse_closed_switches(net)
+
+    # B absorbed into A
+    @test !haskey(net′["bus"],    "B")
+    @test !haskey(net′["switch"], "sw")
+
+    # Load redirected to A
+    @test net′["load"]["ld"]["bus"] == "A"
+
+    # Grounding from A preserved
+    @test "n" in get(net′["bus"]["A"], "perfectly_grounded_terminals", [])
+
+    @test "SWITCH_COLLAPSED" in _log_codes(net′)
+    @test all(s == "info" for s in _log_sevs(net′))
+end
+
+@testset "collapse_closed_switches — voltage bounds tightened" begin
+    net = Dict{String,Any}(
+        "bus" => Dict(
+            "A" => Dict("terminal_names" => ["1","n"],
+                        "v_min" => 200.0, "v_max" => 260.0),
+            "B" => Dict("terminal_names" => ["1","n"],
+                        "v_min" => 210.0, "v_max" => 250.0)),
+        "switch" => Dict("sw" => _switch("A", "B"; open=false)),
+    )
+    net′ = collapse_closed_switches(net)
+
+    @test net′["bus"]["A"]["v_min"] ≈ 210.0   # max of 200, 210
+    @test net′["bus"]["A"]["v_max"] ≈ 250.0   # min of 260, 250
+end
+
+@testset "collapse_closed_switches — terminal union from both buses" begin
+    net = Dict{String,Any}(
+        "bus" => Dict(
+            "A" => Dict("terminal_names" => ["1","2","3"]),
+            "B" => Dict("terminal_names" => ["1","2","3","n"])),
+        "switch" => Dict("sw" => Dict(
+            "bus_from" => "A", "bus_to" => "B",
+            "open_switch" => false,
+            "terminal_map_from" => ["1","2","3"],
+            "terminal_map_to"   => ["1","2","3"])),
+    )
+    net′ = collapse_closed_switches(net)
+
+    @test Set(net′["bus"]["A"]["terminal_names"]) == Set(["1","2","3","n"])
+end
+
+@testset "collapse_closed_switches — dual voltage sources blocked, MERGE_CONFLICT_SOURCE" begin
+    net = Dict{String,Any}(
+        "bus" => Dict("A" => _bus(), "B" => _bus()),
+        "switch" => Dict("sw" => _switch("A", "B"; open=false)),
+        "voltage_source" => Dict(
+            "vs1" => _vsource("A"),
+            "vs2" => _vsource("B")),
+    )
+    net′ = collapse_closed_switches(net)
+
+    @test haskey(net′["switch"], "sw")
+    @test haskey(net′["bus"],    "B")
+    @test "MERGE_CONFLICT_SOURCE" in _log_codes(net′)
+    @test any(e["severity"] == "warning" for e in net′["_simplification_log"])
+end
+
+@testset "collapse_closed_switches — arity mismatch blocked, MERGE_CONFLICT_TERMINALS" begin
+    net = Dict{String,Any}(
+        "bus" => Dict("A" => _bus(), "B" => _bus()),
+        "switch" => Dict("sw" => Dict(
+            "bus_from"          => "A", "bus_to" => "B",
+            "open_switch"       => false,
+            "terminal_map_from" => ["1","n"],
+            "terminal_map_to"   => ["1"])),   # different arity
+    )
+    net′ = collapse_closed_switches(net)
+
+    @test haskey(net′["switch"], "sw")
+    @test "MERGE_CONFLICT_TERMINALS" in _log_codes(net′)
+end
+
+@testset "collapse_closed_switches — self-loop blocked" begin
+    net = Dict{String,Any}(
+        "bus" => Dict("A" => _bus()),
+        "switch" => Dict("sw" => _switch("A", "A"; open=false)),
+    )
+    net′ = collapse_closed_switches(net)
+
+    @test haskey(net′["switch"], "sw")
+    @test "MERGE_CONFLICT_TERMINALS" in _log_codes(net′)
+end
+
+@testset "collapse_closed_switches — chain of two closed switches collapses" begin
+    # A—sw1—B—sw2—C, no other elements
+    net = Dict{String,Any}(
+        "bus" => Dict("A" => _bus(), "B" => _bus(), "C" => _bus()),
+        "switch" => Dict(
+            "sw1" => _switch("A", "B"; open=false),
+            "sw2" => _switch("B", "C"; open=false)),
+        "voltage_source" => Dict("vs" => _vsource("A")),
+        "load"           => Dict("ld" => _load("C")),
+    )
+    net′ = collapse_closed_switches(net)
+
+    @test length(net′["bus"])    == 1
+    @test isempty(get(net′, "switch", Dict()))
+    @test net′["load"]["ld"]["bus"]            == "A"
+    @test net′["voltage_source"]["vs"]["bus"]  == "A"
+    @test count(e["code"] == "SWITCH_COLLAPSED"
+                for e in net′["_simplification_log"]) == 2
+end
+
+@testset "collapse_closed_switches — lines redirected to surviving bus" begin
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus(), "C" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict("l1" => _line("B", "C")),
+        "switch"   => Dict("sw" => _switch("A", "B"; open=false)),
+        "load"     => Dict("ld" => _load("C")),
+        "voltage_source" => Dict("vs" => _vsource("A")),
+    )
+    net′ = collapse_closed_switches(net)
+
+    @test net′["line"]["l1"]["bus_from"] == "A"
+    @test net′["line"]["l1"]["bus_to"]   == "C"
+end
+
+# ── simplify_network ───────────────────────────────────────────────────────────
+
+@testset "simplify_network — runs all operations, log accumulates" begin
+    # Network with: closed switch A—B, open switch B—X, dangling line A—Z,
+    # then two same-linecode lines in series B—C—D.
+    net = Dict{String,Any}(
+        "bus" => Dict(
+            "A" => _bus(), "B" => _bus(), "C" => _bus(),
+            "D" => _bus(), "X" => _bus(), "Z" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line" => Dict(
+            "l_BC" => _line("B", "C"),
+            "l_CD" => _line("C", "D"),
+            "l_AZ" => _line("A", "Z")),  # dangling (nothing at Z)
+        "switch" => Dict(
+            "sw_closed" => _switch("A", "B"; open=false),
+            "sw_open"   => _switch("B", "X"; open=true)),
+        "voltage_source" => Dict("vs" => _vsource("A")),
+        "load"           => Dict("ld" => _load("D")),
+    )
+    net′ = simplify_network(net)
+
+    # After collapse_closed_switches: B merged into A
+    # After remove_open_switches: sw_open gone (X becomes isolated, warns)
+    # After remove_dangling_lines: l_AZ and Z removed
+    # After merge_series_lines: l_BC and l_CD merged
+
+    @test !haskey(get(net′, "switch", Dict()), "sw_closed")
+    @test !haskey(get(net′, "switch", Dict()), "sw_open")
+    @test !haskey(net′["bus"], "Z")
+    @test !haskey(net′["bus"], "C")
+    @test length(net′["line"]) == 1
+    l = only(values(net′["line"]))
+    @test l["length"] ≈ 200.0
+    @test l["bus_to"] == "D"
+
+    log = net′["_simplification_log"]
+    codes = [e["code"] for e in log]
+    @test "SWITCH_COLLAPSED" in codes
+    @test "SWITCH_REMOVED"   in codes
+    @test "LINE_REMOVED"     in codes
+    @test "LINES_MERGED"     in codes
+    @test "ISOLATED_BUS"     in codes   # X isolated after sw_open removed
+end
+
+@testset "simplify_network — individual operations can be disabled" begin
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus(), "C" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict(
+            "l1" => _line("A", "B"),
+            "l2" => _line("B", "C")),
+        "load"     => Dict("ld" => _load("C")),
+        "voltage_source" => Dict("vs" => _vsource("A")),
+    )
+
+    # disable merge → two lines stay
+    net_no_merge = simplify_network(net; series_lines=false)
+    @test length(net_no_merge["line"]) == 2
+
+    # enable merge → fused
+    net_merged = simplify_network(net; series_lines=true)
+    @test length(net_merged["line"]) == 1
+end
+
+@testset "simplify_network — log key present even when no operations fire" begin
+    net = Dict{String,Any}(
+        "bus"  => Dict("A" => _bus()),
+        "load" => Dict("ld" => _load("A")),
+    )
+    net′ = simplify_network(net)
+    @test haskey(net′, "_simplification_log")
+    @test net′["_simplification_log"] isa Vector
+end
+
+@testset "simplify_network — original network is not mutated" begin
+    net = Dict{String,Any}(
+        "bus"      => Dict("A" => _bus(), "B" => _bus(), "C" => _bus()),
+        "linecode" => _lc("lc1"),
+        "line"     => Dict(
+            "l1" => _line("A", "B"),
+            "l2" => _line("B", "C")),
+        "load"     => Dict("ld" => _load("C")),
+    )
+    _  = simplify_network(net)
+    @test length(net["line"]) == 2
+    @test haskey(net["bus"], "B")
+    @test !haskey(net, "_simplification_log")
+end
