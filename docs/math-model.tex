@@ -1,0 +1,686 @@
+% math-model.tex
+%
+% Mathematical documentation of the four-wire rectangular IVR-EN optimal
+% power flow implemented in BMOPFTools.jl (ext/BMOPFOpfExt).
+%
+% Intended for inclusion in the IEEE PES Task Force specification.
+% Compile standalone with pdflatex / lualatex.
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}          % dcases, etc.
+\usepackage{bm}                 % bold math
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\mc}[1]{\mathcal{#1}}
+\newcommand{\vr}[2]{v^r_{#1,#2}}
+\newcommand{\vi}[2]{v^i_{#1,#2}}
+\newcommand{\dvr}{\Delta v^r}
+\newcommand{\dvi}{\Delta v^i}
+\newcommand{\Zmat}{\mathbf{Z}}
+\newcommand{\Rmat}{\mathbf{R}}
+\newcommand{\Xmat}{\mathbf{X}}
+
+\title{\textbf{Four-Wire Rectangular Current--Voltage OPF}\\[4pt]
+       \large Mathematical Model Reference --- BMOPFTools.jl}
+\author{IEEE PES Task Force on Benchmark Models for\\
+        Optimal Power Flow of Distribution Systems}
+\date{\today}
+
+% ============================================================
+\begin{document}
+\maketitle
+\tableofcontents
+\bigskip
+
+% ============================================================
+\section{Overview}
+
+BMOPFTools implements a \emph{four-wire rectangular current--voltage} (IVR-EN)
+optimal power flow (OPF) for unbalanced distribution networks.  The formulation
+is a direct extension of the \texttt{IVRENPowerModel} from
+PowerModelsDistribution~\cite{PowerModelsDistribution2022} to native BMOPF JSON
+network data.
+
+Key design choices:
+\begin{itemize}
+  \item \textbf{Rectangular coordinates throughout.}  Voltage and current
+        variables are real/imaginary pairs $(v^r, v^i)$ and $(c^r, c^i)$ in
+        SI units (V and A).  No polar transformation is applied.
+
+  \item \textbf{Explicit neutral conductor.}  The neutral terminal is a
+        first-class variable; its voltage floats and is determined jointly by
+        the KCL equations and any grounding conditions declared on the bus.
+        This is the ``EN'' (explicit neutral) aspect of the formulation.
+
+  \item \textbf{Constant-power loads and generators.}  Active and reactive
+        power are specified as fixed $P^\text{nom}$, $Q^\text{nom}$ (loads) or
+        bounded intervals $[P^\text{min}, P^\text{max}]$,
+        $[Q^\text{min}, Q^\text{max}]$ (generators).  The resulting power
+        equations are \emph{bilinear} in the voltage and current variables,
+        making the problem a non-convex NLP.
+
+  \item \textbf{Shunt admittances are modelled.}  The $\pi$-model half-sections
+        ($G_\text{fr/to}$, $B_\text{fr/to}$ on linecodes, scaled by line length)
+        and standalone shunt objects ($G$/$B$ matrices, bus-connected to ground)
+        contribute linear current terms to KCL.  Thermal current limits are
+        enforced on the total current (series + shunt) at both line ends.
+
+  \item \textbf{NLP solver.}  The model is built with JuMP and solved with
+        Ipopt.  A feasibility-relaxed variant (\S\ref{sec:feasibility}) adds
+        elastic slack currents so that the KCL system is always satisfiable,
+        enabling diagnostics on infeasible data.
+\end{itemize}
+
+% ============================================================
+\section{Sets and Indices}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Symbol & Description & Defined on \\
+\midrule
+$\mc{B}$           & Buses & network \\
+$\mc{T}_b$         & Terminals of bus $b$ & bus \\
+$\mc{T}_b^\phi$    & Phase (non-neutral) terminals of bus $b$ & bus \\
+$n_b$              & Neutral terminal name of bus $b$ (if any) & bus \\
+$\mc{G}_\text{nd}$ & Grounded terminals: $(b,t)$ s.t.\ $v=0$ & bus \\
+$\mc{L}$           & Lines & network \\
+$\mc{S}$           & Switches & network \\
+$\mc{D}$           & Loads & network \\
+$\mc{G}$           & Generators & network \\
+$\mc{V}$           & Voltage sources (slack buses) & network \\
+$\mc{X}^\text{YY}$ & Wye--wye (per-phase) transformers & network \\
+$\mc{X}^\text{Yd}$ & Wye--delta transformers & network \\
+$\mc{X}^\text{Dy}$ & Delta--wye transformers & network \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The neutral terminal $n_b$ is identified in priority order:
+(1)~the explicit \texttt{neutral\_terminal} field on the bus,
+(2)~a terminal whose name is \texttt{"n"} or \texttt{"N"} (case-insensitive).
+If neither condition holds, all terminals of bus~$b$ are treated as phase
+conductors.
+
+% ============================================================
+\section{Parameters}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Symbol & Unit & Description & Source field \\
+\midrule
+$\Rmat_\ell, \Xmat_\ell$ & $\Omega$ & Total series resistance / reactance matrix of line $\ell$ & \texttt{linecode} $\times$ \texttt{length} \\
+$I^\text{max}_{\ell,k}$ & A & Current magnitude limit, conductor $k$ of line $\ell$ & \texttt{linecode.i\_max} \\
+$P^{d,\text{nom}}_{d,k}$, $Q^{d,\text{nom}}_{d,k}$ & W, var & Nominal active/reactive demand, phase $k$ & \texttt{load.p\_nom}, \texttt{q\_nom} \\
+$P^{g,\text{min/max}}_{g,k}$, $Q^{g,\text{min/max}}_{g,k}$ & W, var & Generator active/reactive power limits & \texttt{generator.p\_min/max}, \texttt{q\_min/max} \\
+$c^g_1$ & \$/W & Linear generation cost coefficient & \texttt{generator.cost} \\
+$V^s_{v,k}$, $\theta^s_{v,k}$ & V, rad & Voltage source magnitude and angle at terminal $k$ & \texttt{voltage\_source.v\_magnitude/angle} \\
+$v^b_\text{min}$, $v^b_\text{max}$ & V & Phase voltage magnitude limits at bus $b$ & \texttt{bus.v\_min}, \texttt{v\_max} \\
+$N_x$ & -- & Transformer turns ratio $= V^\text{ref}_\text{fr} / V^\text{ref}_\text{to}$ & \texttt{transformer.v\_ref\_from/to} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The series impedance matrices $\Rmat_\ell$, $\Xmat_\ell \in \R^{n_c \times n_c}$
+are constructed from the line's associated \texttt{linecode} (which stores
+impedance per metre) multiplied by \texttt{length} in metres.  The matrices are
+symmetric by the Carson/primitive impedance construction.
+
+% ============================================================
+\section{Decision Variables}
+
+All variables are real-valued and in SI units.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Variable & Index & Unit & Description \\
+\midrule
+$v^r_{b,t}$, $v^i_{b,t}$   & $(b,t)\in\mc{B}\times\mc{T}_b$ & V & Rectangular voltage \\
+$c^r_{\ell,k}$, $c^i_{\ell,k}$ & $\ell\in\mc{L},\,k=1\ldots n_\ell$ & A & Series current (from-side), conductor $k$ \\
+$\tilde{c}^r_{\ell,k}$, $\tilde{c}^i_{\ell,k}$ & same & A & Series current (to-side), conductor $k$ \\
+$c^{r,s}_{s,k}$, $c^{i,s}_{s,k}$ & $s\in\mc{S},\,k=1\ldots n_s$ & A & Switch current, conductor $k$ \\
+$c^{r,d}_{d,k}$, $c^{i,d}_{d,k}$ & $d\in\mc{D},\,k=1\ldots|\mc{T}_d^\phi|$ & A & Load current, phase conductor $k$ \\
+$c^{r,g}_{g,k}$, $c^{i,g}_{g,k}$ & $g\in\mc{G},\,k=1\ldots|\mc{T}_g^\phi|$ & A & Generator current, phase conductor $k$ \\
+$c^{r,v}_{v,k}$, $c^{i,v}_{v,k}$ & $v\in\mc{V},\,k=1\ldots n_v$ & A & Voltage source slack current \\
+$c^{r,x}_{x,\sigma,k}$, $c^{i,x}_{x,\sigma,k}$ & $x\in\mc{X},\,\sigma\in\{\text{fr},\text{to}\}$ & A & Transformer winding current \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Generator and load current variables are indexed over the \emph{phase}
+conductors only; the neutral return current is not an independent variable but
+is determined implicitly by KCL.
+
+% ============================================================
+\section{Objective Function}
+
+The objective minimises total active-power generation cost:
+%
+\begin{equation}
+  \min \sum_{g\in\mc{G}} \sum_{k=1}^{|\mc{T}_g^\phi|}
+    c^g_1 \cdot P_{g,k},
+\end{equation}
+%
+where the per-phase generated power $P_{g,k}$ is a bilinear expression in
+the decision variables (see \S\ref{sec:generators}).
+
+The cost field on a generator may alternatively be specified as a three-vector
+$[c_2, c_1, c_0]$.  The constant $c_0$ does not affect the optimum and is
+omitted.  The quadratic coefficient $c_2$ is currently not supported (a warning
+is issued); only the linear term $c_1 P$ is included.
+
+% ============================================================
+\section{Constraints}
+
+\subsection{Grounding}
+
+Terminals declared as perfectly grounded are fixed to zero potential:
+%
+\begin{equation}
+  \vr{b}{t} = 0,\quad \vi{b}{t} = 0, \qquad \forall\,(b,t)\in\mc{G}_\text{nd}.
+\end{equation}
+
+\subsection{Voltage Sources (Slack Bus)}
+
+A voltage source $v\in\mc{V}$ fixes the rectangular voltage at each of its
+terminals and injects an unconstrained slack current into the KCL system:
+%
+\begin{align}
+  \vr{b}{t_k} &= V^s_{v,k}\cos\theta^s_{v,k}, \\
+  \vi{b}{t_k} &= V^s_{v,k}\sin\theta^s_{v,k},
+\end{align}
+%
+for each terminal $t_k$ in the source's \texttt{terminal\_map}.  The slack
+current $(c^{r,v}_{v,k}, c^{i,v}_{v,k})$ is a free variable and absorbs
+whatever power balance the rest of the network requires, making the source bus
+the power-flow reference bus.
+
+\subsection{Voltage Magnitude Bounds}
+
+Operational voltage limits are enforced at every ungrounded, non-source,
+non-neutral phase terminal:
+%
+\begin{equation}
+  \left(v^b_\text{min}\right)^2
+  \;\leq\;
+  \left(\vr{b}{t}\right)^2 + \left(\vi{b}{t}\right)^2
+  \;\leq\;
+  \left(v^b_\text{max}\right)^2,
+  \qquad \forall\,b\in\mc{B},\; t\in\mc{T}_b^\phi.
+\end{equation}
+%
+The neutral terminal voltage is excluded from voltage bounds; it is determined
+by physics (KCL) and may float within whatever range the network equations
+permit.  The squared form avoids introducing a non-smooth square root.
+
+\subsection{Lines}
+\label{sec:lines}
+
+\subsubsection*{KVL (series voltage drop)}
+
+For line $\ell$ with $n_\ell$ conductors, total series impedance
+$\Zmat_\ell = \Rmat_\ell + j\Xmat_\ell \in \C^{n_\ell\times n_\ell}$, and
+terminal-map arrays $\mathbf{t}^\text{fr}_\ell$, $\mathbf{t}^\text{to}_\ell$:
+%
+\begin{align}
+  \vr{b^\text{fr}}{t^\text{fr}_k}
+  - \vr{b^\text{to}}{t^\text{to}_k}
+  &= \sum_{j=1}^{n_\ell}
+     \bigl(R_{\ell,kj}\,c^r_{\ell,j} - X_{\ell,kj}\,c^i_{\ell,j}\bigr),
+  \label{eq:kvl-r} \\[4pt]
+  \vi{b^\text{fr}}{t^\text{fr}_k}
+  - \vi{b^\text{to}}{t^\text{to}_k}
+  &= \sum_{j=1}^{n_\ell}
+     \bigl(R_{\ell,kj}\,c^i_{\ell,j} + X_{\ell,kj}\,c^r_{\ell,j}\bigr),
+  \label{eq:kvl-i}
+\end{align}
+%
+for $k = 1,\ldots,n_\ell$.  The impedance matrix $\Zmat_\ell$ captures full
+mutual coupling between conductors; the off-diagonal terms couple the voltage
+drop on one conductor to the current in another.
+
+\subsubsection*{Series current balance}
+
+The to-side series current variable equals the negative of the from-side:
+%
+\begin{equation}
+  \tilde{c}^r_{\ell,k} = -c^r_{\ell,k},\qquad
+  \tilde{c}^i_{\ell,k} = -c^i_{\ell,k},\qquad
+  k = 1,\ldots,n_\ell.
+\end{equation}
+
+\subsubsection*{$\pi$-model shunt currents}
+
+The linecode $G_\text{fr/to}$, $B_\text{fr/to}$ fields (S/m, scaled by line
+length) define shunt admittance half-sections at each end.  The resulting shunt
+current at bus~$b$, conductor~$k$ is linear in the voltage variables:
+%
+\begin{equation}
+  I^{\text{sh},r}_{k}(b)
+  = \sum_j \bigl(G_{kj}\,v^r_{b,t_j} - B_{kj}\,v^i_{b,t_j}\bigr),\qquad
+  I^{\text{sh},i}_{k}(b)
+  = \sum_j \bigl(G_{kj}\,v^i_{b,t_j} + B_{kj}\,v^r_{b,t_j}\bigr).
+  \label{eq:ish}
+\end{equation}
+%
+No new JuMP variables are introduced; the expressions are accumulated directly
+into the KCL terms.
+
+\subsubsection*{Current magnitude limits}
+
+Thermal limits are enforced on the \emph{total} current (series + shunt) at
+both ends of the line.  When the linecode specifies $I^\text{max}_{\ell,k}$:
+%
+\begin{align}
+  \bigl(c^r_{\ell,k} + I^{\text{sh},r}_k(b^\text{fr})\bigr)^2
+  + \bigl(c^i_{\ell,k} + I^{\text{sh},i}_k(b^\text{fr})\bigr)^2
+  &\;\leq\; \bigl(I^\text{max}_{\ell,k}\bigr)^2,
+  \label{eq:i-lim-fr} \\[4pt]
+  \bigl(\tilde{c}^r_{\ell,k} + I^{\text{sh},r}_k(b^\text{to})\bigr)^2
+  + \bigl(\tilde{c}^i_{\ell,k} + I^{\text{sh},i}_k(b^\text{to})\bigr)^2
+  &\;\leq\; \bigl(I^\text{max}_{\ell,k}\bigr)^2,
+  \label{eq:i-lim-to}
+\end{align}
+%
+for $k = 1,\ldots,n_\ell$.  When shunt fields are absent or zero, these
+collapse to the familiar series-only constraint at both ends.
+
+\subsubsection*{KCL contributions}
+
+At bus~$b^\text{fr}$, terminal $t^\text{fr}_k$: the series current
+$c^r_{\ell,k}$ and the from-end shunt current $I^{\text{sh},r}_k(b^\text{fr})$
+both leave the bus, contributing $-(c^r_{\ell,k} + I^{\text{sh},r}_k(b^\text{fr}))$.
+At bus~$b^\text{to}$, terminal $t^\text{to}_k$: the to-side series current
+$\tilde{c}^r_{\ell,k} = -c^r_{\ell,k}$ and the to-end shunt current both leave
+the bus, contributing $-(\tilde{c}^r_{\ell,k} + I^{\text{sh},r}_k(b^\text{to}))
+= c^r_{\ell,k} - I^{\text{sh},r}_k(b^\text{to})$.
+
+\subsection{Switches}
+
+A \emph{closed} switch enforces zero voltage drop across its terminals:
+%
+\begin{equation}
+  \vr{b^\text{fr}}{t^\text{fr}_k} = \vr{b^\text{to}}{t^\text{to}_k},\qquad
+  \vi{b^\text{fr}}{t^\text{fr}_k} = \vi{b^\text{to}}{t^\text{to}_k},\qquad
+  k = 1,\ldots,n_s.
+\end{equation}
+%
+An \emph{open} switch has its current variables fixed to zero
+$(c^{r,s}_{s,k} = c^{i,s}_{s,k} = 0)$; no voltage coupling is imposed, so
+the two buses are electrically disconnected at that conductor.
+
+Switch currents contribute to KCL with sign convention: current $c^{r,s}_{s,k}$
+leaves $b^\text{fr}$ and enters $b^\text{to}$.
+
+\subsection{Standalone Shunts}
+\label{sec:shunts}
+
+A \texttt{shunt} object represents an admittance matrix
+$\mathbf{Y}^{sh} = \mathbf{G}^{sh} + j\mathbf{B}^{sh}$ (S) connected between
+a set of bus terminals and ground.  The current drawn from terminal~$k$ is
+linear in the voltage variables (no new JuMP variables):
+%
+\begin{equation}
+  I^{\text{sh},r}_{k}
+  = \sum_j \bigl(G^{sh}_{kj}\,v^r_{b,t_j} - B^{sh}_{kj}\,v^i_{b,t_j}\bigr),\qquad
+  I^{\text{sh},i}_{k}
+  = \sum_j \bigl(G^{sh}_{kj}\,v^i_{b,t_j} + B^{sh}_{kj}\,v^r_{b,t_j}\bigr).
+\end{equation}
+%
+KCL contribution: $-I^{\text{sh},r}_k$ at terminal~$t_k$ (current leaves the
+bus to ground).  Grounded terminals are absent from the voltage variable dict
+and contribute nothing.
+
+\subsection{Loads}
+\label{sec:loads}
+
+The load model is \emph{constant power}: active and reactive power at each
+phase conductor are fixed parameters $P^{d,\text{nom}}_{d,k}$ and
+$Q^{d,\text{nom}}_{d,k}$.  The relationship between power, voltage, and current
+is bilinear in rectangular coordinates.
+
+\subsubsection*{Wye / Single-phase loads}
+
+Let $t^\phi_k$ denote the $k$-th phase terminal of load $d$ and $n_b$ the
+neutral terminal of bus~$b$ (or implicitly zero if absent).  Define the
+phase-to-neutral voltage drop:
+%
+\begin{equation}
+  \dvr_k = \vr{b}{t^\phi_k} - \vr{b}{n_b},
+  \qquad
+  \dvi_k = \vi{b}{t^\phi_k} - \vi{b}{n_b}.
+\end{equation}
+%
+The constant-power equations for phase $k$ are:
+%
+\begin{align}
+  \dvr_k\,c^{r,d}_{d,k} + \dvi_k\,c^{i,d}_{d,k} &= P^{d,\text{nom}}_{d,k},
+  \label{eq:load-p}\\
+  \dvi_k\,c^{r,d}_{d,k} - \dvr_k\,c^{i,d}_{d,k} &= Q^{d,\text{nom}}_{d,k}.
+  \label{eq:load-q}
+\end{align}
+%
+These are the real and imaginary parts of $S = V \cdot I^*$ in rectangular form.
+The neutral return current is not an explicit variable; it appears as the
+negative sum of phase currents in KCL at terminal $n_b$.
+
+\subsubsection*{Delta loads}
+
+For a delta-connected load with $n_c$ terminals, element $k$ is connected
+positive-to-negative between terminal $t_k$ and $t_{k^+}$ where
+$k^+ = (k \bmod n_c) + 1$ (cyclic):
+%
+\begin{equation}
+  \dvr_k = \vr{b}{t_k} - \vr{b}{t_{k^+}},
+  \qquad
+  \dvi_k = \vi{b}{t_k} - \vi{b}{t_{k^+}}.
+\end{equation}
+%
+The power equations (\ref{eq:load-p})--(\ref{eq:load-q}) apply with these
+line-to-line voltage drops.  KCL contributions are: $-c^{r,d}_{d,k}$ at
+terminal $t_k$ and $+c^{r,d}_{d,k}$ at terminal $t_{k^+}$.
+
+\subsection{Generators}
+\label{sec:generators}
+
+Generators follow the same bilinear power expressions as wye-connected loads,
+but with power \emph{injected} rather than consumed, and with bounds instead of
+equalities:
+%
+\begin{align}
+  P^{g,\text{min}}_{g,k}
+  \;\leq\; \dvr_k\,c^{r,g}_{g,k} + \dvi_k\,c^{i,g}_{g,k}
+  &\;\leq\; P^{g,\text{max}}_{g,k},
+  \label{eq:gen-p}\\
+  Q^{g,\text{min}}_{g,k}
+  \;\leq\; \dvi_k\,c^{r,g}_{g,k} - \dvr_k\,c^{i,g}_{g,k}
+  &\;\leq\; Q^{g,\text{max}}_{g,k}.
+  \label{eq:gen-q}
+\end{align}
+%
+The voltage drop $(\dvr_k, \dvi_k)$ is phase-to-neutral for WYE generators and
+line-to-line for DELTA generators, following the same convention as loads.
+Generator currents contribute positively to KCL at the phase terminal and
+negatively at the neutral terminal (current flows \emph{out of} the neutral).
+
+\subsection{Transformers}
+
+All transformer constraints are linear in the voltage and current variables.
+Apparent power and thermal limits on transformers are not currently modelled
+as explicit constraints.
+
+\subsubsection*{Wye--wye (per-phase YY)}
+
+The \texttt{single\_phase} and \texttt{center\_tap} subtypes are modelled as
+independent per-phase ideal transformers with turns ratio
+$N_x = V^\text{ref}_\text{fr} / V^\text{ref}_\text{to}$:
+%
+\begin{align}
+  \vr{b^\text{fr}}{t^\text{fr}_k} &= N_x\,\vr{b^\text{to}}{t^\text{to}_k},
+  \qquad
+  \vi{b^\text{fr}}{t^\text{fr}_k} = N_x\,\vi{b^\text{to}}{t^\text{to}_k},
+  \label{eq:yy-v}\\
+  N_x\,c^{r,x}_{x,\text{fr},k} &+ c^{r,x}_{x,\text{to},k} = 0,
+  \qquad
+  N_x\,c^{i,x}_{x,\text{fr},k} + c^{i,x}_{x,\text{to},k} = 0.
+  \label{eq:yy-i}
+\end{align}
+%
+The current relation (\ref{eq:yy-i}) is the transpose of the voltage transform
+and ensures power conservation.
+
+\subsubsection*{Wye--delta (Yd) and delta--wye (Dy)}
+
+The \texttt{wye\_delta} (Yd) and \texttt{delta\_wye} (Dy) subtypes share a
+common formulation.  Let the subscripts ``wye'' and ``del'' refer to the wye-
+and delta-connected windings respectively, with $n_\phi$ phase conductors on the
+delta side.  The \emph{effective} per-winding turns ratio accounts for the
+$\sqrt{3}$ factor introduced by the delta geometry:
+%
+\begin{equation}
+  n_\text{eff} =
+  \begin{dcases}
+    \dfrac{\sqrt{3}}{N_x} & \text{Yd (wye is from-side)},\\[6pt]
+    N_x\,\sqrt{3}         & \text{Dy (delta is from-side)}.
+  \end{dcases}
+\end{equation}
+%
+Here $N_x = V^\text{ref}_\text{fr} / V^\text{ref}_\text{to}$ and both reference
+voltages are specified as phase-to-neutral equivalents.
+
+\paragraph{Voltage constraints.}
+For $k = 1,\ldots,n_\phi$ with $k^+ = (k \bmod n_\phi)+1$, the delta line-to-line
+voltage equals the wye phase-to-neutral voltage scaled by $n_\text{eff}$:
+%
+\begin{align}
+  \vr{\text{del}}{t_k} - \vr{\text{del}}{t_{k^+}}
+  &= n_\text{eff}\bigl(\vr{\text{wye}}{t^\phi_k} - \vr{\text{wye}}{n_\text{wye}}\bigr),
+  \label{eq:yd-v-r}\\
+  \vi{\text{del}}{t_k} - \vi{\text{del}}{t_{k^+}}
+  &= n_\text{eff}\bigl(\vi{\text{wye}}{t^\phi_k} - \vi{\text{wye}}{n_\text{wye}}\bigr),
+  \label{eq:yd-v-i}
+\end{align}
+%
+where $n_\text{wye}$ denotes the wye-side neutral terminal (if present; otherwise
+the wye-side neutral voltage is taken to be zero).
+
+\paragraph{Current constraints.}
+The current transform is the transpose of the voltage transform, ensuring power
+conservation.  Let $k^- = ((k-2)\bmod n_\phi)+1$:
+%
+\begin{align}
+  n_\text{eff}\,c^{r,x}_{x,\text{del},k}
+  &= c^{r,x}_{x,\text{wye},k} - c^{r,x}_{x,\text{wye},k^-},
+  \label{eq:yd-i-r}\\
+  n_\text{eff}\,c^{i,x}_{x,\text{del},k}
+  &= c^{i,x}_{x,\text{wye},k} - c^{i,x}_{x,\text{wye},k^-}.
+  \label{eq:yd-i-i}
+\end{align}
+
+\paragraph{Neutral KCL at the transformer star point.}
+When the wye winding has an explicit neutral terminal:
+%
+\begin{equation}
+  c^{r,x}_{x,\text{wye},n} + \sum_{k=1}^{n_\phi} c^{r,x}_{x,\text{wye},k} = 0,
+  \qquad
+  c^{i,x}_{x,\text{wye},n} + \sum_{k=1}^{n_\phi} c^{i,x}_{x,\text{wye},k} = 0.
+  \label{eq:yd-neutral}
+\end{equation}
+
+\subsection{Kirchhoff's Current Law}
+
+KCL is enforced at every ungrounded terminal.  Each component function
+accumulates its signed current contribution into per-terminal accumulators
+$(\kappa^r_{b,t},\,\kappa^i_{b,t})$ using the sign convention
+\emph{positive current flows into the bus}.  The final KCL constraints are:
+%
+\begin{equation}
+  \kappa^r_{b,t} = 0,\qquad
+  \kappa^i_{b,t} = 0,\qquad
+  \forall\,(b,t)\notin\mc{G}_\text{nd}.
+  \label{eq:kcl}
+\end{equation}
+
+Table~\ref{tab:kcl} summarises the contribution of each component type to the
+KCL accumulator at a given terminal.
+
+\begin{table}[h!]
+\centering
+\caption{KCL contributions (real part; imaginary part analogous).}
+\label{tab:kcl}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Component & Terminal & Contribution & Sign rationale \\
+\midrule
+Voltage source $v$ & $t^\text{src}_k$ & $+c^{r,v}_{v,k}$ & Source injects into bus \\
+Line $\ell$ & $t^\text{fr}_k$ (from-bus) & $-c^r_{\ell,k}$ & Current leaves from-bus \\
+Line $\ell$ & $t^\text{to}_k$ (to-bus) & $-\tilde{c}^r_{\ell,k} = +c^r_{\ell,k}$ & Current enters to-bus \\
+Switch $s$ (closed) & $t^\text{fr}_k$ & $-c^{r,s}_{s,k}$ & Current leaves \\
+Switch $s$ (closed) & $t^\text{to}_k$ & $+c^{r,s}_{s,k}$ & Current enters \\
+Load $d$ (WYE) & phase $t^\phi_k$ & $-c^{r,d}_{d,k}$ & Load consumes current \\
+Load $d$ (WYE) & neutral $n_b$ & $+c^{r,d}_{d,k}$ & Return path \\
+Load $d$ (DELTA) & $t_k$ (positive) & $-c^{r,d}_{d,k}$ & Current leaves \\
+Load $d$ (DELTA) & $t_{k^+}$ (negative) & $+c^{r,d}_{d,k}$ & Current returns \\
+Generator $g$ (WYE) & phase $t^\phi_k$ & $+c^{r,g}_{g,k}$ & Generator injects \\
+Generator $g$ (WYE) & neutral $n_b$ & $-c^{r,g}_{g,k}$ & Return path \\
+Transformer $x$ & any terminal $t$ & $-c^{r,x}_{x,\sigma,k}$ & All winding currents leave \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\section{Feasibility Relaxation}
+\label{sec:feasibility}
+
+The standard OPF may be infeasible when the constant-power load and generation
+specifications cannot be reconciled with the network's physical constraints.  To
+enable diagnostics on such cases, a \emph{feasibility-relaxed} variant
+$\texttt{solve\_feasibility\_opf}$ is provided.
+
+\subsection{Elastic Slack Currents}
+
+An elastic slack current $(c^{r,\varepsilon}_{b,t},\, c^{i,\varepsilon}_{b,t})$
+is added at every ungrounded, non-source terminal.  These variables enter KCL
+directly:
+%
+\begin{equation}
+  \kappa^r_{b,t} + c^{r,\varepsilon}_{b,t} = 0,\qquad
+  \kappa^i_{b,t} + c^{i,\varepsilon}_{b,t} = 0,
+  \qquad \forall\,(b,t)\notin\mc{G}_\text{nd}\cup\mc{G}_\text{src}.
+\end{equation}
+%
+Since the slacks are unconstrained, the modified KCL system is always feasible.
+
+\subsection{Objective}
+
+The cost objective is replaced by the $\ell_2^2$ norm of all slack injections:
+%
+\begin{equation}
+  \min\;\sum_{(b,t)\notin\mc{G}_\text{nd}\cup\mc{G}_\text{src}}
+    \Bigl[
+      \bigl(c^{r,\varepsilon}_{b,t}\bigr)^2
+      + \bigl(c^{i,\varepsilon}_{b,t}\bigr)^2
+    \Bigr].
+\end{equation}
+%
+All other constraints (KVL, power equations, transformer coupling) are
+unchanged.  Voltage bounds are \emph{not} enforced as hard constraints in the
+feasibility OPF; they are evaluated post-solve and reported separately.
+
+\subsection{Interpretation}
+
+A zero slack solution ($c^\varepsilon = 0$) certifies that the network is
+physically feasible under its loading conditions.  Non-zero slacks at terminal
+$(b,t)$ indicate that KCL cannot be satisfied there without external
+intervention.  The magnitude and location of the slacks are used by
+$\texttt{diagnose\_infeasibility}$ to rank and classify the root cause
+(overloaded feeder, floating neutral, isolated bus, transformer mismatch, etc.).
+
+% ============================================================
+\section{Warm-Start Strategy}
+
+The IVR formulation is an NLP with multiple local minima.  Without
+initialisation, Ipopt typically converges to the degenerate $v = 0$ solution.
+The following start values are applied before solving:
+
+For the standard OPF:
+\begin{equation}
+  v^{r,0}_{b,t} = V^\text{src} \cos\theta_t,\quad
+  v^{i,0}_{b,t} = V^\text{src} \sin\theta_t,
+\end{equation}
+where $V^\text{src}$ is the source voltage magnitude and
+$\theta_t \in \{0,\,-2\pi/3,\,+2\pi/3,\,0\}$ for phase terminals
+$\{$a, b, c, n$\}$.
+
+For the feasibility OPF, a BFS voltage propagation through the transformer
+tree assigns per-bus nominal voltages $V^\text{nom}_b$, and the start value
+is $V^\text{nom}_b\cos\theta_t$ per bus.  This correctly initialises LV buses
+at $\approx 230$\,V rather than at the source voltage ($\approx 6350$\,V for
+an 11\,kV MV feeder), preventing convergence to the high-voltage local minimum
+that arises without voltage bounds.
+
+% ============================================================
+\section{Summary of Constraint Counts}
+
+For a network with $B$ buses, average $T$ terminals per bus, $L$ lines with
+$n_\ell$ conductors each, $D$ wye-connected loads, $G$ generators, and one
+voltage source, the model has approximately:
+%
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lr@{}}
+\toprule
+Variable family & Count (real) \\
+\midrule
+Bus voltages $(v^r, v^i)$ & $2 B T$ \\
+Line currents (fr + to) & $4 \sum_\ell n_\ell$ \\
+Load currents & $2 \sum_d n^\phi_d$ \\
+Generator currents & $2 \sum_g n^\phi_g$ \\
+Source slack currents & $2 n_v$ \\
+\midrule
+Equality constraints & \\
+\quad Grounded terminals & $2|\mc{G}_\text{nd}|$ \\
+\quad Source voltage fixing & $2 n_v$ \\
+\quad KVL (lines, real + imaginary) & $4\sum_\ell n_\ell$ \\
+\quad Series current balance & $4\sum_\ell n_\ell$ \\
+\quad Load P/Q equations & $4\sum_d n^\phi_d$ \\
+\quad Transformer equations & linear in winding count \\
+\quad KCL & $2(BT - |\mc{G}_\text{nd}|)$ \\
+Inequality constraints & \\
+\quad Voltage bounds & $\leq 2\sum_b |\mc{T}^\phi_b|$ \\
+\quad Current limits & $\leq 2\sum_\ell n_\ell$ \\
+\quad Generator P/Q bounds & $4\sum_g n^\phi_g$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================
+\section{Relationship to PowerModelsDistribution}
+
+The formulation follows the \texttt{IVRENPowerModel} in
+PowerModelsDistribution~\cite{PowerModelsDistribution2022}, with these
+differences:
+%
+\begin{itemize}
+  \item All variables and parameters are in \textbf{SI units} (V, A, W, var,
+        $\Omega$) rather than per-unit.
+
+  \item The neutral terminal is identified by the \texttt{neutral\_terminal}
+        bus field or the ``n''/``N'' naming convention, rather than by a fixed
+        conductor index.
+
+  \item Network data is read directly from the BMOPF JSON schema rather than
+        the PMD MATHEMATICAL model dict.
+
+  \item The feasibility relaxation and infeasibility diagnostics are
+        BMOPFTools-specific extensions not present in PMD.
+\end{itemize}
+
+% ============================================================
+\bibliographystyle{IEEEtran}
+\begin{thebibliography}{9}
+
+\bibitem{PowerModelsDistribution2022}
+D.~Fobes, S.~ Claeys, F.~Geth, and C.~Coffrin,
+``PowerModelsDistribution.jl: An Open-Source Framework for Exploring
+  Distribution Power Flow Formulations,''
+\emph{Electric Power Systems Research}, vol.~189, p.~106664, 2020.
+
+\end{thebibliography}
+
+\end{document}
