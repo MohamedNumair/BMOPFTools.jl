@@ -65,7 +65,7 @@ function diagnose_infeasibility(fopf_result::Dict{String,Any},
         bus_res = get(bus_result, bid, Dict())
         v_min   = get(bus, "v_min", nothing)
         v_max   = get(bus, "v_max", nothing)
-        neutral = _neutral_terminal(Vector{String}(get(bus, "terminal_names", String[])))
+        neutral = _neutral_terminal(bus)
 
         v_nom = get(v_nom_by_bus, bid, nothing)
         if v_min === nothing && v_max === nothing && v_nom !== nothing
@@ -127,7 +127,7 @@ function diagnose_infeasibility(fopf_result::Dict{String,Any},
         bus_res = get(bus_result, bid, Dict())
         v_min   = get(bus, "v_min", nothing)
         v_max   = get(bus, "v_max", nothing)
-        neutral = _neutral_terminal(Vector{String}(get(bus, "terminal_names", String[])))
+        neutral = _neutral_terminal(bus)
 
         # Fall back to pu-based bounds when no explicit limits set
         v_nom = get(v_nom_by_bus, bid, nothing)
