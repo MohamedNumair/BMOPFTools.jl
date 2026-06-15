@@ -63,7 +63,7 @@ verbatim decimal string. Coercion is recorded in
 A bus carries `terminal_names`, optionally `perfectly_grounded_terminals`,
 and optional voltage-magnitude bounds in four flavours: phase-to-ground
 (`v_min`/`v_max`), phase-to-neutral (`vpn_*`), phase-to-phase (`vpp_*`) and
-sequence (`vsym_*`). Absent bounds mean *unconstrained* (spec §4.1.5).
+sequence (`vpos_*`). Absent bounds mean *unconstrained* (spec §4.1.5).
 
 Grounding semantics (spec Table 10):
 

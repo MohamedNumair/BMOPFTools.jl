@@ -21,7 +21,7 @@ const _REQUIRED_TRANSFORMER_FIELDS = ["bus_from", "bus_to",
 
 const _OPTIONAL_FIELDS = Dict{String,Vector{String}}(
     "bus"  => ["v_min", "v_max", "vpn_min", "vpn_max", "vpp_min", "vpp_max",
-               "vsym_min", "vsym_max", "perfectly_grounded_terminals"],
+               "vpos_min", "vpos_max", "perfectly_grounded_terminals"],
     "line" => ["i_max", "s_max"],
     "load" => [],
     "generator" => ["p_min", "p_max", "q_min", "q_max"],
