@@ -32,7 +32,7 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
     cr_to_v = vars[:cr_to]; ci_to_v = vars[:ci_to]
 
     feasible = JuMP.termination_status(model) in (
-        JuMP.MOI.LOCALLY_SOLVED, JuMP.MOI.OPTIMAL)
+        JuMP.MOI.LOCALLY_SOLVED, JuMP.MOI.OPTIMAL, JuMP.MOI.ALMOST_LOCALLY_SOLVED)
 
     # Helper: safely get variable value (returns NaN if not solved)
     val(v) = feasible ? JuMP.value(v) : NaN

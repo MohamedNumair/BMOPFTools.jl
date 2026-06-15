@@ -122,9 +122,13 @@ function from_pmd(eng::Dict{String,Any};
             phases = [t for t in get(vs, "terminal_map", String[]) if t != "n"]
             isempty(phases) && continue
             tmap = copy(phases)
-            # WYE configuration needs the midpoint return; use the bus
-            # neutral when it exists
-            "n" in get(bus_terminals, bus, String[]) && push!(tmap, "n")
+            # The slack generator models the DSS circuit object's power injection.
+            # DSS circuit sources are referenced to earth (terminal 0), not to the
+            # bus neutral (terminal 4). Including the neutral terminal as a WYE
+            # return creates a spurious degree of freedom that allows the neutral
+            # voltage to drift to unphysical values. Leave the neutral out — the
+            # generator power is referenced to the absolute ground (V=0 implicit
+            # reference), and the neutral bus is governed only by grounding shunts.
             gens["slack_" * vsid] = Dict{String,Any}(
                 "bus"           => bus,
                 "terminal_map"  => tmap,
@@ -350,11 +354,19 @@ function _load_from_pmd(pmd_load::Dict{String,Any},
     conn = get(pmd_load, "connections", Int[])
     l["terminal_map"]  = [_terminal_int_to_name(c) for c in conn]
 
-    # TF spec: a load between two nodes is SINGLE_PHASE; WYE means the
-    # 4-terminal midpoint-return configuration. PMD labels 2-terminal
-    # loads WYE, so reclassify by terminal arity.
+    # TF spec: reclassify 2-terminal loads by terminal type.
+    # PMD labels all 2-terminal loads WYE regardless of connection.
+    # If both terminals are phase conductors (neither is neutral=4), the
+    # load is connected phase-to-phase → DELTA.
+    # If one terminal is the neutral (4), it is phase-to-neutral → SINGLE_PHASE.
     cfg = string(pmd_load["configuration"])
-    l["configuration"] = length(conn) == 2 ? "SINGLE_PHASE" : cfg
+    l["configuration"] = if length(conn) == 2 && !any(c == 4 for c in conn)
+        "DELTA"
+    elseif length(conn) == 2
+        "SINGLE_PHASE"
+    else
+        cfg
+    end
 
     if haskey(pmd_load, "pd_nom")
         l["p_nom"] = Float64.(pmd_load["pd_nom"]) .* pscale
@@ -491,6 +503,16 @@ function _classify_transformer(id::String, pmd_xfmr::Dict{String,Any},
     if length(conns) >= 2
         xfmr["terminal_map_to"] = _winding_terminal_names(
             conns[2], xfmr["bus_to"], bus_terminals, id)
+    end
+
+    # PMD cycles the wye-secondary connections by one position for delta_wye
+    # (e.g. [1,2,3,4] → [2,3,1,4]).  Normalise to natural phase order so that
+    # terminal_map_to[k] corresponds to physical phase k.
+    if subtype == "delta_wye" && haskey(xfmr, "terminal_map_to")
+        tm = xfmr["terminal_map_to"]
+        phase_terms   = sort(filter(t -> t != "n", tm))
+        neutral_terms = filter(t -> t == "n", tm)
+        xfmr["terminal_map_to"] = vcat(phase_terms, neutral_terms)
     end
 
     vm_nom = get(pmd_xfmr, "vm_nom", nothing)

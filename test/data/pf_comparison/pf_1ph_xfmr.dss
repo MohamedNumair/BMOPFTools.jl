@@ -1,0 +1,36 @@
+! Single-phase WYE-WYE transformer power-flow comparison case.
+! (BMOPF subtype: single_phase)
+!
+! Topology: hv ──[1-ph YY xfmr, 11 kV / 0.24 kV]── lv
+!   hv.1/4  = HV phase and neutral (source side)
+!   lv.1/4  = LV phase and neutral (load side)
+!
+! Both neutrals are explicitly earthed so the neutral voltage at lv is
+! determined by the load return current and the LV neutral grounding.
+! Verifies the turns-ratio scaling and per-winding impedance handling.
+
+Clear
+
+New Circuit.pf_1ph_xfmr basekv=11.0 pu=1.0 angle=0 phases=1 bus1=hv.1.0
+
+! HV neutral earthed at source.
+New Reactor.grnd_hv bus1=hv.4 bus2=hv.0 R=0.001 X=0 phases=1
+
+! 2-winding WYE-WYE → PMD classifies as 'single_phase'.
+! %r=0.1 xhl=0.1 → voltage drop < 0.2 V; within the 1 V BMOPF tolerance
+! for the ideal-transformer model that ignores series impedance.
+New Transformer.t1 phases=1 windings=2
+~ wdg=1 bus=hv.1.4 conn=wye kv=11.0 %r=0.1 kva=50
+~ wdg=2 bus=lv.1.4 conn=wye kv=0.240 %r=0.1 kva=50
+~ xhl=0.1
+
+! LV neutral earthed.
+New Reactor.grnd_lv bus1=lv.4 bus2=lv.0 R=0.001 X=0 phases=1
+
+! Vminpu=0 Vmaxpu=2: disable ODS voltage-dependent load switching so model=1
+! behaves as strict constant P+Q at all voltages, matching BMOPF.
+New Load.ld1 bus1=lv.1.4 kv=0.240 kw=30 kvar=10 phases=1 model=1 Vminpu=0 Vmaxpu=2
+
+Set VoltageBases=[11.0, 0.240]
+CalcVoltageBases
+Solve

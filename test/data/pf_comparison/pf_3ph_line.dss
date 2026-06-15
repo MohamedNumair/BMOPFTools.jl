@@ -1,0 +1,38 @@
+! Three-phase 4-wire unbalanced power-flow comparison case.
+!
+! Topology: src ──[4-wire line, 0.5 km]── lb
+!   src.1/2/3  = phase conductors (3-phase balanced 0.415 kV source)
+!   src.4      = neutral, earthed via near-zero reactor
+!   lb.1/2/3   = load phase terminals (unbalanced loads)
+!   lb.4       = neutral; non-zero due to load imbalance and neutral impedance
+!
+! The unbalanced loading (15/10/20 kW) produces a measurable neutral
+! displacement voltage at lb — a strong check on the 4-wire coupling terms
+! in the impedance matrix.
+
+Clear
+
+New Circuit.pf_3ph_line basekv=0.415 pu=1.0 angle=0 phases=3 bus1=src.1.2.3
+
+New Reactor.grnd bus1=src.4 bus2=src.0 R=0.001 X=0
+
+! 4-wire linecode: 4×4 lower-triangular Rmatrix/Xmatrix in Ω/km.
+! Phase self-impedance 0.5 Ω/km; neutral self 0.5 Ω/km; mutual 0.02 Ω/km.
+New Linecode.4w nphases=4
+~ Rmatrix=[0.500|0.020 0.500|0.020 0.020 0.500|0.020 0.020 0.020 0.500]
+~ Xmatrix=[0.200|0.050 0.200|0.050 0.050 0.200|0.050 0.050 0.050 0.200]
+~ Cmatrix=[0|0 0|0 0 0|0 0 0 0]
+~ units=km
+
+New Line.l1 bus1=src.1.2.3.4 bus2=lb.1.2.3.4 linecode=4w length=500 units=m
+
+! Unbalanced constant-power wye-to-neutral loads (model=1).
+! Vminpu=0 Vmaxpu=2: disable ODS voltage-dependent load switching so model=1
+! behaves as strict constant P+Q at all voltages, matching BMOPF.
+New Load.ld1 bus1=lb.1.4 kv=0.240 kw=15 kvar=5  phases=1 model=1 Vminpu=0 Vmaxpu=2
+New Load.ld2 bus1=lb.2.4 kv=0.240 kw=10 kvar=3  phases=1 model=1 Vminpu=0 Vmaxpu=2
+New Load.ld3 bus1=lb.3.4 kv=0.240 kw=20 kvar=7  phases=1 model=1 Vminpu=0 Vmaxpu=2
+
+Set VoltageBases=[0.415]
+CalcVoltageBases
+Solve
