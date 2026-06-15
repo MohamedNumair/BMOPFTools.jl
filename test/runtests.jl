@@ -7,6 +7,11 @@ if _HAS_PMD
     @eval using PowerModelsDistribution
 end
 
+const _HAS_ODS = !isnothing(Base.identify_package("OpenDSSDirect"))
+if _HAS_ODS
+    @eval using OpenDSSDirect
+end
+
 const _HAS_JUMP_IPOPT = !isnothing(Base.identify_package("JuMP")) &&
                         !isnothing(Base.identify_package("Ipopt"))
 if _HAS_JUMP_IPOPT
@@ -583,7 +588,7 @@ const IEEE13_FIXTURE = """
         g = net["generator"]["slack_source"]
         @test g["bus"] == "src"
         @test g["configuration"] == "WYE"
-        @test g["terminal_map"] == ["1","2","3","n"]
+        @test g["terminal_map"] == ["1","2","3"]
         @test g["cost"] ≈ [0.25, 0.25, 0.25]
         @test get(g, "_slack", false) == true
         @test !haskey(g, "p_min") && !haskey(g, "p_max")
@@ -1435,7 +1440,7 @@ const IEEE13_FIXTURE = """
                 @test length(slack) == 1
                 @test slack[1]["bus"] == first(values(net["voltage_source"]))["bus"]
                 @test slack[1]["configuration"] == "WYE"
-                @test length(slack[1]["terminal_map"]) == 4
+                @test length(slack[1]["terminal_map"]) == 3
                 @test haskey(slack[1], "cost")
                 @test !haskey(slack[1], "p_max")     # unbounded slack
 
@@ -1533,6 +1538,18 @@ const IEEE13_FIXTURE = """
             @test_skip "JuMP/Ipopt not in load path — skipping OPF tests"
         else
             include("opf_tests.jl")
+        end
+    end
+
+    # -----------------------------------------------------------------------
+    # Power-flow comparison — BMOPF vs OpenDSS reference solver
+    # Requires JuMP, Ipopt, PowerModelsDistribution, and OpenDSSDirect.
+    # -----------------------------------------------------------------------
+    @testset "Power-flow comparison vs OpenDSS" begin
+        if !_HAS_JUMP_IPOPT || !_HAS_PMD || !_HAS_ODS
+            @test_skip "Requires JuMP, Ipopt, PowerModelsDistribution, and OpenDSSDirect"
+        else
+            include("powerflow_comparison_tests.jl")
         end
     end
 
