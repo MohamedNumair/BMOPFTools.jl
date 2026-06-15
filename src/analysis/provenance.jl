@@ -639,7 +639,7 @@ end
 # Per-bus neutral terminal name (or nothing), via the convention helper
 function _bus_neutral_map(buses)::Dict{String,Union{String,Nothing}}
     Dict{String,Union{String,Nothing}}(
-        id => _neutral_terminal(string.(get(b, "terminal_names", String[])))
+        id => _neutral_terminal(b)
         for (id, b) in buses)
 end
 
