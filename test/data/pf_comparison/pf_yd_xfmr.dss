@@ -1,0 +1,36 @@
+! Wye-delta (Yd) three-phase transformer power-flow comparison case.
+! (BMOPF subtype: wye_delta)
+!
+! Topology: hv ──[Yd xfmr, 11 kV wye / 0.415 kV delta]── lv
+!   hv.1/2/3/4  = HV wye phases and neutral
+!   lv.1/2/3    = LV delta terminals (no neutral on delta bus)
+!
+! Unbalanced single-phase loads are connected phase-to-phase on the delta bus.
+! The ≈−30° angle shift is implicit in the Yd constraint equations; any error
+! in the BMOPF formulation will produce non-zero slack or voltage mismatch.
+
+Clear
+
+New Circuit.pf_yd_xfmr basekv=11.0 pu=1.0 angle=0 phases=3 bus1=hv.1.2.3
+
+! HV wye neutral earthed via near-zero reactor.
+New Reactor.grnd_hv bus1=hv.4 bus2=hv.0 R=0.001 X=0
+
+! 2-winding WYE-DELTA → PMD classifies as 'wye_delta'.
+! %r=0.1 xhl=0.1 → voltage drop < 0.2 V; within the 1 V BMOPF tolerance
+! for the ideal-transformer model that ignores series impedance.
+New Transformer.t1 phases=3 windings=2
+~ wdg=1 bus=hv.1.2.3.4 conn=wye   kv=11.0  %r=0.1 kva=500
+~ wdg=2 bus=lv.1.2.3   conn=delta kv=0.415 %r=0.1 kva=500
+~ xhl=0.1
+
+! Unbalanced phase-to-phase loads on LV delta bus.
+! Vminpu=0 Vmaxpu=2: disable ODS voltage-dependent load switching so model=1
+! behaves as strict constant P+Q at all voltages, matching BMOPF.
+New Load.ld1 bus1=lv.1.2 kv=0.415 kw=100 kvar=30 phases=1 model=1 Vminpu=0 Vmaxpu=2
+New Load.ld2 bus1=lv.2.3 kv=0.415 kw=80  kvar=25 phases=1 model=1 Vminpu=0 Vmaxpu=2
+New Load.ld3 bus1=lv.3.1 kv=0.415 kw=120 kvar=40 phases=1 model=1 Vminpu=0 Vmaxpu=2
+
+Set VoltageBases=[11.0, 0.415]
+CalcVoltageBases
+Solve
