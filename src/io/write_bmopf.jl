@@ -30,7 +30,8 @@ write_bmopf(net, "output.json";
 ```
 """
 function write_bmopf(net::Dict{String,Any}, io::IO;
-                     meta::Union{Dict,Nothing}=nothing)
+                     meta::Union{Dict,Nothing}=nothing,
+                     indent::Union{Int,Nothing}=2)
     base     = get(net, "meta", Dict{String,Any}())
     out_meta = _build_meta(base, meta)
 
@@ -38,13 +39,18 @@ function write_bmopf(net::Dict{String,Any}, io::IO;
     out = Dict{String,Any}(k => v for (k, v) in net
                            if k != "meta" && k != "_meta")
     out["meta"] = out_meta
-    JSON3.write(io, out)
+    if isnothing(indent)
+        JSON3.write(io, out)
+    else
+        JSON3.pretty(io, out, JSON3.AlignmentContext(; indent=UInt16(indent)))
+    end
 end
 
 function write_bmopf(net::Dict{String,Any}, path::AbstractString;
-                     meta::Union{Dict,Nothing}=nothing)
+                     meta::Union{Dict,Nothing}=nothing,
+                     indent::Union{Int,Nothing}=2)
     open(path, "w") do io
-        write_bmopf(net, io; meta)
+        write_bmopf(net, io; meta, indent)
     end
 end
 
