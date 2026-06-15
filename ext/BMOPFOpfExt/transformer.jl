@@ -163,45 +163,56 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
 
     t_wye_neutral = n_pos !== nothing ? tm_wye[n_pos] : nothing
 
-    # Voltage constraints:
-    #   vr_del[k] - vr_del[k_next] = n_eff * (vr_wye_ph[k] - vr_wye_neutral)
-    for k in 1:n_ph_eff
-        k_next = (k % n_ph_eff) + 1
-        t_del_k    = tm_del[k]
-        t_del_next = tm_del[k_next]
-        t_wye_ph   = tm_wye[ph_idx[k]]
+    # Voltage constraints.
+    # For Yd (wye_is_from=true):  V_del[k] - V_del[k_next] = n_eff*(V_wye[k] - V_n)
+    # For Dy (wye_is_from=false): V_del[k] - V_del[k_prev] = n_eff*(V_wye[k] - V_n)
+    # The Dy direction matches the ODS backward-delta convention.
+    for k in 1:n_ph
+        t_del_k   = tm_del[k]
+        t_wye_ph  = tm_wye[ph_idx[k]]
+        if wye_is_from
+            k_other = (k % n_ph) + 1          # k_next for Yd
+        else
+            k_other = ((k - 2 + n_ph) % n_ph) + 1  # k_prev for Dy
+        end
+        t_del_other = tm_del[k_other]
 
         if n_pos !== nothing
             t_wye_n = tm_wye[n_pos]
             @constraint(model,
-                vr[(b_del, t_del_k)] - vr[(b_del, t_del_next)] ==
+                vr[(b_del, t_del_k)] - vr[(b_del, t_del_other)] ==
                 n_eff * (vr[(b_wye, t_wye_ph)] - vr[(b_wye, t_wye_n)]))
             @constraint(model,
-                vi[(b_del, t_del_k)] - vi[(b_del, t_del_next)] ==
+                vi[(b_del, t_del_k)] - vi[(b_del, t_del_other)] ==
                 n_eff * (vi[(b_wye, t_wye_ph)] - vi[(b_wye, t_wye_n)]))
         else
             # No neutral terminal: neutral voltage is implicitly zero (grounded elsewhere)
             @constraint(model,
-                vr[(b_del, t_del_k)] - vr[(b_del, t_del_next)] ==
+                vr[(b_del, t_del_k)] - vr[(b_del, t_del_other)] ==
                 n_eff * vr[(b_wye, t_wye_ph)])
             @constraint(model,
-                vi[(b_del, t_del_k)] - vi[(b_del, t_del_next)] ==
+                vi[(b_del, t_del_k)] - vi[(b_del, t_del_other)] ==
                 n_eff * vi[(b_wye, t_wye_ph)])
         end
     end
 
-    # Current constraints (from T^T power-conservation derivation):
-    #   n_eff * I_del[k] = I_wye[ph_k] - I_wye[ph_{k_prev}]
-    for k in 1:n_ph_eff
-        k_prev = ((k - 2 + n_ph_eff) % n_ph_eff) + 1
-        ph_pos  = ph_idx[k]
-        ph_prev = ph_idx[k_prev]
+    # Current constraints (transpose of voltage transformation):
+    # For Yd (wye_is_from=true):  n_eff*I_del[k] = I_wye[k] - I_wye[k_prev]
+    # For Dy (wye_is_from=false): n_eff*I_del[k] = I_wye[k] - I_wye[k_next]
+    for k in 1:n_ph
+        ph_pos = ph_idx[k]
+        if wye_is_from
+            k_other = ((k - 2 + n_ph) % n_ph) + 1  # k_prev for Yd
+        else
+            k_other = (k % n_ph) + 1                # k_next for Dy
+        end
+        ph_other = ph_idx[k_other]
         @constraint(model,
             n_eff * cr_xf[(tid, side_del, k)] ==
-            cr_xf[(tid, side_wye, ph_pos)] - cr_xf[(tid, side_wye, ph_prev)])
+            cr_xf[(tid, side_wye, ph_pos)] - cr_xf[(tid, side_wye, ph_other)])
         @constraint(model,
             n_eff * ci_xf[(tid, side_del, k)] ==
-            ci_xf[(tid, side_wye, ph_pos)] - ci_xf[(tid, side_wye, ph_prev)])
+            ci_xf[(tid, side_wye, ph_pos)] - ci_xf[(tid, side_wye, ph_other)])
     end
 
     # Neutral KCL at the transformer star point:

@@ -34,6 +34,11 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
 
     model = JuMP.Model(optimizer)
     JuMP.set_silent(model)
+    # Disable "acceptable level" early stopping so Ipopt always converges to the
+    # regular tolerance (1e-8).  Without this, problems with bilinear P/Q
+    # constraints and active thermal limits can exit prematurely, producing
+    # inaccurate voltages.
+    JuMP.set_optimizer_attribute(model, "acceptable_tol", 1e-8)
 
     bus_terminals = _bus_terminals(working)
     grounded      = _grounded_terminals(working)
@@ -94,7 +99,8 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     result = _extract_results(model, working, bus_terminals, grounded, vars)
 
     solved = JuMP.termination_status(model) in (JuMP.MOI.LOCALLY_SOLVED,
-                                                 JuMP.MOI.OPTIMAL)
+                                                 JuMP.MOI.OPTIMAL,
+                                                 JuMP.MOI.ALMOST_LOCALLY_SOLVED)
     val(v) = solved ? JuMP.value(v) : NaN
 
     # Slack injection results — keyed by bus then terminal
