@@ -1119,15 +1119,16 @@ const IEEE13_FIXTURE = """
     end
 
     @testset "Terminal-name conventions" begin
-        # letter convention: a/b/c/n
+        # letter convention: a/b/c/n; explicit neutral_terminal field; no neutral
         net = Dict{String,Any}(
             "bus" => Dict{String,Any}(
                 "x" => Dict{String,Any}("terminal_names" => ["a","b","c","n"]),
-                "y" => Dict{String,Any}("terminal_names" => ["1","2","3","4"]),
+                "y" => Dict{String,Any}("terminal_names" => ["1","2","3","4"],
+                                        "neutral_terminal" => "4"),
                 "z" => Dict{String,Any}("terminal_names" => ["1","2","3"])))
         findings = Finding[]
         inv = inventory_analysis(net, findings)
-        # a/b/c (+n) → 3-phase; 1/2/3/4 → 3-phase (4 = neutral); 1/2/3 → 3-phase
+        # a/b/c (+n) → 3-phase via name; 1/2/3/4 → 3-phase via explicit field; 1/2/3 → 3-phase
         @test inv["bus"]["by_n_phases"] == Dict(3 => 3)
 
         # to_pmd accepts the broadened conventions
