@@ -96,7 +96,7 @@ function inventory_analysis(net::Dict{String,Any},
     by_phases = Dict{Int,Int}()
     for (_, b) in buses
         names = String.(get(b, "terminal_names", String[]))
-        nn = _neutral_terminal(names)
+        nn = _neutral_terminal(b)
         n_phases = count(t -> t != nn, names)
         by_phases[n_phases] = get(by_phases, n_phases, 0) + 1
     end

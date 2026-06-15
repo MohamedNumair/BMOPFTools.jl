@@ -144,19 +144,26 @@ infos(r::SummaryReport)    = infos(r.findings)
 # ---------------------------------------------------------------------------
 
 """
-    _neutral_terminal(names) -> Union{String,Nothing}
+    _neutral_terminal(bus) -> Union{String,Nothing}
 
-Identify the neutral terminal of a bus from its terminal names. The TF spec
-allows arbitrary naming conventions (Table 11); recognised here: a terminal
-named "n"/"N" (any case), or terminal "4" under the OpenDSS numeric
-convention ["1","2","3","4"]. Returns `nothing` if no neutral can be
-identified (all terminals are then treated as phases).
+Identify the neutral terminal of a bus. Checks the explicit `neutral_terminal`
+field first (spec-authoritative), then falls back to the documented naming
+convention: a terminal named `"n"` or `"N"` (any case) is treated as neutral.
+Returns `nothing` if no neutral can be identified.
+
+The OpenDSS numeric convention ["1","2","3","4"] is resolved at import time by
+`from_dss` (remapped to ["a","b","c","n"]) rather than here.
 """
-function _neutral_terminal(names::Vector{String})::Union{String,Nothing}
+function _neutral_terminal(bus::Dict{String,Any})::Union{String,Nothing}
+    nt = get(bus, "neutral_terminal", nothing)
+    nt isa String && return nt
+    _neutral_terminal(get(bus, "terminal_names", String[]))
+end
+
+function _neutral_terminal(names::AbstractVector)::Union{String,Nothing}
     for nm in names
-        lowercase(nm) == "n" && return nm
+        lowercase(string(nm)) == "n" && return string(nm)
     end
-    (length(names) == 4 && sort(names) == ["1", "2", "3", "4"]) && return "4"
     nothing
 end
 
@@ -168,6 +175,7 @@ include("io/parse_bmopf.jl")
 include("io/write_bmopf.jl")
 include("io/from_pmd.jl")
 include("io/to_pmd.jl")
+include("io/from_dss.jl")
 
 include("analysis/inventory.jl")
 include("analysis/voltage_levels.jl")
@@ -327,6 +335,7 @@ export Finding, SummaryReport
 export errors, warnings, infos
 export parse_bmopf, write_bmopf
 export from_pmd, to_pmd
+export from_dss
 export analyze, render
 export is_timeseries, get_snapshot      # useful for interactive use
 
