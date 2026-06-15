@@ -106,3 +106,31 @@ function _xfmr_turns_ratio(xfmr::Dict{String,Any})
     vt = Float64(get(xfmr, "v_ref_to",   1.0))
     (vt == 0.0) ? 1.0 : vf / vt
 end
+
+"""
+    _line_pi_shunt(line, linecodes) -> (G_fr, B_fr, G_to, B_to)
+
+Return the total from- and to-side shunt admittance matrices (S) for a line
+from its linecode's G_from/B_from/G_to/B_to fields (S/m) scaled by line length.
+Returns (nothing, nothing, nothing, nothing) when no shunt fields are present.
+"""
+function _line_pi_shunt(line::Dict{String,Any}, linecodes::Dict{String,Any})
+    lcid = get(line, "linecode", nothing)
+    lcid === nothing && return nothing, nothing, nothing, nothing
+    lc = get(linecodes, lcid, nothing)
+    lc === nothing && return nothing, nothing, nothing, nothing
+
+    G_fr = _pkm(lc, "G_from_")
+    B_fr = _pkm(lc, "B_from_")
+    G_to = _pkm(lc, "G_to_")
+    B_to = _pkm(lc, "B_to_")
+
+    any(!isnothing, (G_fr, B_fr, G_to, B_to)) || return nothing, nothing, nothing, nothing
+
+    len = Float64(get(line, "length", 1.0))
+    G_fr !== nothing && (G_fr = G_fr .* len)
+    B_fr !== nothing && (B_fr = B_fr .* len)
+    G_to !== nothing && (G_to = G_to .* len)
+    B_to !== nothing && (B_to = B_to .* len)
+    G_fr, B_fr, G_to, B_to
+end
