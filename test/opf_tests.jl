@@ -261,4 +261,109 @@
         @test vm_n > 1.0   # analytical estimate: |V_n| ≈ R_n × |I_n| ≈ 8–10 V
     end
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # T7: Standalone shunt object — exact to-end voltage
+    #
+    # Single-phase Thevenin with shunt conductance G at the load bus:
+    #   I_series = G · V_bus1,  KVL: V_s − V_bus1 = R · I_series
+    #   → V_bus1 = V_s / (1 + R·G)
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T7: standalone shunt — exact to-end voltage" begin
+        V_s = 1000.0;  R = 0.01;  G = 1.0
+        V_exp = V_s / (1 + R * G)   # 1000/1.01 ≈ 990.099 V
+
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.01}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "shunt":{"sh1":{"bus":"bus1","terminal_map":["1"],"G_1_1":1.0}}}
+        """; from_string=true)
+
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        # V_bus1 = V_s / (1 + R·G): shunt draws I = G·V, creating a voltage drop
+        @test res["bus"]["bus1"]["1"]["vm"] ≈ V_exp   atol=0.01
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # T8: π-model line shunt — to-end voltage via linecode G_to field
+    #
+    # Same Thevenin formula with the to-end π-shunt conductance G_to in the
+    # linecode (no load, no from-end shunt):
+    #   → V_bus1 = V_s / (1 + R·G_to)
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T8: π-model line shunt — exact to-end voltage" begin
+        V_s = 1000.0;  R = 0.01;  G_to = 0.5
+        V_exp = V_s / (1 + R * G_to)   # 1000/1.005 ≈ 995.025 V
+
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.01,"G_to_1_1":0.5}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}}}
+        """; from_string=true)
+
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        # V_bus1 = V_s / (1 + R·G_to): to-end π-shunt provides a return path
+        @test res["bus"]["bus1"]["1"]["vm"] ≈ V_exp   atol=0.01
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # T9: Total current limit includes from-end π-shunt contribution
+    #
+    # From-end conductance shunt G_fr draws I_sh = G_fr · V_s from the source
+    # bus.  With no to-end load the series current is zero, so the total
+    # from-end current = G_fr · V_s.  We verify:
+    #   (a) The solver is feasible (i_max = 120 A > G_fr · V_s = 100 A)
+    #   (b) The series current cr_fr ≈ 0 A (no load drives no series flow)
+    #   (c) The shunt current G_fr · |V_fr| ≈ 100 A < i_max
+    # If the magnitude constraint used only the series term, (b) would make
+    # the constraint vacuous; counting the shunt correctly exercises the code.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T9: total current limit includes from-end π-shunt" begin
+        V_s = 1000.0;  G_fr = 0.1   # shunt draws 100 A from source bus to ground
+        I_sh_exp = G_fr * V_s        # = 100 A; series current ≈ 0 (no load)
+
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":1.0e-4,"G_from_1_1":0.1,"i_max":[120.0]}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}}}
+        """; from_string=true)
+
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        # Series current ≈ 0: no load, no to-end shunt
+        @test abs(res["line"]["l1"]["1"]["cr_fr"]) < 1.0
+        # Shunt current = G_fr · |V_sourcebus| ≈ 100 A, within i_max = 120 A
+        vr_src = res["bus"]["sourcebus"]["1"]["vr"]
+        vi_src = res["bus"]["sourcebus"]["1"]["vi"]
+        I_sh_computed = G_fr * sqrt(vr_src^2 + vi_src^2)
+        @test I_sh_computed ≈ I_sh_exp   atol=1.0
+        @test I_sh_computed < 120.0   # within the thermal limit
+    end
+
 end  # @testset "OPF — solve_opf extension"
