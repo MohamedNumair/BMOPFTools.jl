@@ -340,7 +340,7 @@ function integrity_check(net::Dict{String,Any},
             b in source_buses && continue
             neutral = get(neutral_of, b, nothing)
             wired   = get(branch_terminals, b, Set{String}())
-            tm = Vector{String}(get(c, "terminal_map", String[]))
+            tm = string.(get(c, "terminal_map", String[]))
             floating = [t for t in tm
                         if t != neutral &&
                            lowercase(t) != "n" &&
