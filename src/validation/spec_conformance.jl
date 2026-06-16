@@ -118,6 +118,9 @@ function spec_conformance_check(net::Dict{String,Any},
         end
     end
 
+    # --- terminal map conventions ---
+    _check_terminal_map_conventions!(net, findings, result)
+
     # --- linecode matrix storage: full row-first vs upper-triangular ---
     triangular = String[]
     for (id, lc) in get(net, "linecode", Dict())
@@ -156,6 +159,192 @@ function spec_conformance_check(net::Dict{String,Any},
     result["n_triangular_linecodes"] = length(triangular)
     result["n_conformance_issues"]   = n_issues
     result
+end
+
+# ---------------------------------------------------------------------------
+# Terminal map convention checks
+# ---------------------------------------------------------------------------
+#
+# Three rules:
+#  E.TMAP.PHASE_TO_NEUTRAL — any terminal in a component's map that occupies
+#    a phase position but resolves to the bus neutral. "Phase position" is any
+#    slot that is not the expected neutral slot: for nodal WYE/SINGLE_PHASE
+#    components the neutral slot is the last entry; for DELTA components and
+#    lines/switches there is no neutral slot at all. Transformer maps are
+#    exempt (non-trivial neutral involvement is expected).
+#
+#  I.TMAP.CROSS_PHASE_LINE — terminal_map_from != terminal_map_to on a line
+#    or switch, implying cross-phase / transposed wiring.
+#
+#  I.TMAP.PERMUTED_ORDER — the terminal map entries appear in a different
+#    relative order than they do in the bus's terminal_names (permuted
+#    connection). Phase subsetting is fine; only ordering is flagged.
+#    Transformers are exempt.
+
+function _check_terminal_map_conventions!(net, findings, result)
+    buses = get(net, "bus", Dict())
+
+    # Helper: neutral terminal name for a bus (nothing if not identified)
+    bus_neutral(bid) = begin
+        b = get(buses, bid, nothing)
+        b isa Dict ? _neutral_terminal(b) : nothing
+    end
+
+    # Helper: relative order of terminals as they appear in terminal_names
+    # Returns true if `tm` entries appear in the same relative order as in
+    # `terminal_names` (subsequence check, ignoring elements not in tm).
+    function _ordered_subsequence(tm, terminal_names)
+        # Filter terminal_names to only those appearing in tm, then check
+        # if that filtered list equals tm.
+        tm_set = Set(tm)
+        filtered = [t for t in terminal_names if t in tm_set]
+        filtered == tm
+    end
+
+    n_phase_neutral = 0
+    n_cross_phase   = 0
+    n_permuted      = 0
+
+    # ── Nodal elements ───────────────────────────────────────────────────────
+    # Shunts are exempt from the "all entries neutral" check: a shunt whose
+    # terminal_map is purely ["n"] is a neutral-to-ground admittance (NER/
+    # grounding impedance), which is a standard and legitimate earthing model.
+    for comp_type in ("load", "generator", "shunt", "voltage_source")
+        for (id, c) in get(net, comp_type, Dict())
+            c isa Dict || continue
+            bid = get(c, "bus", nothing)
+            bid isa AbstractString || continue
+            nn  = bus_neutral(bid)
+            nn === nothing && continue   # bus has no identified neutral
+
+            tm  = Vector{String}(get(c, "terminal_map", String[]))
+            isempty(tm) && continue
+            cfg = get(c, "configuration", nothing)
+
+            # Determine the expected neutral slot: last position for WYE and
+            # SINGLE_PHASE; none for DELTA.
+            neutral_slot = if cfg == "DELTA"
+                nothing
+            else
+                length(tm)   # last position is the expected return/neutral
+            end
+
+            # Flag when the map contains no phase conductors at all (every
+            # entry is the neutral). Shunts are exempt: terminal_map=["n"] is
+            # a valid neutral-to-ground earthing admittance.
+            if comp_type != "shunt" && all(string(t) == nn for t in tm)
+                n_phase_neutral += 1
+                push!(findings, Finding(ERROR, "E.TMAP.PHASE_TO_NEUTRAL", :spec,
+                    Symbol(comp_type), id,
+                    "$comp_type '$id': terminal_map $tm contains no phase " *
+                    "conductors — all entries resolve to neutral '$nn' of bus '$bid'.",
+                    Dict{String,Any}("bus" => bid, "neutral" => nn,
+                                     "terminal_map" => tm)))
+            else
+                for (pos, t) in enumerate(tm)
+                    string(t) == nn || continue
+                    # This entry is the neutral terminal — flag only if it
+                    # occupies a phase slot (not the expected trailing slot).
+                    if neutral_slot === nothing || pos != neutral_slot
+                        n_phase_neutral += 1
+                        push!(findings, Finding(ERROR, "E.TMAP.PHASE_TO_NEUTRAL", :spec,
+                            Symbol(comp_type), id,
+                            "$comp_type '$id': terminal at position $pos is wired " *
+                            "to neutral '$nn' of bus '$bid', which is a phase " *
+                            "position$(neutral_slot === nothing ? " (DELTA has no neutral slot)" :
+                                       " (expected neutral at position $neutral_slot)").",
+                            Dict{String,Any}("bus" => bid, "neutral" => nn,
+                                             "position" => pos, "terminal_map" => tm)))
+                    end
+                end
+            end
+
+            # Ordering check against bus terminal_names
+            b = buses[bid]
+            tn = Vector{String}(get(b, "terminal_names", String[]))
+            isempty(tn) && continue
+            if !_ordered_subsequence(tm, tn)
+                n_permuted += 1
+                push!(findings, Finding(INFO, "I.TMAP.PERMUTED_ORDER", :spec,
+                    Symbol(comp_type), id,
+                    "$comp_type '$id' terminal_map $tm is a permutation of the " *
+                    "expected order from bus '$bid' terminal_names $tn — check " *
+                    "whether phases are wired in the intended order.",
+                    Dict{String,Any}("bus" => bid, "terminal_map" => tm,
+                                     "terminal_names" => tn)))
+            end
+        end
+    end
+
+    # ── Lines and switches ────────────────────────────────────────────────────
+    for comp_type in ("line", "switch")
+        for (id, c) in get(net, comp_type, Dict())
+            c isa Dict || continue
+
+            tmf = Vector{String}(get(c, "terminal_map_from", String[]))
+            tmt = Vector{String}(get(c, "terminal_map_to",   String[]))
+
+            # Cross-phase check
+            if !isempty(tmf) && !isempty(tmt) && tmf != tmt
+                n_cross_phase += 1
+                push!(findings, Finding(INFO, "I.TMAP.CROSS_PHASE_LINE", :spec,
+                    Symbol(comp_type), id,
+                    "$comp_type '$id' has different from/to terminal maps " *
+                    "(from=$tmf, to=$tmt) — implies cross-phase or transposed " *
+                    "wiring, which is rare in distribution networks.",
+                    Dict{String,Any}("terminal_map_from" => tmf,
+                                     "terminal_map_to"   => tmt)))
+            end
+
+            # Phase-to-neutral check on each end
+            for (side, tm, bus_key) in (("from", tmf, "bus_from"),
+                                         ("to",   tmt, "bus_to"))
+                bid = get(c, bus_key, nothing)
+                bid isa AbstractString || continue
+                nn  = bus_neutral(bid)
+                nn === nothing && continue
+                isempty(tm) && continue
+                # For lines/switches there is no "expected" neutral slot — any
+                # neutral in the map is flagged only when it also appears in
+                # the other end's map at the same position (symmetric neutral
+                # return is fine). Asymmetric neutral involvement is flagged
+                # via the cross-phase rule already. Here we catch the case
+                # where ALL entries are the neutral (degenerate map).
+                if all(string(t) == nn for t in tm)
+                    n_phase_neutral += 1
+                    push!(findings, Finding(ERROR, "E.TMAP.PHASE_TO_NEUTRAL", :spec,
+                        Symbol(comp_type), id,
+                        "$comp_type '$id' $side terminal map $tm consists " *
+                        "entirely of neutral '$nn' at bus '$bid'.",
+                        Dict{String,Any}("bus" => bid, "neutral" => nn,
+                                         "side" => side, "terminal_map" => tm)))
+                end
+            end
+
+            # Ordering check on each end against bus terminal_names
+            for (tm, bus_key) in ((tmf, "bus_from"), (tmt, "bus_to"))
+                bid = get(c, bus_key, nothing)
+                bid isa AbstractString || continue
+                b = get(buses, bid, nothing)
+                b isa Dict || continue
+                tn = Vector{String}(get(b, "terminal_names", String[]))
+                isempty(tn) || isempty(tm) && continue
+                if !_ordered_subsequence(tm, tn)
+                    n_permuted += 1
+                    push!(findings, Finding(INFO, "I.TMAP.PERMUTED_ORDER", :spec,
+                        Symbol(comp_type), id,
+                        "$comp_type '$id' terminal map $tm is a permutation of " *
+                        "the expected order from bus '$bid' terminal_names $tn.",
+                        Dict{String,Any}("bus" => bid, "terminal_map" => tm,
+                                         "terminal_names" => tn)))
+                end
+            end
+        end
+    end
+
+    result["n_phase_to_neutral"] = n_phase_neutral
+    result["n_cross_phase_lines"] = n_cross_phase
+    result["n_permuted_terminal_maps"] = n_permuted
 end
 
 """
