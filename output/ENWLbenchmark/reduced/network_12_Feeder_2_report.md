@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_12_Feeder_2
 
-**Generated:** 2026-06-16 17:46:25  
-**Findings:** 0 errors · 0 warnings · 26 info  
+**Generated:** 2026-06-16 19:47:15  
+**Findings:** 0 errors · 1 warnings · 26 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -143,6 +143,10 @@
 | Buses with \|V\| bounds | 0.0% |
 | Buses with vpn / vpp / vpos bounds | 165 / 0 / 0 |
 | Lines with thermal limits | 100.0% |
+| Generators with no DOF (p\_min≈p\_max) | 0 |
+| Generators with zero cost (dispatchable) | 0 |
+| Same-cost generator pairs (≤1 hop) | 0 |
+| Loads with zero p\_nom | 0 |
 
 **Augmentation needed:**
 
@@ -174,7 +178,12 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 26 (0 errors, 0 warnings, 26 info)
+**Total findings:** 27 (0 errors, 1 warnings, 26 info)
+
+### 🟡 Warnings
+
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line988`  
+  Line 'line988' has ||Z||_F = 7.82e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 
 ### 🔵 Info
 

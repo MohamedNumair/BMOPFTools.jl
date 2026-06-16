@@ -1,0 +1,15 @@
+# Network graph  (5 buses)
+
+sourcebus (SRC G2)
+└── 36
+    └── 56
+        ├── 57 (L1)
+        └── 58 (L2 G1)
+
+Loads (2 total):
+  L1 = load1              1.97 kW  SINGLE_PHASE  phases: 1
+  L2 = load2              0.31 kW  SINGLE_PHASE  phases: 2
+
+Generators (2 total):
+  G1 = der_58           max    4.0 kW
+  G2 = grid             max  13.64 kW

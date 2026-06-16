@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_12_Feeder_3
 
-**Generated:** 2026-06-16 17:46:25  
-**Findings:** 0 errors · 0 warnings · 28 info  
+**Generated:** 2026-06-16 19:47:16  
+**Findings:** 0 errors · 1 warnings · 29 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -143,6 +143,10 @@
 | Buses with \|V\| bounds | 0.0% |
 | Buses with vpn / vpp / vpos bounds | 151 / 0 / 0 |
 | Lines with thermal limits | 100.0% |
+| Generators with no DOF (p\_min≈p\_max) | 0 |
+| Generators with zero cost (dispatchable) | 0 |
+| Same-cost generator pairs (≤1 hop) | 0 |
+| Loads with zero p\_nom | 0 |
 
 **Augmentation needed:**
 
@@ -176,7 +180,12 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 28 (0 errors, 0 warnings, 28 info)
+**Total findings:** 30 (0 errors, 1 warnings, 29 info)
+
+### 🟡 Warnings
+
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line1018`  
+  Line 'line1018' has ||Z||_F = 2.9e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 
 ### 🔵 Info
 
@@ -184,6 +193,8 @@
   152 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.DOM.LINE_IMPEDANCE_SPREAD]** `line`  
+  Adjacent lines 'line1189' and 'line1018' at bus '1019' have ||Z||_F ratio 1690.0× — large impedance contrasts between neighbouring lines cause ill-conditioned KKT Jacobians; consider per-unit scaling or network reformulation.
 - **[I.RED.MERGEABLE_LINES]** `line`  
   5 group(s) of series lines (10 lines total) can be merged — intermediate buses have no other connections.
 - **[I.RED.UNUSED_LINECODES]** `linecode`  

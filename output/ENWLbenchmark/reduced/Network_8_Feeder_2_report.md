@@ -1,6 +1,6 @@
 # BMOPF Network Summary: Network_8_Feeder_2
 
-**Generated:** 2026-06-16 17:46:19  
+**Generated:** 2026-06-16 19:47:08  
 **Findings:** 0 errors · 1 warnings · 80 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
@@ -145,6 +145,10 @@
 | Buses with \|V\| bounds | 0.0% |
 | Buses with vpn / vpp / vpos bounds | 537 / 0 / 0 |
 | Lines with thermal limits | 100.0% |
+| Generators with no DOF (p\_min≈p\_max) | 0 |
+| Generators with zero cost (dispatchable) | 0 |
+| Same-cost generator pairs (≤1 hop) | 0 |
+| Loads with zero p\_nom | 0 |
 
 **Augmentation needed:**
 

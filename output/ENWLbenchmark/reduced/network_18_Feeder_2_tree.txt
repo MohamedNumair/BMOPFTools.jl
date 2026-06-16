@@ -1,0 +1,89 @@
+# Network graph  (52 buses)
+
+sourcebus (SRC G7)
+└── 27
+    ├── 71 (L1)
+    └── 92
+        ├── 189
+        │   ├── 196 (L12)
+        │   └── 314 (L19)
+        └── 94
+            ├── 151
+            │   ├── 182
+            │   │   ├── 186
+            │   │   │   ├── 240
+            │   │   │   │   ├── 280
+            │   │   │   │   │   ├── 298
+            │   │   │   │   │   │   └── 791 (L5)
+            │   │   │   │   │   └── 514 (L21)
+            │   │   │   │   └── 405 (L20)
+            │   │   │   └── 398
+            │   │   │       ├── 409
+            │   │   │       │   ├── 554
+            │   │   │       │   │   ├── 914
+            │   │   │       │   │   │   ├── 920 (L11)
+            │   │   │       │   │   │   └── 982 (L15 G5)
+            │   │   │       │   │   └── 975 (L14)
+            │   │   │       │   └── 835
+            │   │   │       │       ├── 843 (L6 G2)
+            │   │   │       │       └── 938 (L13)
+            │   │   │       └── 849 (L7)
+            │   │   └── 348
+            │   │       ├── 614 (L23 G1)
+            │   │       └── 747 (L2)
+            │   └── 213
+            │       ├── 332
+            │       │   ├── 340
+            │       │   │   └── 444
+            │       │   │       ├── 498
+            │       │   │       │   └── 902
+            │       │   │       │       ├── 908 (L9 G3)
+            │       │   │       │       └── 909 (L10 G4)
+            │       │   │       └── 698
+            │       │   │           ├── 712 (L24)
+            │       │   │           └── 780 (L4)
+            │       │   └── 590
+            │       │       ├── 606 (L22)
+            │       │       └── 762 (L3)
+            │       └── 550
+            │           ├── 562
+            │           │   └── 990 (L17 G6)
+            │           └── 891
+            │               ├── 898 (L8)
+            │               └── 984 (L16)
+            └── 239 (L18)
+
+Loads (24 total):
+  L1 = load1              1.97 kW  SINGLE_PHASE  phases: 2
+  L2 = load10             0.27 kW  SINGLE_PHASE  phases: 1
+  L3 = load11             0.33 kW  SINGLE_PHASE  phases: 3
+  L4 = load12             0.33 kW  SINGLE_PHASE  phases: 1
+  L5 = load13             0.25 kW  SINGLE_PHASE  phases: 2
+  L6 = load14             2.04 kW  SINGLE_PHASE  phases: 3
+  L7 = load15             0.83 kW  SINGLE_PHASE  phases: 1
+  L8 = load16             0.11 kW  SINGLE_PHASE  phases: 3
+  L9 = load17             0.29 kW  SINGLE_PHASE  phases: 2
+  L10 = load18             0.32 kW  SINGLE_PHASE  phases: 2
+  L11 = load19             1.94 kW  SINGLE_PHASE  phases: 2
+  L12 = load2              0.31 kW  SINGLE_PHASE  phases: 3
+  L13 = load20             0.26 kW  SINGLE_PHASE  phases: 3
+  L14 = load21             0.34 kW  SINGLE_PHASE  phases: 3
+  L15 = load22             0.97 kW  SINGLE_PHASE  phases: 2
+  L16 = load23             0.25 kW  SINGLE_PHASE  phases: 3
+  L17 = load24             1.96 kW  SINGLE_PHASE  phases: 2
+  L18 = load3              2.94 kW  SINGLE_PHASE  phases: 2
+  L19 = load4              0.32 kW  SINGLE_PHASE  phases: 3
+  L20 = load5              1.33 kW  SINGLE_PHASE  phases: 3
+  L21 = load6              3.05 kW  SINGLE_PHASE  phases: 2
+  L22 = load7              2.06 kW  SINGLE_PHASE  phases: 3
+  L23 = load8              0.29 kW  SINGLE_PHASE  phases: 2
+  L24 = load9              0.31 kW  SINGLE_PHASE  phases: 1
+
+Generators (7 total):
+  G1 = der_614          max    4.0 kW
+  G2 = der_843          max    4.0 kW
+  G3 = der_908          max    4.0 kW
+  G4 = der_909          max    4.0 kW
+  G5 = der_982          max    4.0 kW
+  G6 = der_990          max    4.0 kW
+  G7 = grid             max 138.42 kW

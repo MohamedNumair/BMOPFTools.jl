@@ -1,0 +1,160 @@
+# Network graph  (302 buses, compressed)
+
+sourcebus (SRC G44)
+└── 56
+    ├── 122 (L1)
+    └── 63
+        ├── 114
+        │   ├── 124
+        │   │   ├── 129 (L93 G3)
+        │   │   └── 148
+        │   │       ├── 418
+        │   │       │   ├── 1410 (L97)
+        │   │       │   ├── 1549 (L106)
+        │   │       │   └── 2066
+        │   │       │       ├── 2101 (L134)
+        │   │       │       └── 2272
+        │   │       │           ├── 2296 (L153)
+        │   │       │           └── 2319 (L155 G16)
+        │   │       └── 479
+        │   │           ├── 536
+        │   │           │   ├── 687
+        │   │           │   │   ├── 1371
+        │   │           │   │   │   ├── 1431
+        │   │           │   │   │   │   ├── 1485 [+19 buses, 10 loads]
+        │   │           │   │   │   │   └── 1637 (L108)
+        │   │           │   │   │   └── 1741 (L113)
+        │   │           │   │   └── 769
+        │   │           │   │       ├── 1011
+        │   │           │   │       │   ├── 1087 [+21 buses, 11 loads]
+        │   │           │   │       │   └── 1419 (L99)
+        │   │           │   │       └── 1013
+        │   │           │   │           ├── 1128 [+147 buses, 94 loads]
+        │   │           │   │           └── 1454 [+22 buses, 12 loads]
+        │   │           │   └── 716
+        │   │           │       ├── 759
+        │   │           │       │   ├── 1064 (L24)
+        │   │           │       │   └── 780
+        │   │           │       │       ├── 1065 (L35 G1)
+        │   │           │       │       └── 803 [+21 buses, 11 loads]
+        │   │           │       └── 959 (L159 G42)
+        │   │           └── 673
+        │   │               ⋮  (1 buses)
+        │   │               ├── 1313
+        │   │               │   ├── 1346 (L90 G4)
+        │   │               │   └── 1347 (L91)
+        │   │               └── 829
+        │   │                   ├── 883
+        │   │                   │   ├── 1042 (L13)
+        │   │                   │   └── 910
+        │   │                   │       ├── 1158 (L79)
+        │   │                   │       └── 939 [+13 buses, 7 loads]
+        │   │                   └── 968 (L2 G43)
+        │   ├── 224
+        │   │   ├── 235 (L104)
+        │   │   └── 247 (L115 G17)
+        │   └── 656
+        │       ├── 676
+        │       │   ├── 700 (L137)
+        │       │   └── 720 (L148 G41)
+        │       └── 677 (L126 G40)
+        └── 128 (L82)
+
+Loads (169 total):
+  L1 = load1              1.97 kW  SINGLE_PHASE  phases: 2
+  L2 = load10             0.27 kW  SINGLE_PHASE  phases: 1
+  L3 = load100            0.28 kW  SINGLE_PHASE  phases: 1
+  L4 = load101            1.97 kW  SINGLE_PHASE  phases: 2
+  L5 = load102            0.31 kW  SINGLE_PHASE  phases: 3
+  L6 = load103            2.94 kW  SINGLE_PHASE  phases: 1
+  L7 = load104            0.32 kW  SINGLE_PHASE  phases: 2
+  L8 = load105            1.33 kW  SINGLE_PHASE  phases: 3
+  L9 = load106            3.05 kW  SINGLE_PHASE  phases: 1
+  L10 = load107            2.06 kW  SINGLE_PHASE  phases: 2
+  L11 = load108            0.29 kW  SINGLE_PHASE  phases: 3
+  L12 = load109            0.31 kW  SINGLE_PHASE  phases: 1
+  L13 = load11             0.33 kW  SINGLE_PHASE  phases: 3
+  L14 = load110            0.27 kW  SINGLE_PHASE  phases: 2
+  L15 = load111            0.33 kW  SINGLE_PHASE  phases: 3
+  L16 = load112            0.33 kW  SINGLE_PHASE  phases: 1
+  L17 = load113            0.25 kW  SINGLE_PHASE  phases: 2
+  L18 = load114            2.04 kW  SINGLE_PHASE  phases: 3
+  L19 = load115            0.83 kW  SINGLE_PHASE  phases: 1
+  L20 = load116            0.11 kW  SINGLE_PHASE  phases: 2
+  L21 = load117            0.29 kW  SINGLE_PHASE  phases: 3
+  L22 = load118            0.32 kW  SINGLE_PHASE  phases: 1
+  L23 = load119            1.94 kW  SINGLE_PHASE  phases: 2
+  L24 = load12             0.33 kW  SINGLE_PHASE  phases: 2
+  L25 = load120            0.26 kW  SINGLE_PHASE  phases: 3
+  L26 = load121            0.34 kW  SINGLE_PHASE  phases: 1
+  L27 = load122            0.97 kW  SINGLE_PHASE  phases: 2
+  L28 = load123            0.25 kW  SINGLE_PHASE  phases: 3
+  L29 = load124            1.96 kW  SINGLE_PHASE  phases: 1
+  L30 = load125            0.29 kW  SINGLE_PHASE  phases: 2
+  L31 = load126            0.34 kW  SINGLE_PHASE  phases: 3
+  L32 = load127            0.27 kW  SINGLE_PHASE  phases: 1
+  L33 = load128            0.28 kW  SINGLE_PHASE  phases: 2
+  L34 = load129            0.35 kW  SINGLE_PHASE  phases: 2
+  L35 = load13             0.25 kW  SINGLE_PHASE  phases: 1
+  L36 = load130            0.26 kW  SINGLE_PHASE  phases: 2
+  L37 = load131            0.28 kW  SINGLE_PHASE  phases: 3
+  L38 = load132            0.34 kW  SINGLE_PHASE  phases: 1
+  L39 = load133            0.29 kW  SINGLE_PHASE  phases: 3
+  L40 = load134            2.75 kW  SINGLE_PHASE  phases: 3
+  L41 = load135            0.96 kW  SINGLE_PHASE  phases: 1
+  L42 = load136            0.32 kW  SINGLE_PHASE  phases: 3
+  L43 = load137            0.28 kW  SINGLE_PHASE  phases: 3
+  L44 = load138            0.28 kW  SINGLE_PHASE  phases: 2
+  L45 = load139            9.74 kW  SINGLE_PHASE  phases: 2
+  L46 = load14             2.04 kW  SINGLE_PHASE  phases: 3
+  L47 = load140            0.29 kW  SINGLE_PHASE  phases: 3
+  L48 = load141            0.29 kW  SINGLE_PHASE  phases: 1
+  L49 = load142            0.15 kW  SINGLE_PHASE  phases: 1
+  L50 = load143            0.32 kW  SINGLE_PHASE  phases: 3
+  … and 119 more (pass legend_limit= to show all)
+
+Generators (44 total):
+  G1 = der_1065         max    4.0 kW
+  G2 = der_1272         max    4.0 kW
+  G3 = der_129          max    4.0 kW
+  G4 = der_1346         max    4.0 kW
+  G5 = der_1517         max    4.0 kW
+  G6 = der_1731         max    4.0 kW
+  G7 = der_1780         max    4.0 kW
+  G8 = der_1795         max    4.0 kW
+  G9 = der_1913         max    4.0 kW
+  G10 = der_1984         max    4.0 kW
+  G11 = der_2096         max    4.0 kW
+  G12 = der_2198         max    4.0 kW
+  G13 = der_2250         max    4.0 kW
+  G14 = der_2271         max    4.0 kW
+  G15 = der_2292         max    4.0 kW
+  G16 = der_2319         max    4.0 kW
+  G17 = der_247          max    4.0 kW
+  G18 = der_2646         max    4.0 kW
+  G19 = der_2745         max    4.0 kW
+  G20 = der_2776         max    4.0 kW
+  G21 = der_2880         max    4.0 kW
+  G22 = der_2881         max    4.0 kW
+  G23 = der_2883         max    4.0 kW
+  G24 = der_2884         max    4.0 kW
+  G25 = der_2886         max    4.0 kW
+  G26 = der_2890         max    4.0 kW
+  G27 = der_2892         max    4.0 kW
+  G28 = der_2893         max    4.0 kW
+  G29 = der_2899         max    4.0 kW
+  G30 = der_2901         max    4.0 kW
+  G31 = der_2905         max    4.0 kW
+  G32 = der_2909         max    4.0 kW
+  G33 = der_3008         max    4.0 kW
+  G34 = der_3092         max    4.0 kW
+  G35 = der_3259         max    4.0 kW
+  G36 = der_3426         max    4.0 kW
+  G37 = der_3533         max    4.0 kW
+  G38 = der_3725         max    4.0 kW
+  G39 = der_3959         max    4.0 kW
+  G40 = der_677          max    4.0 kW
+  G41 = der_720          max    4.0 kW
+  G42 = der_959          max    4.0 kW
+  G43 = der_968          max    4.0 kW
+  G44 = grid             max 870.71 kW
