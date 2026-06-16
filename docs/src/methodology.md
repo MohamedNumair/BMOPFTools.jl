@@ -162,6 +162,22 @@ voltage envelopes including the sequence/phase-to-neutral bounds whose
 presence measurably improves NLP robustness [3], and cross-section-derived
 current ratings.
 
+Beyond the structural augmentation check (`I.BENCH.AUGMENTATION`), four
+per-network degeneracy flags catch subtler problems that survive augmentation:
+
+- **`W.BENCH.GEN_NO_DOF`** — generators with `p_min ≈ p_max` on every phase
+  are fixed injections, not decision variables.  They add model size without
+  contributing to benchmark difficulty.
+- **`W.BENCH.GEN_ZERO_COST`** — dispatchable generators with a zero cost
+  vector make the objective flat in their dispatch direction; the optimal
+  solution is primal non-unique and solver-dependent.
+- **`W.BENCH.GEN_DEGENERATE_COST`** — pairs of dispatchable generators on the
+  same bus or one hop apart with identical cost coefficients allow free
+  power redistribution between them.  Benchmarks with this property have
+  multiple optima and produce inconsistent comparisons across solvers.
+- **`I.BENCH.LOAD_ZERO_PNOM`** — loads with zero real-power setpoint are
+  electrically inert and likely represent missing or placeholder data.
+
 ## [References](@id refs)
 
 1. M. Deakin, A. Pandey, F. Geth, *Mathematical Model and Data Model for
