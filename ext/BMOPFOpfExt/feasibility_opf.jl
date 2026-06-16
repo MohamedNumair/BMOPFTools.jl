@@ -32,7 +32,9 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
                                            s_base::Float64=1e6)
 
     working = BMOPFTools.is_timeseries(net) ?
-              BMOPFTools.get_snapshot(net, t_index) : net
+              BMOPFTools.get_snapshot(net, t_index) : deepcopy(net)
+
+    _ensure_source_generator!(working)
 
     bases = nothing
     if per_unit
@@ -70,10 +72,9 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     _add_generator_constraints!(model, working, vars, kcl_r, kcl_i)
 
     # ── Slack current injections ──────────────────────────────────────────────
-    # One (cs_r, cs_i) pair per KCL node that is not a fixed voltage-source
-    # terminal (those have fixed vr/vi and are skipped via _source_fixed_terminals).
-
-    fixed = _source_fixed_terminals(working)
+    # One (cs_r, cs_i) pair per KCL node. Grounded terminals are excluded
+    # (vr=vi=0 already fixed). Source-bus phase terminals are covered by the
+    # _auto_slack generator so their elastic slack will naturally be zero.
 
     cs_r = Dict{Tuple{String,String}, JuMP.VariableRef}()
     cs_i = Dict{Tuple{String,String}, JuMP.VariableRef}()
@@ -81,7 +82,7 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     for (bid, terminals) in bus_terminals
         for t in terminals
             key = (bid, t)
-            (key in grounded || key in fixed) && continue
+            key in grounded && continue
             haskey(kcl_r, key) || continue
             cs_r[key] = @variable(model, base_name = "cs_r_$(bid)_$(t)")
             cs_i[key] = @variable(model, base_name = "cs_i_$(bid)_$(t)")
