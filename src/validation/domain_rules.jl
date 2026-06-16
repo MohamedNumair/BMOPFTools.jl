@@ -15,7 +15,7 @@ function domain_rules_check(net::Dict{String,Any},
     result = Dict{String,Any}()
     n_checks = Ref(0)
 
-    _check_bus_voltage_bounds(net, findings, thresholds, n_checks)
+    _check_bus_voltage_bounds(net, findings, n_checks)
     _check_load_power_factor(net, findings, thresholds, n_checks)
     _check_generator_cost(net, findings, thresholds, n_checks)
     _check_line_impedance(net, findings, thresholds, n_checks)
@@ -25,6 +25,8 @@ function domain_rules_check(net::Dict{String,Any},
     _check_zero_length(net, findings, n_checks)
     _check_angle_units(net, findings, n_checks)
     _check_negative_loads(net, findings, n_checks)
+    _check_low_impedance_lines(net, findings, thresholds, n_checks)
+    _check_adjacent_line_impedance_spread(net, findings, thresholds, n_checks, result)
 
     result["n_checks_run"] = n_checks[]
     result
@@ -39,10 +41,15 @@ const _DEFAULT_THRESHOLDS = Dict{String,Any}(
     "r_series_min"      => 1e-9,
     # Transformer: max step ratio in either direction (33/0.4 kV ≈ 83,
     # 132/11 kV = 12; anything beyond 1000:1 is suspect)
-    "xfmr_ratio_max"    => 1000.0
+    "xfmr_ratio_max"    => 1000.0,
+    # Absolute series impedance ||Z||_F (Ω) below which a line should be a switch
+    "z_line_min_ohm"    => 1e-4,
+    # Adjacent-line ||Z||_F ratio thresholds (info / warning)
+    "z_spread_info"     => 1e3,
+    "z_spread_warn"     => 1e5,
 )
 
-function _check_bus_voltage_bounds(net, findings, thresh, n_checks)
+function _check_bus_voltage_bounds(net, findings, n_checks)
     for (id, b) in get(net, "bus", Dict())
         vmin = get(b, "v_min", nothing)
         vmax = get(b, "v_max", nothing)
@@ -253,4 +260,137 @@ function _check_nonnegative_fields(net, findings, n_checks)
             end
         end
     end
+end
+
+# ---------------------------------------------------------------------------
+# Impedance helpers
+# ---------------------------------------------------------------------------
+
+# Compute the Frobenius norm of the absolute series impedance matrix Z = (R+jX)*length
+# for a line, resolving its linecode. Returns nothing if data is missing.
+function _line_z_norm(line, linecodes)
+    lc_id  = get(line, "linecode", nothing)
+    lc_id isa AbstractString || return nothing
+    lc = get(linecodes, lc_id, nothing)
+    lc isa Dict || return nothing
+    len = get(line, "length", nothing)
+    len isa Number || return nothing
+    len = Float64(len)
+    len > 0 || return nothing
+    R = _pattern_keys_to_matrix(lc, "R_series_")
+    X = _pattern_keys_to_matrix(lc, "X_series_")
+    R isa AbstractMatrix || return nothing
+    X isa AbstractMatrix || return nothing
+    # Frobenius norm of complex Z matrix scaled by length
+    norm_val = 0.0
+    for i in eachindex(R)
+        norm_val += (R[i]*len)^2 + (X[i]*len)^2
+    end
+    sqrt(norm_val)
+end
+
+# ---------------------------------------------------------------------------
+# Check 1: low-impedance lines that should be modelled as switches
+# ---------------------------------------------------------------------------
+
+function _check_low_impedance_lines(net, findings, thresh, n_checks)
+    z_min = Float64(thresh["z_line_min_ohm"])
+    linecodes = get(net, "linecode", Dict())
+    for (id, line) in get(net, "line", Dict())
+        line isa Dict || continue
+        n_checks[] += 1
+        z = _line_z_norm(line, linecodes)
+        z === nothing && continue
+        if z < z_min
+            push!(findings, Finding(WARNING, "W.DOM.LINE_LOW_IMPEDANCE", :domain_rules,
+                :line, id,
+                "Line '$id' has ||Z||_F = $(round(z, sigdigits=3)) Ω < threshold " *
+                "$(z_min) Ω — near-zero series impedance; consider replacing with " *
+                "a switch object to avoid ill-conditioned KVL constraints.",
+                Dict{String,Any}("z_norm_ohm" => z, "threshold" => z_min)))
+        end
+    end
+end
+
+# ---------------------------------------------------------------------------
+# Check 2: adjacent lines with wildly different absolute impedances
+# ---------------------------------------------------------------------------
+
+function _check_adjacent_line_impedance_spread(net, findings, thresh, n_checks, result)
+    z_info = Float64(thresh["z_spread_info"])
+    z_warn = Float64(thresh["z_spread_warn"])
+    linecodes = get(net, "linecode", Dict())
+    lines = get(net, "line", Dict())
+
+    # Buses that host a voltage source, transformer, or switch — excluded from
+    # adjacency because fixed voltages or topology breaks remove those coupling rows
+    # from the KKT system.
+    excluded_buses = Set{String}()
+    for (_, vs) in get(net, "voltage_source", Dict())
+        vs isa Dict && push!(excluded_buses, get(vs, "bus", ""))
+    end
+    for (_, sw) in get(net, "switch", Dict())
+        sw isa Dict || continue
+        push!(excluded_buses, get(sw, "bus_from", ""))
+        push!(excluded_buses, get(sw, "bus_to",   ""))
+    end
+    xfmr = get(net, "transformer", Dict())
+    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+        for (_, t) in get(xfmr, subtype, Dict())
+            t isa Dict || continue
+            push!(excluded_buses, get(t, "bus_from", ""))
+            push!(excluded_buses, get(t, "bus_to",   ""))
+        end
+    end
+
+    # Build bus → [(line_id, z_norm)] index for lines with computable Z
+    bus_lines = Dict{String, Vector{Tuple{String,Float64}}}()
+    for (id, line) in lines
+        line isa Dict || continue
+        z = _line_z_norm(line, linecodes)
+        z === nothing && continue
+        for bus_field in ("bus_from", "bus_to")
+            b = get(line, bus_field, "")
+            b in excluded_buses && continue
+            push!(get!(bus_lines, b, Tuple{String,Float64}[]), (id, z))
+        end
+    end
+
+    # Find worst ratio across all qualifying adjacent pairs
+    worst_ratio  = 1.0
+    worst_pair   = ("", "")
+    worst_bus    = ""
+
+    for (bus, entries) in bus_lines
+        length(entries) < 2 && continue
+        n_checks[] += 1
+        for i in eachindex(entries), j in (i+1):length(entries)
+            id_a, za = entries[i]
+            id_b, zb = entries[j]
+            za == 0.0 || zb == 0.0 && continue
+            ratio = max(za, zb) / min(za, zb)
+            if ratio > worst_ratio
+                worst_ratio = ratio
+                worst_pair  = (id_a, id_b)
+                worst_bus   = bus
+            end
+        end
+    end
+
+    result["max_adjacent_impedance_ratio"] = worst_ratio
+
+    worst_ratio < z_info && return
+
+    sev = worst_ratio >= z_warn ? WARNING : INFO
+    code = worst_ratio >= z_warn ? "W.DOM.LINE_IMPEDANCE_SPREAD" : "I.DOM.LINE_IMPEDANCE_SPREAD"
+    push!(findings, Finding(sev, code, :domain_rules, :line, nothing,
+        "Adjacent lines '$(worst_pair[1])' and '$(worst_pair[2])' at bus '$worst_bus' " *
+        "have ||Z||_F ratio $(round(worst_ratio, sigdigits=3))× — " *
+        "large impedance contrasts between neighbouring lines cause ill-conditioned " *
+        "KKT Jacobians; consider per-unit scaling or network reformulation.",
+        Dict{String,Any}("line_a" => worst_pair[1], "line_b" => worst_pair[2],
+                         "bus"    => worst_bus,
+                         "ratio"  => worst_ratio,
+                         "threshold_info" => z_info,
+                         "threshold_warn" => z_warn)))
 end
