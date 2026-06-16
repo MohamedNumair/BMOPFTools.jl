@@ -210,9 +210,12 @@
         res = solve_opf(net)
         @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
 
-        # Source real power: P_src = V_s · Ir  (Vi_s = 0 at the slack bus)
-        cr_src = res["voltage_source"]["vs"]["1"]["cr"]
-        P_src  = V_s * cr_src
+        # Source real power via the auto-injected slack generator at sourcebus.
+        # P_src = (vr_src - vr_n)·crg + (vi_src - vi_n)·cig
+        # With grounded neutral: vr_n = vi_n = 0, vi_src = 0 (angle=0).
+        # So P_src = vr_src · crg = V_s · crg.
+        crg_src = res["generator"]["_auto_slack"]["1"]["pg"] / V_s   # pg = V_s · crg
+        P_src   = res["generator"]["_auto_slack"]["1"]["pg"]
 
         # Line loss: P_loss = R · |I|² (no reactive component here)
         cr_fr  = res["line"]["l1"]["1"]["cr_fr"]
@@ -462,17 +465,21 @@
     #      not modify the original network dict.
     # ─────────────────────────────────────────────────────────────────────────
 
-    # Shared fixture for T11–T13: T1 geometry with a profit-seeking generator
+    # Shared fixture for T11–T13: T1 geometry with a profit-seeking DER at bus1
     # (negative cost) so the optimizer always dispatches at p_max, giving a
     # deterministic nonzero pg far from zero — avoids rtol failures on near-zero values.
-    # p_max = 200 000 W;  cost = -0.05 $/W  →  objective = -10 000 ($/s)
+    # The grid connection is covered by the auto-injected _auto_slack at sourcebus.
+    # g1 injects 200 kW; load is 100 kW → net 100 kW exported to sourcebus.
+    # V_bus1 rises above V_s (reverse current direction).
+    # Analytical: V² − V_s·V − R·P_net = 0 → V = (V_s + √(V_s²+4·R·P_net))/2 ≈ 1047.7 V
+    # cost = -0.05 $/W → objective = -0.05 × 200 000 = -10 000 $/s
     _pu_net() = parse_bmopf("""
     {"bus":{
         "sourcebus":{"terminal_names":["1","n"],
                      "perfectly_grounded_terminals":["n"]},
         "bus1":     {"terminal_names":["1","n"],
                      "perfectly_grounded_terminals":["n"],
-                     "v_min":900.0,"v_max":999.0}},
+                     "v_min":900.0,"v_max":1100.0}},
      "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
          "v_magnitude":[1000.0],"v_angle":[0.0]}},
      "linecode":{"lc":{"R_series_1_1":0.5}},
@@ -482,7 +489,7 @@
      "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
          "configuration":"SINGLE_PHASE",
          "p_nom":[100000.0],"q_nom":[0.0]}},
-     "generator":{"g1":{"bus":"sourcebus","terminal_map":["1"],
+     "generator":{"g1":{"bus":"bus1","terminal_map":["1","n"],
          "configuration":"SINGLE_PHASE",
          "p_min":[0.0],"p_max":[200000.0],
          "q_min":[0.0],"q_max":[0.0],
@@ -498,9 +505,10 @@
         # Source voltage is fixed at 1000 V; result must be in SI, not PU.
         @test res["bus"]["sourcebus"]["1"]["vm"] ≈ 1000.0   atol=0.1
 
-        # Load bus voltage: same analytical expectation as T1 (V≈947 V in SI).
-        V_s = 1000.0; R = 0.5; P = 100_000.0
-        V_exp = (V_s + sqrt(V_s^2 - 4*R*P)) / 2
+        # Load bus voltage: g1 exports P_net = 200kW − 100kW = 100kW to sourcebus.
+        # Reverse current → V_bus1 > V_s. Quadratic: V² − V_s·V − R·P_net = 0.
+        V_s = 1000.0; R = 0.5; P_net = 100_000.0
+        V_exp = (V_s + sqrt(V_s^2 + 4*R*P_net)) / 2   # ≈ 1047.7 V
         @test res["bus"]["bus1"]["1"]["vm"] ≈ V_exp   atol=0.5
 
         # Profit-seeking generator (cost=-0.05 $/W) binds at p_max=200 000 W.

@@ -125,6 +125,57 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
 end
 
 """
+    _ensure_source_generator!(working) -> Bool
+
+Check whether any generator already exists at the voltage-source bus.  If not,
+inject an unbounded zero-cost generator `"_auto_slack"` at that bus so that KCL
+at the source-bus phase terminals can be satisfied without free slack currents.
+
+Returns `true` if a generator was injected, `false` if one was already present.
+
+This covers the pure power-flow case (no generators in the network) and any OPF
+where the modeller forgot to add a grid connection at the slack bus.  The injected
+generator has empty `p_min`/`p_max` (no bound constraints added to the model) and
+`cost = [0.0]` so it does not distort the objective.
+"""
+function _ensure_source_generator!(working::Dict{String,Any})::Bool
+    vs_dict = get(working, "voltage_source", Dict())
+    isempty(vs_dict) && return false
+
+    # Take the first (and normally only) voltage source
+    _, vs = first(vs_dict)
+    src_bus = get(vs, "bus", "")
+    isempty(src_bus) && return false
+
+    gens = get(working, "generator", Dict())
+
+    # Already have a generator at the source bus — nothing to do
+    any(g -> get(g, "bus", "") == src_bus, values(gens)) && return false
+
+    # Determine phase terminals from the voltage source terminal_map (excludes neutral)
+    phase_tm = [t for t in Vector{String}(get(vs, "terminal_map", String[]))
+                if lowercase(t) != "n"]
+    isempty(phase_tm) && return false
+
+    @warn "solve_opf: no generator found at source bus '$src_bus' — " *
+          "automatically injecting an unbounded zero-cost generator '_auto_slack' " *
+          "to satisfy KCL. For a proper OPF benchmark add an explicit grid " *
+          "generator with bounds and cost at the source bus."
+
+    get!(working, "generator", Dict{String,Any}())["_auto_slack"] = Dict{String,Any}(
+        "bus"           => src_bus,
+        "terminal_map"  => vcat(phase_tm, ["n"]),
+        "configuration" => "WYE",
+        "p_min"         => Float64[],   # no bound constraints
+        "p_max"         => Float64[],
+        "q_min"         => Float64[],
+        "q_max"         => Float64[],
+        "cost"          => [0.0],
+    )
+    return true
+end
+
+"""
     _add_source_constraints!(net, vars)
 
 Fix bus voltages at voltage-source terminals to their specified magnitude and angle.

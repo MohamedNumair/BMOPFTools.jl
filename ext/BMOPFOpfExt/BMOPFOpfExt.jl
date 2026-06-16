@@ -93,7 +93,9 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
                                s_base::Float64=1e6)
 
     working = BMOPFTools.is_timeseries(net) ?
-              BMOPFTools.get_snapshot(net, t_index) : net
+              BMOPFTools.get_snapshot(net, t_index) : deepcopy(net)
+
+    _ensure_source_generator!(working)
 
     bases = nothing
     if per_unit
