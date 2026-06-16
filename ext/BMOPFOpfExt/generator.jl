@@ -125,32 +125,103 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
 end
 
 """
-    _add_source_constraints!(net, vars, kcl_r, kcl_i)
+    _ensure_source_generator!(working) -> Bool
 
-Fix bus voltages at voltage-source terminals and inject unconstrained slack current
-`cr_src / ci_src` into the KCL accumulators.
+Check whether any generator already exists at the voltage-source bus.  If not,
+inject an unbounded zero-cost generator `"_auto_slack"` at that bus so that KCL
+at the source-bus phase terminals can be satisfied without free slack currents.
+
+Returns `true` if a generator was injected, `false` if one was already present.
+
+This covers the pure power-flow case (no generators in the network) and any OPF
+where the modeller forgot to add a grid connection at the slack bus.  The injected
+generator has empty `p_min`/`p_max` (no bound constraints added to the model) and
+`cost = [0.0]` so it does not distort the objective.
+"""
+function _ensure_source_generator!(working::Dict{String,Any})::Bool
+    vs_dict = get(working, "voltage_source", Dict())
+    isempty(vs_dict) && return false
+
+    # Take the first (and normally only) voltage source
+    _, vs = first(vs_dict)
+    src_bus = get(vs, "bus", "")
+    isempty(src_bus) && return false
+
+    gens = get(working, "generator", Dict())
+
+    # Only skip injection if a generator with a neutral terminal already exists
+    # at the source bus.  A generator without a neutral (e.g. from_pmd's
+    # slack_source which has terminal_map:["1"]) cannot satisfy neutral KCL.
+    has_neutral_gen = any(values(gens)) do g
+        get(g, "bus", "") == src_bus &&
+        any(t -> lowercase(string(t)) == "n", get(g, "terminal_map", String[]))
+    end
+    has_neutral_gen && return false
+
+    # Determine phase terminals from the voltage source terminal_map (excludes neutral)
+    phase_tm = [t for t in Vector{String}(get(vs, "terminal_map", String[]))
+                if lowercase(t) != "n"]
+    isempty(phase_tm) && return false
+
+    @warn "solve_opf: no generator found at source bus '$src_bus' — " *
+          "automatically injecting an unbounded zero-cost generator '_auto_slack' " *
+          "to satisfy KCL. For a proper OPF benchmark add an explicit grid " *
+          "generator with bounds and cost at the source bus."
+
+    get!(working, "generator", Dict{String,Any}())["_auto_slack"] = Dict{String,Any}(
+        "bus"           => src_bus,
+        "terminal_map"  => vcat(phase_tm, ["n"]),
+        "configuration" => "WYE",
+        "p_min"         => Float64[],   # no bound constraints
+        "p_max"         => Float64[],
+        "q_min"         => Float64[],
+        "q_max"         => Float64[],
+        "cost"          => [0.0],
+    )
+    return true
+end
+
+"""
+    _add_source_constraints!(net, vars)
+
+Fix bus voltages at voltage-source terminals to their specified magnitude and angle.
 
 Each terminal is fixed to the rectangular value `v_mag·cos(v_ang)`, `v_mag·sin(v_ang)`.
-The slack current absorbs whatever KCL imbalance the rest of the network demands,
-making the source bus the power-flow slack bus.
+The voltage source provides the angle and magnitude reference only; power balance at
+the source bus is satisfied by explicit generator injections (crg/cig), not by free
+slack currents.
 """
-function _add_source_constraints!(net, vars, kcl_r, kcl_i)
+function _add_source_constraints!(net, vars)
     vr = vars[:vr]; vi = vars[:vi]
-    cr_src = vars[:cr_src]; ci_src = vars[:ci_src]
 
-    for (sid, vs) in get(net, "voltage_source", Dict())
-        bus    = get(vs, "bus", "")
-        tm     = Vector{String}(get(vs, "terminal_map", String[]))
-        v_mag  = Float64.(get(vs, "v_magnitude", Float64[]))
-        v_ang  = Float64.(get(vs, "v_angle",     Float64[]))
+    for (_, vs) in get(net, "voltage_source", Dict())
+        bus   = get(vs, "bus", "")
+        tm    = Vector{String}(get(vs, "terminal_map", String[]))
+        v_mag = Float64.(get(vs, "v_magnitude", Float64[]))
+        v_ang = Float64.(get(vs, "v_angle",     Float64[]))
 
         for (k, t) in enumerate(tm)
             if length(v_mag) >= k && length(v_ang) >= k
                 fix(vr[(bus, t)], v_mag[k] * cos(v_ang[k]); force=true)
                 fix(vi[(bus, t)], v_mag[k] * sin(v_ang[k]); force=true)
             end
-            # Slack injection: cr_src/ci_src are free — KCL determines their value.
-            _kcl_add!(kcl_r, kcl_i, bus, t, cr_src[(sid,k)], ci_src[(sid,k)])
+            # Power balance at the source bus is satisfied by explicit generator
+            # injections (crg/cig).  The voltage source fixes the voltage
+            # reference only and does not inject current into KCL.
+        end
+
+        # Fix the neutral voltage at the source bus to 0 (system ground).
+        # The voltage source's terminal_map lists only phase terminals; lines
+        # and generators connected to the source bus also bring a neutral
+        # terminal there, which would otherwise be a free variable with no
+        # voltage reference — creating a null space in the KKT system.
+        # We fix vr/vi to 0 without adding to the grounded set, so that KCL
+        # is still enforced at the neutral (the grid generator's neutral
+        # current satisfies it).
+        for (b, t) in keys(vr)
+            b == bus && lowercase(t) == "n" || continue
+            JuMP.is_fixed(vr[(bus, t)]) || fix(vr[(bus, t)], 0.0; force=true)
+            JuMP.is_fixed(vi[(bus, t)]) || fix(vi[(bus, t)], 0.0; force=true)
         end
     end
 end
