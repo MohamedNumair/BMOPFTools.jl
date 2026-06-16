@@ -65,6 +65,7 @@ include("load.jl")
 include("generator.jl")
 include("objective.jl")
 include("results.jl")
+include("per_unit.jl")
 include("feasibility_opf.jl")
 
 """
@@ -87,10 +88,17 @@ The formulation follows the PMD IVRENPowerModel convention:
 """
 function BMOPFTools.solve_opf(net::Dict{String,Any};
                                optimizer=Ipopt.Optimizer,
-                               t_index::Int=1)
+                               t_index::Int=1,
+                               per_unit::Bool=false,
+                               s_base::Float64=1e6)
 
     working = BMOPFTools.is_timeseries(net) ?
               BMOPFTools.get_snapshot(net, t_index) : net
+
+    bases = nothing
+    if per_unit
+        working, bases = _to_per_unit(working, s_base)
+    end
 
     model = JuMP.Model(optimizer)
     JuMP.set_silent(model)
@@ -135,7 +143,8 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
 
     JuMP.optimize!(model)
 
-    _extract_results(model, working, bus_terminals, grounded, vars)
+    result = _extract_results(model, working, bus_terminals, grounded, vars)
+    bases !== nothing ? _from_per_unit(result, bases, net) : result
 end
 
 end # module BMOPFOpfExt

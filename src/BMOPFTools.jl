@@ -288,11 +288,16 @@ end
 # ---------------------------------------------------------------------------
 
 """
-    solve_opf(net::Dict{String,Any}; optimizer=nothing, t_index::Int=1) -> Dict{String,Any}
+    solve_opf(net::Dict{String,Any}; optimizer=nothing, t_index::Int=1,
+              per_unit::Bool=false, s_base::Float64=1e6) -> Dict{String,Any}
 
 Solve the four-wire rectangular current-voltage (IVR-EN) optimal power flow
 on a BMOPF network dict. Requires JuMP and Ipopt to be loaded in the calling
 environment before calling this function.
+
+When `per_unit=true` the model is built and solved in per-unit (V_base
+propagated from the source bus through transformers; S_base = `s_base` VA,
+default 1 MVA). All results are returned in SI units regardless.
 
 Returns a results dict with keys:
 - `"termination_status"` — JuMP termination status string
