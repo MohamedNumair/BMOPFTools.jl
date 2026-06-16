@@ -448,4 +448,115 @@
         @test b["3"]["vm"] ≈ vpos_max   atol=5.0
     end
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # Per-unit scaling tests
+    #
+    # T11: Base propagation — solve_opf(per_unit=true) returns SI results.
+    #      The source bus voltage in the result must match the SI fixture value
+    #      regardless of the internal PU representation.
+    #
+    # T12: SI == PU results — the same network solved with and without per_unit
+    #      must produce numerically identical results (rtol=1e-4).
+    #
+    # T13: Net dict immutability — calling solve_opf with per_unit=true must
+    #      not modify the original network dict.
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # Shared fixture for T11–T13: T1 geometry with a profit-seeking generator
+    # (negative cost) so the optimizer always dispatches at p_max, giving a
+    # deterministic nonzero pg far from zero — avoids rtol failures on near-zero values.
+    # p_max = 200 000 W;  cost = -0.05 $/W  →  objective = -10 000 ($/s)
+    _pu_net() = parse_bmopf("""
+    {"bus":{
+        "sourcebus":{"terminal_names":["1","n"],
+                     "perfectly_grounded_terminals":["n"]},
+        "bus1":     {"terminal_names":["1","n"],
+                     "perfectly_grounded_terminals":["n"],
+                     "v_min":900.0,"v_max":999.0}},
+     "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+         "v_magnitude":[1000.0],"v_angle":[0.0]}},
+     "linecode":{"lc":{"R_series_1_1":0.5}},
+     "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+         "terminal_map_from":["1"],"terminal_map_to":["1"],
+         "linecode":"lc","length":1.0}},
+     "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+         "configuration":"SINGLE_PHASE",
+         "p_nom":[100000.0],"q_nom":[0.0]}},
+     "generator":{"g1":{"bus":"sourcebus","terminal_map":["1"],
+         "configuration":"SINGLE_PHASE",
+         "p_min":[0.0],"p_max":[200000.0],
+         "q_min":[0.0],"q_max":[0.0],
+         "cost":-0.05}}}
+    """; from_string=true)
+
+    @testset "T11: per_unit=true returns SI results" begin
+        net = _pu_net()
+        res = solve_opf(net; per_unit=true)
+
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+
+        # Source voltage is fixed at 1000 V; result must be in SI, not PU.
+        @test res["bus"]["sourcebus"]["1"]["vm"] ≈ 1000.0   atol=0.1
+
+        # Load bus voltage: same analytical expectation as T1 (V≈947 V in SI).
+        V_s = 1000.0; R = 0.5; P = 100_000.0
+        V_exp = (V_s + sqrt(V_s^2 - 4*R*P)) / 2
+        @test res["bus"]["bus1"]["1"]["vm"] ≈ V_exp   atol=0.5
+
+        # Profit-seeking generator (cost=-0.05 $/W) binds at p_max=200 000 W.
+        # objective = -0.05 × 200 000 = -10 000; pg in W, not PU.
+        @test res["objective"] ≈ -10_000.0   rtol=1e-3
+        @test res["generator"]["g1"]["1"]["pg"] ≈ 200_000.0   rtol=1e-3
+    end
+
+    @testset "T12: per_unit=true and per_unit=false agree" begin
+        net    = _pu_net()
+        r_si   = solve_opf(net)
+        r_pu   = solve_opf(net; per_unit=true)
+
+        @test r_si["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test r_pu["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+
+        # Voltages at source and load bus must match to tight tolerance.
+        for bus in ("sourcebus", "bus1")
+            vm_si = r_si["bus"][bus]["1"]["vm"]
+            vm_pu = r_pu["bus"][bus]["1"]["vm"]
+            @test isapprox(vm_si, vm_pu; rtol=1e-4)
+
+            va_si = r_si["bus"][bus]["1"]["va"]
+            va_pu = r_pu["bus"][bus]["1"]["va"]
+            @test isapprox(va_si, va_pu; atol=1e-6)
+        end
+
+        # Objective (in W·$/W = SI) must match; both should be ≈ -10 000.
+        @test isapprox(r_si["objective"], r_pu["objective"]; rtol=1e-3)
+
+        # Line current magnitude at from-end must match.
+        cm_si = r_si["line"]["l1"]["1"]["cm_fr"]
+        cm_pu = r_pu["line"]["l1"]["1"]["cm_fr"]
+        @test isapprox(cm_si, cm_pu; rtol=1e-3)
+
+        # Generator output (in W) must match; both should be ≈ 200 000 W.
+        pg_si = r_si["generator"]["g1"]["1"]["pg"]
+        pg_pu = r_pu["generator"]["g1"]["1"]["pg"]
+        @test isapprox(pg_si, pg_pu; rtol=1e-3)
+    end
+
+    @testset "T13: per_unit=true does not mutate net" begin
+        net = _pu_net()
+
+        # Snapshot SI values before the solve.
+        v_min_before  = net["bus"]["bus1"]["v_min"]
+        vmag_before   = net["voltage_source"]["vs"]["v_magnitude"][1]
+        pnom_before   = net["load"]["ld1"]["p_nom"][1]
+        r_before      = net["linecode"]["lc"]["R_series_1_1"]
+
+        solve_opf(net; per_unit=true)
+
+        @test net["bus"]["bus1"]["v_min"]                      == v_min_before
+        @test net["voltage_source"]["vs"]["v_magnitude"][1]    == vmag_before
+        @test net["load"]["ld1"]["p_nom"][1]                   == pnom_before
+        @test net["linecode"]["lc"]["R_series_1_1"]            == r_before
+    end
+
 end  # @testset "OPF — solve_opf extension"
