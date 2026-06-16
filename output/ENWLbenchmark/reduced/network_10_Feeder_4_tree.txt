@@ -1,0 +1,33 @@
+# Network graph  (17 buses)
+
+sourcebus (SRC G3)
+└── 83
+    ├── 256
+    │   ├── 264
+    │   │   └── 273 (L3 G1)
+    │   └── 280
+    │       └── 289 (L4)
+    └── 85
+        ├── 165
+        │   ├── 169 (L1)
+        │   └── 462
+        │       └── 490
+        │           ├── 495 (L5 G2)
+        │           ├── 496 (L6)
+        │           └── 497 (L7)
+        └── 179
+            └── 185 (L2)
+
+Loads (7 total):
+  L1 = load1              1.97 kW  SINGLE_PHASE  phases: 1
+  L2 = load2              0.31 kW  SINGLE_PHASE  phases: 2
+  L3 = load3              2.94 kW  SINGLE_PHASE  phases: 3
+  L4 = load4              0.32 kW  SINGLE_PHASE  phases: 1
+  L5 = load5              1.33 kW  SINGLE_PHASE  phases: 2
+  L6 = load6              3.05 kW  SINGLE_PHASE  phases: 3
+  L7 = load7              2.06 kW  SINGLE_PHASE  phases: 1
+
+Generators (3 total):
+  G1 = der_273          max    4.0 kW
+  G2 = der_495          max    4.0 kW
+  G3 = grid             max  71.89 kW
