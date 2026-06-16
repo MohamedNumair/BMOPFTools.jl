@@ -167,7 +167,7 @@ function _set_voltage_start_values!(vars, net, bus_terminals, grounded)
     # These are overwritten by whatever the actual source specifies.
     t_angle = Dict{String,Float64}(
         "1" => 0.0, "2" => -2.0944, "3" => 2.0944, "n" => 0.0)
-    v_nom = 1000.0
+    v_nom = 0.0
 
     for (_, vs) in get(net, "voltage_source", Dict())
         tm   = Vector{String}(get(vs, "terminal_map", String[]))
@@ -179,6 +179,7 @@ function _set_voltage_start_values!(vars, net, bus_terminals, grounded)
         end
         break   # first source is enough
     end
+    v_nom == 0.0 && (v_nom = 1.0)   # degenerate fallback
 
     for (bid, terminals) in bus_terminals
         nt = BMOPFTools._neutral_terminal(terminals)

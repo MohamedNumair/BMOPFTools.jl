@@ -27,7 +27,7 @@ function adds its contribution to the KCL accumulator dicts `(kcl_r, kcl_i)`;
 2. `_build_vars`                             — declare all JuMP variables
 3. `_set_voltage_start_values!`              — warm-start Ipopt
 4. `_add_voltage_bounds!`                    — operational V limits (solve_opf only)
-5. `_add_source_constraints!`                — fix slack-bus voltages; register cr_src in KCL
+5. `_add_source_constraints!`                — fix slack-bus voltages (voltage reference only)
 6. `_add_line/switch/transformer_constraints!` — KVL + KCL contributions
 7. `_add_load/generator_constraints!`        — constant-power equations + KCL
 8. `_add_kcl_constraints!`                   — enforce KCL == 0 at every node
@@ -93,7 +93,9 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
                                s_base::Float64=1e6)
 
     working = BMOPFTools.is_timeseries(net) ?
-              BMOPFTools.get_snapshot(net, t_index) : net
+              BMOPFTools.get_snapshot(net, t_index) : deepcopy(net)
+
+    _ensure_source_generator!(working)
 
     bases = nothing
     if per_unit
@@ -118,9 +120,9 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
     _add_voltage_bounds!(model, working, bus_terminals, grounded, vars)
     _add_bus_limit_constraints!(model, working, bus_terminals, grounded, vars)
 
-    # Voltage source: fix slack voltages and register slack current in KCL
+    # Voltage source: fix reference voltages only (no slack current injection)
     kcl_r, kcl_i = _init_kcl(bus_terminals, grounded)
-    _add_source_constraints!(working, vars, kcl_r, kcl_i)
+    _add_source_constraints!(working, vars)
 
     # Branch constraints and KCL contributions
     _add_line_constraints!(model, working, vars, kcl_r, kcl_i)
