@@ -27,10 +27,17 @@ Use [`BMOPFTools.diagnose_infeasibility`](@ref) to interpret the result.
 """
 function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
                                            optimizer=Ipopt.Optimizer,
-                                           t_index::Int=1)
+                                           t_index::Int=1,
+                                           per_unit::Bool=false,
+                                           s_base::Float64=1e6)
 
     working = BMOPFTools.is_timeseries(net) ?
               BMOPFTools.get_snapshot(net, t_index) : net
+
+    bases = nothing
+    if per_unit
+        working, bases = _to_per_unit(working, s_base)
+    end
 
     model = JuMP.Model(optimizer)
     JuMP.set_silent(model)
@@ -130,5 +137,5 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     result["slack_injections"]        = slack_by_bus
     result["total_slack_magnitude_A"] = sqrt(total_sq)
     result["is_feasibility_opf"]      = true
-    result
+    bases !== nothing ? _from_per_unit(result, bases, net) : result
 end
