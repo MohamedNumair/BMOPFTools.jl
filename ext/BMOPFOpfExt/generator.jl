@@ -149,8 +149,14 @@ function _ensure_source_generator!(working::Dict{String,Any})::Bool
 
     gens = get(working, "generator", Dict())
 
-    # Already have a generator at the source bus — nothing to do
-    any(g -> get(g, "bus", "") == src_bus, values(gens)) && return false
+    # Only skip injection if a generator with a neutral terminal already exists
+    # at the source bus.  A generator without a neutral (e.g. from_pmd's
+    # slack_source which has terminal_map:["1"]) cannot satisfy neutral KCL.
+    has_neutral_gen = any(values(gens)) do g
+        get(g, "bus", "") == src_bus &&
+        any(t -> lowercase(string(t)) == "n", get(g, "terminal_map", String[]))
+    end
+    has_neutral_gen && return false
 
     # Determine phase terminals from the voltage source terminal_map (excludes neutral)
     phase_tm = [t for t in Vector{String}(get(vs, "terminal_map", String[]))
