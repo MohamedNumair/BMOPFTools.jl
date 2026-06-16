@@ -1,6 +1,9 @@
 > [!WARNING]  
 > This project is currently ongoing rapid development and may have breaking changes made directly to main. Use at your own risk until further notice. An upcoming breaking change is removing the dependence on the OpenDSS parser from PMD, which will be switched to https://github.com/eigenergy/PowerIO.jl
 
+
+[![Documentation](https://github.com/frederikgeth/BMOPFTools.jl/actions/workflows/documentation.yml/badge.svg)](https://github.com/frederikgeth/BMOPFTools.jl/actions/workflows/documentation.yml)
+
 # BMOPFTools.jl
 
 A Julia library for **parsing, validating, analysing and reporting** on
