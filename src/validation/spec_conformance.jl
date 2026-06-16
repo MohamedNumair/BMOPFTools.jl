@@ -352,7 +352,8 @@ end
 
 Assess whether the case defines a non-trivial, well-posed OPF benchmark per
 the TF spec (generation-cost objective, Eq. 135), and list the augmentation
-steps needed to make it one.
+steps needed to make it one. Also flags degeneracy risks that could cause
+primal non-uniqueness or flat objective directions.
 """
 function benchmark_readiness_check(net::Dict{String,Any},
                                     findings::Vector{Finding})::Dict{String,Any}
@@ -427,5 +428,122 @@ function benchmark_readiness_check(net::Dict{String,Any},
             join(suggestions, "; ") * ".",
             Dict{String,Any}("suggestions" => suggestions)))
     end
+
+    # ── Degeneracy risk flags ────────────────────────────────────────────────
+
+    # Helper: is a generator dispatchable (p_min strictly below p_max on at
+    # least one phase)?
+    function _is_dispatchable(g)
+        g isa Dict || return false
+        pmn = Float64.(get(g, "p_min", Float64[]))
+        pmx = Float64.(get(g, "p_max", Float64[]))
+        isempty(pmx) && return false
+        any(i -> length(pmn) >= i && pmx[i] - pmn[i] > 0.0, eachindex(pmx))
+    end
+
+    # (1) Generators with no degrees of freedom (p_min == p_max on every phase)
+    no_dof = String[]
+    for (id, g) in gens
+        g isa Dict || continue
+        pmn = Float64.(get(g, "p_min", Float64[]))
+        pmx = Float64.(get(g, "p_max", Float64[]))
+        isempty(pmx) && continue
+        n_ph = length(pmx)
+        if all(i -> length(pmn) >= i && pmx[i] ≈ pmn[i], 1:n_ph)
+            push!(no_dof, id)
+        end
+    end
+    result["n_gen_no_dof"] = length(no_dof)
+    if !isempty(no_dof)
+        push!(findings, Finding(WARNING, "W.BENCH.GEN_NO_DOF", :benchmark,
+            :generator, nothing,
+            "$(length(no_dof)) generator(s) have p_min ≈ p_max on all phases — " *
+            "fixed output, not dispatchable: $(join(sort(no_dof), ", ")).",
+            Dict{String,Any}("generators" => sort(no_dof))))
+    end
+
+    # (2) Generators with cost = 0 (flat objective direction)
+    zero_cost = String[]
+    for (id, g) in gens
+        g isa Dict || continue
+        _is_dispatchable(g) || continue   # fixed generators can't move anyway
+        cost = Float64.(get(g, "cost", Float64[]))
+        if !isempty(cost) && all(c -> c ≈ 0.0, cost)
+            push!(zero_cost, id)
+        end
+    end
+    result["n_gen_zero_cost"] = length(zero_cost)
+    if !isempty(zero_cost)
+        push!(findings, Finding(WARNING, "W.BENCH.GEN_ZERO_COST", :benchmark,
+            :generator, nothing,
+            "$(length(zero_cost)) dispatchable generator(s) have cost = 0 — " *
+            "their dispatch is underdetermined (flat objective direction): " *
+            "$(join(sort(zero_cost), ", ")).",
+            Dict{String,Any}("generators" => sort(zero_cost))))
+    end
+
+    # (3) Same-cost dispatchable generators on the same bus or one hop away
+    #     (primal non-uniqueness: solver can exchange power between them freely)
+    bus_adj = Dict{String,Set{String}}()
+    for (_, l) in lines
+        f = get(l, "bus_from", nothing); t = get(l, "bus_to", nothing)
+        (f isa AbstractString && t isa AbstractString) || continue
+        push!(get!(bus_adj, f, Set{String}()), t)
+        push!(get!(bus_adj, t, Set{String}()), f)
+    end
+    for (_, sw) in get(net, "switch", Dict())
+        get(sw, "open_switch", false) && continue
+        f = get(sw, "bus_from", nothing); t = get(sw, "bus_to", nothing)
+        (f isa AbstractString && t isa AbstractString) || continue
+        push!(get!(bus_adj, f, Set{String}()), t)
+        push!(get!(bus_adj, t, Set{String}()), f)
+    end
+
+    disp_gens = [(id, g) for (id, g) in gens if g isa Dict && _is_dispatchable(g)]
+    same_cost_pairs = Tuple{String,String,Float64}[]
+    for i in eachindex(disp_gens), j in (i+1):length(disp_gens)
+        id_a, ga = disp_gens[i]
+        id_b, gb = disp_gens[j]
+        cost_a = Float64.(get(ga, "cost", Float64[]))
+        cost_b = Float64.(get(gb, "cost", Float64[]))
+        isempty(cost_a) || isempty(cost_b) && continue
+        # Compare first (representative) cost coefficient
+        abs(cost_a[1] - cost_b[1]) > 1e-12 * max(abs(cost_a[1]), 1.0) && continue
+        bus_a = get(ga, "bus", ""); bus_b = get(gb, "bus", "")
+        same_bus  = bus_a == bus_b
+        one_hop   = bus_b in get(bus_adj, bus_a, Set{String}())
+        (same_bus || one_hop) || continue
+        push!(same_cost_pairs, (id_a, id_b, cost_a[1]))
+    end
+    result["n_same_cost_gen_pairs"] = length(same_cost_pairs)
+    if !isempty(same_cost_pairs)
+        pair_strs = ["($a, $b)" for (a, b, _) in same_cost_pairs]
+        push!(findings, Finding(WARNING, "W.BENCH.GEN_DEGENERATE_COST", :benchmark,
+            :generator, nothing,
+            "$(length(same_cost_pairs)) pair(s) of dispatchable generators share " *
+            "the same cost and are electrically close (same bus or one hop) — " *
+            "optimal dispatch is primal non-unique: $(join(pair_strs, ", ")).",
+            Dict{String,Any}("pairs" => [[a, b] for (a, b, _) in same_cost_pairs])))
+    end
+
+    # (4) Loads with zero p_nom entries
+    zero_pnom_loads = String[]
+    for (id, l) in get(net, "load", Dict())
+        l isa Dict || continue
+        pnom = Float64.(get(l, "p_nom", Float64[]))
+        if !isempty(pnom) && all(p -> p ≈ 0.0, pnom)
+            push!(zero_pnom_loads, id)
+        end
+    end
+    result["n_loads_zero_pnom"] = length(zero_pnom_loads)
+    if !isempty(zero_pnom_loads)
+        push!(findings, Finding(INFO, "I.BENCH.LOAD_ZERO_PNOM", :benchmark,
+            :load, nothing,
+            "$(length(zero_pnom_loads)) load(s) have p_nom = 0 on all phases — " *
+            "these loads impose no real power demand: " *
+            "$(join(sort(zero_pnom_loads), ", ")).",
+            Dict{String,Any}("loads" => sort(zero_pnom_loads))))
+    end
+
     result
 end
