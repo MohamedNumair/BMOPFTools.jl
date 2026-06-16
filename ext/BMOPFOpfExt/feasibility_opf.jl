@@ -61,7 +61,7 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     # post-solve by diagnose_infeasibility, which reports violations.
 
     kcl_r, kcl_i = _init_kcl(bus_terminals, grounded)
-    _add_source_constraints!(working, vars, kcl_r, kcl_i)
+    _add_source_constraints!(working, vars)
     _add_line_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_switch_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_transformer_constraints!(model, working, vars, kcl_r, kcl_i)
@@ -70,8 +70,8 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     _add_generator_constraints!(model, working, vars, kcl_r, kcl_i)
 
     # ── Slack current injections ──────────────────────────────────────────────
-    # One (cs_r, cs_i) pair per KCL node that is not already fixed by a
-    # voltage source (those already have an unconstrained cr_src/ci_src).
+    # One (cs_r, cs_i) pair per KCL node that is not a fixed voltage-source
+    # terminal (those have fixed vr/vi and are skipped via _source_fixed_terminals).
 
     fixed = _source_fixed_terminals(working)
 

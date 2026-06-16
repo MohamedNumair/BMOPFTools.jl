@@ -2512,22 +2512,6 @@
     }
   },
   "generator": {
-    "slack_source": {
-      "_slack": true,
-      "cost": [
-        0.001,
-        0.001,
-        0.001
-      ],
-      "terminal_map": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "bus": "sourcebus",
-      "configuration": "WYE"
-    },
     "der_99": {
       "bus": "99",
       "terminal_map": [
@@ -2535,14 +2519,37 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
         0.000147772996
+      ]
+    },
+    "grid": {
+      "bus": "sourcebus",
+      "terminal_map": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "configuration": "WYE",
+      "p_min": [
+        -11076.0,
+        -11076.0,
+        -11076.0
+      ],
+      "p_max": [
+        11076.0,
+        11076.0,
+        11076.0
+      ],
+      "cost": [
+        0.000295545992
       ]
     }
   },

@@ -210,10 +210,16 @@ function _pu_scale_generators!(net, bases)
         if haskey(gen, "cost")
             c = gen["cost"]
             if c isa AbstractVector
-                gen["cost"] = [i == 1 ? Float64(ci) * sb^2 :   # quadratic: $/W² → $/PU²
-                                i == 2 ? Float64(ci) * sb   :   # linear: $/W → $/PU
-                                         Float64(ci)            # constant: unchanged
-                               for (i, ci) in enumerate(c)]
+                if length(c) == 1
+                    # [c1]: scalar linear cost — multiply by s_base
+                    gen["cost"] = [Float64(c[1]) * sb]
+                else
+                    # [c2, c1, c0] polynomial: scale each term by its power of s_base
+                    gen["cost"] = [i == 1 ? Float64(ci) * sb^2 :   # c2: $/W² → $/PU²
+                                    i == 2 ? Float64(ci) * sb   :   # c1: $/W → $/PU
+                                             Float64(ci)            # c0: constant
+                                   for (i, ci) in enumerate(c)]
+                end
             else
                 gen["cost"] = Float64(c) * sb
             end

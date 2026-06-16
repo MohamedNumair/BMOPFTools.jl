@@ -44569,22 +44569,6 @@
     }
   },
   "generator": {
-    "slack_source": {
-      "_slack": true,
-      "cost": [
-        0.001,
-        0.001,
-        0.001
-      ],
-      "terminal_map": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "bus": "sourcebus",
-      "configuration": "WYE"
-    },
     "der_1054": {
       "bus": "1054",
       "terminal_map": [
@@ -44592,10 +44576,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44609,10 +44593,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44626,10 +44610,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44643,10 +44627,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44660,10 +44644,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44677,10 +44661,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44694,10 +44678,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44711,10 +44695,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44728,10 +44712,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44745,10 +44729,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44762,10 +44746,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44779,10 +44763,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44796,10 +44780,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44813,10 +44797,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44830,10 +44814,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44847,10 +44831,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44864,10 +44848,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44881,10 +44865,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44898,10 +44882,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44915,10 +44899,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44932,10 +44916,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44949,10 +44933,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44966,10 +44950,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -44983,10 +44967,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45000,10 +44984,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45017,10 +45001,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45034,10 +45018,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45051,10 +45035,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45068,10 +45052,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45085,10 +45069,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45102,10 +45086,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45119,10 +45103,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45136,10 +45120,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45153,10 +45137,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45170,10 +45154,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45187,10 +45171,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45204,10 +45188,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45221,10 +45205,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45238,10 +45222,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45255,10 +45239,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45272,10 +45256,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45289,10 +45273,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45306,10 +45290,10 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
@@ -45323,14 +45307,37 @@
         "n"
       ],
       "configuration": "SINGLE_PHASE",
-      "p_min_W": [
+      "p_min": [
         0.0
       ],
-      "p_max_W": [
+      "p_max": [
         4000.0
       ],
       "cost": [
         0.000176832342
+      ]
+    },
+    "grid": {
+      "bus": "sourcebus",
+      "terminal_map": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "configuration": "WYE",
+      "p_min": [
+        -309775.20000000007,
+        -309775.20000000007,
+        -309775.20000000007
+      ],
+      "p_max": [
+        309775.20000000007,
+        309775.20000000007,
+        309775.20000000007
+      ],
+      "cost": [
+        0.000991814988
       ]
     }
   },
