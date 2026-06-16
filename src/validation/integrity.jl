@@ -358,6 +358,49 @@ function integrity_check(net::Dict{String,Any},
     end
     result["n_floating_load_terminals"] = n_floating
 
+    # --- unused bus terminals ---
+    # A terminal declared in terminal_names but not referenced by any component
+    # at that bus (branch end or nodal element) adds a free voltage variable
+    # with no KCL constraint — pure numeric overhead and almost always a
+    # conversion artifact or copy-paste error.
+    # Voltage-source buses are excluded: the source pins every declared terminal
+    # so unused declarations are harmless there.
+    all_used_terminals = Dict{String, Set{String}}()
+    for t_dict in (branch_terminals,)
+        for (b, ts) in t_dict
+            union!(get!(all_used_terminals, b, Set{String}()), ts)
+        end
+    end
+    for comp_type in ("load", "generator", "shunt", "voltage_source")
+        for (_, c) in get(net, comp_type, Dict())
+            c isa Dict || continue
+            b  = get(c, "bus", nothing)
+            tm = get(c, "terminal_map", nothing)
+            b isa AbstractString && tm isa AbstractVector || continue
+            s = get!(all_used_terminals, b, Set{String}())
+            for t in tm; push!(s, string(t)); end
+        end
+    end
+
+    n_unused_bus_terminals = 0
+    for (bus_id, bus) in buses
+        bus isa Dict || continue
+        bus_id in source_buses && continue
+        declared = Set(string.(get(bus, "terminal_names", String[])))
+        used     = get(all_used_terminals, bus_id, Set{String}())
+        unused   = sort(collect(setdiff(declared, used)))
+        isempty(unused) && continue
+        n_unused_bus_terminals += 1
+        push!(findings, Finding(WARNING, "W.INT.UNUSED_BUS_TERMINAL",
+            :integrity, :bus, bus_id,
+            "Bus '$bus_id' declares terminal(s) $unused in terminal_names " *
+            "that are not referenced by any component at that bus — these " *
+            "are free voltage variables with no KCL constraint; remove them " *
+            "from terminal_names or verify the connection is not missing.",
+            Dict{String,Any}("bus" => bus_id, "terminals" => unused)))
+    end
+    result["n_unused_bus_terminals"] = n_unused_bus_terminals
+
     # --- low-impedance lines + spread ---
     if length(z_tot) >= 3
         vals = collect(values(z_tot))

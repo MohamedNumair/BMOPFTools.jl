@@ -1166,6 +1166,69 @@ const IEEE13_FIXTURE = """
         @test res11["n_floating_load_terminals"] == 0
     end
 
+    @testset "Integrity — unused bus terminals" begin
+        # Base: b2 declares ["1","2","3","n"]; line and load only use ["1","2","n"].
+        # Terminal "3" is declared but nothing references it — should flag.
+        make_sparse_bus() = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "b1" => Dict{String,Any}("terminal_names" => ["1","2","n"]),
+                "b2" => Dict{String,Any}("terminal_names" => ["1","2","3","n"])),
+            "linecode" => Dict{String,Any}(
+                "lc2" => Dict{String,Any}("R_series_1_1" => 0.1, "R_series_2_2" => 0.1,
+                                          "X_series_1_1" => 0.1, "X_series_2_2" => 0.1)),
+            "line" => Dict{String,Any}(
+                "l1" => Dict{String,Any}("bus_from" => "b1", "bus_to" => "b2",
+                                          "terminal_map_from" => ["1","2","n"],
+                                          "terminal_map_to"   => ["1","2","n"],
+                                          "linecode" => "lc2", "length" => 100.0)),
+            "voltage_source" => Dict{String,Any}(
+                "vs" => Dict{String,Any}("bus" => "b1",
+                                          "terminal_map" => ["1","2","n"],
+                                          "v_magnitude" => [230.0, 230.0],
+                                          "v_angle"     => [0.0, -2.094])),
+            "load" => Dict{String,Any}(
+                "ld" => Dict{String,Any}("bus" => "b2", "configuration" => "WYE",
+                                          "terminal_map" => ["1","2","n"],
+                                          "p_nom" => [1000.0, 1000.0],
+                                          "q_nom" => [0.0, 0.0])))
+
+        # terminal "3" on b2 is declared but unused — should flag once
+        net_u1 = make_sparse_bus()
+        fu1 = Finding[]
+        res_u1 = integrity_check(net_u1, fu1)
+        @test res_u1["n_unused_bus_terminals"] == 1
+        @test any(f -> f.code == "W.INT.UNUSED_BUS_TERMINAL" &&
+                       f.component_id == "b2" &&
+                       "3" in f.detail["terminals"], fu1)
+
+        # load uses all declared terminals — no false positive
+        net_u2 = make_sparse_bus()
+        net_u2["bus"]["b2"]["terminal_names"] = ["1","2","n"]
+        fu2 = Finding[]
+        res_u2 = integrity_check(net_u2, fu2)
+        @test res_u2["n_unused_bus_terminals"] == 0
+        @test !any(f -> f.code == "W.INT.UNUSED_BUS_TERMINAL", fu2)
+
+        # terminal covered by a shunt (not load/branch) — still counts as used
+        net_u3 = make_sparse_bus()
+        net_u3["shunt"] = Dict{String,Any}(
+            "sh1" => Dict{String,Any}("bus" => "b2", "terminal_map" => ["3","n"],
+                                       "G_1_1" => 0.01, "B_1_1" => 0.0))
+        fu3 = Finding[]
+        res_u3 = integrity_check(net_u3, fu3)
+        @test res_u3["n_unused_bus_terminals"] == 0
+        @test !any(f -> f.code == "W.INT.UNUSED_BUS_TERMINAL", fu3)
+
+        # voltage-source bus with surplus terminal is exempt
+        net_u4 = make_sparse_bus()
+        net_u4["bus"]["b1"]["terminal_names"] = ["1","2","3","n"]
+        fu4 = Finding[]
+        res_u4 = integrity_check(net_u4, fu4)
+        # only b2's "3" should flag; b1 is a source bus
+        @test !any(f -> f.code == "W.INT.UNUSED_BUS_TERMINAL" &&
+                        f.component_id == "b1", fu4)
+    end
+
     @testset "OpenDSS default fingerprints" begin
         base = parse_bmopf(IEEE13_FIXTURE; from_string=true)
 
