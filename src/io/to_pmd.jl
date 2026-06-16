@@ -360,7 +360,7 @@ end
 Reconstruct an n×n matrix from flat pattern keys, e.g. "R_series_1_1" → rs[1,1].
 Returns `nothing` if no matching keys found.
 """
-function _pattern_keys_to_matrix(d::Dict{String,Any}, prefix::String)
+function _pattern_keys_to_matrix(d::Dict{String}, prefix::String)
     # find the size from existing keys; prefix ends with "_" so the
     # remaining suffix is "i_j" (e.g. "R_series_" + "1_2")
     n = 0
