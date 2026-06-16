@@ -1,0 +1,202 @@
+{
+  "source_eng": "network_9_feeder_4_model_eng.json",
+  "source_math": "network_9_feeder_4_model_math.json",
+  "bases": {
+    "v_base_V": 240.17771198,
+    "s_base_VA": 1000000.0,
+    "i_base_A": 4163.583672
+  },
+  "bus_bounds": {
+    "133": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "130": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "121": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "126": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "136": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "125": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "132": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "135": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "127": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "129": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "119": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "128": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "137": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "123": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "120": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "124": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "131": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "139": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "118": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "138": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "122": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "134": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    }
+  },
+  "linecode_ratings": {
+    "lc8": {
+      "i_max_A": 419.0
+    },
+    "lc1": {
+      "i_max_A": 75.0
+    },
+    "lc5": {
+      "i_max_A": 223.0
+    }
+  },
+  "generators": {
+    "der_131": {
+      "bus": "131",
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "configuration": "SINGLE_PHASE",
+      "p_min_W": [
+        0.0
+      ],
+      "p_max_W": [
+        4000.0
+      ],
+      "cost_per_W": 0.000297529776
+    },
+    "der_134": {
+      "bus": "134",
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "configuration": "SINGLE_PHASE",
+      "p_min_W": [
+        0.0
+      ],
+      "p_max_W": [
+        4000.0
+      ],
+      "cost_per_W": 0.000311206589
+    },
+    "der_120": {
+      "bus": "120",
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "configuration": "SINGLE_PHASE",
+      "p_min_W": [
+        0.0
+      ],
+      "p_max_W": [
+        4000.0
+      ],
+      "cost_per_W": 7.1678046e-05
+    },
+    "der_137": {
+      "bus": "137",
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "configuration": "SINGLE_PHASE",
+      "p_min_W": [
+        0.0
+      ],
+      "p_max_W": [
+        4000.0
+      ],
+      "cost_per_W": 0.000383507682
+    },
+    "der_125": {
+      "bus": "125",
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "configuration": "SINGLE_PHASE",
+      "p_min_W": [
+        0.0
+      ],
+      "p_max_W": [
+        4000.0
+      ],
+      "cost_per_W": 0.000167362351
+    },
+    "der_119": {
+      "bus": "119",
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "configuration": "SINGLE_PHASE",
+      "p_min_W": [
+        0.0
+      ],
+      "p_max_W": [
+        4000.0
+      ],
+      "cost_per_W": 8.98362e-05
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "source_eng": "network_13_feeder_3_model_eng.json",
+  "source_math": "network_13_feeder_3_model_math.json",
+  "bases": {
+    "v_base_V": 240.17771198,
+    "s_base_VA": 1000000.0,
+    "i_base_A": 4163.583672
+  },
+  "bus_bounds": {
+    "107": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "56": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "36": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "84": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "85": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    }
+  },
+  "linecode_ratings": {
+    "lc9": {
+      "i_max_A": 197.0
+    },
+    "lc8": {
+      "i_max_A": 419.0
+    },
+    "lc1": {
+      "i_max_A": 75.0
+    }
+  },
+  "generators": {
+    "der_107": {
+      "bus": "107",
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "configuration": "SINGLE_PHASE",
+      "p_min_W": [
+        0.0
+      ],
+      "p_max_W": [
+        4000.0
+      ],
+      "cost_per_W": 0.000119497276
+    }
+  }
+}
