@@ -45,7 +45,6 @@ All variables are real-valued and in SI units (V and A).
 | $\tilde{c}^r_{\ell,k},\; \tilde{c}^i_{\ell,k}$ | line $\ell$, conductor $k$ | Series current, to-side |
 | $c^{r,d}_{d,k},\; c^{i,d}_{d,k}$ | load $d$, phase $k$ | Load current |
 | $c^{r,g}_{g,k},\; c^{i,g}_{g,k}$ | generator $g$, phase $k$ | Generator current |
-| $c^{r,v}_{v,k},\; c^{i,v}_{v,k}$ | source $v$, terminal $k$ | Voltage source slack current |
 | $c^{r,x}_{x,\sigma,k},\; c^{i,x}_{x,\sigma,k}$ | transformer $x$, side $\sigma$, conductor $k$ | Transformer winding current |
 
 Load and generator current variables cover **phase conductors only**; neutral
@@ -76,13 +75,22 @@ v^r_{b,t} = 0, \quad v^i_{b,t} = 0 \qquad \forall\,(b,t) \in \mathcal{G}_\text{n
 
 #### Voltage sources
 
-Each source terminal $t_k$ is fixed to the specified rectangular value and
-injects an unconstrained slack current $c^{r,v}_{v,k}$ into KCL:
+Each source terminal $t_k$ is fixed to the specified rectangular value.
+The voltage source provides the **voltage reference only** — it does not inject
+current into KCL:
 
 ```math
 v^r_{b,t_k} = V^s_{v,k} \cos\theta^s_{v,k}, \qquad
 v^i_{b,t_k} = V^s_{v,k} \sin\theta^s_{v,k}
 ```
+
+Power balance at the source bus is satisfied by an explicit generator (see
+[Source bus generator injection](@ref source-gen-injection) below).
+
+The source-bus **neutral** is additionally fixed to zero
+($v^r_{b,n} = v^i_{b,n} = 0$) without being added to $\mathcal{G}_\text{nd}$,
+so that KCL is still enforced there and the grid generator's neutral return
+current can satisfy it.
 
 #### Voltage magnitude bounds
 
@@ -273,7 +281,6 @@ Sign conventions:
 
 | Component | Terminal | KCL contribution |
 |---|---|---|
-| Voltage source | source terminal | $+c^{r,v}$ (injects) |
 | Line from-side | from terminal | $-c^r_\ell$ (leaves) |
 | Line to-side | to terminal | $+c^r_\ell$ (enters, since $\tilde{c} = -c$) |
 | Load WYE | phase terminal | $-c^{r,d}$ (consumed) |
@@ -283,6 +290,45 @@ Sign conventions:
 | Generator WYE | phase terminal | $+c^{r,g}$ (injects) |
 | Generator WYE | neutral terminal | $-c^{r,g}$ (return) |
 | Transformer | each terminal | $-c^{r,x}$ (winding current leaves) |
+
+---
+
+## [Source bus generator injection](@id source-gen-injection)
+
+Because the voltage source only fixes voltages and does not inject current,
+**every ungrounded terminal at the source bus must have its KCL satisfied by
+an explicit generator**.  Before building the JuMP model, `solve_opf` and
+`solve_feasibility_opf` call `_ensure_source_generator!`, which checks whether
+any generator with a neutral terminal already exists at the source bus.  If not,
+it automatically injects an unbounded zero-cost generator named `_auto_slack`
+and emits a warning:
+
+```
+┌ Warning: solve_opf: no generator found at source bus 'sourcebus' —
+│ automatically injecting an unbounded zero-cost generator '_auto_slack'
+│ to satisfy KCL. For a proper OPF benchmark add an explicit grid generator
+│ with bounds and cost at the source bus.
+```
+
+The `_auto_slack` generator covers **all phase terminals plus the neutral** of the
+source bus, so both phase and neutral KCL are satisfied.  It appears in the
+result dict under `result["generator"]["_auto_slack"]` so its active and reactive
+power output is visible.
+
+**When auto-injection fires:**
+
+- Pure power-flow networks (no generators defined).
+- OPF networks where the modeller omitted a grid-connection generator at the
+  slack bus.
+- Networks converted from PowerModelsDistribution via `from_pmd`: the
+  synthesised `slack_source` generator has only phase terminals (no neutral),
+  so `_auto_slack` is injected alongside it to cover the neutral.
+
+**For production OPF benchmarks** the warning should be resolved by adding an
+explicit `generator` at the source bus with physically meaningful `p_min`,
+`p_max` bounds and a `cost` that reflects grid import/export pricing.  The
+`_auto_slack` fallback exists for ergonomics and power-flow compatibility, not
+as a substitute for a properly specified grid connection.
 
 ---
 
