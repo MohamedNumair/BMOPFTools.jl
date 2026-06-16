@@ -1,0 +1,76 @@
+# Network graph  (48 buses)
+
+b212 (SRC G1)
+└── [tx1632: Dyn1 11.0kV/433V]── b557
+    └── b2115
+        ├── b1061
+        │   └── b3299
+        │       ├── b2434
+        │       │   ├── b1101 (L7)
+        │       │   ├── b2490
+        │       │   │   ├── b1422
+        │       │   │   │   ├── b1229
+        │       │   │   │   │   └── b341 (L18)
+        │       │   │   │   └── b2643 (L13)
+        │       │   │   └── b45 (L2)
+        │       │   └── b793 (L6)
+        │       └── b950 (L12)
+        ├── b2441
+        │   └── b3149
+        │       ├── b1966
+        │       │   ├── b3314
+        │       │   │   └── b3061
+        │       │   │       └── b1710 (L10)
+        │       │   ├── b343
+        │       │   │   ├── b1014
+        │       │   │   │   └── b3263 (L5)
+        │       │   │   └── b2714
+        │       │   │       └── b947 (L11)
+        │       │   └── b922 (L19)
+        │       └── b2617
+        │           ├── b1626
+        │           │   ├── b829 (L8)
+        │           │   └── b974
+        │           │       ├── b1704 (L3)
+        │           │       └── b671 (L17)
+        │           └── b60
+        │               └── b2306
+        │                   ├── b1060 (L14)
+        │                   ├── b1331 (L20)
+        │                   └── b1894
+        │                       └── b385 (L15)
+        └── b3351
+            └── b2991
+                ├── b1434 (L9)
+                ├── b195
+                │   ├── b1062 (L21)
+                │   ├── b2066
+                │   │   └── b3018 (L16)
+                │   └── b2603 (L1)
+                └── b2128 (L4)
+
+Loads (21 total):
+  L1 = ld1084_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L2 = ld1092_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L3 = ld1132_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L4 = ld137_load_a       10.0 kW  SINGLE_PHASE  phases: 1
+  L5 = ld1951_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L6 = ld198_load_b       10.0 kW  SINGLE_PHASE  phases: 2
+  L7 = ld2189_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L8 = ld2798_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L9 = ld2981_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L10 = ld3166_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L11 = ld3264_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L12 = ld3782_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L13 = ld3931_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L14 = ld4251_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L15 = ld4273_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L16 = ld4428_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L17 = ld4460_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+  L18 = ld4525_load_c      10.0 kW  SINGLE_PHASE  phases: 3
+  L19 = ld490_load_c       10.0 kW  SINGLE_PHASE  phases: 3
+  L20 = ld562_load_a       10.0 kW  SINGLE_PHASE  phases: 1
+  L21 = ld986_load_b       10.0 kW  SINGLE_PHASE  phases: 2
+
+Generators (1 total):
+  G1 = slack_source     max    0.0 kW

@@ -1,0 +1,16 @@
+# Network graph  (7 buses)
+
+b2439 (SRC G1)
+└── [tx2458: Dyn1 11.0kV/433V]── b2549
+    └── b31
+        ├── b1885
+        │   └── b1304 (L1)
+        └── b2267
+            └── b765 (L2)
+
+Loads (2 total):
+  L1 = ld1804_load_a      10.0 kW  SINGLE_PHASE  phases: 1
+  L2 = ld3812_load_b      10.0 kW  SINGLE_PHASE  phases: 2
+
+Generators (1 total):
+  G1 = slack_source     max    0.0 kW
