@@ -1,0 +1,233 @@
+{
+  "source_eng": "network_9_feeder_6_model_eng.json",
+  "source_math": "network_9_feeder_6_model_math.json",
+  "bases": {
+    "v_base_V": 240.17771198,
+    "s_base_VA": 1000000.0,
+    "i_base_A": 4163.583672
+  },
+  "bus_bounds": {
+    "178": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "172": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "167": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "200": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "181": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "158": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "166": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "163": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "161": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "177": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "175": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "162": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "203": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "174": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "173": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "179": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "72": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "205": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "164": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "197": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "176": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "180": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "170": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "168": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "165": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "182": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "169": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "171": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
+    "160": {
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    }
+  },
+  "linecode_ratings": {
+    "lc8": {
+      "i_max_A": 419.0
+    },
+    "lc6": {
+      "i_max_A": 58.0
+    },
+    "lc1": {
+      "i_max_A": 75.0
+    },
+    "lc5": {
+      "i_max_A": 223.0
+    }
+  },
+  "generators": {
+    "der_172": {
+      "bus": "172",
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "configuration": "SINGLE_PHASE",
+      "p_min_W": [
+        0.0
+      ],
+      "p_max_W": [
+        4000.0
+      ],
+      "cost_per_W": 0.000258188727
+    },
+    "der_168": {
+      "bus": "168",
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "configuration": "SINGLE_PHASE",
+      "p_min_W": [
+        0.0
+      ],
+      "p_max_W": [
+        4000.0
+      ],
+      "cost_per_W": 0.000242964839
+    },
+    "der_161": {
+      "bus": "161",
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "configuration": "SINGLE_PHASE",
+      "p_min_W": [
+        0.0
+      ],
+      "p_max_W": [
+        4000.0
+      ],
+      "cost_per_W": 0.000462171345
+    },
+    "der_179": {
+      "bus": "179",
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "configuration": "SINGLE_PHASE",
+      "p_min_W": [
+        0.0
+      ],
+      "p_max_W": [
+        4000.0
+      ],
+      "cost_per_W": 0.000424782543
+    },
+    "der_169": {
+      "bus": "169",
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "configuration": "SINGLE_PHASE",
+      "p_min_W": [
+        0.0
+      ],
+      "p_max_W": [
+        4000.0
+      ],
+      "cost_per_W": 3.6380718e-05
+    },
+    "der_164": {
+      "bus": "164",
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "configuration": "SINGLE_PHASE",
+      "p_min_W": [
+        0.0
+      ],
+      "p_max_W": [
+        4000.0
+      ],
+      "cost_per_W": 0.000177594282
+    }
+  }
+}
