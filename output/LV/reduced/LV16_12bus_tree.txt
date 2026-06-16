@@ -1,0 +1,12 @@
+# Network graph  (4 buses)
+
+b467 (SRC G1)
+└── [tx215: Dyn1 11.0kV/433V]── b1520
+    └── b1255
+        └── b3179 (L1)
+
+Loads (1 total):
+  L1 = ld313_load_a       10.0 kW  SINGLE_PHASE  phases: 1
+
+Generators (1 total):
+  G1 = slack_source     max    0.0 kW

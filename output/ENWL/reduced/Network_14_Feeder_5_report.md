@@ -1,0 +1,172 @@
+# BMOPF Network Summary: Network_14_Feeder_5
+
+**Generated:** 2026-06-16 11:36:08  
+**Findings:** 0 errors · 1 warnings · 4 info  
+**Convention:** LV_240V: 4-wire; 1 grounding point(s)
+
+---
+
+## 1. Component Inventory
+
+| Component | Count | Notes |
+|-----------|------:|-------|
+| bus | 47 |  |
+| line | 46 |  |
+| linecode | 2 |  |
+| voltage_source | 1 |  |
+| load | 45 | 48.6 kW, 16.0 kvar |
+| generator | 1 | capacity: 0.0 W |
+| shunt | 1 |  |
+| switch | 0 |  |
+| transformer | 0 |  |
+
+## 2. Voltage Levels
+
+**Voltage levels identified:** 1
+
+| Level | Nominal | Buses | Lines | Loads | Generators |
+|-------|---------|------:|------:|------:|-----------:|
+| LV_240V | 240.0 V | 47 | 46 | 45 | 1 |
+
+## 3. Connectivity & Topology
+
+| Property | Value |
+|----------|-------|
+| Connected components | 1 |
+| Fully connected | true |
+| Topology | Radial |
+| Mean degree | 1.96 |
+| Max degree | 46 |
+| Degree-1 buses | 46 |
+| Tree depth (max hops) | 2 |
+
+## 4. Diversity & Variance
+
+**Overall symmetry score:** MODERATE
+
+### load
+
+| Parameter | Min | Max | CV | n |
+|-----------|-----|-----|----|---|
+| p_nom | 114.0 | 9740.0 | 1.588 | 45 |
+| q_nom | 37.5 | 3200.0 | 1.588 | 45 |
+
+### line ⚠
+
+| Parameter | Min | Max | CV | n |
+|-----------|-----|-----|----|---|
+| length | 15.0 | 66.6 | 0.472 | 46 |
+
+### linecode
+
+| Parameter | Min | Max | CV | n |
+|-----------|-----|-----|----|---|
+| R_series_1_1 | 0.000259 | 0.00135 | 0.959 | 2 |
+
+> 🔵 **[I.DIV.LINE_SYMMETRIC]** 45 lines share linecode 'lc1' with similar length (±10%) — electrically near-identical.
+
+## 5. Loading & Operational Summary
+
+| | Value |
+|--|-------|
+| Total load P | 48.6 kW |
+| Total load Q | 16.0 kvar |
+| Total gen capacity | 0.0 W |
+| Generation/load ratio | 0.0% |
+
+> 🟡 **[W.OPS.IMPORT_DEPENDENT]** Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.05 MW).
+
+## 6. Infeasibility Pre-flight
+
+| Check | Result |
+|-------|--------|
+| Import dependent | true |
+| Constraint conflicts | 0 |
+| Buses without voltage bounds | 47 |
+| Single point of failure | true |
+| TPIA status | not_run |
+
+> 🔵 **[I.PRE.NO_VOLT_BOUNDS]** 47 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
+> 🔵 **[I.PRE.SINGLE_SOURCE]** Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+
+## 7. Provenance & Model Conventions
+
+**Inferred convention:** LV_240V: 4-wire; 1 grounding point(s)
+
+| Voltage level | Wires | Buses with neutral |
+|---------------|-------|-------------------:|
+| LV_240V | 4-wire | 47 / 47 |
+
+| Neutral grounding | Value |
+|-------------------|------:|
+| Buses with neutral | 47 |
+| Neutral branches | 46 |
+| Grounding points | 1 |
+| Neutral sections | 1 |
+| Floating sections | 0 |
+
+**Linecode impedance classification:**
+
+| Verdict | Count |
+|---------|------:|
+| distinct | 2 |
+
+**OpenDSS default fingerprints:** none detected ✓
+
+**Earthing system per galvanic zone:**
+
+| Zone | Buses | Wires | Star point | Downstream earths | Likely system |
+|------|------:|-------|------------|------------------:|---------------|
+| 240.0 V | 47 | 4-wire | solid | 0 | TN-S or TT (source-earthed only — protective-earth side not representable in the data model) |
+
+## 8. Spec Conformance & Benchmark Readiness
+
+| Spec conformance | Value |
+|------------------|------:|
+| Conformance issues | 0 |
+| Voltage sources (spec requires 1) | 1 |
+
+| Structural integrity | Value |
+|----------------------|------:|
+| Reference issues | 0 |
+| Dimension issues | 0 |
+| Galvanic islands | 1 |
+| Islands without voltage reference | 0 |
+| Line impedance spread | 1.24× |
+
+| Benchmark readiness | Value |
+|---------------------|------:|
+| Objective well-posed | true |
+| Only slack generation | true |
+| Buses with \|V\| bounds | 0.0% |
+| Buses with vpn / vpp / vpos bounds | 0 / 0 / 0 |
+| Lines with thermal limits | 100.0% |
+
+**Augmentation needed:**
+
+- only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds
+- no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground)
+- no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF
+
+> 🔵 **[I.BENCH.AUGMENTATION]** Case needs augmentation to be a non-trivial OPF benchmark: only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF.
+
+## 9. Data Quality Summary
+
+**Total findings:** 5 (0 errors, 1 warnings, 4 info)
+
+### 🟡 Warnings
+
+- **[W.OPS.IMPORT_DEPENDENT]** `network`  
+  Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.05 MW).
+
+### 🔵 Info
+
+- **[I.DIV.LINE_SYMMETRIC]** `line`  
+  45 lines share linecode 'lc1' with similar length (±10%) — electrically near-identical.
+- **[I.PRE.NO_VOLT_BOUNDS]** `bus`  
+  47 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
+- **[I.PRE.SINGLE_SOURCE]** `network`  
+  Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.BENCH.AUGMENTATION]** `network`  
+  Case needs augmentation to be a non-trivial OPF benchmark: only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF.
+
