@@ -103,6 +103,15 @@ accepted) and optional `p_min/p_max/q_min/q_max`. A generator without
 bounds is an unbounded (slack-style) unit. The converter marks the slack it
 synthesises with `_slack: true`.
 
+**Auto-injected source generator.** `solve_opf` and `solve_feasibility_opf`
+require at least one generator with a **neutral terminal** at the source bus to
+satisfy neutral KCL (the voltage source fixes voltages but does not inject
+current).  If none is present, the solver automatically adds a generator named
+`_auto_slack` with empty bounds (unconstrained) and zero cost.  A warning is
+emitted; the generator appears in the result dict.  For proper OPF benchmarks
+replace this with an explicit grid-connection generator that has physically
+meaningful bounds and cost — see [Source bus generator injection](opf.md#source-gen-injection).
+
 ## Transformer subtypes
 
 Four subtypes, each its own sub-dict under `transformer`, with terminal-map
