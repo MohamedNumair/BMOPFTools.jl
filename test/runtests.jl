@@ -632,6 +632,119 @@ const IEEE13_FIXTURE = """
         @test any(f -> f.code == "W.SPEC.N_SOURCES", findings3)
     end
 
+    @testset "Terminal map convention checks" begin
+        # Minimal 3-phase bus used across sub-tests
+        _tmap_net(extra_components="") = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["a","b","c","n"],
+                   "perfectly_grounded_terminals":["n"]},
+            "b1": {"terminal_names":["a","b","c","n"],
+                   "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["a","b","c"],
+             "v_magnitude":[11000.0,11000.0,11000.0],
+             "v_angle":[0.0,-2.094,-4.189]}},
+         "linecode":{"lc":{"R_series_1_1":0.1,"R_series_2_2":0.1,"R_series_3_3":0.1}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["a","b","c"],
+             "terminal_map_to":["a","b","c"],
+             "linecode":"lc","length":100.0}},
+         "load":{"ld1":{"bus":"b1","terminal_map":["a","b","c","n"],
+             "configuration":"WYE","p_nom":[1e4,1e4,1e4],"q_nom":[0.0,0.0,0.0]}}
+         $extra_components}
+        """; from_string=true)
+
+        # ── clean network: no terminal map findings ───────────────────────────
+        @testset "clean network has no terminal map findings" begin
+            net = _tmap_net()
+            findings = Finding[]
+            res = spec_conformance_check(net, findings)
+            @test res["n_phase_to_neutral"]       == 0
+            @test res["n_cross_phase_lines"]      == 0
+            @test res["n_permuted_terminal_maps"] == 0
+            @test !any(f -> f.code in ("E.TMAP.PHASE_TO_NEUTRAL",
+                                       "I.TMAP.CROSS_PHASE_LINE",
+                                       "I.TMAP.PERMUTED_ORDER"), findings)
+        end
+
+        # ── E.TMAP.PHASE_TO_NEUTRAL: generator wired only to neutral ─────────
+        @testset "E.TMAP.PHASE_TO_NEUTRAL — generator terminal_map=[n]" begin
+            net = _tmap_net(""","generator":{"g1":{"bus":"b1",
+                "terminal_map":["n"],
+                "configuration":"WYE","cost":0.05,
+                "p_min":[0.0],"p_max":[1e4],
+                "q_min":[0.0],"q_max":[0.0]}}""")
+            findings = Finding[]
+            res = spec_conformance_check(net, findings)
+            @test res["n_phase_to_neutral"] >= 1
+            @test any(f -> f.code == "E.TMAP.PHASE_TO_NEUTRAL" &&
+                           f.component_id == "g1", findings)
+        end
+
+        # ── E.TMAP.PHASE_TO_NEUTRAL: WYE load with neutral in phase slot ─────
+        @testset "E.TMAP.PHASE_TO_NEUTRAL — neutral in phase slot of WYE load" begin
+            net = _tmap_net(""","load":{"bad":{"bus":"b1",
+                "terminal_map":["a","n","c","n"],
+                "configuration":"WYE",
+                "p_nom":[1e4,1e4,1e4],"q_nom":[0.0,0.0,0.0]}}""")
+            findings = Finding[]
+            res = spec_conformance_check(net, findings)
+            @test res["n_phase_to_neutral"] >= 1
+            @test any(f -> f.code == "E.TMAP.PHASE_TO_NEUTRAL" &&
+                           f.component_id == "bad", findings)
+        end
+
+        # ── WYE load with neutral in trailing slot: no error ──────────────────
+        @testset "WYE load neutral in last slot is not an error" begin
+            net = _tmap_net()   # ld1 already has ["a","b","c","n"] — correct
+            findings = Finding[]
+            spec_conformance_check(net, findings)
+            @test !any(f -> f.code == "E.TMAP.PHASE_TO_NEUTRAL" &&
+                            f.component_id == "ld1", findings)
+        end
+
+        # ── I.TMAP.CROSS_PHASE_LINE: from/to maps differ ─────────────────────
+        @testset "I.TMAP.CROSS_PHASE_LINE — mismatched from/to" begin
+            net = _tmap_net()
+            net["line"]["l1"]["terminal_map_to"] = ["b","a","c"]   # permuted
+            findings = Finding[]
+            res = spec_conformance_check(net, findings)
+            @test res["n_cross_phase_lines"] >= 1
+            @test any(f -> f.code == "I.TMAP.CROSS_PHASE_LINE" &&
+                           f.component_id == "l1", findings)
+        end
+
+        # ── identical from/to: no cross-phase finding ─────────────────────────
+        @testset "matching from/to terminal maps not flagged as cross-phase" begin
+            net = _tmap_net()
+            findings = Finding[]
+            res = spec_conformance_check(net, findings)
+            @test res["n_cross_phase_lines"] == 0
+        end
+
+        # ── I.TMAP.PERMUTED_ORDER: load terminal map out of bus order ─────────
+        @testset "I.TMAP.PERMUTED_ORDER — permuted nodal terminal map" begin
+            net = _tmap_net()
+            net["load"]["ld1"]["terminal_map"] = ["b","a","c","n"]   # b before a
+            findings = Finding[]
+            res = spec_conformance_check(net, findings)
+            @test res["n_permuted_terminal_maps"] >= 1
+            @test any(f -> f.code == "I.TMAP.PERMUTED_ORDER" &&
+                           f.component_id == "ld1", findings)
+        end
+
+        # ── phase subset in bus order: no permutation finding ─────────────────
+        @testset "phase subset in bus order not flagged as permuted" begin
+            net = _tmap_net(""","load":{"sub":{"bus":"b1",
+                "terminal_map":["a","n"],
+                "configuration":"SINGLE_PHASE",
+                "p_nom":[5e3],"q_nom":[0.0]}}""")
+            findings = Finding[]
+            spec_conformance_check(net, findings)
+            @test !any(f -> f.code == "I.TMAP.PERMUTED_ORDER" &&
+                            f.component_id == "sub", findings)
+        end
+    end
+
     @testset "Benchmark readiness" begin
         # fixture has a non-slack generator with cost and voltage bounds
         net = parse_bmopf(IEEE13_FIXTURE; from_string=true)
