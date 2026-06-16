@@ -13,9 +13,10 @@ Enrichments applied per file:
      equal) from enrichment linecode_ratings; fallback 600 A retained for any
      linecode not present in enrichment.
   3. DER generators added to the generator dict (terminal_map = [phase, "n"],
-     SINGLE_PHASE, already set correctly in the enrichment files).
-  4. slack_source cost updated from [1,1,1] to [1e-3, 1e-3, 1e-3] $/W
-     (derived from MATH gen.1 c1 = 1000 $/pu-MVA ÷ S_base = 1 MVA).
+     SINGLE_PHASE, bounds in W from enrichment p_min_W / p_max_W).
+  4. A bounded "grid" generator is added at the source bus with cost equal to
+     2× the most expensive DER, and p bounds of ±2× total feeder load.  The
+     legacy slack_source generator (if present) is removed.
 
 Usage:
     python3 scripts/generate_enwl_benchmark.py
@@ -23,7 +24,6 @@ Usage:
 
 import json
 import os
-import re
 
 BMOPF_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "output", "ENWL", "original")
@@ -34,9 +34,6 @@ ENR_DIR = os.path.normpath(
 OUT_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "output", "ENWLbenchmark")
 )
-
-# $/W for the slack voltage source — from PMDLab MATH gen.1 c1 = 1000 $/pu, S_base = 1 MVA
-SLACK_COST_PER_W = 1e-3
 
 
 def _enrichment_key(bmopf_filename):
@@ -84,21 +81,45 @@ def enrich(bmopf_data, enr):
             "bus":           gen["bus"],
             "terminal_map":  gen["terminal_map"],
             "configuration": gen["configuration"],
-            "p_min_W":       gen["p_min_W"],
-            "p_max_W":       gen["p_max_W"],
+            "p_min":         gen["p_min_W"],
+            "p_max":         gen["p_max_W"],
             "cost":          [gen["cost_per_W"]],
         }
 
-    # ── 4. Slack source cost ─────────────────────────────────────────────────
-    for _gid, g in d.get("voltage_source", {}).items():
-        # voltage_source entries don't carry cost — skip
-        pass
-    for gid, g in d.get("generator", {}).items():
+    # ── 4. Replace legacy slack_source with bounded grid generator ───────────
+    # Total feeder load (sum of all p_nom entries across all loads)
+    total_load_W = sum(
+        p for load in d.get("load", {}).values()
+        for p in (load.get("p_nom") or [])
+    )
+    grid_p_bound = 2.0 * total_load_W
+
+    max_der_cost = max(
+        (gen["cost_per_W"] for gen in enr["generators"].values()),
+        default=0.0,
+    )
+    grid_cost = 2.0 * max_der_cost if max_der_cost > 0.0 else 1e-3
+
+    # Find and remove the legacy slack_source generator
+    source_bus_gen = None
+    source_tm = None
+    for gid, g in list(d["generator"].items()):
         if g.get("_slack"):
-            n_phases = len(g.get("terminal_map", [])) - 1  # exclude neutral
-            if n_phases < 1:
-                n_phases = 3
-            g["cost"] = [SLACK_COST_PER_W] * n_phases
+            source_bus_gen = g["bus"]
+            source_tm = [t for t in g.get("terminal_map", []) if t != "n"]
+            del d["generator"][gid]
+            break
+
+    if source_bus_gen and source_tm:
+        n_phases = len(source_tm)
+        d["generator"]["grid"] = {
+            "bus":           source_bus_gen,
+            "terminal_map":  source_tm + ["n"],
+            "configuration": "WYE",
+            "p_min":         [-grid_p_bound] * n_phases,
+            "p_max":         [ grid_p_bound] * n_phases,
+            "cost":          [grid_cost],
+        }
 
     return d
 
