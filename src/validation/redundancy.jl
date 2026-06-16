@@ -11,6 +11,8 @@ function redundancy_check(net::Dict{String,Any},
     result = Dict{String,Any}()
 
     result["zero_loads"]         = _check_zero_loads(net, findings)
+    result["sparse_phase_loads"] = _check_sparse_phase_loads(net, findings)
+    result["mergeable_loads"]    = _check_mergeable_loads(net, findings)
     result["mergeable_lines"]    = _check_mergeable_lines(net, findings)
     result["zero_shunts"]        = _check_zero_shunts(net, findings)
     result["unused_linecodes"]   = _check_unused_linecodes(net, findings)
@@ -36,6 +38,105 @@ function _check_zero_loads(net, findings)
             Dict{String,Any}("loads" => zero_loads)))
     end
     Dict{String,Any}("n" => length(zero_loads), "ids" => zero_loads)
+end
+
+function _check_sparse_phase_loads(net, findings)
+    # Flag WYE loads where at least one phase has p≈0 and q≈0 while another
+    # does not.  SINGLE_PHASE and DELTA are excluded: single-phase has no
+    # phases to trim; delta "zero phases" have no clean single-phase equivalent.
+    sparse = Dict{String, Vector{Int}}()   # load id => dead phase indices (1-based)
+    for (id, l) in get(net, "load", Dict())
+        l isa Dict || continue
+        get(l, "configuration", "WYE") == "WYE" || continue
+        p = Float64.(get(l, "p_nom", Float64[]))
+        q = Float64.(get(l, "q_nom", Float64[]))
+        n = max(length(p), length(q))
+        n < 2 && continue   # nothing to trim in a 1-phase WYE
+        dead = Int[]
+        for k in 1:n
+            pk = k <= length(p) ? p[k] : 0.0
+            qk = k <= length(q) ? q[k] : 0.0
+            pk ≈ 0.0 && qk ≈ 0.0 && push!(dead, k)
+        end
+        # Only flag if mixed: some phases dead, some alive
+        !isempty(dead) && length(dead) < n && (sparse[id] = dead)
+    end
+
+    if !isempty(sparse)
+        ids = sort(collect(keys(sparse)))
+        push!(findings, Finding(INFO, "I.RED.LOAD_SPARSE_PHASES", :redundancy, :load, nothing,
+            "$(length(sparse)) WYE load(s) have one or more phases with p≈0 and q≈0 " *
+            "while other phases are active — consider splitting into per-phase " *
+            "SINGLE_PHASE loads to reduce model size: $(join(ids, ", ")).",
+            Dict{String,Any}("loads" => Dict(id => dead for (id, dead) in sparse))))
+    end
+    Dict{String,Any}("n" => length(sparse),
+                     "loads" => Dict(id => dead for (id, dead) in sparse))
+end
+
+# Return a canonical key for grouping loads that can be merged.
+# WYE/SINGLE_PHASE: sort phase terminals, append neutral last.
+# DELTA: normalise to the lexicographically smallest cyclic rotation.
+function _load_merge_key(load::Dict)
+    bus  = get(load, "bus", "")
+    cfg  = get(load, "configuration", "WYE")
+    tm   = Vector{String}(get(load, "terminal_map", String[]))
+
+    if cfg in ("WYE", "SINGLE_PHASE")
+        neutral = findfirst(t -> lowercase(t) == "n", tm)
+        phases  = [tm[i] for i in eachindex(tm) if i != neutral]
+        sort!(phases)
+        normed  = neutral !== nothing ? vcat(phases, [tm[neutral]]) : phases
+    else  # DELTA — find smallest cyclic rotation
+        n = length(tm)
+        normed = tm
+        for rot in 1:n-1
+            candidate = vcat(tm[rot+1:end], tm[1:rot])
+            candidate < normed && (normed = candidate)
+        end
+    end
+    (bus, cfg, normed)
+end
+
+function _check_mergeable_loads(net, findings)
+    loads = get(net, "load", Dict())
+    groups = Dict{Any, Vector{String}}()
+
+    for (id, l) in loads
+        l isa Dict || continue
+        # Loads with time_series are excluded: merging requires summing profiles
+        haskey(l, "time_series") && continue
+        key = _load_merge_key(l)
+        push!(get!(groups, key, String[]), id)
+    end
+
+    mergeable = [(key, sort(ids)) for (key, ids) in groups if length(ids) >= 2]
+    has_ts    = any(haskey(l, "time_series") for (_, l) in loads if l isa Dict)
+
+    if !isempty(mergeable)
+        n_loads = sum(length(ids) for (_, ids) in mergeable)
+        ts_note = has_ts ? " (loads with time_series profiles were excluded)" : ""
+        push!(findings, Finding(INFO, "I.RED.LOAD_MERGEABLE", :redundancy, :load, nothing,
+            "$(length(mergeable)) group(s) of loads ($n_loads loads total) share the " *
+            "same bus, configuration and terminal_map — each group can be collapsed " *
+            "into a single load with summed setpoints$ts_note.",
+            Dict{String,Any}(
+                "n_groups" => length(mergeable),
+                "groups"   => [Dict{String,Any}(
+                    "bus"           => key[1],
+                    "configuration" => key[2],
+                    "terminal_map"  => key[3],
+                    "load_ids"      => ids)
+                    for (key, ids) in mergeable])))
+    end
+
+    Dict{String,Any}("n_groups"  => length(mergeable),
+                     "groups"    => [Dict{String,Any}(
+                         "bus"           => key[1],
+                         "configuration" => key[2],
+                         "terminal_map"  => key[3],
+                         "load_ids"      => ids)
+                         for (key, ids) in mergeable])
 end
 
 function _check_mergeable_lines(net, findings)

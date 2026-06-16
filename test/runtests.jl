@@ -391,6 +391,122 @@ const IEEE13_FIXTURE = """
         @test result["unused_linecodes"]["n"] == 0
     end
 
+    @testset "Redundancy — sparse phase loads" begin
+        make_net(loads) = Dict{String,Any}("load" => loads)
+
+        # 3-phase WYE: phase 2 and 3 dead → flag phases [2,3]
+        net = make_net(Dict("l1" => Dict(
+            "bus" => "b1", "configuration" => "WYE",
+            "terminal_map" => ["1","2","3","n"],
+            "p_nom" => [1000.0, 0.0, 0.0], "q_nom" => [0.0, 0.0, 0.0])))
+        r = redundancy_check(net, Finding[])
+        @test r["sparse_phase_loads"]["n"] == 1
+        @test haskey(r["sparse_phase_loads"]["loads"], "l1")
+        @test sort(r["sparse_phase_loads"]["loads"]["l1"]) == [2, 3]
+
+        # Finding code fires
+        findings = Finding[]
+        redundancy_check(net, findings)
+        @test any(f -> f.code == "I.RED.LOAD_SPARSE_PHASES", findings)
+
+        # All phases active → no flag
+        net2 = make_net(Dict("l1" => Dict(
+            "bus" => "b1", "configuration" => "WYE",
+            "terminal_map" => ["1","2","3","n"],
+            "p_nom" => [100.0, 200.0, 300.0], "q_nom" => [0.0, 0.0, 0.0])))
+        r2 = redundancy_check(net2, Finding[])
+        @test r2["sparse_phase_loads"]["n"] == 0
+
+        # All phases dead → covered by ZERO_LOADS, not SPARSE_PHASES
+        net3 = make_net(Dict("l1" => Dict(
+            "bus" => "b1", "configuration" => "WYE",
+            "terminal_map" => ["1","2","3","n"],
+            "p_nom" => [0.0, 0.0, 0.0], "q_nom" => [0.0, 0.0, 0.0])))
+        r3 = redundancy_check(net3, Finding[])
+        @test r3["sparse_phase_loads"]["n"] == 0
+
+        # SINGLE_PHASE and DELTA are excluded
+        net4 = make_net(Dict(
+            "l1" => Dict("bus" => "b1", "configuration" => "SINGLE_PHASE",
+                         "terminal_map" => ["1","n"],
+                         "p_nom" => [0.0], "q_nom" => [0.0]),
+            "l2" => Dict("bus" => "b1", "configuration" => "DELTA",
+                         "terminal_map" => ["1","2","3"],
+                         "p_nom" => [100.0, 0.0, 0.0], "q_nom" => [0.0, 0.0, 0.0])))
+        r4 = redundancy_check(net4, Finding[])
+        @test r4["sparse_phase_loads"]["n"] == 0
+    end
+
+    @testset "Redundancy — mergeable loads" begin
+        make_net(loads) = Dict{String,Any}("load" => loads)
+
+        # Two WYE loads on the same bus with same terminal_map → mergeable
+        net = make_net(Dict(
+            "l1" => Dict("bus" => "b1", "configuration" => "WYE",
+                         "terminal_map" => ["1","2","3","n"],
+                         "p_nom" => [100.0, 200.0, 300.0]),
+            "l2" => Dict("bus" => "b1", "configuration" => "WYE",
+                         "terminal_map" => ["1","2","3","n"],
+                         "p_nom" => [50.0, 60.0, 70.0])))
+        r = redundancy_check(net, Finding[])
+        @test r["mergeable_loads"]["n_groups"] == 1
+        @test sort(r["mergeable_loads"]["groups"][1]["load_ids"]) == ["l1","l2"]
+        findings = Finding[]
+        redundancy_check(net, findings)
+        @test any(f -> f.code == "I.RED.LOAD_MERGEABLE", findings)
+
+        # Different terminal_map → not mergeable
+        net2 = make_net(Dict(
+            "l1" => Dict("bus" => "b1", "configuration" => "SINGLE_PHASE",
+                         "terminal_map" => ["1","n"], "p_nom" => [100.0]),
+            "l2" => Dict("bus" => "b1", "configuration" => "SINGLE_PHASE",
+                         "terminal_map" => ["2","n"], "p_nom" => [200.0])))
+        r2 = redundancy_check(net2, Finding[])
+        @test r2["mergeable_loads"]["n_groups"] == 0
+
+        # Different buses → not mergeable
+        net3 = make_net(Dict(
+            "l1" => Dict("bus" => "b1", "configuration" => "WYE",
+                         "terminal_map" => ["1","2","3","n"], "p_nom" => [100.0,0.0,0.0]),
+            "l2" => Dict("bus" => "b2", "configuration" => "WYE",
+                         "terminal_map" => ["1","2","3","n"], "p_nom" => [100.0,0.0,0.0])))
+        r3 = redundancy_check(net3, Finding[])
+        @test r3["mergeable_loads"]["n_groups"] == 0
+
+        # WYE terminal_map order-insensitive: ["2","1","n"] same key as ["1","2","n"]
+        net4 = make_net(Dict(
+            "l1" => Dict("bus" => "b1", "configuration" => "WYE",
+                         "terminal_map" => ["1","2","n"], "p_nom" => [100.0, 200.0]),
+            "l2" => Dict("bus" => "b1", "configuration" => "WYE",
+                         "terminal_map" => ["2","1","n"], "p_nom" => [50.0, 60.0])))
+        r4 = redundancy_check(net4, Finding[])
+        @test r4["mergeable_loads"]["n_groups"] == 1
+
+        # DELTA: same cyclic rotation → mergeable; reverse → not mergeable
+        net5 = make_net(Dict(
+            "l1" => Dict("bus" => "b1", "configuration" => "DELTA",
+                         "terminal_map" => ["1","2","3"], "p_nom" => [100.0,100.0,100.0]),
+            "l2" => Dict("bus" => "b1", "configuration" => "DELTA",
+                         "terminal_map" => ["2","3","1"], "p_nom" => [50.0,50.0,50.0]),
+            "l3" => Dict("bus" => "b1", "configuration" => "DELTA",
+                         "terminal_map" => ["1","3","2"], "p_nom" => [10.0,10.0,10.0])))
+        r5 = redundancy_check(net5, Finding[])
+        # l1 and l2 are cyclic rotations (same group); l3 is reversed (different)
+        @test r5["mergeable_loads"]["n_groups"] == 1
+        grp = r5["mergeable_loads"]["groups"][1]
+        @test sort(grp["load_ids"]) == ["l1","l2"]
+
+        # Loads with time_series excluded
+        net6 = make_net(Dict(
+            "l1" => Dict("bus" => "b1", "configuration" => "WYE",
+                         "terminal_map" => ["1","2","3","n"], "p_nom" => [100.0,0.0,0.0],
+                         "time_series" => Dict("p_nom" => "ts1")),
+            "l2" => Dict("bus" => "b1", "configuration" => "WYE",
+                         "terminal_map" => ["1","2","3","n"], "p_nom" => [50.0,0.0,0.0])))
+        r6 = redundancy_check(net6, Finding[])
+        @test r6["mergeable_loads"]["n_groups"] == 0
+    end
+
     @testset "Validation — completeness" begin
         net      = parse_bmopf(IEEE13_FIXTURE; from_string=true)
         findings = Finding[]
@@ -995,6 +1111,59 @@ const IEEE13_FIXTURE = """
         f8 = Finding[]
         integrity_check(net8, f8)
         @test any(x -> x.code == "I.INT.UNIFORM_GEN_COST", f8)
+    end
+
+    @testset "Integrity — floating load terminals" begin
+        # Build a minimal 2-bus network where the line only carries 2 phases+neutral,
+        # but the load claims all 3 phases.
+        make_2bus() = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "b1" => Dict{String,Any}("terminal_names" => ["1","2","3","n"]),
+                "b2" => Dict{String,Any}("terminal_names" => ["1","2","3","n"])),
+            "linecode" => Dict{String,Any}(
+                "lc2w" => Dict{String,Any}("R_series_1_1" => 0.1, "R_series_2_2" => 0.1,
+                                           "X_series_1_1" => 0.1, "X_series_2_2" => 0.1)),
+            "line" => Dict{String,Any}(
+                "l1" => Dict{String,Any}("bus_from" => "b1", "bus_to" => "b2",
+                                          "terminal_map_from" => ["1","2","n"],
+                                          "terminal_map_to"   => ["1","2","n"],
+                                          "linecode" => "lc2w", "length" => 100.0)),
+            "voltage_source" => Dict{String,Any}(
+                "vs" => Dict{String,Any}("bus" => "b1",
+                                          "terminal_map" => ["1","2","n"],
+                                          "v_magnitude" => [230.0, 230.0],
+                                          "v_angle"     => [0.0, -2.094])),
+            "load" => Dict{String,Any}(
+                "ld3ph" => Dict{String,Any}("bus" => "b2", "configuration" => "WYE",
+                                             "terminal_map" => ["1","2","3","n"],
+                                             "p_nom" => [1000.0, 1000.0, 1000.0],
+                                             "q_nom" => [0.0, 0.0, 0.0])))
+
+        # phase "3" on b2 has no branch — should flag
+        net9 = make_2bus()
+        f9 = Finding[]
+        res9 = integrity_check(net9, f9)
+        @test res9["n_floating_load_terminals"] == 1
+        @test any(f -> f.code == "W.INT.FLOATING_LOAD_TERMINAL" &&
+                       f.component_id == "ld3ph" &&
+                       "3" in f.detail["terminals"], f9)
+
+        # load only uses wired terminals — no false positive
+        net10 = make_2bus()
+        net10["load"]["ld3ph"]["terminal_map"] = ["1","2","n"]
+        net10["load"]["ld3ph"]["p_nom"] = [1000.0, 1000.0]
+        net10["load"]["ld3ph"]["q_nom"] = [0.0, 0.0]
+        f10 = Finding[]
+        res10 = integrity_check(net10, f10)
+        @test res10["n_floating_load_terminals"] == 0
+        @test !any(f -> f.code == "W.INT.FLOATING_LOAD_TERMINAL", f10)
+
+        # load at voltage-source bus is exempt (source pins voltages)
+        net11 = make_2bus()
+        net11["load"]["ld3ph"]["bus"] = "b1"
+        f11 = Finding[]
+        res11 = integrity_check(net11, f11)
+        @test res11["n_floating_load_terminals"] == 0
     end
 
     @testset "OpenDSS default fingerprints" begin

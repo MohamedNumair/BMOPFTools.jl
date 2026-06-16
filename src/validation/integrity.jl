@@ -289,6 +289,75 @@ function integrity_check(net::Dict{String,Any},
         end
     end
 
+    # --- floating load/generator terminals ---
+    # A phase terminal that only appears in a load/generator terminal_map but
+    # has no branch (line, switch, or transformer) on the same bus is physically
+    # floating: KCL reduces to 0=0 there and the voltage variable is decoupled
+    # from the rest of the network.  Neutrals are excluded (they are often
+    # grounded implicitly).  Terminals at voltage-source buses are also excluded
+    # (the source pins the voltage regardless of branch wiring).
+    source_buses = Set(get(vs, "bus", "") for (_, vs) in get(net, "voltage_source", Dict())
+                       if vs isa Dict)
+
+    # Build bus → Set{terminal} wired by at least one branch end
+    branch_terminals = Dict{String, Set{String}}()
+    for comp_type in ("line", "switch")
+        for (_, c) in get(net, comp_type, Dict())
+            c isa Dict || continue
+            for (bus_field, tm_field) in (("bus_from","terminal_map_from"),
+                                           ("bus_to",  "terminal_map_to"))
+                b  = get(c, bus_field, nothing)
+                tm = get(c, tm_field,  nothing)
+                b isa AbstractString && tm isa AbstractVector || continue
+                s = get!(branch_terminals, b, Set{String}())
+                for t in tm; push!(s, string(t)); end
+            end
+        end
+    end
+    xfmr_sub = get(net, "transformer", Dict())
+    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+        sub = get(xfmr_sub, subtype, nothing)
+        sub isa Dict || continue
+        for (_, c) in sub
+            c isa Dict || continue
+            for (bus_field, tm_field) in (("bus_from","terminal_map_from"),
+                                           ("bus_to",  "terminal_map_to"))
+                b  = get(c, bus_field, nothing)
+                tm = get(c, tm_field,  nothing)
+                b isa AbstractString && tm isa AbstractVector || continue
+                s = get!(branch_terminals, b, Set{String}())
+                for t in tm; push!(s, string(t)); end
+            end
+        end
+    end
+
+    n_floating = 0
+    for comp_type in ("load", "generator")
+        for (id, c) in get(net, comp_type, Dict())
+            c isa Dict || continue
+            b = get(c, "bus", nothing)
+            b isa AbstractString || continue
+            b in source_buses && continue
+            neutral = get(neutral_of, b, nothing)
+            wired   = get(branch_terminals, b, Set{String}())
+            tm = string.(get(c, "terminal_map", String[]))
+            floating = [t for t in tm
+                        if t != neutral &&
+                           lowercase(t) != "n" &&
+                           !(t in wired)]
+            isempty(floating) && continue
+            n_floating += 1
+            push!(findings, Finding(WARNING, "W.INT.FLOATING_LOAD_TERMINAL",
+                :integrity, Symbol(comp_type), id,
+                "$comp_type '$id' at bus '$b' has phase terminal(s) $floating " *
+                "that are not wired by any branch — the voltage at those " *
+                "terminals is decoupled from the network (floating), making " *
+                "KCL trivially satisfied and the load constraint degenerate.",
+                Dict{String,Any}("bus" => b, "terminals" => floating)))
+        end
+    end
+    result["n_floating_load_terminals"] = n_floating
+
     # --- low-impedance lines + spread ---
     if length(z_tot) >= 3
         vals = collect(values(z_tot))
