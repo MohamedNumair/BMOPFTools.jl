@@ -567,4 +567,139 @@
         @test net["linecode"]["lc"]["R_series_1_1"]            == r_before
     end
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # T14: Result dictionary structure contract
+    #
+    # Pins the shape of every section of the result dict so that refactoring
+    # the extraction code cannot silently rename or drop fields.
+    #
+    # Fixture: single-phase, two buses, one line, one closed switch in series
+    # with the line (sourcebus→switchbus→bus1), one load, one generator, one
+    # voltage source.  All components appear in the result dict.
+    #
+    # sourcebus --[l1]--> switchbus --[sw1]--> bus1
+    #                                           ├── ld1 (load)
+    #                                           └── gen1 (generator)
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T14: result dict structure contract" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus": {"terminal_names":["1","n"],
+                          "perfectly_grounded_terminals":["n"]},
+            "switchbus": {"terminal_names":["1","n"],
+                          "perfectly_grounded_terminals":["n"]},
+            "bus1":      {"terminal_names":["1","n"],
+                          "perfectly_grounded_terminals":["n"],
+                          "v_min":800.0,"v_max":1050.0}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.1}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"switchbus",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "switch":{"sw1":{"bus_from":"switchbus","bus_to":"bus1",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "open_switch":false}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[50000.0],"q_nom":[0.0]}},
+         "generator":{"gen1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_min":[10000.0],"p_max":[10000.0],
+             "q_min":[0.0],"q_max":[0.0],
+             "cost":0.01}}}
+        """; from_string=true)
+
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+
+        # ── top-level keys ────────────────────────────────────────────────────
+        for k in ("termination_status","objective","solve_time",
+                  "bus","line","switch","load","generator","transformer")
+            @test haskey(res, k)
+        end
+        # voltage_source does not appear — it fixes voltages only, no current result
+        @test !haskey(res, "voltage_source")
+
+        # ── bus: terminal-keyed, four fields per terminal ─────────────────────
+        for (bus_id, expected_terminals) in (
+                "sourcebus" => ["1","n"],
+                "switchbus" => ["1","n"],
+                "bus1"      => ["1","n"])
+            @test haskey(res["bus"], bus_id)
+            for t in expected_terminals
+                @test haskey(res["bus"][bus_id], t)
+                td = res["bus"][bus_id][t]
+                for f in ("vr","vi","vm","va")
+                    @test haskey(td, f)
+                    @test td[f] isa Float64
+                end
+                @test td["vm"] >= 0.0
+                @test td["vm"] ≈ sqrt(td["vr"]^2 + td["vi"]^2)   atol=1e-9
+                @test td["va"] ≈ atan(td["vi"], td["vr"])          atol=1e-9
+            end
+        end
+
+        # ── line: terminal-name keys (not positional integers) ────────────────
+        @test haskey(res["line"], "l1")
+        # conductor "1" from terminal_map_from=["1"]
+        @test haskey(res["line"]["l1"], "1")
+        @test !haskey(res["line"]["l1"], 1)   # must be String key, not Int
+        ld = res["line"]["l1"]["1"]
+        for f in ("cr_fr","ci_fr","cr_to","ci_to","cm_fr","cm_to")
+            @test haskey(ld, f)
+            @test ld[f] isa Float64
+        end
+        @test ld["cm_fr"] >= 0.0
+        @test ld["cm_to"] >= 0.0
+        @test ld["cm_fr"] ≈ sqrt(ld["cr_fr"]^2 + ld["ci_fr"]^2)  atol=1e-9
+        @test ld["cm_to"] ≈ sqrt(ld["cr_to"]^2 + ld["ci_to"]^2)  atol=1e-9
+
+        # ── switch: terminal-name keys, three fields ──────────────────────────
+        @test haskey(res["switch"], "sw1")
+        # terminal_map_from = ["1","n"] → keys "1" and "n"
+        for t in ("1","n")
+            @test haskey(res["switch"]["sw1"], t)
+            sd = res["switch"]["sw1"][t]
+            for f in ("cr","ci","cm")
+                @test haskey(sd, f)
+                @test sd[f] isa Float64
+            end
+            @test sd["cm"] >= 0.0
+            @test sd["cm"] ≈ sqrt(sd["cr"]^2 + sd["ci"]^2)  atol=1e-9
+        end
+
+        # ── load: phase-terminal keys only (neutral absent) ───────────────────
+        @test haskey(res["load"], "ld1")
+        # terminal_map = ["1","n"], SINGLE_PHASE → phase terminal "1" only
+        @test haskey(res["load"]["ld1"], "1")
+        @test !haskey(res["load"]["ld1"], "n")  # neutral carries no current variable
+        ldd = res["load"]["ld1"]["1"]
+        for f in ("crd","cid","pd","qd")
+            @test haskey(ldd, f)
+            @test ldd[f] isa Float64
+        end
+        # constant-power constraints must hold: pd ≈ p_nom, qd ≈ q_nom
+        @test ldd["pd"] ≈ 50_000.0   atol=1.0
+        @test ldd["qd"] ≈      0.0   atol=1.0
+
+        # ── generator: phase-terminal keys only (neutral absent) ─────────────
+        @test haskey(res["generator"], "gen1")
+        @test haskey(res["generator"]["gen1"], "1")
+        @test !haskey(res["generator"]["gen1"], "n")
+        gd = res["generator"]["gen1"]["1"]
+        for f in ("crg","cig","pg","qg")
+            @test haskey(gd, f)
+            @test gd[f] isa Float64
+        end
+        @test gd["pg"] ≈ 10_000.0   atol=1.0   # fixed p_min == p_max
+
+        # ── transformer: empty dict (no transformers in this fixture) ─────────
+        @test res["transformer"] isa Dict
+        @test isempty(res["transformer"])
+
+        # ── voltage_source: not in result (fixes voltages only, no current) ────
+        @test !haskey(res, "voltage_source")
+    end
+
 end  # @testset "OPF — solve_opf extension"
