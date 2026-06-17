@@ -123,7 +123,106 @@ function operational_analysis(net::Dict{String,Any},
             Dict{String,Any}("n_unconstrained" => n_lines - n_with_thermal)))
     end
 
+    # --- Unloaded phases per galvanic zone ---
+    buses = get(net, "bus", Dict())
+    zones = _galvanic_zones(net)
+    unloaded_findings = Tuple{String,String,String}[]   # (zone_label, terminal, bus_list_hint)
+
+    for zone in zones
+        # Phase terminals present anywhere in this zone (exclude neutral)
+        phase_present = Set{String}()
+        for bid in zone
+            b = get(buses, bid, Dict())
+            nt = _neutral_terminal(b)
+            for t in get(b, "terminal_names", String[])
+                string(t) != nt && push!(phase_present, string(t))
+            end
+        end
+        isempty(phase_present) && continue
+
+        # Phase terminals actually connected to a load in this zone
+        phase_loaded = Set{String}()
+        for (_, l) in loads
+            get(l, "bus", "") in zone || continue
+            nt_bus = _neutral_terminal(get(buses, get(l, "bus", ""), Dict()))
+            for t in get(l, "terminal_map", [])
+                string(t) != nt_bus && push!(phase_loaded, string(t))
+            end
+        end
+
+        # Identify a label for this zone (source bus if present, else smallest bus name)
+        vsrc_buses = Set(string(get(vs, "bus", ""))
+                         for (_, vs) in get(net, "voltage_source", Dict()))
+        zone_label = let src = intersect(zone, vsrc_buses)
+            isempty(src) ? minimum(zone) : first(src)
+        end
+
+        for t in sort(collect(setdiff(phase_present, phase_loaded)))
+            push!(unloaded_findings, (zone_label, t, zone_label))
+        end
+    end
+
+    if !isempty(unloaded_findings)
+        for (zone_label, terminal, _) in unloaded_findings
+            push!(findings, Finding(INFO, "I.OPR.UNLOADED_PHASE", :operational,
+                :network, nothing,
+                "Galvanic zone anchored at bus '$zone_label' has no load connected " *
+                "to phase terminal '$terminal'.",
+                Dict{String,Any}("zone_anchor" => zone_label, "terminal" => terminal)))
+        end
+    end
+    result["unloaded_phase_findings"] = length(unloaded_findings)
+
     result
+end
+
+"""
+    _galvanic_zones(net) -> Vector{Set{String}}
+
+Partition buses into galvanic zones: connected subgraphs joined by lines and
+closed switches only. Transformers are galvanic isolation boundaries and are
+NOT included as edges. Returns a list of bus-name sets, one per zone.
+"""
+function _galvanic_zones(net::Dict{String,Any})::Vector{Set{String}}
+    buses = collect(keys(get(net, "bus", Dict())))
+    isempty(buses) && return Set{String}[]
+
+    adj = Dict{String,Vector{String}}()
+    for b in buses; adj[b] = String[]; end
+
+    add!(a, b) = begin
+        push!(get!(adj, a, String[]), b)
+        push!(get!(adj, b, String[]), a)
+    end
+
+    for (_, l) in get(net, "line", Dict())
+        f = get(l, "bus_from", nothing); t = get(l, "bus_to", nothing)
+        (f isa AbstractString && t isa AbstractString && f != t) && add!(f, t)
+    end
+    for (_, sw) in get(net, "switch", Dict())
+        get(sw, "open_switch", false) && continue
+        f = get(sw, "bus_from", nothing); t = get(sw, "bus_to", nothing)
+        (f isa AbstractString && t isa AbstractString && f != t) && add!(f, t)
+    end
+
+    visited = Set{String}()
+    zones   = Vector{Set{String}}()
+    for b in buses
+        b in visited && continue
+        zone = Set{String}()
+        queue = String[b]
+        while !isempty(queue)
+            cur = popfirst!(queue)
+            cur in visited && continue
+            push!(visited, cur)
+            push!(zone, cur)
+            for nb in get(adj, cur, String[])
+                nb in visited || push!(queue, nb)
+            end
+        end
+        push!(zones, zone)
+    end
+    zones
 end
 
 """

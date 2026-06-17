@@ -3468,17 +3468,6 @@
       "element_id": "line509"
     },
     {
-      "message": "Removed dangling line line2 and its leaf bus 3 (leaf has no active elements).",
-      "detail": {
-        "removed_bus": "3"
-      },
-      "severity": "info",
-      "operation": "remove_dangling_lines",
-      "code": "LINE_REMOVED",
-      "element_type": "line",
-      "element_id": "line2"
-    },
-    {
       "message": "Removed dangling line line544 and its leaf bus 545 (leaf has no active elements).",
       "detail": {
         "removed_bus": "545"
@@ -3488,6 +3477,17 @@
       "code": "LINE_REMOVED",
       "element_type": "line",
       "element_id": "line544"
+    },
+    {
+      "message": "Removed dangling line line2 and its leaf bus 3 (leaf has no active elements).",
+      "detail": {
+        "removed_bus": "3"
+      },
+      "severity": "info",
+      "operation": "remove_dangling_lines",
+      "code": "LINE_REMOVED",
+      "element_type": "line",
+      "element_id": "line2"
     },
     {
       "message": "Removed dangling line line80 and its leaf bus 81 (leaf has no active elements).",

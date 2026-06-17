@@ -1,7 +1,7 @@
 # BMOPF Network Summary: DSuite_SPM_Suburban
 
-**Generated:** 2026-06-18 08:45:57  
-**Findings:** 1 errors · 111 warnings · 22 info  
+**Generated:** 2026-06-18 09:32:07  
+**Findings:** 1 errors · 111 warnings · 25 info  
 **Convention:** MV_6.4kV: mixed; LV_242V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -126,6 +126,9 @@
 > 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'dist_transformer_20240793_9024306' is at 208.4% utilisation at nominal load — little OPF headroom.
 > 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'dist_transformer_10432679_9016690' is at 208.4% utilisation at nominal load — little OPF headroom.
 > 🟡 **[W.OPS.LINE_UNCONSTRAINED]** 1 of 2873 lines have no thermal limit (i_max or s_max) — OPF thermal constraints will be missing.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -229,7 +232,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 134 (1 errors, 111 warnings, 22 info)
+**Total findings:** 137 (1 errors, 111 warnings, 25 info)
 
 ### 🔴 Errors
 
@@ -469,6 +472,12 @@
   5 lines share linecode 'busbar' with similar length (±10%) — electrically near-identical.
 - **[I.DIV.LINE_SYMMETRIC]** `line`  
   15 lines share linecode 'default' with similar length (±10%) — electrically near-identical.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '1'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 - **[I.PROV.NEGATIVE_MUTUAL_R]** `cable_230v_0.05_cu`  
   Linecode 'cable_230v_0.05_cu' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
 - **[I.PROV.NEGATIVE_MUTUAL_R]** `cable_230v_185_al_wavef`  

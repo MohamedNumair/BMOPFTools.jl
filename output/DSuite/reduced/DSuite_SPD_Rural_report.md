@@ -1,7 +1,7 @@
 # BMOPF Network Summary: DSuite_SPD_Rural
 
-**Generated:** 2026-06-18 08:45:54  
-**Findings:** 1 errors · 10 warnings · 22 info  
+**Generated:** 2026-06-18 09:32:04  
+**Findings:** 1 errors · 10 warnings · 25 info  
 **Convention:** MV_6.4kV: mixed; LV_242V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -89,6 +89,9 @@
 | dist_transformer_14216629_9089776 | 50.0 kVA | 0.0% |
 
 > 🟡 **[W.OPS.LINE_UNCONSTRAINED]** 1 of 54 lines have no thermal limit (i_max or s_max) — OPF thermal constraints will be missing.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -191,7 +194,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 33 (1 errors, 10 warnings, 22 info)
+**Total findings:** 36 (1 errors, 10 warnings, 25 info)
 
 ### 🔴 Errors
 
@@ -227,6 +230,12 @@
   Load p_nom has very low coefficient of variation (0.0) — all loads nearly identical.
 - **[I.DIV.LINE_SYMMETRIC]** `line`  
   3 lines share linecode 'connector' with similar length (±10%) — electrically near-identical.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '1'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 - **[I.PROV.NEGATIVE_MUTUAL_R]** `cable_230v_0.05_cu`  
   Linecode 'cable_230v_0.05_cu' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
 - **[I.PROV.NEGATIVE_MUTUAL_R]** `cable_230v_185_al_wavef`  

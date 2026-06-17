@@ -1,7 +1,7 @@
 # BMOPF Network Summary: DSuite_SPD_Suburban
 
-**Generated:** 2026-06-18 08:45:54  
-**Findings:** 1 errors · 26 warnings · 23 info  
+**Generated:** 2026-06-18 09:32:04  
+**Findings:** 1 errors · 26 warnings · 26 info  
 **Convention:** MV_6.4kV: mixed; LV_242V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -93,6 +93,9 @@
 
 > 🟡 **[W.OPS.IMPORT_DEPENDENT]** Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.07 MW).
 > 🟡 **[W.OPS.LINE_UNCONSTRAINED]** 1 of 264 lines have no thermal limit (i_max or s_max) — OPF thermal constraints will be missing.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -195,7 +198,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 50 (1 errors, 26 warnings, 23 info)
+**Total findings:** 53 (1 errors, 26 warnings, 26 info)
 
 ### 🔴 Errors
 
@@ -265,6 +268,12 @@
   3 lines share linecode 'cable_230v_0.03_al' with similar length (±10%) — electrically near-identical.
 - **[I.DIV.LINE_SYMMETRIC]** `line`  
   4 lines share linecode 'cable_230v_0.04_cu' with similar length (±10%) — electrically near-identical.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '1'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 - **[I.PROV.NEGATIVE_MUTUAL_R]** `cable_230v_0.05_cu`  
   Linecode 'cable_230v_0.05_cu' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
 - **[I.PROV.NEGATIVE_MUTUAL_R]** `cable_230v_185_al_wavef`  

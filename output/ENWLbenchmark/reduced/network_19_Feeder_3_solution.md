@@ -1,9 +1,9 @@
 # BMOPF Solution Profile: network_19_Feeder_3
 
-**Generated:** 2026-06-18 07:11:38  
+**Generated:** 2026-06-18 09:29:39  
 **Status:** `LOCALLY_SOLVED`  
 **Objective:** 8.336  
-**Solve time:** 0.183 s  
+**Solve time:** 0.221 s  
 **Findings:** 0 errors · 18 warnings · 2 info  
 
 ---
@@ -32,7 +32,7 @@
 
 | Sev | Generator | Terminal | Field | Value | Bound |
 |-----|-----------|----------|-------|-------|-------|
-| W | `der_963` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
+| W | `der_1188` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_1300` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_823` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_1275` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
@@ -48,7 +48,7 @@
 | W | `der_1071` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_449` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_429` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1188` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
+| W | `der_963` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 
 ## 5. Constraint Residuals
 
@@ -56,8 +56,8 @@
 
 ## 6. All Findings
 
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_963`  
-  Generator 'der_963' phase '2': pg=4.0 kW is within 1 % of its bound (active).
+- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1188`  
+  Generator 'der_1188' phase '3': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1300`  
   Generator 'der_1300' phase '3': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_823`  
@@ -88,8 +88,8 @@
   Generator 'der_449' phase '1': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_429`  
   Generator 'der_429' phase '2': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1188`  
-  Generator 'der_1188' phase '3': pg=4.0 kW is within 1 % of its bound (active).
+- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_963`  
+  Generator 'der_963' phase '2': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.POWER_BALANCE`  
   Network power balance error: |pg_total − pd_total − p_loss| = 1.349 kW (>1 % of load). pg=59.81 kW, pd=58.8 kW, p_loss=2.35 kW.
 - INFO `I.SOL.BINDING_SUMMARY`  

@@ -1,6 +1,6 @@
 # BMOPF Network Summary: network_17 / Feeder_5
 
-**Generated:** 2026-06-18 08:47:01  
+**Generated:** 2026-06-18 09:33:14  
 **Findings:** 0 errors · 99 warnings · 6 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 

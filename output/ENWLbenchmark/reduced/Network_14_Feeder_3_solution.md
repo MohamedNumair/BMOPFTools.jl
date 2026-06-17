@@ -1,9 +1,9 @@
 # BMOPF Solution Profile: Network_14_Feeder_3
 
-**Generated:** 2026-06-18 07:11:17  
+**Generated:** 2026-06-18 09:29:14  
 **Status:** `LOCALLY_SOLVED`  
 **Objective:** 8.8388  
-**Solve time:** 0.064 s  
+**Solve time:** 0.077 s  
 **Findings:** 0 errors · 15 warnings · 2 info  
 
 ---
@@ -38,8 +38,8 @@
 | W | `der_112` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_107` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_113` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_95` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_96` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
+| W | `der_95` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_152` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_104` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_143` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
@@ -62,10 +62,10 @@
   Generator 'der_107' phase '3': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_113`  
   Generator 'der_113' phase '3': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_95`  
-  Generator 'der_95' phase '3': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_96`  
   Generator 'der_96' phase '1': pg=4.0 kW is within 1 % of its bound (active).
+- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_95`  
+  Generator 'der_95' phase '3': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_152`  
   Generator 'der_152' phase '1': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_104`  

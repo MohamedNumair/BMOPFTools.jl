@@ -1,6 +1,6 @@
 # BMOPF Network Summary: Three-wire-Kron-reduced / network_13 / Feeder_2
 
-**Generated:** 2026-06-18 08:48:26  
+**Generated:** 2026-06-18 09:34:43  
 **Findings:** 0 errors · 262 warnings · 7 info  
 **Convention:** LV_240V: mixed; implicit (Kron-style) grounding
 

@@ -29,6 +29,17 @@ function connectivity_analysis(net::Dict{String,Any},
     # branch elements separately — radiality must see every physical branch.
     n_branches = Ref(0)
 
+    # Check for branch self-loops (bus_from == bus_to) before adding edges.
+    function check_self_loop!(comp_type, id, bus_a, bus_b)
+        (bus_a isa AbstractString && bus_b isa AbstractString) || return
+        if bus_a == bus_b
+            push!(findings, Finding(ERROR, "E.CONN.SELF_LOOP", :connectivity,
+                Symbol(comp_type), id,
+                "$comp_type '$id' connects bus '$bus_a' to itself — zero-length branch.",
+                Dict{String,Any}("bus" => bus_a)))
+        end
+    end
+
     # Helper: add an edge if both endpoints are known buses
     function add_edge_safe!(bus_a, bus_b)
         (bus_a isa AbstractString && bus_b isa AbstractString) || return
@@ -40,14 +51,18 @@ function connectivity_analysis(net::Dict{String,Any},
     end
 
     # Lines
-    for (_, l) in get(net, "line", Dict())
-        add_edge_safe!(get(l, "bus_from", nothing), get(l, "bus_to", nothing))
+    for (id, l) in get(net, "line", Dict())
+        bf = get(l, "bus_from", nothing); bt = get(l, "bus_to", nothing)
+        check_self_loop!("line", id, bf, bt)
+        add_edge_safe!(bf, bt)
     end
 
     # Closed switches only
-    for (_, sw) in get(net, "switch", Dict())
+    for (id, sw) in get(net, "switch", Dict())
+        bf = get(sw, "bus_from", nothing); bt = get(sw, "bus_to", nothing)
+        check_self_loop!("switch", id, bf, bt)
         get(sw, "open_switch", false) && continue
-        add_edge_safe!(get(sw, "bus_from", nothing), get(sw, "bus_to", nothing))
+        add_edge_safe!(bf, bt)
     end
 
     # Transformers (each winding pair is an edge)
@@ -55,8 +70,10 @@ function connectivity_analysis(net::Dict{String,Any},
     for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
-        for (_, t) in sub
-            add_edge_safe!(get(t, "bus_from", nothing), get(t, "bus_to", nothing))
+        for (id, t) in sub
+            bf = get(t, "bus_from", nothing); bt = get(t, "bus_to", nothing)
+            check_self_loop!("transformer ($subtype)", id, bf, bt)
+            add_edge_safe!(bf, bt)
         end
     end
 

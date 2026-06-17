@@ -32566,57 +32566,6 @@
       "bus": "617",
       "configuration": "SINGLE_PHASE"
     },
-    "der_1513": {
-      "cost": [
-        2.728749e-6
-      ],
-      "p_max": [
-        4000
-      ],
-      "p_min": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "1513",
-      "configuration": "SINGLE_PHASE"
-    },
-    "der_1255": {
-      "cost": [
-        0.00040690842
-      ],
-      "p_max": [
-        4000
-      ],
-      "p_min": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "1255",
-      "configuration": "SINGLE_PHASE"
-    },
-    "der_1349": {
-      "cost": [
-        0.000444396451
-      ],
-      "p_max": [
-        4000
-      ],
-      "p_min": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "1349",
-      "configuration": "SINGLE_PHASE"
-    },
     "der_1360": {
       "cost": [
         0.000207982145
@@ -32649,6 +32598,57 @@
         "n"
       ],
       "bus": "309",
+      "configuration": "SINGLE_PHASE"
+    },
+    "der_1349": {
+      "cost": [
+        0.000444396451
+      ],
+      "p_max": [
+        4000
+      ],
+      "p_min": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "1349",
+      "configuration": "SINGLE_PHASE"
+    },
+    "der_1513": {
+      "cost": [
+        2.728749e-6
+      ],
+      "p_max": [
+        4000
+      ],
+      "p_min": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "1513",
+      "configuration": "SINGLE_PHASE"
+    },
+    "der_1255": {
+      "cost": [
+        0.00040690842
+      ],
+      "p_max": [
+        4000
+      ],
+      "p_min": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "1255",
       "configuration": "SINGLE_PHASE"
     },
     "der_1248": {
@@ -33865,6 +33865,16 @@
       "vpn_min": 216.159941,
       "vpn_max": 264.195483
     },
+    "1615": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "vpn_min": 216.159941,
+      "vpn_max": 264.195483
+    },
     "545": {
       "terminal_names": [
         "1",
@@ -33876,16 +33886,6 @@
       "vpn_max": 264.195483
     },
     "3": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "vpn_min": 216.159941,
-      "vpn_max": 264.195483
-    },
-    "1615": {
       "terminal_names": [
         "1",
         "2",
@@ -37025,7 +37025,7 @@
       "vpn_min": 216.159941,
       "vpn_max": 264.195483
     },
-    "1648": {
+    "407": {
       "terminal_names": [
         "1",
         "2",
@@ -37035,7 +37035,7 @@
       "vpn_min": 216.159941,
       "vpn_max": 264.195483
     },
-    "407": {
+    "1648": {
       "terminal_names": [
         "1",
         "2",

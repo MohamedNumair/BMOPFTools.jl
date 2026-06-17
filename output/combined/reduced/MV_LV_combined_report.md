@@ -1,7 +1,7 @@
 # BMOPF Network Summary: MV_LV_combined
 
-**Generated:** 2026-06-18 08:53:41  
-**Findings:** 0 errors · 14 warnings · 15 info  
+**Generated:** 2026-06-18 09:40:15  
+**Findings:** 0 errors · 14 warnings · 44 info  
 **Convention:** MV_6.4kV: mixed; LV_250V: 4-wire; 1289 grounding point(s)
 
 ---
@@ -168,6 +168,35 @@
 > 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'tx4279' is at 250.4% utilisation at nominal load — little OPF headroom.
 > 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'tx2677' is at 210.2% utilisation at nominal load — little OPF headroom.
 > 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'tx2382' is at 270.6% utilisation at nominal load — little OPF headroom.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1726' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1726' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1726' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1952' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1952' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b179' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1255' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1255' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1304' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2885' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2885' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2885' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b395' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b395' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b395' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2337' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2337' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1420' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1420' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1595' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1595' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1090' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1090' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1012' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1012' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1579' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1163' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1163' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1163' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -295,7 +324,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 29 (0 errors, 14 warnings, 15 info)
+**Total findings:** 58 (0 errors, 14 warnings, 44 info)
 
 ### 🟡 Warnings
 
@@ -332,6 +361,64 @@
 
 - **[I.DIV.LOAD_CV_LOW]** `load`  
   Load p_nom has very low coefficient of variation (0.0) — all loads nearly identical.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1726' has no load connected to phase terminal '1'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1726' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1726' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1952' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1952' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b179' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1255' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1255' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1304' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b2885' has no load connected to phase terminal '1'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b2885' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b2885' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b395' has no load connected to phase terminal '1'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b395' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b395' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b2337' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b2337' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1420' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1420' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1595' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1595' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1090' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1090' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1012' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1012' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1579' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1163' has no load connected to phase terminal '1'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1163' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1163' has no load connected to phase terminal '3'.
 - **[I.PROV.B_OFFDIAG]** `abc4x95_lv_oh_4w_bundled`  
   Linecode 'abc4x95_lv_oh_4w_bundled' B_from_block has positive mutual susceptance — deviates from the Maxwell sign pattern; typical of screen-eliminated/bundled cable reductions, otherwise a sign-convention suspect.
 - **[I.PROV.B_OFFDIAG]** `abc4x95_lv_oh_4w_bundled`  

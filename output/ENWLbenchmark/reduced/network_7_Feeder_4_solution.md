@@ -1,9 +1,9 @@
 # BMOPF Solution Profile: network_7_Feeder_4
 
-**Generated:** 2026-06-18 07:11:50  
+**Generated:** 2026-06-18 09:29:53  
 **Status:** `LOCALLY_SOLVED`  
 **Objective:** 18.3462  
-**Solve time:** 1.126 s  
+**Solve time:** 1.109 s  
 **Findings:** 0 errors · 47 warnings · 2 info  
 
 ---
@@ -35,9 +35,9 @@
 | W | `der_1300` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_1237` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_1360` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1499` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1000` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_316` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
+| W | `der_1000` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
+| W | `der_1499` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_1296` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_1195` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_215` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
@@ -88,12 +88,12 @@
   Generator 'der_1237' phase '2': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1360`  
   Generator 'der_1360' phase '1': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1499`  
-  Generator 'der_1499' phase '2': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1000`  
-  Generator 'der_1000' phase '3': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_316`  
   Generator 'der_316' phase '1': pg=4.0 kW is within 1 % of its bound (active).
+- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1000`  
+  Generator 'der_1000' phase '3': pg=4.0 kW is within 1 % of its bound (active).
+- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1499`  
+  Generator 'der_1499' phase '2': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1296`  
   Generator 'der_1296' phase '2': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1195`  

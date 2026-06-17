@@ -874,17 +874,6 @@
       "element_id": "line364"
     },
     {
-      "message": "Removed dangling line line104 and its leaf bus 105 (leaf has no active elements).",
-      "detail": {
-        "removed_bus": "105"
-      },
-      "severity": "info",
-      "operation": "remove_dangling_lines",
-      "code": "LINE_REMOVED",
-      "element_type": "line",
-      "element_id": "line104"
-    },
-    {
       "message": "Removed dangling line line308 and its leaf bus 309 (leaf has no active elements).",
       "detail": {
         "removed_bus": "309"
@@ -894,6 +883,17 @@
       "code": "LINE_REMOVED",
       "element_type": "line",
       "element_id": "line308"
+    },
+    {
+      "message": "Removed dangling line line104 and its leaf bus 105 (leaf has no active elements).",
+      "detail": {
+        "removed_bus": "105"
+      },
+      "severity": "info",
+      "operation": "remove_dangling_lines",
+      "code": "LINE_REMOVED",
+      "element_type": "line",
+      "element_id": "line104"
     },
     {
       "message": "Removed dangling line line80 and its leaf bus 81 (leaf has no active elements).",
@@ -3756,19 +3756,6 @@
       "element_id": "line90"
     },
     {
-      "message": "Merged line line3 (0.1414 m) into line2 at pass-through bus 3; new length 0.22689399999999998 m.",
-      "detail": {
-        "new_length": 0.22689399999999998,
-        "absorbed_line": "line3",
-        "removed_bus": "3"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line2"
-    },
-    {
       "message": "Merged line line30 (1.5394 m) into line29 at pass-through bus 30; new length 8.1218 m.",
       "detail": {
         "new_length": 8.1218,
@@ -3780,6 +3767,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line29"
+    },
+    {
+      "message": "Merged line line3 (0.1414 m) into line2 at pass-through bus 3; new length 0.22689399999999998 m.",
+      "detail": {
+        "new_length": 0.22689399999999998,
+        "absorbed_line": "line3",
+        "removed_bus": "3"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line2"
     },
     {
       "message": "Merged line line27 (0.3891 m) into line26 at pass-through bus 27; new length 1.07142 m.",

@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV31_15bus
 
-**Generated:** 2026-06-18 08:53:37  
-**Findings:** 0 errors · 2 warnings · 13 info  
+**Generated:** 2026-06-18 09:40:10  
+**Findings:** 0 errors · 2 warnings · 16 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 5 grounding point(s)
 
 ---
@@ -86,6 +86,9 @@
 | tx2177 | 1.0 MVA | 3.4% |
 
 > 🟡 **[W.OPS.IMPORT_DEPENDENT]** Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.03 MW).
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b3190' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b3190' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b3190' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -181,7 +184,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 15 (0 errors, 2 warnings, 13 info)
+**Total findings:** 18 (0 errors, 2 warnings, 16 info)
 
 ### 🟡 Warnings
 
@@ -194,6 +197,12 @@
 
 - **[I.DIV.LOAD_CV_LOW]** `load`  
   Load p_nom has very low coefficient of variation (0.0) — all loads nearly identical.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b3190' has no load connected to phase terminal '1'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b3190' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b3190' has no load connected to phase terminal '3'.
 - **[I.PROV.B_OFFDIAG]** `abc4x95_lv_oh_4w_bundled`  
   Linecode 'abc4x95_lv_oh_4w_bundled' B_from_block has positive mutual susceptance — deviates from the Maxwell sign pattern; typical of screen-eliminated/bundled cable reductions, otherwise a sign-convention suspect.
 - **[I.PROV.B_OFFDIAG]** `abc4x95_lv_oh_4w_bundled`  

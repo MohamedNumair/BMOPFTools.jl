@@ -1,7 +1,7 @@
 # BMOPF Network Summary: Three-wire-modified-phase-to-neutral / network_13 / Feeder_3
 
-**Generated:** 2026-06-18 08:50:20  
-**Findings:** 0 errors · 2 warnings · 7 info  
+**Generated:** 2026-06-18 09:36:41  
+**Findings:** 0 errors · 2 warnings · 8 info  
 **Convention:** LV_240V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -73,6 +73,7 @@
 | Generation/load ratio | 0.0% |
 
 > 🟡 **[W.OPS.IMPORT_DEPENDENT]** Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.0 MW).
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -161,7 +162,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 9 (0 errors, 2 warnings, 7 info)
+**Total findings:** 10 (0 errors, 2 warnings, 8 info)
 
 ### 🟡 Warnings
 
@@ -172,6 +173,8 @@
 
 ### 🔵 Info
 
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 - **[I.PROV.SEQ_DERIVED]** `linecode`  
   2 linecode(s) have exactly balanced impedance matrices (equal self, equal mutual entries) — likely constructed from sequence parameters (r1,x1,r0,x0) or a transposition assumption, not from conductor geometry: lc8, lc9.
 - **[I.PROV.NO_PI_SHUNT]** `linecode`  

@@ -186,10 +186,10 @@
       ],
       "linecode": "lc1"
     },
-    "line140": {
-      "length": 0.105,
-      "bus_from": "134",
-      "bus_to": "141",
+    "line391": {
+      "length": 0.76448,
+      "bus_from": "386",
+      "bus_to": "392",
       "terminal_map_from": [
         "1",
         "2",
@@ -202,7 +202,7 @@
         "3",
         "n"
       ],
-      "linecode": "lc6"
+      "linecode": "lc1"
     },
     "line191": {
       "length": 0.10599,
@@ -222,10 +222,10 @@
       ],
       "linecode": "lc6"
     },
-    "line391": {
-      "length": 0.76448,
-      "bus_from": "386",
-      "bus_to": "392",
+    "line140": {
+      "length": 0.105,
+      "bus_from": "134",
+      "bus_to": "141",
       "terminal_map_from": [
         "1",
         "2",
@@ -238,7 +238,7 @@
         "3",
         "n"
       ],
-      "linecode": "lc1"
+      "linecode": "lc6"
     },
     "line38": {
       "length": 6.1122,
@@ -8144,7 +8144,7 @@
       "vpn_min": 216.159941,
       "vpn_max": 264.195483
     },
-    "230": {
+    "77": {
       "terminal_names": [
         "1",
         "2",
@@ -8154,7 +8154,7 @@
       "vpn_min": 216.159941,
       "vpn_max": 264.195483
     },
-    "77": {
+    "230": {
       "terminal_names": [
         "1",
         "2",
@@ -8914,7 +8914,7 @@
       "vpn_min": 216.159941,
       "vpn_max": 264.195483
     },
-    "105": {
+    "30": {
       "terminal_names": [
         "1",
         "2",
@@ -8944,7 +8944,7 @@
       "vpn_min": 216.159941,
       "vpn_max": 264.195483
     },
-    "30": {
+    "105": {
       "terminal_names": [
         "1",
         "2",

@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV1_14bus
 
-**Generated:** 2026-06-18 08:53:35  
-**Findings:** 0 errors · 2 warnings · 13 info  
+**Generated:** 2026-06-18 09:40:09  
+**Findings:** 0 errors · 2 warnings · 17 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 4 grounding point(s)
 
 ---
@@ -84,6 +84,10 @@
 | tx3170 | 100.0 kVA | 22.4% |
 
 > 🟡 **[W.OPS.IMPORT_DEPENDENT]** Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.02 MW).
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b179' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2577' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2577' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2577' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -179,7 +183,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 15 (0 errors, 2 warnings, 13 info)
+**Total findings:** 19 (0 errors, 2 warnings, 17 info)
 
 ### 🟡 Warnings
 
@@ -190,6 +194,14 @@
 
 ### 🔵 Info
 
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b179' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b2577' has no load connected to phase terminal '1'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b2577' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b2577' has no load connected to phase terminal '3'.
 - **[I.PROV.B_OFFDIAG]** `abc4x95_lv_oh_4w_bundled`  
   Linecode 'abc4x95_lv_oh_4w_bundled' B_from_block has positive mutual susceptance — deviates from the Maxwell sign pattern; typical of screen-eliminated/bundled cable reductions, otherwise a sign-convention suspect.
 - **[I.PROV.B_OFFDIAG]** `abc4x95_lv_oh_4w_bundled`  

@@ -1,6 +1,6 @@
 # Simplification log: LV11_216bus
 
-**Generated:** 2026-06-18 08:53:35  
+**Generated:** 2026-06-18 09:40:08  
 **Buses:** 217 → 170 (−47)  
 **Lines:** 207 → 168 (−39)  
 **Operations:** 54

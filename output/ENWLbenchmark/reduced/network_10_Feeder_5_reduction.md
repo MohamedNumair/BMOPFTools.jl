@@ -1,6 +1,6 @@
 # Simplification log: network_10_Feeder_5
 
-**Generated:** 2026-06-18 08:54:24  
+**Generated:** 2026-06-18 09:27:22  
 **Buses:** 451 → 17 (−434)  
 **Lines:** 450 → 16 (−434)  
 **Operations:** 436
@@ -360,9 +360,9 @@
 | 342 | `merge_series_lines` | line `line82` | Merged line line86 (0.49953 m) into line82 at pass-through bus 83; new length 0.74524 m. |
 | 343 | `merge_series_lines` | line `line45` | Merged line line44 (0.57714 m) into line45 at pass-through bus 45; new length 1.14014 m. |
 | 344 | `merge_series_lines` | line `line176` | Merged line line185 (0.12542 m) into line176 at pass-through bus 181; new length 0.32725800000000005 m. |
-| 345 | `merge_series_lines` | line `line29` | Merged line line30 (0.16603 m) into line29 at pass-through bus 30; new length 2.81463 m. |
+| 345 | `merge_series_lines` | line `line107` | Merged line line104 (0.19606 m) into line107 at pass-through bus 105; new length 0.98601 m. |
 | 346 | `merge_series_lines` | line `line2` | Merged line line3 (0.071281 m) into line2 at pass-through bus 3; new length 0.142456 m. |
-| 347 | `merge_series_lines` | line `line107` | Merged line line104 (0.19606 m) into line107 at pass-through bus 105; new length 0.98601 m. |
+| 347 | `merge_series_lines` | line `line29` | Merged line line30 (0.16603 m) into line29 at pass-through bus 30; new length 2.81463 m. |
 | 348 | `merge_series_lines` | line `line74` | Merged line line78 (6.9545 m) into line74 at pass-through bus 75; new length 15.758500000000002 m. |
 | 349 | `merge_series_lines` | line `line26` | Merged line line27 (7.4299 m) into line26 at pass-through bus 27; new length 10.3951 m. |
 | 350 | `merge_series_lines` | line `line49` | Merged line line50 (6.2219 m) into line49 at pass-through bus 50; new length 6.48527 m. |

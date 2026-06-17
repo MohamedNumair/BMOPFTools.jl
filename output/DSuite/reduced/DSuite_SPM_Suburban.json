@@ -37868,7 +37868,7 @@
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
     "source": "D-Suite Alpha v1.1",
     "reference": "M. Deakin, DOI: 10.25405/data.ncl.27175317",
-    "created": "2026-06-17T22:45:57Z",
+    "created": "2026-06-17T23:32:07Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"

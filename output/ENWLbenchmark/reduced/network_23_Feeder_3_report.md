@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_23_Feeder_3
 
-**Generated:** 2026-06-18 08:55:23  
-**Findings:** 0 errors · 0 warnings · 6 info  
+**Generated:** 2026-06-18 09:28:22  
+**Findings:** 0 errors · 0 warnings · 7 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -77,6 +77,8 @@
 | Total load Q | 747.0 var |
 | Total gen capacity | 17.644 kW |
 | Generation/load ratio | 775.9% |
+
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -160,10 +162,12 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 6 (0 errors, 0 warnings, 6 info)
+**Total findings:** 7 (0 errors, 0 warnings, 7 info)
 
 ### 🔵 Info
 
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 - **[I.PROV.NO_PI_SHUNT]** `linecode`  
   All 3 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PRE.NO_VOLT_BOUNDS]** `bus`  
