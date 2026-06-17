@@ -310,8 +310,39 @@ function _from_per_unit(result_pu::Dict{String,Any}, bases, net::Dict{String,Any
         ib   = get(bases.i_base, bf, 1.0)
         for (_, cvals) in cond_dict
             cvals isa Dict || continue
-            for f in ("cr_fr", "ci_fr", "cr_to", "ci_to", "cm_fr")
+            for f in ("cr_fr", "ci_fr", "cr_to", "ci_to", "cm_fr", "cm_to")
                 haskey(cvals, f) && (cvals[f] = cvals[f] * ib)
+            end
+        end
+    end
+
+    # Switch currents: ← × I_base[bus_from]
+    switches = get(net, "switch", Dict())
+    for (sid, cond_dict) in get(result, "switch", Dict())
+        sw = get(switches, sid, Dict())
+        bf = get(sw, "bus_from", "")
+        ib = get(bases.i_base, bf, 1.0)
+        for (_, cvals) in cond_dict
+            cvals isa Dict || continue
+            for f in ("cr", "ci", "cm")
+                haskey(cvals, f) && (cvals[f] = cvals[f] * ib)
+            end
+        end
+    end
+
+    # Load currents and powers
+    loads = get(net, "load", Dict())
+    for (lid, ph_dict) in get(result, "load", Dict())
+        load = get(loads, lid, Dict())
+        bus  = get(load, "bus", "")
+        ib   = get(bases.i_base, bus, 1.0)
+        for (_, lvals) in ph_dict
+            lvals isa Dict || continue
+            for f in ("crd", "cid")
+                haskey(lvals, f) && (lvals[f] = lvals[f] * ib)
+            end
+            for f in ("pd", "qd")
+                haskey(lvals, f) && (lvals[f] = lvals[f] * sb)
             end
         end
     end
@@ -333,17 +364,26 @@ function _from_per_unit(result_pu::Dict{String,Any}, bases, net::Dict{String,Any
         end
     end
 
-    # Voltage source currents
-    vsrcs = get(net, "voltage_source", Dict())
-    for (sid, t_dict) in get(result, "voltage_source", Dict())
-        vs  = get(vsrcs, sid, Dict())
-        bus = get(vs, "bus", "")
-        ib  = get(bases.i_base, bus, 1.0)
-        for (_, svals) in t_dict
-            svals isa Dict || continue
-            for f in ("cr", "ci")
-                haskey(svals, f) && (svals[f] = svals[f] * ib)
-            end
+    # Transformer currents: from-side ← I_base[bus_from], to-side ← I_base[bus_to]
+    xfmr_dict = get(net, "transformer", Dict())
+    for (tid, winding_dict) in get(result, "transformer", Dict())
+        # Find which subtype this transformer belongs to
+        xfmr = nothing
+        for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+            sub = get(xfmr_dict, subtype, nothing)
+            sub isa Dict && haskey(sub, tid) && (xfmr = sub[tid]; break)
+        end
+        xfmr === nothing && continue
+        bf = get(xfmr, "bus_from", ""); bt = get(xfmr, "bus_to", "")
+        ib_fr = get(bases.i_base, bf, 1.0)
+        ib_to = get(bases.i_base, bt, 1.0)
+        for (_, cvals) in get(winding_dict, "fr", Dict())
+            cvals isa Dict || continue
+            for f in ("cr", "ci", "cm"); haskey(cvals, f) && (cvals[f] = cvals[f] * ib_fr); end
+        end
+        for (_, cvals) in get(winding_dict, "to", Dict())
+            cvals isa Dict || continue
+            for f in ("cr", "ci", "cm"); haskey(cvals, f) && (cvals[f] = cvals[f] * ib_to); end
         end
     end
 
