@@ -1,0 +1,415 @@
+# BMOPF Network Summary: DSuite_SPM_Suburban
+
+**Generated:** 2026-06-17 12:23:37  
+**Findings:** 1 errors · 67 warnings · 20 info  
+**Convention:** MV_6.4kV: mixed; LV_242V: mixed; implicit (Kron-style) grounding
+
+---
+
+## 1. Component Inventory
+
+| Component | Count | Notes |
+|-----------|------:|-------|
+| bus | 2282 |  |
+| line | 2301 |  |
+| linecode | 63 |  |
+| voltage_source | 1 |  |
+| load | 1114 | 1.042 MW, 0.0 var |
+| generator | 1 | capacity: 0.0 W |
+| shunt | 0 |  |
+| switch | 0 |  |
+| transformer | 10 | Dyn1×10 |
+
+## 2. Voltage Levels
+
+**Voltage levels identified:** 2
+
+| Level | Nominal | Buses | Lines | Loads | Generators |
+|-------|---------|------:|------:|------:|-----------:|
+| MV_6.4kV | 6.41 kV | 2 | 1 | 0 | 1 |
+| LV_242V | 242.0 V | 2280 | 2300 | 1114 | 0 |
+
+**Transformer transitions:**
+
+- `dist_transformer_20190615_9064119`: MV_6.4kV → LV_242V (delta_wye, Dyn1)
+- `dist_transformer_20012486_9049173`: MV_6.4kV → LV_242V (delta_wye, Dyn1)
+- `dist_transformer_10433351_9067554`: MV_6.4kV → LV_242V (delta_wye, Dyn1)
+- `dist_transformer_10350026_9076215`: MV_6.4kV → LV_242V (delta_wye, Dyn1)
+- `dist_transformer_10434231_9125129`: MV_6.4kV → LV_242V (delta_wye, Dyn1)
+- `dist_transformer_10433349_9082814`: MV_6.4kV → LV_242V (delta_wye, Dyn1)
+- `dist_transformer_20096439_9125147`: MV_6.4kV → LV_242V (delta_wye, Dyn1)
+- `dist_transformer_20012512_9082132`: MV_6.4kV → LV_242V (delta_wye, Dyn1)
+- `dist_transformer_20240793_9024306`: MV_6.4kV → LV_242V (delta_wye, Dyn1)
+- `dist_transformer_10432679_9016690`: MV_6.4kV → LV_242V (delta_wye, Dyn1)
+
+## 3. Connectivity & Topology
+
+| Property | Value |
+|----------|-------|
+| Connected components | 1 |
+| Fully connected | true |
+| Topology | Meshed |
+| Mean degree | 2.02 |
+| Max degree | 11 |
+| Degree-1 buses | 1030 |
+| Tree depth (max hops) | 38 |
+
+> 🟡 **[W.CONN.MESHED]** Network contains 30 extra edge(s) forming cycles — not purely radial.
+
+## 4. Diversity & Variance
+
+**Overall symmetry score:** MODERATE
+
+### load ⚠
+
+| Parameter | Min | Max | CV | n |
+|-----------|-----|-----|----|---|
+| p_nom | 0.0 | 1000.0 | 0.263 | 1114 |
+| q_nom | 0.0 | 0.0 | 0.0 | 1114 |
+
+### line ⚠
+
+| Parameter | Min | Max | CV | n |
+|-----------|-----|-----|----|---|
+| length | 0.0216 | 23.2 | 1.082 | 2301 |
+
+### linecode
+
+| Parameter | Min | Max | CV | n |
+|-----------|-----|-----|----|---|
+| R_series_1_1 | 1.0e-6 | 0.0172 | 1.098 | 63 |
+
+### transformer
+
+| Parameter | Min | Max | CV | n |
+|-----------|-----|-----|----|---|
+| s_rating | 500000.0 | 500000.0 | 0.0 | 10 |
+
+> 🟡 **[W.DIV.LOAD_SYMMETRIC]** 1112 of 1114 loads share identical (p_nom, q_nom) — possible copy-paste symmetry.
+> 🔵 **[I.DIV.LINE_SYMMETRIC]** 5 lines share linecode 'busbar' with similar length (±10%) — electrically near-identical.
+> 🔵 **[I.DIV.LINE_SYMMETRIC]** 15 lines share linecode 'default' with similar length (±10%) — electrically near-identical.
+
+## 5. Loading & Operational Summary
+
+| | Value |
+|--|-------|
+| Total load P | 1.042 MW |
+| Total load Q | 0.0 var |
+| Total gen capacity | 0.0 W |
+| Generation/load ratio | 0.0% |
+
+**Transformer utilisation:**
+
+| ID | Rating | Loading (est.) |
+|----|--------|---------------:|
+| dist_transformer_20190615_9064119 | 500.0 kVA | 208.4% ⚠ |
+| dist_transformer_20012486_9049173 | 500.0 kVA | 24.4% |
+| dist_transformer_10433351_9067554 | 500.0 kVA | 208.4% ⚠ |
+| dist_transformer_10350026_9076215 | 500.0 kVA | 208.4% ⚠ |
+| dist_transformer_10434231_9125129 | 500.0 kVA | 208.4% ⚠ |
+| dist_transformer_10433349_9082814 | 500.0 kVA | 208.4% ⚠ |
+| dist_transformer_20096439_9125147 | 500.0 kVA | 208.4% ⚠ |
+| dist_transformer_20012512_9082132 | 500.0 kVA | 208.4% ⚠ |
+| dist_transformer_20240793_9024306 | 500.0 kVA | 208.4% ⚠ |
+| dist_transformer_10432679_9016690 | 500.0 kVA | 208.4% ⚠ |
+
+> 🟡 **[W.OPS.IMPORT_DEPENDENT]** Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (1.04 MW).
+> 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'dist_transformer_20190615_9064119' is at 208.4% utilisation at nominal load — little OPF headroom.
+> 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'dist_transformer_10433351_9067554' is at 208.4% utilisation at nominal load — little OPF headroom.
+> 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'dist_transformer_10350026_9076215' is at 208.4% utilisation at nominal load — little OPF headroom.
+> 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'dist_transformer_10434231_9125129' is at 208.4% utilisation at nominal load — little OPF headroom.
+> 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'dist_transformer_10433349_9082814' is at 208.4% utilisation at nominal load — little OPF headroom.
+> 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'dist_transformer_20096439_9125147' is at 208.4% utilisation at nominal load — little OPF headroom.
+> 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'dist_transformer_20012512_9082132' is at 208.4% utilisation at nominal load — little OPF headroom.
+> 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'dist_transformer_20240793_9024306' is at 208.4% utilisation at nominal load — little OPF headroom.
+> 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'dist_transformer_10432679_9016690' is at 208.4% utilisation at nominal load — little OPF headroom.
+> 🟡 **[W.OPS.LINE_UNCONSTRAINED]** 1 of 2301 lines have no thermal limit (i_max or s_max) — OPF thermal constraints will be missing.
+
+## 6. Infeasibility Pre-flight
+
+| Check | Result |
+|-------|--------|
+| Import dependent | true |
+| Constraint conflicts | 0 |
+| Buses without voltage bounds | 2282 |
+| Single point of failure | true |
+| TPIA status | not_run |
+
+> 🔵 **[I.PRE.NO_VOLT_BOUNDS]** 2282 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
+> 🔵 **[I.PRE.SINGLE_SOURCE]** Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+
+## 7. Provenance & Model Conventions
+
+**Inferred convention:** MV_6.4kV: mixed; LV_242V: mixed; implicit (Kron-style) grounding
+
+| Voltage level | Wires | Buses with neutral |
+|---------------|-------|-------------------:|
+| MV_6.4kV | mixed | 1 / 2 |
+| LV_242V | mixed | 1075 / 2280 |
+
+| Neutral grounding | Value |
+|-------------------|------:|
+| Buses with neutral | 1076 |
+| Neutral branches | 0 |
+| Grounding points | 1076 |
+| Neutral sections | 1076 |
+| Floating sections | 0 |
+
+**Linecode impedance classification:**
+
+| Verdict | Count |
+|---------|------:|
+| exactly_balanced | 16 |
+| decoupled | 47 |
+
+**OpenDSS default fingerprints:** 15 hit(s) — see findings
+
+**Earthing system per galvanic zone:**
+
+| Zone | Buses | Wires | Star point | Downstream earths | Likely system |
+|------|------:|-------|------------|------------------:|---------------|
+| 6.41 kV | 2 | ≤3-wire | solid | 0 | solidly earthed |
+| 242.0 V | 1983 | ≤3-wire | solid | 941 | indeterminate (3-wire / Kron-style implicit grounding) |
+| 242.0 V | 297 | ≤3-wire | solid | 124 | indeterminate (3-wire / Kron-style implicit grounding) |
+
+> 🔵 **[I.PROV.NEGATIVE_MUTUAL_R]** Linecode 'cable_230v_0.05_cu' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
+> 🔵 **[I.PROV.NEGATIVE_MUTUAL_R]** Linecode 'cable_230v_185_al_wavef' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
+> 🔵 **[I.PROV.NEGATIVE_MUTUAL_R]** Linecode 'default' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
+> 🔵 **[I.PROV.NEGATIVE_MUTUAL_R]** Linecode 'unknown_lv_ohline_m' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
+> 🔵 **[I.PROV.NEGATIVE_MUTUAL_R]** Linecode 'unknown_lv_cable_m' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
+> 🔵 **[I.PROV.SEQ_DERIVED]** 16 linecode(s) have exactly balanced impedance matrices (equal self, equal mutual entries) — likely constructed from sequence parameters (r1,x1,r0,x0) or a transposition assumption, not from conductor geometry: cable_230v_0.05_cu, cable_230v_185_al_wavef, cable_230v_240_al_consac, cable_230v_25_al_acs, cable_230v_25_al_act, cable_230v_25_al_ascs, cable_230v_25_al_asct, cable_230v_300_al_wave, cable_230v_35_al_acs, cable_230v_35_al_act, cable_230v_35_al_ascs, cable_230v_35_al_asct, cable_230v_35_al_hybrid, default, unknown_lv_cable_m, unknown_lv_ohline_m.
+> 🔵 **[I.PROV.DECOUPLED_PHASES]** 47 linecode(s) have zero mutual coupling (diagonal impedance matrix) — positive-sequence-only data; the phases decouple into independent single-phase networks: busbar, cable_230v_0.0125_al, cable_230v_0.0125_cu, cable_230v_0.0225_cu, cable_230v_0.025_cu, cable_230v_0.03_al, cable_230v_0.04_al, cable_230v_0.04_cu, cable_230v_0.06_al, cable_230v_0.06_cu, cable_230v_0.15_al, cable_230v_0.15_cu, cable_230v_0.1_al, cable_230v_0.1_cu, cable_230v_0.25_al, cable_230v_0.25_cu, cable_230v_0.2_al, cable_230v_0.2_cu, cable_230v_0.3_al, cable_230v_0.3_cu, cable_230v_0.5_al, cable_230v_0.5_cu, cable_230v_16_cu, cable_230v_185_al, cable_230v_185_al_wave, cable_230v_25_al, cable_230v_25_cu, cable_230v_25_cu_cscs, cable_230v_25_cu_csct, cable_230v_300_al_consac, cable_230v_300_cu, cable_230v_35_cu_ccs, cable_230v_35_cu_cct, cable_230v_35_cu_cscs, cable_230v_35_cu_csct, cable_230v_4_cu, cable_230v_95_al, cable_230v_95_cu, connector, ohl_230v_0.0225_ocu, ohl_230v_0.05_oal, ohl_230v_25_oal, ohl_230v_35_abc, ohl_230v_50_abc, ohl_230v_50_oal, unknown_lv_cable_s, unknown_lv_ohline_s.
+> 🔵 **[I.PROV.DSS_DEFAULT_XFMR]** 10 transformer(s) have impedance matching the OpenDSS defaults — likely unspecified in the source: dist_transformer_10350026_9076215 (%r=0.2); dist_transformer_10432679_9016690 (%r=0.2); dist_transformer_10433349_9082814 (%r=0.2); dist_transformer_10433351_9067554 (%r=0.2); dist_transformer_10434231_9125129 (%r=0.2); dist_transformer_20012486_9049173 (%r=0.2); dist_transformer_20012512_9082132 (%r=0.2); dist_transformer_20096439_9125147 (%r=0.2); dist_transformer_20190615_9064119 (%r=0.2); dist_transformer_20240793_9024306 (%r=0.2).
+> 🔵 **[I.PROV.DSS_DEFAULT_LENGTH]** 5 of 2301 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
+> 🔵 **[I.PROV.IMPEDANCE_TRANSFORM_KR]** 63 three-wire linecode(s) match the impedance signature of Kron reduction — neutral row/column eliminated from the original four-wire Carson impedance matrix via Schur complement. Exact when every neutral is perfectly grounded; approximate with finite grounding. Zero-sequence behaviour is not captured by the three-wire representation.: busbar, cable_230v_0.0125_al, cable_230v_0.0125_cu, cable_230v_0.0225_cu, cable_230v_0.025_cu, cable_230v_0.03_al, cable_230v_0.04_al, cable_230v_0.04_cu, cable_230v_0.05_cu, cable_230v_0.06_al, cable_230v_0.06_cu, cable_230v_0.15_al, cable_230v_0.15_cu, cable_230v_0.1_al, cable_230v_0.1_cu, cable_230v_0.25_al, cable_230v_0.25_cu, cable_230v_0.2_al, cable_230v_0.2_cu, cable_230v_0.3_al, cable_230v_0.3_cu, cable_230v_0.5_al, cable_230v_0.5_cu, cable_230v_16_cu, cable_230v_185_al, cable_230v_185_al_wave, cable_230v_185_al_wavef, cable_230v_240_al_consac, cable_230v_25_al, cable_230v_25_al_acs, cable_230v_25_al_act, cable_230v_25_al_ascs, cable_230v_25_al_asct, cable_230v_25_cu, cable_230v_25_cu_cscs, cable_230v_25_cu_csct, cable_230v_300_al_consac, cable_230v_300_al_wave, cable_230v_300_cu, cable_230v_35_al_acs, cable_230v_35_al_act, cable_230v_35_al_ascs, cable_230v_35_al_asct, cable_230v_35_al_hybrid, cable_230v_35_cu_ccs, cable_230v_35_cu_cct, cable_230v_35_cu_cscs, cable_230v_35_cu_csct, cable_230v_4_cu, cable_230v_95_al, cable_230v_95_cu, connector, default, ohl_230v_0.0225_ocu, ohl_230v_0.05_oal, ohl_230v_25_oal, ohl_230v_35_abc, ohl_230v_50_abc, ohl_230v_50_oal, unknown_lv_cable_m, unknown_lv_cable_s, unknown_lv_ohline_m, unknown_lv_ohline_s.
+
+## 8. Spec Conformance & Benchmark Readiness
+
+| Spec conformance | Value |
+|------------------|------:|
+| Conformance issues | 1 |
+| Voltage sources (spec requires 1) | 1 |
+
+| Structural integrity | Value |
+|----------------------|------:|
+| Reference issues | 0 |
+| Dimension issues | 0 |
+| Galvanic islands | 3 |
+| Islands without voltage reference | 0 |
+| Line impedance spread | 1.12e6× |
+
+| Benchmark readiness | Value |
+|---------------------|------:|
+| Objective well-posed | true |
+| Only slack generation | true |
+| Buses with \|V\| bounds | 0.0% |
+| Buses with vpn / vpp / vpos bounds | 0 / 0 / 0 |
+| Lines with thermal limits | 100.0% |
+| Generators with no DOF (p\_min≈p\_max) | 0 |
+| Generators with zero cost (dispatchable) | 0 |
+| Same-cost generator pairs (≤1 hop) | 0 |
+| Loads with zero p\_nom | 72 |
+
+**Augmentation needed:**
+
+- only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds
+- no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground)
+- no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF
+- 1 of 2301 lines lack thermal limits — add i_max/s_max (e.g. correlated with conductor cross-section)
+
+> 🟡 **[W.INT.LOW_IMPEDANCE_LINE]** 32 line(s) have total series impedance below 10⁻³× the network median — they degrade NLP conditioning; model them as lossless switches: 10886611, 11620810, 11620811, 11620812, 11620813, 11620814, 7194482, 7218887, 7218893, 7219136, 7219179, 7278989, 7278993, 7278995, 7278997, 7278999, 7279177, 7279433, 7383762, 7383778, 7383785, 7383789, 7383798, 7383830, 7383833, 7383835, 7383845, 7383849, 7383869, 7383890, 7383893, 7383921.
+
+> 🟡 **[W.SPEC.CONFIG_ARITY]** generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
+
+> 🔵 **[I.BENCH.AUGMENTATION]** Case needs augmentation to be a non-trivial OPF benchmark: only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF; 1 of 2301 lines lack thermal limits — add i_max/s_max (e.g. correlated with conductor cross-section).
+> 🔵 **[I.BENCH.LOAD_ZERO_PNOM]** 72 load(s) have p_nom = 0 on all phases — these loads impose no real power demand: sop_a1_14534810_1, sop_a1_14534810_2, sop_a1_14534810_3, sop_a2_9336563_1, sop_a2_9336563_2, sop_a2_9336563_3, sop_a3_15870547_1, sop_a3_15870547_2, sop_a3_15870547_3, sop_b1_9376744_1, sop_b1_9376744_2, sop_b1_9376744_3, sop_b2_17641788_1, sop_b2_17641788_2, sop_b2_17641788_3, sop_b3_14854625_1, sop_b3_14854625_2, sop_b3_14854625_3, sop_x4_13407292_1, sop_x4_13407292_2, sop_x4_13407292_3, sop_x5_17892708_1, sop_x5_17892708_2, sop_x5_17892708_3, statcom_12753273_1, statcom_12753273_2, statcom_12753273_3, statcom_12812602_1, statcom_12812602_2, statcom_12812602_3, statcom_13379019_1, statcom_13379019_2, statcom_13379019_3, statcom_13580150_1, statcom_13580150_2, statcom_13580150_3, statcom_13605448_1, statcom_13605448_2, statcom_13605448_3, statcom_13687015_1, statcom_13687015_2, statcom_13687015_3, statcom_13781202_1, statcom_13781202_2, statcom_13781202_3, statcom_14554105_1, statcom_14554105_2, statcom_14554105_3, statcom_15210260_1, statcom_15210260_2, statcom_15210260_3, statcom_15299670_1, statcom_15299670_2, statcom_15299670_3, statcom_15468770_1, statcom_15468770_2, statcom_15468770_3, statcom_15596111_1, statcom_15596111_2, statcom_15596111_3, statcom_15688800_1, statcom_15688800_2, statcom_15688800_3, statcom_15695193_1, statcom_15695193_2, statcom_15695193_3, statcom_17383288_1, statcom_17383288_2, statcom_17383288_3, str_9076215_1, str_9076215_2, str_9076215_3.
+
+## 9. Data Quality Summary
+
+**Total findings:** 88 (1 errors, 67 warnings, 20 info)
+
+### 🔴 Errors
+
+- **[E.COMP.MISSING_REQUIRED]** `sourcez`  
+  line 'sourcez' is missing required field(s): linecode.
+
+### 🟡 Warnings
+
+- **[W.CONN.MESHED]** `network`  
+  Network contains 30 extra edge(s) forming cycles — not purely radial.
+- **[W.DIV.LOAD_SYMMETRIC]** `load`  
+  1112 of 1114 loads share identical (p_nom, q_nom) — possible copy-paste symmetry.
+- **[W.OPS.IMPORT_DEPENDENT]** `network`  
+  Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (1.04 MW).
+- **[W.OPS.XFMR_OVERLOADED]** `dist_transformer_20190615_9064119`  
+  Transformer 'dist_transformer_20190615_9064119' is at 208.4% utilisation at nominal load — little OPF headroom.
+- **[W.OPS.XFMR_OVERLOADED]** `dist_transformer_10433351_9067554`  
+  Transformer 'dist_transformer_10433351_9067554' is at 208.4% utilisation at nominal load — little OPF headroom.
+- **[W.OPS.XFMR_OVERLOADED]** `dist_transformer_10350026_9076215`  
+  Transformer 'dist_transformer_10350026_9076215' is at 208.4% utilisation at nominal load — little OPF headroom.
+- **[W.OPS.XFMR_OVERLOADED]** `dist_transformer_10434231_9125129`  
+  Transformer 'dist_transformer_10434231_9125129' is at 208.4% utilisation at nominal load — little OPF headroom.
+- **[W.OPS.XFMR_OVERLOADED]** `dist_transformer_10433349_9082814`  
+  Transformer 'dist_transformer_10433349_9082814' is at 208.4% utilisation at nominal load — little OPF headroom.
+- **[W.OPS.XFMR_OVERLOADED]** `dist_transformer_20096439_9125147`  
+  Transformer 'dist_transformer_20096439_9125147' is at 208.4% utilisation at nominal load — little OPF headroom.
+- **[W.OPS.XFMR_OVERLOADED]** `dist_transformer_20012512_9082132`  
+  Transformer 'dist_transformer_20012512_9082132' is at 208.4% utilisation at nominal load — little OPF headroom.
+- **[W.OPS.XFMR_OVERLOADED]** `dist_transformer_20240793_9024306`  
+  Transformer 'dist_transformer_20240793_9024306' is at 208.4% utilisation at nominal load — little OPF headroom.
+- **[W.OPS.XFMR_OVERLOADED]** `dist_transformer_10432679_9016690`  
+  Transformer 'dist_transformer_10432679_9016690' is at 208.4% utilisation at nominal load — little OPF headroom.
+- **[W.OPS.LINE_UNCONSTRAINED]** `line`  
+  1 of 2301 lines have no thermal limit (i_max or s_max) — OPF thermal constraints will be missing.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7278989`  
+  Line '7278989' has ||Z||_F = 3.11e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `10881070`  
+  Line '10881070' has ||Z||_F = 8.8e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383833`  
+  Line '7383833' has ||Z||_F = 1.08e-6 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383785`  
+  Line '7383785' has ||Z||_F = 1.33e-6 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7278993`  
+  Line '7278993' has ||Z||_F = 4.12e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11559268`  
+  Line '11559268' has ||Z||_F = 2.98e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383869`  
+  Line '7383869' has ||Z||_F = 5.84e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11608031`  
+  Line '11608031' has ||Z||_F = 2.98e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7218893`  
+  Line '7218893' has ||Z||_F = 5.44e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383921`  
+  Line '7383921' has ||Z||_F = 7.08e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383798`  
+  Line '7383798' has ||Z||_F = 7.34e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7278997`  
+  Line '7278997' has ||Z||_F = 5.29e-8 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7219179`  
+  Line '7219179' has ||Z||_F = 6.94e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `10118466`  
+  Line '10118466' has ||Z||_F = 8.93e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11618073`  
+  Line '11618073' has ||Z||_F = 5.82e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383778`  
+  Line '7383778' has ||Z||_F = 1.01e-6 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `10883341`  
+  Line '10883341' has ||Z||_F = 5.01e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11608032`  
+  Line '11608032' has ||Z||_F = 4.62e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383893`  
+  Line '7383893' has ||Z||_F = 4.61e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `10886611`  
+  Line '10886611' has ||Z||_F = 1.06e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7278995`  
+  Line '7278995' has ||Z||_F = 1.02e-6 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383762`  
+  Line '7383762' has ||Z||_F = 6.91e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11620812`  
+  Line '11620812' has ||Z||_F = 2.65e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11572984`  
+  Line '11572984' has ||Z||_F = 3.61e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383835`  
+  Line '7383835' has ||Z||_F = 4.76e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11614761`  
+  Line '11614761' has ||Z||_F = 5.82e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7219136`  
+  Line '7219136' has ||Z||_F = 8.87e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383845`  
+  Line '7383845' has ||Z||_F = 6.89e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11470969`  
+  Line '11470969' has ||Z||_F = 1.81e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11614758`  
+  Line '11614758' has ||Z||_F = 2.98e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383849`  
+  Line '7383849' has ||Z||_F = 1.06e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11519647`  
+  Line '11519647' has ||Z||_F = 2.98e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7279177`  
+  Line '7279177' has ||Z||_F = 9.36e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11620813`  
+  Line '11620813' has ||Z||_F = 4.26e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11608030`  
+  Line '11608030' has ||Z||_F = 3.61e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11614760`  
+  Line '11614760' has ||Z||_F = 4.62e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7194482`  
+  Line '7194482' has ||Z||_F = 6.74e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383830`  
+  Line '7383830' has ||Z||_F = 4.46e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383789`  
+  Line '7383789' has ||Z||_F = 1.39e-6 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11620814`  
+  Line '11620814' has ||Z||_F = 2.18e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7383890`  
+  Line '7383890' has ||Z||_F = 1.05e-6 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11520353`  
+  Line '11520353' has ||Z||_F = 3.61e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11470960`  
+  Line '11470960' has ||Z||_F = 1.49e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7279433`  
+  Line '7279433' has ||Z||_F = 7.92e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11620811`  
+  Line '11620811' has ||Z||_F = 3.38e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7218887`  
+  Line '7218887' has ||Z||_F = 9.34e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7278999`  
+  Line '7278999' has ||Z||_F = 5.29e-8 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11581768`  
+  Line '11581768' has ||Z||_F = 3.61e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11519646`  
+  Line '11519646' has ||Z||_F = 4.62e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `11620810`  
+  Line '11620810' has ||Z||_F = 2.18e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_IMPEDANCE_SPREAD]** `line`  
+  Adjacent lines '7278999' and '3196081' at bus '17743105' have ||Z||_F ratio 286000.0× — large impedance contrasts between neighbouring lines cause ill-conditioned KKT Jacobians; consider per-unit scaling or network reformulation.
+- **[W.RED.ZERO_LOADS]** `load`  
+  72 load(s) have p_nom=0 and q_nom=0 — electrically inert.
+- **[W.INT.LOW_IMPEDANCE_LINE]** `line`  
+  32 line(s) have total series impedance below 10⁻³× the network median — they degrade NLP conditioning; model them as lossless switches: 10886611, 11620810, 11620811, 11620812, 11620813, 11620814, 7194482, 7218887, 7218893, 7219136, 7219179, 7278989, 7278993, 7278995, 7278997, 7278999, 7279177, 7279433, 7383762, 7383778, 7383785, 7383789, 7383798, 7383830, 7383833, 7383835, 7383845, 7383849, 7383869, 7383890, 7383893, 7383921.
+- **[W.SPEC.CONFIG_ARITY]** `slack_source`  
+  generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
+
+### 🔵 Info
+
+- **[I.DIV.LINE_SYMMETRIC]** `line`  
+  5 lines share linecode 'busbar' with similar length (±10%) — electrically near-identical.
+- **[I.DIV.LINE_SYMMETRIC]** `line`  
+  15 lines share linecode 'default' with similar length (±10%) — electrically near-identical.
+- **[I.PROV.NEGATIVE_MUTUAL_R]** `cable_230v_0.05_cu`  
+  Linecode 'cable_230v_0.05_cu' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
+- **[I.PROV.NEGATIVE_MUTUAL_R]** `cable_230v_185_al_wavef`  
+  Linecode 'cable_230v_185_al_wavef' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
+- **[I.PROV.NEGATIVE_MUTUAL_R]** `default`  
+  Linecode 'default' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
+- **[I.PROV.NEGATIVE_MUTUAL_R]** `unknown_lv_ohline_m`  
+  Linecode 'unknown_lv_ohline_m' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
+- **[I.PROV.NEGATIVE_MUTUAL_R]** `unknown_lv_cable_m`  
+  Linecode 'unknown_lv_cable_m' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
+- **[I.PROV.SEQ_DERIVED]** `linecode`  
+  16 linecode(s) have exactly balanced impedance matrices (equal self, equal mutual entries) — likely constructed from sequence parameters (r1,x1,r0,x0) or a transposition assumption, not from conductor geometry: cable_230v_0.05_cu, cable_230v_185_al_wavef, cable_230v_240_al_consac, cable_230v_25_al_acs, cable_230v_25_al_act, cable_230v_25_al_ascs, cable_230v_25_al_asct, cable_230v_300_al_wave, cable_230v_35_al_acs, cable_230v_35_al_act, cable_230v_35_al_ascs, cable_230v_35_al_asct, cable_230v_35_al_hybrid, default, unknown_lv_cable_m, unknown_lv_ohline_m.
+- **[I.PROV.DECOUPLED_PHASES]** `linecode`  
+  47 linecode(s) have zero mutual coupling (diagonal impedance matrix) — positive-sequence-only data; the phases decouple into independent single-phase networks: busbar, cable_230v_0.0125_al, cable_230v_0.0125_cu, cable_230v_0.0225_cu, cable_230v_0.025_cu, cable_230v_0.03_al, cable_230v_0.04_al, cable_230v_0.04_cu, cable_230v_0.06_al, cable_230v_0.06_cu, cable_230v_0.15_al, cable_230v_0.15_cu, cable_230v_0.1_al, cable_230v_0.1_cu, cable_230v_0.25_al, cable_230v_0.25_cu, cable_230v_0.2_al, cable_230v_0.2_cu, cable_230v_0.3_al, cable_230v_0.3_cu, cable_230v_0.5_al, cable_230v_0.5_cu, cable_230v_16_cu, cable_230v_185_al, cable_230v_185_al_wave, cable_230v_25_al, cable_230v_25_cu, cable_230v_25_cu_cscs, cable_230v_25_cu_csct, cable_230v_300_al_consac, cable_230v_300_cu, cable_230v_35_cu_ccs, cable_230v_35_cu_cct, cable_230v_35_cu_cscs, cable_230v_35_cu_csct, cable_230v_4_cu, cable_230v_95_al, cable_230v_95_cu, connector, ohl_230v_0.0225_ocu, ohl_230v_0.05_oal, ohl_230v_25_oal, ohl_230v_35_abc, ohl_230v_50_abc, ohl_230v_50_oal, unknown_lv_cable_s, unknown_lv_ohline_s.
+- **[I.PROV.DSS_DEFAULT_XFMR]** `transformer`  
+  10 transformer(s) have impedance matching the OpenDSS defaults — likely unspecified in the source: dist_transformer_10350026_9076215 (%r=0.2); dist_transformer_10432679_9016690 (%r=0.2); dist_transformer_10433349_9082814 (%r=0.2); dist_transformer_10433351_9067554 (%r=0.2); dist_transformer_10434231_9125129 (%r=0.2); dist_transformer_20012486_9049173 (%r=0.2); dist_transformer_20012512_9082132 (%r=0.2); dist_transformer_20096439_9125147 (%r=0.2); dist_transformer_20190615_9064119 (%r=0.2); dist_transformer_20240793_9024306 (%r=0.2).
+- **[I.PROV.DSS_DEFAULT_LENGTH]** `line`  
+  5 of 2301 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
+- **[I.PROV.IMPEDANCE_TRANSFORM_KR]** `linecode`  
+  63 three-wire linecode(s) match the impedance signature of Kron reduction — neutral row/column eliminated from the original four-wire Carson impedance matrix via Schur complement. Exact when every neutral is perfectly grounded; approximate with finite grounding. Zero-sequence behaviour is not captured by the three-wire representation.: busbar, cable_230v_0.0125_al, cable_230v_0.0125_cu, cable_230v_0.0225_cu, cable_230v_0.025_cu, cable_230v_0.03_al, cable_230v_0.04_al, cable_230v_0.04_cu, cable_230v_0.05_cu, cable_230v_0.06_al, cable_230v_0.06_cu, cable_230v_0.15_al, cable_230v_0.15_cu, cable_230v_0.1_al, cable_230v_0.1_cu, cable_230v_0.25_al, cable_230v_0.25_cu, cable_230v_0.2_al, cable_230v_0.2_cu, cable_230v_0.3_al, cable_230v_0.3_cu, cable_230v_0.5_al, cable_230v_0.5_cu, cable_230v_16_cu, cable_230v_185_al, cable_230v_185_al_wave, cable_230v_185_al_wavef, cable_230v_240_al_consac, cable_230v_25_al, cable_230v_25_al_acs, cable_230v_25_al_act, cable_230v_25_al_ascs, cable_230v_25_al_asct, cable_230v_25_cu, cable_230v_25_cu_cscs, cable_230v_25_cu_csct, cable_230v_300_al_consac, cable_230v_300_al_wave, cable_230v_300_cu, cable_230v_35_al_acs, cable_230v_35_al_act, cable_230v_35_al_ascs, cable_230v_35_al_asct, cable_230v_35_al_hybrid, cable_230v_35_cu_ccs, cable_230v_35_cu_cct, cable_230v_35_cu_cscs, cable_230v_35_cu_csct, cable_230v_4_cu, cable_230v_95_al, cable_230v_95_cu, connector, default, ohl_230v_0.0225_ocu, ohl_230v_0.05_oal, ohl_230v_25_oal, ohl_230v_35_abc, ohl_230v_50_abc, ohl_230v_50_oal, unknown_lv_cable_m, unknown_lv_cable_s, unknown_lv_ohline_m, unknown_lv_ohline_s.
+- **[I.PRE.NO_VOLT_BOUNDS]** `bus`  
+  2282 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
+- **[I.PRE.SINGLE_SOURCE]** `network`  
+  Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `network`  
+  meta has field(s) not in the BMOPF schema: reference, source.
+- **[I.RED.MERGEABLE_LINES]** `line`  
+  277 group(s) of series lines (637 lines total) can be merged — intermediate buses have no other connections.
+- **[I.RED.UNUSED_LINECODES]** `linecode`  
+  28 linecode(s) defined but not referenced by any line.
+- **[I.RED.DUPLICATE_LINECODES]** `linecode`  
+  8 group(s) of linecodes share identical R_series_1_1/X_series_1_1.
+- **[I.BENCH.AUGMENTATION]** `network`  
+  Case needs augmentation to be a non-trivial OPF benchmark: only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF; 1 of 2301 lines lack thermal limits — add i_max/s_max (e.g. correlated with conductor cross-section).
+- **[I.BENCH.LOAD_ZERO_PNOM]** `load`  
+  72 load(s) have p_nom = 0 on all phases — these loads impose no real power demand: sop_a1_14534810_1, sop_a1_14534810_2, sop_a1_14534810_3, sop_a2_9336563_1, sop_a2_9336563_2, sop_a2_9336563_3, sop_a3_15870547_1, sop_a3_15870547_2, sop_a3_15870547_3, sop_b1_9376744_1, sop_b1_9376744_2, sop_b1_9376744_3, sop_b2_17641788_1, sop_b2_17641788_2, sop_b2_17641788_3, sop_b3_14854625_1, sop_b3_14854625_2, sop_b3_14854625_3, sop_x4_13407292_1, sop_x4_13407292_2, sop_x4_13407292_3, sop_x5_17892708_1, sop_x5_17892708_2, sop_x5_17892708_3, statcom_12753273_1, statcom_12753273_2, statcom_12753273_3, statcom_12812602_1, statcom_12812602_2, statcom_12812602_3, statcom_13379019_1, statcom_13379019_2, statcom_13379019_3, statcom_13580150_1, statcom_13580150_2, statcom_13580150_3, statcom_13605448_1, statcom_13605448_2, statcom_13605448_3, statcom_13687015_1, statcom_13687015_2, statcom_13687015_3, statcom_13781202_1, statcom_13781202_2, statcom_13781202_3, statcom_14554105_1, statcom_14554105_2, statcom_14554105_3, statcom_15210260_1, statcom_15210260_2, statcom_15210260_3, statcom_15299670_1, statcom_15299670_2, statcom_15299670_3, statcom_15468770_1, statcom_15468770_2, statcom_15468770_3, statcom_15596111_1, statcom_15596111_2, statcom_15596111_3, statcom_15688800_1, statcom_15688800_2, statcom_15688800_3, statcom_15695193_1, statcom_15695193_2, statcom_15695193_3, statcom_17383288_1, statcom_17383288_2, statcom_17383288_3, str_9076215_1, str_9076215_2, str_9076215_3.
+
