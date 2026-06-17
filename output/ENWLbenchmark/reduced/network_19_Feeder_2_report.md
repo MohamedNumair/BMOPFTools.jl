@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_19_Feeder_2
 
-**Generated:** 2026-06-16 19:47:59  
-**Findings:** 0 errors · 1 warnings · 32 info  
+**Generated:** 2026-06-18 09:28:14  
+**Findings:** 0 errors · 1 warnings · 33 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -14,8 +14,8 @@
 | line | 211 |  |
 | linecode | 8 |  |
 | voltage_source | 1 |  |
-| load | 111 | 98.3 kW, 32.3 kvar |
-| generator | 29 | capacity: 701.6 kW |
+| load | 111 | 98.272 kW, 32.3 kvar |
+| generator | 29 | capacity: 701.63 kW |
 | shunt | 1 |  |
 | switch | 0 |  |
 | transformer | 0 |  |
@@ -75,9 +75,9 @@
 
 | | Value |
 |--|-------|
-| Total load P | 98.3 kW |
+| Total load P | 98.272 kW |
 | Total load Q | 32.3 kvar |
-| Total gen capacity | 701.6 kW |
+| Total gen capacity | 701.63 kW |
 | Generation/load ratio | 714.0% |
 
 ## 6. Infeasibility Pre-flight
@@ -122,6 +122,8 @@
 | Zone | Buses | Wires | Star point | Downstream earths | Likely system |
 |------|------:|-------|------------|------------------:|---------------|
 | 240.0 V | 212 | 4-wire | solid | 0 | TN-S or TT (source-earthed only — protective-earth side not representable in the data model) |
+
+> 🔵 **[I.PROV.NO_PI_SHUNT]** All 8 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 
 ## 8. Spec Conformance & Benchmark Readiness
 
@@ -187,7 +189,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 33 (0 errors, 1 warnings, 32 info)
+**Total findings:** 34 (0 errors, 1 warnings, 33 info)
 
 ### 🟡 Warnings
 
@@ -196,6 +198,8 @@
 
 ### 🔵 Info
 
+- **[I.PROV.NO_PI_SHUNT]** `linecode`  
+  All 8 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PRE.NO_VOLT_BOUNDS]** `bus`  
   212 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  

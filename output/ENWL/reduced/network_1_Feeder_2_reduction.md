@@ -1,6 +1,6 @@
 # Simplification log: network_1 / Feeder_2
 
-**Generated:** 2026-06-17 17:50:54  
+**Generated:** 2026-06-18 09:33:32  
 **Buses:** 506 → 66 (−440)  
 **Lines:** 505 → 65 (−440)  
 **Operations:** 444

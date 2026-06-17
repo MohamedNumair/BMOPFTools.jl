@@ -37269,7 +37269,7 @@
   },
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-17T07:49:40Z",
+    "created": "2026-06-17T23:32:15Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"

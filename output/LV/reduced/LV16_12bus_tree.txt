@@ -6,7 +6,7 @@ b467 (SRC G1)
         └── b3179 (L1)
 
 Loads (1 total):
-  L1 = ld313_load_a       10.0 kW  SINGLE_PHASE  phases: 1
+  L1 = ld313_load_a       10.0 kW  SINGLE_PHASE  terminals: 1,n
 
 Generators (1 total):
-  G1 = slack_source     max    0.0 kW
+  G1 = slack_source     max    0.0 kW  terminals: 1,2,3

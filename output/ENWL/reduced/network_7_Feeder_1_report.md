@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_7 / Feeder_1
 
-**Generated:** 2026-06-17 17:51:22  
-**Findings:** 0 errors · 2 warnings · 5 info  
+**Generated:** 2026-06-18 09:34:01  
+**Findings:** 0 errors · 2 warnings · 6 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -119,6 +119,8 @@
 |------|------:|-------|------------|------------------:|---------------|
 | 240.0 V | 135 | 4-wire | solid | 0 | TN-S or TT (source-earthed only — protective-earth side not representable in the data model) |
 
+> 🔵 **[I.PROV.NO_PI_SHUNT]** All 6 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
+
 ## 8. Spec Conformance & Benchmark Readiness
 
 | Spec conformance | Value |
@@ -158,7 +160,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 7 (0 errors, 2 warnings, 5 info)
+**Total findings:** 8 (0 errors, 2 warnings, 6 info)
 
 ### 🟡 Warnings
 
@@ -171,6 +173,8 @@
 
 - **[I.DIV.LINE_SYMMETRIC]** `line`  
   9 lines share linecode 'lc1' with similar length (±10%) — electrically near-identical.
+- **[I.PROV.NO_PI_SHUNT]** `linecode`  
+  All 6 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PRE.NO_VOLT_BOUNDS]** `bus`  
   135 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  

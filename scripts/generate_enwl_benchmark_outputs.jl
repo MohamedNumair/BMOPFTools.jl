@@ -86,17 +86,19 @@ end
 # Read *.json from the root of ENWLbenchmark/, skipping results files and
 # anything already inside original/ or reduced/.
 
+orig_dir = joinpath(BENCH_DIR, "original")
+red_dir  = joinpath(BENCH_DIR, "reduced")
+
 source_files = sort([
-    f for f in readdir(BENCH_DIR; join=true)
+    f for f in readdir(orig_dir; join=true)
     if isfile(f) && endswith(f, ".json") &&
        !occursin("_results", basename(f)) &&
-       !occursin("_opf", basename(f))
+       !occursin("_opf", basename(f)) &&
+       !occursin("_report", basename(f))
 ])
 
 println("Found $(length(source_files)) ENWLbenchmark case(s).\n")
 
-orig_dir = joinpath(BENCH_DIR, "original")
-red_dir  = joinpath(BENCH_DIR, "reduced")
 mkpath(orig_dir)
 mkpath(red_dir)
 

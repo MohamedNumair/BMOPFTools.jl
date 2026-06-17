@@ -2692,19 +2692,6 @@
       "element_id": "line84"
     },
     {
-      "message": "Merged line line30 (1.5105 m) into line29 at pass-through bus 30; new length 1.5804989999999999 m.",
-      "detail": {
-        "new_length": 1.5804989999999999,
-        "absorbed_line": "line30",
-        "removed_bus": "30"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line29"
-    },
-    {
       "message": "Merged line line3 (0.039999 m) into line2 at pass-through bus 3; new length 0.081231 m.",
       "detail": {
         "new_length": 0.081231,
@@ -2716,6 +2703,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line2"
+    },
+    {
+      "message": "Merged line line30 (1.5105 m) into line29 at pass-through bus 30; new length 1.5804989999999999 m.",
+      "detail": {
+        "new_length": 1.5804989999999999,
+        "absorbed_line": "line30",
+        "removed_bus": "30"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line29"
     },
     {
       "message": "Merged line line80 (1.3393 m) into line83 at pass-through bus 81; new length 6.3517 m.",
@@ -4628,7 +4628,7 @@
       "vpn_min": 216.159941,
       "vpn_max": 264.195483
     },
-    "230": {
+    "77": {
       "terminal_names": [
         "1",
         "2",
@@ -4638,7 +4638,7 @@
       "vpn_min": 216.159941,
       "vpn_max": 264.195483
     },
-    "77": {
+    "230": {
       "terminal_names": [
         "1",
         "2",

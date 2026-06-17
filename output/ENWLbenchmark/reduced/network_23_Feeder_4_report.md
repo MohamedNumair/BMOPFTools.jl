@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_23_Feeder_4
 
-**Generated:** 2026-06-16 19:48:08  
-**Findings:** 0 errors · 0 warnings · 27 info  
+**Generated:** 2026-06-18 09:28:23  
+**Findings:** 0 errors · 0 warnings · 28 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -14,8 +14,8 @@
 | line | 151 |  |
 | linecode | 7 |  |
 | voltage_source | 1 |  |
-| load | 89 | 78.9 kW, 25.9 kvar |
-| generator | 24 | capacity: 565.4 kW |
+| load | 89 | 78.898 kW, 25.9 kvar |
+| generator | 24 | capacity: 565.386 kW |
 | shunt | 1 |  |
 | switch | 0 |  |
 | transformer | 0 |  |
@@ -73,9 +73,9 @@
 
 | | Value |
 |--|-------|
-| Total load P | 78.9 kW |
+| Total load P | 78.898 kW |
 | Total load Q | 25.9 kvar |
-| Total gen capacity | 565.4 kW |
+| Total gen capacity | 565.386 kW |
 | Generation/load ratio | 716.6% |
 
 ## 6. Infeasibility Pre-flight
@@ -120,6 +120,8 @@
 | Zone | Buses | Wires | Star point | Downstream earths | Likely system |
 |------|------:|-------|------------|------------------:|---------------|
 | 240.0 V | 152 | 4-wire | solid | 0 | TN-S or TT (source-earthed only — protective-earth side not representable in the data model) |
+
+> 🔵 **[I.PROV.NO_PI_SHUNT]** All 7 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 
 ## 8. Spec Conformance & Benchmark Readiness
 
@@ -180,10 +182,12 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 27 (0 errors, 0 warnings, 27 info)
+**Total findings:** 28 (0 errors, 0 warnings, 28 info)
 
 ### 🔵 Info
 
+- **[I.PROV.NO_PI_SHUNT]** `linecode`  
+  All 7 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PRE.NO_VOLT_BOUNDS]** `bus`  
   152 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  

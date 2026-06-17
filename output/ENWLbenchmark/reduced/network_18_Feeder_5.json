@@ -2007,23 +2007,6 @@
       "bus": "368",
       "configuration": "SINGLE_PHASE"
     },
-    "der_849": {
-      "cost": [
-        0.000265697448
-      ],
-      "p_max": [
-        4000
-      ],
-      "p_min": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "849",
-      "configuration": "SINGLE_PHASE"
-    },
     "der_495": {
       "cost": [
         0.000246472524
@@ -2039,6 +2022,23 @@
         "n"
       ],
       "bus": "495",
+      "configuration": "SINGLE_PHASE"
+    },
+    "der_849": {
+      "cost": [
+        0.000265697448
+      ],
+      "p_max": [
+        4000
+      ],
+      "p_min": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "849",
       "configuration": "SINGLE_PHASE"
     },
     "der_897": {

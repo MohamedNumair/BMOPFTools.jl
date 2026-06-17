@@ -1,9 +1,9 @@
 # BMOPF Solution Profile: network_17_Feeder_2
 
-**Generated:** 2026-06-18 07:11:31  
+**Generated:** 2026-06-18 09:29:31  
 **Status:** `LOCALLY_SOLVED`  
 **Objective:** 4.6433  
-**Solve time:** 0.016 s  
+**Solve time:** 0.023 s  
 **Findings:** 0 errors · 2 warnings · 2 info  
 
 ---

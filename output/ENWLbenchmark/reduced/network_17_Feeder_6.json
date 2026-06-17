@@ -9505,23 +9505,6 @@
       "bus": "1584",
       "configuration": "SINGLE_PHASE"
     },
-    "der_2402": {
-      "cost": [
-        0.00036606037
-      ],
-      "p_max": [
-        4000
-      ],
-      "p_min": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "2402",
-      "configuration": "SINGLE_PHASE"
-    },
     "der_2881": {
       "cost": [
         0.000406573548
@@ -9537,6 +9520,23 @@
         "n"
       ],
       "bus": "2881",
+      "configuration": "SINGLE_PHASE"
+    },
+    "der_2402": {
+      "cost": [
+        0.00036606037
+      ],
+      "p_max": [
+        4000
+      ],
+      "p_min": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "2402",
       "configuration": "SINGLE_PHASE"
     },
     "der_3335": {

@@ -16,4 +16,4 @@ b2262 (SRC G1)
                     └── [SW]── b2032
 
 Generators (1 total):
-  G1 = slack_source     max    0.0 kW
+  G1 = slack_source     max    0.0 kW  terminals: 1,2,3

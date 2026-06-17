@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_23_Feeder_3
 
-**Generated:** 2026-06-16 19:48:07  
-**Findings:** 0 errors · 0 warnings · 5 info  
+**Generated:** 2026-06-18 09:28:22  
+**Findings:** 0 errors · 0 warnings · 7 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -14,8 +14,8 @@
 | line | 4 |  |
 | linecode | 3 |  |
 | voltage_source | 1 |  |
-| load | 2 | 2.3 kW, 747.0 var |
-| generator | 2 | capacity: 17.6 kW |
+| load | 2 | 2.274 kW, 747.0 var |
+| generator | 2 | capacity: 17.644 kW |
 | shunt | 1 |  |
 | switch | 0 |  |
 | transformer | 0 |  |
@@ -73,10 +73,12 @@
 
 | | Value |
 |--|-------|
-| Total load P | 2.3 kW |
+| Total load P | 2.274 kW |
 | Total load Q | 747.0 var |
-| Total gen capacity | 17.6 kW |
+| Total gen capacity | 17.644 kW |
 | Generation/load ratio | 775.9% |
+
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -121,6 +123,8 @@
 |------|------:|-------|------------|------------------:|---------------|
 | 240.0 V | 5 | 4-wire | solid | 0 | TN-S or TT (source-earthed only — protective-earth side not representable in the data model) |
 
+> 🔵 **[I.PROV.NO_PI_SHUNT]** All 3 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
+
 ## 8. Spec Conformance & Benchmark Readiness
 
 | Spec conformance | Value |
@@ -158,10 +162,14 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 5 (0 errors, 0 warnings, 5 info)
+**Total findings:** 7 (0 errors, 0 warnings, 7 info)
 
 ### 🔵 Info
 
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
+- **[I.PROV.NO_PI_SHUNT]** `linecode`  
+  All 3 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PRE.NO_VOLT_BOUNDS]** `bus`  
   5 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  

@@ -4944,57 +4944,6 @@
       "bus": "617",
       "configuration": "SINGLE_PHASE"
     },
-    "der_1360": {
-      "cost": [
-        0.000207982145
-      ],
-      "p_max": [
-        4000
-      ],
-      "p_min": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "1360",
-      "configuration": "SINGLE_PHASE"
-    },
-    "der_309": {
-      "cost": [
-        8.3903942e-5
-      ],
-      "p_max": [
-        4000
-      ],
-      "p_min": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "309",
-      "configuration": "SINGLE_PHASE"
-    },
-    "der_1349": {
-      "cost": [
-        0.000444396451
-      ],
-      "p_max": [
-        4000
-      ],
-      "p_min": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "1349",
-      "configuration": "SINGLE_PHASE"
-    },
     "der_1513": {
       "cost": [
         2.728749e-6
@@ -5027,6 +4976,57 @@
         "n"
       ],
       "bus": "1255",
+      "configuration": "SINGLE_PHASE"
+    },
+    "der_1349": {
+      "cost": [
+        0.000444396451
+      ],
+      "p_max": [
+        4000
+      ],
+      "p_min": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "1349",
+      "configuration": "SINGLE_PHASE"
+    },
+    "der_1360": {
+      "cost": [
+        0.000207982145
+      ],
+      "p_max": [
+        4000
+      ],
+      "p_min": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "1360",
+      "configuration": "SINGLE_PHASE"
+    },
+    "der_309": {
+      "cost": [
+        8.3903942e-5
+      ],
+      "p_max": [
+        4000
+      ],
+      "p_min": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "309",
       "configuration": "SINGLE_PHASE"
     },
     "der_1248": {
@@ -9064,19 +9064,6 @@
       "element_id": "line1544"
     },
     {
-      "message": "Merged line line556 (9.6137 m) into line544 at pass-through bus 545; new length 14.9783 m.",
-      "detail": {
-        "new_length": 14.9783,
-        "absorbed_line": "line556",
-        "removed_bus": "545"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line544"
-    },
-    {
       "message": "Merged line line1614 (0.20243 m) into line1618 at pass-through bus 1615; new length 0.72303 m.",
       "detail": {
         "new_length": 0.72303,
@@ -9101,6 +9088,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line3"
+    },
+    {
+      "message": "Merged line line556 (9.6137 m) into line544 at pass-through bus 545; new length 14.9783 m.",
+      "detail": {
+        "new_length": 14.9783,
+        "absorbed_line": "line556",
+        "removed_bus": "545"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line544"
     },
     {
       "message": "Merged line line80 (5.6513 m) into line84 at pass-through bus 81; new length 5.96052 m.",
@@ -12069,19 +12069,6 @@
       "element_id": "line231"
     },
     {
-      "message": "Merged line line413 (0.63572 m) into line406 at pass-through bus 407; new length 5.3779200000000005 m.",
-      "detail": {
-        "new_length": 5.3779200000000005,
-        "absorbed_line": "line413",
-        "removed_bus": "407"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line406"
-    },
-    {
       "message": "Merged line line1652 (0.84881 m) into line1647 at pass-through bus 1648; new length 1.18879 m.",
       "detail": {
         "new_length": 1.18879,
@@ -12093,6 +12080,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line1647"
+    },
+    {
+      "message": "Merged line line413 (0.63572 m) into line406 at pass-through bus 407; new length 5.3779200000000005 m.",
+      "detail": {
+        "new_length": 5.3779200000000005,
+        "absorbed_line": "line413",
+        "removed_bus": "407"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line406"
     },
     {
       "message": "Merged line line53 (1.1793 m) into line54 at pass-through bus 54; new length 11.8507 m.",

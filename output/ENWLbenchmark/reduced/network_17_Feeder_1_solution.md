@@ -1,9 +1,9 @@
 # BMOPF Solution Profile: network_17_Feeder_1
 
-**Generated:** 2026-06-18 07:11:31  
+**Generated:** 2026-06-18 09:29:31  
 **Status:** `LOCALLY_SOLVED`  
 **Objective:** 20.8983  
-**Solve time:** 1.787 s  
+**Solve time:** 2.673 s  
 **Findings:** 0 errors · 48 warnings · 2 info  
 
 ---
@@ -52,9 +52,9 @@
 | W | `der_1530` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_2729` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_232` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_560` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_968` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_2586` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
+| W | `der_968` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
+| W | `der_560` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_2712` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_1741` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
 | W | `der_1486` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
@@ -126,12 +126,12 @@
   Generator 'der_2729' phase '1': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_232`  
   Generator 'der_232' phase '2': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_560`  
-  Generator 'der_560' phase '2': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_968`  
-  Generator 'der_968' phase '1': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_2586`  
   Generator 'der_2586' phase '2': pg=4.0 kW is within 1 % of its bound (active).
+- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_968`  
+  Generator 'der_968' phase '1': pg=4.0 kW is within 1 % of its bound (active).
+- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_560`  
+  Generator 'der_560' phase '2': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_2712`  
   Generator 'der_2712' phase '2': pg=4.0 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1741`  

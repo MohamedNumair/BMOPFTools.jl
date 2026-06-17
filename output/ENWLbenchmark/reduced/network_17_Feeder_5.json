@@ -7525,6 +7525,40 @@
       "bus": "1677",
       "configuration": "SINGLE_PHASE"
     },
+    "der_2587": {
+      "cost": [
+        0.000157123213
+      ],
+      "p_max": [
+        4000
+      ],
+      "p_min": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "2587",
+      "configuration": "SINGLE_PHASE"
+    },
+    "der_1742": {
+      "cost": [
+        2.6850128e-5
+      ],
+      "p_max": [
+        4000
+      ],
+      "p_min": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "1742",
+      "configuration": "SINGLE_PHASE"
+    },
     "der_2436": {
       "cost": [
         0.000212593194
@@ -7574,40 +7608,6 @@
         "n"
       ],
       "bus": "1637",
-      "configuration": "SINGLE_PHASE"
-    },
-    "der_2587": {
-      "cost": [
-        0.000157123213
-      ],
-      "p_max": [
-        4000
-      ],
-      "p_min": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "2587",
-      "configuration": "SINGLE_PHASE"
-    },
-    "der_1742": {
-      "cost": [
-        2.6850128e-5
-      ],
-      "p_max": [
-        4000
-      ],
-      "p_min": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "1742",
       "configuration": "SINGLE_PHASE"
     },
     "der_2726": {

@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV17_279bus
 
-**Generated:** 2026-06-17 17:57:10  
-**Findings:** 0 errors · 4 warnings · 15 info  
+**Generated:** 2026-06-18 09:40:09  
+**Findings:** 0 errors · 4 warnings · 18 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 143 grounding point(s)
 
 ---
@@ -89,6 +89,9 @@
 
 > 🟡 **[W.OPS.IMPORT_DEPENDENT]** Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (1.41 MW).
 > 🟡 **[W.OPS.XFMR_OVERLOADED]** Transformer 'tx269' is at 315.3% utilisation at nominal load — little OPF headroom.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b3309' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b3309' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b3309' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -184,7 +187,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 19 (0 errors, 4 warnings, 15 info)
+**Total findings:** 22 (0 errors, 4 warnings, 18 info)
 
 ### 🟡 Warnings
 
@@ -203,6 +206,12 @@
   Load p_nom has very low coefficient of variation (0.0) — all loads nearly identical.
 - **[I.DIV.LINE_SYMMETRIC]** `line`  
   3 lines share linecode 'generic/lv' with similar length (±10%) — electrically near-identical.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b3309' has no load connected to phase terminal '1'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b3309' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b3309' has no load connected to phase terminal '3'.
 - **[I.PROV.B_OFFDIAG]** `abc4x95_lv_oh_4w_bundled`  
   Linecode 'abc4x95_lv_oh_4w_bundled' B_from_block has positive mutual susceptance — deviates from the Maxwell sign pattern; typical of screen-eliminated/bundled cable reductions, otherwise a sign-convention suspect.
 - **[I.PROV.B_OFFDIAG]** `abc4x95_lv_oh_4w_bundled`  

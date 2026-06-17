@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV14_13bus
 
-**Generated:** 2026-06-17 17:57:10  
-**Findings:** 0 errors · 1 warnings · 12 info  
+**Generated:** 2026-06-18 09:40:08  
+**Findings:** 0 errors · 1 warnings · 18 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; implicit (Kron-style) grounding
 
 ---
@@ -68,6 +68,13 @@
 | ID | Rating | Loading (est.) |
 |----|--------|---------------:|
 | tx381 | 1.0 MVA | 0.0% |
+
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2262' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2262' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2262' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1163' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1163' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1163' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -162,7 +169,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 13 (0 errors, 1 warnings, 12 info)
+**Total findings:** 19 (0 errors, 1 warnings, 18 info)
 
 ### 🟡 Warnings
 
@@ -171,6 +178,18 @@
 
 ### 🔵 Info
 
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b2262' has no load connected to phase terminal '1'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b2262' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b2262' has no load connected to phase terminal '3'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1163' has no load connected to phase terminal '1'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1163' has no load connected to phase terminal '2'.
+- **[I.OPR.UNLOADED_PHASE]** `network`  
+  Galvanic zone anchored at bus 'b1163' has no load connected to phase terminal '3'.
 - **[I.PROV.B_OFFDIAG]** `abc4x95_lv_oh_4w_bundled`  
   Linecode 'abc4x95_lv_oh_4w_bundled' B_from_block has positive mutual susceptance — deviates from the Maxwell sign pattern; typical of screen-eliminated/bundled cable reductions, otherwise a sign-convention suspect.
 - **[I.PROV.B_OFFDIAG]** `abc4x95_lv_oh_4w_bundled`  

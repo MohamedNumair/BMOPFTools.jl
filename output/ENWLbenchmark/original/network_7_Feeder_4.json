@@ -31473,9 +31473,9 @@
       "bus": "316",
       "configuration": "SINGLE_PHASE"
     },
-    "der_1499": {
+    "der_1360": {
       "cost": [
-        0.000174197583
+        0.000237038199
       ],
       "p_max": [
         4000
@@ -31484,10 +31484,10 @@
         0
       ],
       "terminal_map": [
-        "2",
+        "1",
         "n"
       ],
-      "bus": "1499",
+      "bus": "1360",
       "configuration": "SINGLE_PHASE"
     },
     "der_1000": {
@@ -31507,9 +31507,9 @@
       "bus": "1000",
       "configuration": "SINGLE_PHASE"
     },
-    "der_1360": {
+    "der_1499": {
       "cost": [
-        0.000237038199
+        0.000174197583
       ],
       "p_max": [
         4000
@@ -31518,10 +31518,10 @@
         0
       ],
       "terminal_map": [
-        "1",
+        "2",
         "n"
       ],
-      "bus": "1360",
+      "bus": "1499",
       "configuration": "SINGLE_PHASE"
     },
     "der_1296": {

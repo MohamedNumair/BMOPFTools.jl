@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_21_Feeder_5
 
-**Generated:** 2026-06-16 19:48:05  
-**Findings:** 0 errors · 0 warnings · 11 info  
+**Generated:** 2026-06-18 09:28:19  
+**Findings:** 0 errors · 0 warnings · 12 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -14,8 +14,8 @@
 | line | 60 |  |
 | linecode | 4 |  |
 | voltage_source | 1 |  |
-| load | 27 | 24.0 kW, 7.9 kvar |
-| generator | 8 | capacity: 171.8 kW |
+| load | 27 | 23.97 kW, 7.9 kvar |
+| generator | 8 | capacity: 171.82 kW |
 | shunt | 1 |  |
 | switch | 0 |  |
 | transformer | 0 |  |
@@ -73,9 +73,9 @@
 
 | | Value |
 |--|-------|
-| Total load P | 24.0 kW |
+| Total load P | 23.97 kW |
 | Total load Q | 7.9 kvar |
-| Total gen capacity | 171.8 kW |
+| Total gen capacity | 171.82 kW |
 | Generation/load ratio | 716.8% |
 
 ## 6. Infeasibility Pre-flight
@@ -121,6 +121,8 @@
 |------|------:|-------|------------|------------------:|---------------|
 | 240.0 V | 61 | 4-wire | solid | 0 | TN-S or TT (source-earthed only — protective-earth side not representable in the data model) |
 
+> 🔵 **[I.PROV.NO_PI_SHUNT]** All 4 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
+
 ## 8. Spec Conformance & Benchmark Readiness
 
 | Spec conformance | Value |
@@ -164,10 +166,12 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 11 (0 errors, 0 warnings, 11 info)
+**Total findings:** 12 (0 errors, 0 warnings, 12 info)
 
 ### 🔵 Info
 
+- **[I.PROV.NO_PI_SHUNT]** `linecode`  
+  All 4 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PRE.NO_VOLT_BOUNDS]** `bus`  
   61 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  

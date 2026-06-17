@@ -1375,23 +1375,6 @@
       "bus": "sourcebus",
       "configuration": "WYE"
     },
-    "der_95": {
-      "cost": [
-        0.000473226613
-      ],
-      "p_max": [
-        4000
-      ],
-      "p_min": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "95",
-      "configuration": "SINGLE_PHASE"
-    },
     "der_96": {
       "cost": [
         0.000285793189
@@ -1407,6 +1390,23 @@
         "n"
       ],
       "bus": "96",
+      "configuration": "SINGLE_PHASE"
+    },
+    "der_95": {
+      "cost": [
+        0.000473226613
+      ],
+      "p_max": [
+        4000
+      ],
+      "p_min": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "95",
       "configuration": "SINGLE_PHASE"
     },
     "der_127": {
@@ -1491,15 +1491,15 @@
       "element_id": "line28"
     },
     {
-      "message": "Removed dangling line line152 and its leaf bus 153 (leaf has no active elements).",
+      "message": "Removed dangling line line2 and its leaf bus 3 (leaf has no active elements).",
       "detail": {
-        "removed_bus": "153"
+        "removed_bus": "3"
       },
       "severity": "info",
       "operation": "remove_dangling_lines",
       "code": "LINE_REMOVED",
       "element_type": "line",
-      "element_id": "line152"
+      "element_id": "line2"
     },
     {
       "message": "Removed dangling line line40 and its leaf bus 41 (leaf has no active elements).",
@@ -1513,15 +1513,15 @@
       "element_id": "line40"
     },
     {
-      "message": "Removed dangling line line2 and its leaf bus 3 (leaf has no active elements).",
+      "message": "Removed dangling line line152 and its leaf bus 153 (leaf has no active elements).",
       "detail": {
-        "removed_bus": "3"
+        "removed_bus": "153"
       },
       "severity": "info",
       "operation": "remove_dangling_lines",
       "code": "LINE_REMOVED",
       "element_type": "line",
-      "element_id": "line2"
+      "element_id": "line152"
     },
     {
       "message": "Removed dangling line line64 and its leaf bus 65 (leaf has no active elements).",
@@ -3213,7 +3213,7 @@
       "vpn_min": 216.159941,
       "vpn_max": 264.195483
     },
-    "132": {
+    "105": {
       "terminal_names": [
         "1",
         "2",
@@ -3223,7 +3223,7 @@
       "vpn_min": 216.159941,
       "vpn_max": 264.195483
     },
-    "105": {
+    "132": {
       "terminal_names": [
         "1",
         "2",
