@@ -3,7 +3,7 @@
 # Index conventions:
 #   vr/vi        : Dict{Tuple{String,String}, VariableRef}  (bus_id, terminal)
 #   cr_fr/ci_fr  : Dict{Tuple{String,Int},    VariableRef}  (line_id, conductor_pos)
-#   cr_to/ci_to  : same
+#   cr_to/ci_to  : Dict{Tuple{String,Int},    AffExpr}      (line_id, conductor_pos) = -cr_fr / -ci_fr
 #   crd/cid      : Dict{Tuple{String,Int},    VariableRef}  (load_id, conductor_pos)
 #   crg/cig      : Dict{Tuple{String,Int},    VariableRef}  (gen_id,  conductor_pos)
 #   cr_src/ci_src: Dict{Tuple{String,Int},    VariableRef}  (src_id,  conductor_pos)
@@ -32,22 +32,25 @@ function _add_voltage_variables!(model, bus_terminals, grounded)
     vr, vi
 end
 
-"Declare `cr_fr`/`ci_fr` and `cr_to`/`ci_to` series current variables for each line conductor."
+"Declare `cr_fr`/`ci_fr` series current variables for each line conductor.
+`cr_to`/`ci_to` are returned as `AffExpr` aliases equal to `-cr_fr` — there
+is only one independent series current per branch."
 function _add_line_variables!(model, net)
     cr_fr = Dict{Tuple{String,Int}, JuMP.VariableRef}()
     ci_fr = Dict{Tuple{String,Int}, JuMP.VariableRef}()
-    cr_to = Dict{Tuple{String,Int}, JuMP.VariableRef}()
-    ci_to = Dict{Tuple{String,Int}, JuMP.VariableRef}()
+    cr_to = Dict{Tuple{String,Int}, JuMP.AffExpr}()
+    ci_to = Dict{Tuple{String,Int}, JuMP.AffExpr}()
 
     for (lid, line) in get(net, "line", Dict())
         n_c = length(get(line, "terminal_map_from", String[]))
         for k in 1:n_c
             cr_fr[(lid,k)] = @variable(model, base_name = "cr_fr_$(lid)_$(k)")
             ci_fr[(lid,k)] = @variable(model, base_name = "ci_fr_$(lid)_$(k)")
-            cr_to[(lid,k)] = @variable(model, base_name = "cr_to_$(lid)_$(k)")
-            ci_to[(lid,k)] = @variable(model, base_name = "ci_to_$(lid)_$(k)")
+            cr_to[(lid,k)] = JuMP.AffExpr(0.0, cr_fr[(lid,k)] => -1.0)
+            ci_to[(lid,k)] = JuMP.AffExpr(0.0, ci_fr[(lid,k)] => -1.0)
         end
     end
+
     cr_fr, ci_fr, cr_to, ci_to
 end
 
@@ -242,11 +245,7 @@ function _set_level_aware_start_values!(vars, net, bus_terminals, grounded)
     end
 end
 
-"""
-    _build_vars(model, net, bus_terminals, grounded) -> Dict{Symbol,Any}
-
-Declare all JuMP variables and return them in a single dict.
-"""
+"Declare all JuMP variables and return them in a single dict."
 function _build_vars(model, net, bus_terminals, grounded)
     vr,    vi    = _add_voltage_variables!(model, bus_terminals, grounded)
     cr_fr, ci_fr,

@@ -62,8 +62,10 @@ function _classify_linecodes(net::Dict{String,Any},
     linecodes = get(net, "linecode", Dict())
     by_lc = Dict{String,Any}()
     verdict_counts = Dict{String,Int}()
-    seq_ids = String[]
-    dec_ids = String[]
+    seq_ids   = String[]
+    dec_ids   = String[]
+    no_shunt_ids  = String[]   # linecodes with all-zero/absent π-shunt admittance
+    has_shunt_ids = String[]   # linecodes with at least one non-zero shunt entry
 
     for (id, lc) in linecodes
         lc isa Dict || continue
@@ -218,6 +220,19 @@ function _classify_linecodes(net::Dict{String,Any},
 
         verdict_counts[entry["verdict"]] = get(verdict_counts, entry["verdict"], 0) + 1
         by_lc[id] = entry
+
+        # π-shunt presence tracking: keys present but all-zero counts as no shunt
+        shunt_present = any(
+            begin
+                M = _pattern_keys_to_matrix(lc, p)
+                M isa AbstractMatrix && any(!=(0.0), M)
+            end
+            for p in ("G_from_", "B_from_", "G_to_", "B_to_"))
+        if shunt_present
+            push!(has_shunt_ids, id)
+        else
+            push!(no_shunt_ids, id)
+        end
     end
 
     if !isempty(seq_ids)
@@ -237,6 +252,24 @@ function _classify_linecodes(net::Dict{String,Any},
             "phases decouple into independent single-phase networks: " *
             "$(join(sort(dec_ids), ", ")).",
             Dict{String,Any}("linecodes" => sort(dec_ids))))
+    end
+    if !isempty(no_shunt_ids) && isempty(has_shunt_ids)
+        push!(findings, Finding(INFO, "I.PROV.NO_PI_SHUNT", :provenance,
+            :linecode, nothing,
+            "All $(length(no_shunt_ids)) linecode(s) have no π-shunt admittance " *
+            "(G_from/B_from/G_to/B_to absent or zero) — the line model reduces " *
+            "to a series impedance only. Shunt capacitance is typically negligible " *
+            "for short LV cables but may be significant for long MV/HV lines.",
+            Dict{String,Any}("linecodes" => sort(no_shunt_ids))))
+    elseif !isempty(no_shunt_ids)
+        push!(findings, Finding(INFO, "I.PROV.PARTIAL_PI_SHUNT", :provenance,
+            :linecode, nothing,
+            "$(length(no_shunt_ids)) of $(length(no_shunt_ids) + length(has_shunt_ids)) " *
+            "linecode(s) have no π-shunt admittance — mixed model: some lines are " *
+            "series-only, others include shunt capacitance/conductance: " *
+            "$(join(sort(no_shunt_ids), ", ")).",
+            Dict{String,Any}("linecodes_without_shunt" => sort(no_shunt_ids),
+                             "linecodes_with_shunt"    => sort(has_shunt_ids))))
     end
 
     Dict{String,Any}("by_linecode" => by_lc, "verdict_counts" => verdict_counts)
