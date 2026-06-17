@@ -1742,6 +1742,197 @@ const IEEE13_FIXTURE = """
     end
 
     # --------------------------------------------------------------------------
+    # New analysis findings — self-loop, unloaded phase, PF default, spec semantics
+    # --------------------------------------------------------------------------
+
+    # Minimal 3-bus helper for semantic spec checks
+    _spec_net(extra="") = parse_bmopf("""
+    {"bus":{
+        "src":{"terminal_names":["a","b","c","n"],"perfectly_grounded_terminals":["n"]},
+        "b1": {"terminal_names":["a","b","c","n"],"perfectly_grounded_terminals":["n"]}},
+     "voltage_source":{"vs":{"bus":"src","terminal_map":["a","b","c"],
+         "v_magnitude":[11000.0,11000.0,11000.0],"v_angle":[0.0,-2.094,-4.189]}},
+     "linecode":{"lc":{"R_series_1_1":0.1,"R_series_2_2":0.1,"R_series_3_3":0.1}},
+     "line":{"l1":{"bus_from":"src","bus_to":"b1",
+         "terminal_map_from":["a","b","c"],"terminal_map_to":["a","b","c"],
+         "linecode":"lc","length":100.0}},
+     "load":{"ld1":{"bus":"b1","terminal_map":["a","n"],
+         "configuration":"SINGLE_PHASE","p_nom":[1e4],"q_nom":[0.0]}}
+     $extra}
+    """; from_string=true)
+
+    @testset "Connectivity — E.CONN.SELF_LOOP on line" begin
+        net = _spec_net()
+        net["line"]["loop"] = Dict{String,Any}(
+            "bus_from" => "b1", "bus_to" => "b1",
+            "terminal_map_from" => ["a"], "terminal_map_to" => ["a"],
+            "linecode" => "lc", "length" => 0.0)
+        findings = Finding[]
+        connectivity_analysis(net, findings)
+        @test any(f -> f.code == "E.CONN.SELF_LOOP" && f.component_id == "loop", findings)
+    end
+
+    @testset "Connectivity — E.CONN.SELF_LOOP on switch" begin
+        net = _spec_net()
+        net["switch"] = Dict{String,Any}(
+            "sw_loop" => Dict{String,Any}(
+                "bus_from" => "b1", "bus_to" => "b1",
+                "terminal_map_from" => ["a"], "terminal_map_to" => ["a"],
+                "open_switch" => false))
+        findings = Finding[]
+        connectivity_analysis(net, findings)
+        @test any(f -> f.code == "E.CONN.SELF_LOOP" && f.component_id == "sw_loop", findings)
+    end
+
+    @testset "Connectivity — no self-loop on normal line" begin
+        net = _spec_net()
+        findings = Finding[]
+        connectivity_analysis(net, findings)
+        @test !any(f -> f.code == "E.CONN.SELF_LOOP", findings)
+    end
+
+    @testset "Operational — I.OPR.UNLOADED_PHASE: phase without load" begin
+        # b1 has phases a,b,c,n — only phase a has a load
+        net = _spec_net()
+        findings = Finding[]
+        result = operational_analysis(net, findings)
+        # phases b and c are unloaded
+        unloaded = [f for f in findings if f.code == "I.OPR.UNLOADED_PHASE"]
+        terminals = Set(f.detail["terminal"] for f in unloaded)
+        @test "b" in terminals
+        @test "c" in terminals
+        @test !("a" in terminals)
+        @test result["unloaded_phase_findings"] >= 2
+    end
+
+    @testset "Operational — no I.OPR.UNLOADED_PHASE when all phases loaded" begin
+        # Start from base net and manually add b/c loads so the "load" key merges
+        net = _spec_net()
+        net["load"]["ld_b"] = Dict{String,Any}(
+            "bus" => "b1", "terminal_map" => ["b","n"],
+            "configuration" => "SINGLE_PHASE",
+            "p_nom" => [1e4], "q_nom" => [0.0])
+        net["load"]["ld_c"] = Dict{String,Any}(
+            "bus" => "b1", "terminal_map" => ["c","n"],
+            "configuration" => "SINGLE_PHASE",
+            "p_nom" => [1e4], "q_nom" => [0.0])
+        findings = Finding[]
+        result = operational_analysis(net, findings)
+        @test !any(f -> f.code == "I.OPR.UNLOADED_PHASE", findings)
+        @test result["unloaded_phase_findings"] == 0
+    end
+
+    @testset "Diversity — I.DIV.LOAD_PF_DSS_DEFAULT near 0.88" begin
+        net = parse_bmopf(IEEE13_FIXTURE; from_string=true)
+        # Force all loads to PF=0.88 (p=0.88, q=√(1-0.88²)=0.475)
+        for (_, l) in net["load"]
+            n = length(get(l, "p_nom", [0.0]))
+            l["p_nom"] = fill(880.0, n)
+            l["q_nom"] = fill(475.0, n)
+        end
+        findings = Finding[]
+        diversity_analysis(net, findings)
+        @test any(f -> f.code == "I.DIV.LOAD_PF_DSS_DEFAULT", findings)
+    end
+
+    @testset "Diversity — no I.DIV.LOAD_PF_DSS_DEFAULT when PF is varied" begin
+        net = parse_bmopf(IEEE13_FIXTURE; from_string=true)
+        findings = Finding[]
+        diversity_analysis(net, findings)
+        # IEEE13 loads have diverse PF values — should not trigger
+        @test !any(f -> f.code == "I.DIV.LOAD_PF_DSS_DEFAULT", findings)
+    end
+
+    @testset "Spec — E.SPEC.DUPLICATE_TERMINAL in load" begin
+        # WYE needs 4 terminals; supply 4 but with a duplicate phase so
+        # arity is satisfied and the duplicate check fires
+        net = _spec_net(""","load":{"bad":{"bus":"b1",
+            "terminal_map":["a","a","c","n"],
+            "configuration":"WYE",
+            "p_nom":[1e4,1e4,1e4],"q_nom":[0.0,0.0,0.0]}}""")
+        findings = Finding[]
+        spec_conformance_check(net, findings)
+        @test any(f -> f.code == "E.SPEC.DUPLICATE_TERMINAL" &&
+                       f.component_id == "bad", findings)
+    end
+
+    @testset "Spec — I.SPEC.LOAD_PHASE_TO_PHASE: both terminals are phase" begin
+        net = _spec_net(""","load":{"pp":{"bus":"b1",
+            "terminal_map":["a","b"],
+            "configuration":"SINGLE_PHASE",
+            "p_nom":[1e4],"q_nom":[0.0]}}""")
+        findings = Finding[]
+        spec_conformance_check(net, findings)
+        @test any(f -> f.code == "I.SPEC.LOAD_PHASE_TO_PHASE" &&
+                       f.component_id == "pp", findings)
+    end
+
+    @testset "Spec — I.SPEC.LOAD_PHASE_TO_PHASE not raised for phase-to-neutral" begin
+        net = _spec_net()   # ld1 is ["a","n"] — phase-to-neutral
+        findings = Finding[]
+        spec_conformance_check(net, findings)
+        @test !any(f -> f.code == "I.SPEC.LOAD_PHASE_TO_PHASE" &&
+                        f.component_id == "ld1", findings)
+    end
+
+    @testset "Spec — E.SPEC.WYE_MISSING_NEUTRAL: last terminal not neutral" begin
+        net = _spec_net(""","load":{"wye_bad":{"bus":"b1",
+            "terminal_map":["a","b","c","a"],
+            "configuration":"WYE",
+            "p_nom":[1e4,1e4,1e4],"q_nom":[0.0,0.0,0.0]}}""")
+        findings = Finding[]
+        spec_conformance_check(net, findings)
+        @test any(f -> f.code == "E.SPEC.WYE_MISSING_NEUTRAL" &&
+                       f.component_id == "wye_bad", findings)
+    end
+
+    @testset "Spec — E.SPEC.WYE_DUPLICATE_PHASE: duplicate phase in WYE" begin
+        net = _spec_net(""","load":{"wye_dup":{"bus":"b1",
+            "terminal_map":["a","a","c","n"],
+            "configuration":"WYE",
+            "p_nom":[1e4,1e4,1e4],"q_nom":[0.0,0.0,0.0]}}""")
+        findings = Finding[]
+        spec_conformance_check(net, findings)
+        @test any(f -> f.code == "E.SPEC.WYE_DUPLICATE_PHASE" &&
+                       f.component_id == "wye_dup", findings)
+    end
+
+    @testset "Spec — E.SPEC.DELTA_HAS_NEUTRAL: neutral terminal in DELTA" begin
+        net = _spec_net(""","load":{"delta_bad":{"bus":"b1",
+            "terminal_map":["a","n","c"],
+            "configuration":"DELTA",
+            "p_nom":[1e4,1e4,1e4],"q_nom":[0.0,0.0,0.0]}}""")
+        findings = Finding[]
+        spec_conformance_check(net, findings)
+        @test any(f -> f.code == "E.SPEC.DELTA_HAS_NEUTRAL" &&
+                       f.component_id == "delta_bad", findings)
+    end
+
+    @testset "Spec — E.SPEC.DELTA_DUPLICATE_PHASE: duplicate phase in DELTA" begin
+        net = _spec_net(""","load":{"delta_dup":{"bus":"b1",
+            "terminal_map":["a","a","c"],
+            "configuration":"DELTA",
+            "p_nom":[1e4,1e4,1e4],"q_nom":[0.0,0.0,0.0]}}""")
+        findings = Finding[]
+        spec_conformance_check(net, findings)
+        @test any(f -> f.code == "E.SPEC.DELTA_DUPLICATE_PHASE" &&
+                       f.component_id == "delta_dup", findings)
+    end
+
+    @testset "Spec — E.SPEC.DUPLICATE_TERMINAL in line terminal_map_from" begin
+        net = _spec_net()
+        net["line"]["bad_l"] = Dict{String,Any}(
+            "bus_from" => "src", "bus_to" => "b1",
+            "terminal_map_from" => ["a","a","c"],
+            "terminal_map_to"   => ["a","b","c"],
+            "linecode" => "lc", "length" => 50.0)
+        findings = Finding[]
+        spec_conformance_check(net, findings)
+        @test any(f -> f.code == "E.SPEC.DUPLICATE_TERMINAL" &&
+                       f.component_id == "bad_l", findings)
+    end
+
+    # --------------------------------------------------------------------------
     # LV1_14bus — real OpenDSS network integration test
     # Requires PowerModelsDistribution; skipped if not in the active load path.
     # To run with PMD: cd .. && julia --project=. -e '
