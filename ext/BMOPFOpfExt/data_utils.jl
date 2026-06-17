@@ -57,27 +57,9 @@ function _line_z_matrix(line::Dict{String,Any}, linecodes::Dict{String,Any})
     (R_pm .* len, X_pm .* len, n)
 end
 
-"""
-    _neutral_pos(terminal_map) -> Union{Int,Nothing}
-
-Return the 1-based position of the neutral terminal in `terminal_map`,
-or `nothing` if none is identified.
-"""
-function _neutral_pos(terminal_map::Vector{String})
-    nt = BMOPFTools._neutral_terminal(terminal_map)
-    nt === nothing && return nothing
-    findfirst(==(nt), terminal_map)
-end
-
-"""
-    _phase_positions(terminal_map) -> Vector{Int}
-
-Return the 1-based positions of the non-neutral conductors in `terminal_map`.
-"""
-function _phase_positions(terminal_map::Vector{String})
-    np = _neutral_pos(terminal_map)
-    [k for k in eachindex(terminal_map) if k != np]
-end
+# _neutral_pos and _phase_positions live in BMOPFTools core; alias locally.
+const _neutral_pos    = BMOPFTools._neutral_pos
+const _phase_positions = BMOPFTools._phase_positions
 
 """
     _source_fixed_terminals(net) -> Set{Tuple{String,String}}
