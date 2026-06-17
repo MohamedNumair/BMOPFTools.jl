@@ -1886,6 +1886,11 @@ const IEEE13_FIXTURE = """
     include("simplify_tests.jl")
 
     # -----------------------------------------------------------------------
+    # Solution profiling — no solver required
+    # -----------------------------------------------------------------------
+    include("solution_profiling_tests.jl")
+
+    # -----------------------------------------------------------------------
     # OPF extension — requires JuMP and Ipopt
     # -----------------------------------------------------------------------
     @testset "OPF extension" begin

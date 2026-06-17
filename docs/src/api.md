@@ -11,6 +11,7 @@ BMOPFTools
 ```@docs
 Finding
 SummaryReport
+SolutionReport
 Severity
 ERROR
 WARNING
@@ -39,6 +40,7 @@ get_snapshot
 ```@docs
 from_pmd
 to_pmd
+from_dss
 ```
 
 ## Top-level analysis and rendering
@@ -49,6 +51,24 @@ render
 render_terminal
 render_markdown
 render_ascii_tree
+```
+
+## Solution profiling
+
+```@docs
+profile_solution
+render_solution
+solution_check
+```
+
+## Network simplification
+
+```@docs
+simplify_network
+merge_series_lines
+remove_dangling_lines
+remove_open_switches
+collapse_closed_switches
 ```
 
 ## Analysis passes

@@ -6,22 +6,26 @@ the IEEE Task Force on *Benchmarking Multiconductor OPF for Distribution
 Systems* for up-to-four-wire optimal power flow (OPF) benchmarks
 ([ref. 1](methodology.md#refs)).
 
-The library serves two audiences:
+The library serves three use cases:
 
 - **Dataset producers** converting utility-derived OpenDSS models into
-  clean, spec-conformant BMOPF JSON benchmark cases, and
+  clean, spec-conformant BMOPF JSON benchmark cases,
 - **dataset consumers** who want to understand exactly what a case contains
   — its modeling conventions, hidden assumptions, data-quality issues and
-  OPF-readiness — before building optimization models on it.
+  OPF-readiness — before building optimization models on it, and
+- **optimization practitioners** who, given a solved BMOPF case and an OPF
+  result dict, want to flag bound violations, near-active constraints,
+  constraint residuals, and solution-quality issues without access to solver
+  internals.
 
 ## Design
 
 The network data model is a plain `Dict{String,Any}` mirroring the BMOPF
 JSON structure exactly. There are deliberately no wrapper types: data flows
 to and from JSON and PowerModelsDistribution without conversion layers, and
-the only structs in the library are the *outputs* — [`Finding`](@ref) and
-[`SummaryReport`](@ref) — which need stable shape for rendering and
-programmatic use.
+the only structs in the library are the *outputs* — [`Finding`](@ref),
+[`SummaryReport`](@ref), and [`SolutionReport`](@ref) — which need stable
+shape for rendering and programmatic use.
 
 Every diagnostic is a `Finding` with a **stable dot-separated code**
 (`E.`/`W.`/`I.` for error/warning/info) — see the
@@ -46,6 +50,22 @@ report.results[:provenance]["convention"]
 report.results[:benchmark]["suggestions"]
 ```
 
+Profiling an OPF result dict (requires `solve_opf` or any compatible solver):
+
+```julia
+using BMOPFTools, JuMP, Ipopt
+
+net    = parse_bmopf("case.json")
+result = solve_opf(net; optimizer=Ipopt.Optimizer)
+
+report = profile_solution(net, result)
+render_solution(report, stdout)              # Markdown to terminal
+render_solution(report, "solution.md")      # Markdown file
+
+errors(report)     # bound violations and infeasibility findings
+warnings(report)   # near-active bounds and residual warnings
+```
+
 Converting from OpenDSS via PowerModelsDistribution (PMD must be available
 in the active environment — it is *not* a dependency of BMOPFTools):
 
@@ -65,9 +85,12 @@ OpenDSS .dss ──(PMD parse_file)──► ENGINEERING dict
                                         │  from_pmd
                                         ▼
   BMOPF JSON ◄── write_bmopf ── BMOPF Dict{String,Any} ── to_pmd ──► PMD
-                                        │  analyze
-                                        ▼
-                                 SummaryReport ──► render
+                                        │  analyze              │  solve_opf
+                                        ▼                       ▼
+                                 SummaryReport          result Dict{String,Any}
+                                        │                       │  profile_solution
+                                        ▼                       ▼
+                                     render              SolutionReport ──► render_solution
 ```
 
 `analyze` runs fourteen passes (see [Analysis & reports](analysis.md)) and
@@ -83,8 +106,8 @@ normalisations) so the case's assumptions are explicit rather than implied.
   `from_pmd`/`to_pmd`, with the impedance-base formulas.
 - [Analysis & reports](analysis.md) — what each pass computes and how to
   read the report.
-- [Finding-code reference](findings.md) — all 80 codes, with triggers and
-  rationale.
+- [Finding-code reference](findings.md) — complete catalogue of finding codes,
+  with triggers and rationale.
 - [Methodology notes](methodology.md) — the physics and linear algebra
   behind the provenance checks, with literature references.
 - [API reference](api.md).
