@@ -16,9 +16,10 @@ Variables (all rectangular, SI units — V and A):
 - `cr_xf / ci_xf` — transformer branch current (from- and to-side)
 - `cr_sw / ci_sw` — switch current (zeroed when open)
 
-The to-side series current `cr_to = −cr_fr` is an `AffExpr`, not a variable.
-The total branch current at each end (series + π-shunt) is also an `AffExpr`
-in `cr_fr` and `vr`/`vi`, substituted directly into KCL and thermal limits.
+The to-side series currents `cr_to = −cr_fr` and `ci_to = −ci_fr` are
+`AffExpr`s, not variables. The total branch current at each end
+(series + π-shunt) is likewise an `AffExpr` in `cr_fr`/`ci_fr` and
+`vr`/`vi`, substituted directly into KCL and thermal limits.
 
 KCL sign convention: positive current flows **into** the bus.  Every component
 function adds its contribution to the KCL accumulator dicts `(kcl_r, kcl_i)`;
