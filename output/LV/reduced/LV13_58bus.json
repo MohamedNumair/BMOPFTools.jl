@@ -216,8 +216,7 @@
       "terminal_map": [
         "1",
         "2",
-        "3",
-        "n"
+        "3"
       ],
       "bus": "b1504",
       "configuration": "WYE"
@@ -733,16 +732,16 @@
       "element_id": "switch_1078_closed"
     },
     {
-      "message": "Collapsed closed switch switch_2037_closed: bus b1587 merged into b1323.",
+      "message": "Collapsed closed switch switch_2474_closed: bus b1564 merged into b136.",
       "detail": {
-        "bus_to_absorbed": "b1587",
-        "bus_from": "b1323"
+        "bus_to_absorbed": "b1564",
+        "bus_from": "b136"
       },
       "severity": "info",
       "operation": "collapse_closed_switches",
       "code": "SWITCH_COLLAPSED",
       "element_type": "switch",
-      "element_id": "switch_2037_closed"
+      "element_id": "switch_2474_closed"
     },
     {
       "message": "Collapsed closed switch switch_3581_closed: bus b2165 merged into b2836.",
@@ -805,18 +804,6 @@
       "element_id": "switch_3177_closed"
     },
     {
-      "message": "Collapsed closed switch switch_2474_closed: bus b1564 merged into b136.",
-      "detail": {
-        "bus_to_absorbed": "b1564",
-        "bus_from": "b136"
-      },
-      "severity": "info",
-      "operation": "collapse_closed_switches",
-      "code": "SWITCH_COLLAPSED",
-      "element_type": "switch",
-      "element_id": "switch_2474_closed"
-    },
-    {
       "message": "Collapsed closed switch switch_3499_closed: bus b434 merged into b2416.",
       "detail": {
         "bus_to_absorbed": "b434",
@@ -827,6 +814,18 @@
       "code": "SWITCH_COLLAPSED",
       "element_type": "switch",
       "element_id": "switch_3499_closed"
+    },
+    {
+      "message": "Collapsed closed switch switch_2037_closed: bus b1587 merged into b1323.",
+      "detail": {
+        "bus_to_absorbed": "b1587",
+        "bus_from": "b1323"
+      },
+      "severity": "info",
+      "operation": "collapse_closed_switches",
+      "code": "SWITCH_COLLAPSED",
+      "element_type": "switch",
+      "element_id": "switch_2037_closed"
     },
     {
       "message": "Collapsed closed switch switch_2311_closed: bus b963 merged into b1260.",
@@ -1203,7 +1202,7 @@
   ],
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-15T02:58:17Z",
+    "created": "2026-06-17T07:57:09Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"

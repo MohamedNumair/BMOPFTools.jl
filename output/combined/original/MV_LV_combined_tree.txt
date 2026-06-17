@@ -997,7 +997,7 @@ Loads (141 total):
   … and 91 more (pass legend_limit= to show all)
 
 ────────────────────────────────────────────────────────────
-# Section 13: tx3170  (tx3170: Dyn9 11.0kV/433V,  14 buses)
+# Section 13: tx3170  (tx3170: Dyn1 11.0kV/433V,  14 buses)
 
 b179
 ├── b1989

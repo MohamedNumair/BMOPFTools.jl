@@ -58,7 +58,7 @@
       ]
     }
   },
-  "name": "network_22_Feeder_2",
+  "name": "network_22 / Feeder_2",
   "line": {
     "line48": {
       "length": 73.103849,
@@ -664,7 +664,7 @@
   },
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-15T02:57:20Z",
+    "created": "2026-06-17T07:50:58Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -705,8 +705,7 @@
       "terminal_map": [
         "1",
         "2",
-        "3",
-        "n"
+        "3"
       ],
       "bus": "sourcebus",
       "configuration": "WYE"
@@ -1547,17 +1546,17 @@
       "element_id": "line180"
     },
     {
-      "message": "Merged line line30 (0.35287 m) into line29 at pass-through bus 30; new length 0.69198 m.",
+      "message": "Merged line line95 (0.8662099999999999 m) into line108 at pass-through bus 105; new length 1.22372 m.",
       "detail": {
-        "new_length": 0.69198,
-        "absorbed_line": "line30",
-        "removed_bus": "30"
+        "new_length": 1.22372,
+        "absorbed_line": "line95",
+        "removed_bus": "105"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line29"
+      "element_id": "line108"
     },
     {
       "message": "Merged line line3 (0.081057 m) into line2 at pass-through bus 3; new length 0.16788999999999998 m.",
@@ -1573,17 +1572,17 @@
       "element_id": "line2"
     },
     {
-      "message": "Merged line line95 (0.8662099999999999 m) into line108 at pass-through bus 105; new length 1.22372 m.",
+      "message": "Merged line line30 (0.35287 m) into line29 at pass-through bus 30; new length 0.69198 m.",
       "detail": {
-        "new_length": 1.22372,
-        "absorbed_line": "line95",
-        "removed_bus": "105"
+        "new_length": 0.69198,
+        "absorbed_line": "line30",
+        "removed_bus": "30"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line108"
+      "element_id": "line29"
     },
     {
       "message": "Merged line line27 (0.39001 m) into line26 at pass-through bus 27; new length 0.89086 m.",

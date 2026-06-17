@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV29_90bus
 
-**Generated:** 2026-06-16 11:42:46  
-**Findings:** 0 errors · 4 warnings · 14 info  
+**Generated:** 2026-06-17 17:57:11  
+**Findings:** 0 errors · 5 warnings · 14 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 43 grounding point(s)
 
 ---
@@ -150,7 +150,7 @@
 
 | Spec conformance | Value |
 |------------------|------:|
-| Conformance issues | 0 |
+| Conformance issues | 1 |
 | Voltage sources (spec requires 1) | 1 |
 
 | Structural integrity | Value |
@@ -168,6 +168,10 @@
 | Buses with \|V\| bounds | 0.0% |
 | Buses with vpn / vpp / vpos bounds | 0 / 0 / 0 |
 | Lines with thermal limits | 100.0% |
+| Generators with no DOF (p\_min≈p\_max) | 0 |
+| Generators with zero cost (dispatchable) | 0 |
+| Same-cost generator pairs (≤1 hop) | 0 |
+| Loads with zero p\_nom | 0 |
 
 **Augmentation needed:**
 
@@ -175,11 +179,13 @@
 - no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground)
 - no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF
 
+> 🟡 **[W.SPEC.CONFIG_ARITY]** generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
+
 > 🔵 **[I.BENCH.AUGMENTATION]** Case needs augmentation to be a non-trivial OPF benchmark: only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF.
 
 ## 9. Data Quality Summary
 
-**Total findings:** 18 (0 errors, 4 warnings, 14 info)
+**Total findings:** 19 (0 errors, 5 warnings, 14 info)
 
 ### 🟡 Warnings
 
@@ -191,6 +197,8 @@
   Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.41 MW).
 - **[W.OPS.XFMR_OVERLOADED]** `tx2615`  
   Transformer 'tx2615' is at 145.5% utilisation at nominal load — little OPF headroom.
+- **[W.SPEC.CONFIG_ARITY]** `slack_source`  
+  generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
 
 ### 🔵 Info
 

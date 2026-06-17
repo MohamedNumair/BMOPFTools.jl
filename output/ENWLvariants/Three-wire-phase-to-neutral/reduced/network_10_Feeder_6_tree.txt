@@ -1,0 +1,24 @@
+# Network graph  (12 buses)
+
+sourcebus (SRC G1)
+└── 63
+    ├── 227
+    │   ├── 286 (L2)
+    │   └── 295
+    │       ├── 301
+    │       │   ├── 367 (L3)
+    │       │   └── 429
+    │       │       └── 459 (L5)
+    │       └── 338
+    │           └── 442 (L4)
+    └── 64 (L1)
+
+Loads (5 total):
+  L1 = load1              1.97 kW  SINGLE_PHASE  phases: 1
+  L2 = load2              0.31 kW  SINGLE_PHASE  phases: 2
+  L3 = load3              2.94 kW  SINGLE_PHASE  phases: 3
+  L4 = load4              0.32 kW  SINGLE_PHASE  phases: 1
+  L5 = load5              1.33 kW  SINGLE_PHASE  phases: 2
+
+Generators (1 total):
+  G1 = slack_source     max    0.0 kW

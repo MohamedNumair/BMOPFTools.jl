@@ -1,6 +1,6 @@
 # BMOPF Network Summary: DSuite_SPD_Rural
 
-**Generated:** 2026-06-17 12:23:33  
+**Generated:** 2026-06-17 17:49:29  
 **Findings:** 1 errors · 11 warnings · 21 info  
 **Convention:** MV_6.4kV: mixed; LV_242V: mixed; implicit (Kron-style) grounding
 
@@ -137,8 +137,8 @@
 | 6.41 kV | 2 | ≤3-wire | solid | 0 | solidly earthed |
 | 242.0 V | 64 | ≤3-wire | solid | 28 | indeterminate (3-wire / Kron-style implicit grounding) |
 
-> 🔵 **[I.PROV.NEGATIVE_MUTUAL_R]** Linecode 'cable_230v_185_al_wavef' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
 > 🔵 **[I.PROV.NEGATIVE_MUTUAL_R]** Linecode 'cable_230v_0.05_cu' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
+> 🔵 **[I.PROV.NEGATIVE_MUTUAL_R]** Linecode 'cable_230v_185_al_wavef' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
 > 🔵 **[I.PROV.NEGATIVE_MUTUAL_R]** Linecode 'default' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
 > 🔵 **[I.PROV.NEGATIVE_MUTUAL_R]** Linecode 'unknown_lv_ohline_m' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
 > 🔵 **[I.PROV.NEGATIVE_MUTUAL_R]** Linecode 'unknown_lv_cable_m' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
@@ -210,12 +210,12 @@
   1 of 65 lines have no thermal limit (i_max or s_max) — OPF thermal constraints will be missing.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `7095820`  
   Line '7095820' has ||Z||_F = 4.26e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `7095819`  
+  Line '7095819' has ||Z||_F = 1.06e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `7095821`  
   Line '7095821' has ||Z||_F = 3.23e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `11545351`  
   Line '11545351' has ||Z||_F = 1.06e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `7095819`  
-  Line '7095819' has ||Z||_F = 1.06e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.RED.ZERO_LOADS]** `load`  
   39 load(s) have p_nom=0 and q_nom=0 — electrically inert.
 - **[W.INT.LOW_IMPEDANCE_LINE]** `line`  
@@ -229,10 +229,10 @@
   Load p_nom has very low coefficient of variation (0.0) — all loads nearly identical.
 - **[I.DIV.LINE_SYMMETRIC]** `line`  
   3 lines share linecode 'connector' with similar length (±10%) — electrically near-identical.
-- **[I.PROV.NEGATIVE_MUTUAL_R]** `cable_230v_185_al_wavef`  
-  Linecode 'cable_230v_185_al_wavef' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
 - **[I.PROV.NEGATIVE_MUTUAL_R]** `cable_230v_0.05_cu`  
   Linecode 'cable_230v_0.05_cu' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
+- **[I.PROV.NEGATIVE_MUTUAL_R]** `cable_230v_185_al_wavef`  
+  Linecode 'cable_230v_185_al_wavef' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
 - **[I.PROV.NEGATIVE_MUTUAL_R]** `default`  
   Linecode 'default' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
 - **[I.PROV.NEGATIVE_MUTUAL_R]** `unknown_lv_ohline_m`  

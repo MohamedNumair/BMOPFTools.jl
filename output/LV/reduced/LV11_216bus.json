@@ -1376,8 +1376,7 @@
       "terminal_map": [
         "1",
         "2",
-        "3",
-        "n"
+        "3"
       ],
       "bus": "b3125",
       "configuration": "WYE"
@@ -5130,7 +5129,7 @@
   ],
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-15T02:58:16Z",
+    "created": "2026-06-17T07:57:09Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -5753,6 +5752,28 @@
       "bus": "b1447",
       "G_1_1": 0.1
     },
+    "loadbusgrounding_b2419": {
+      "B_1_1": 0,
+      "_pmd": {
+        "b_fr": [
+          0
+        ],
+        "g_to": [
+          0
+        ],
+        "b_to": [
+          0
+        ],
+        "g_fr": [
+          0
+        ]
+      },
+      "terminal_map": [
+        "n"
+      ],
+      "bus": "b2419",
+      "G_1_1": 0.1
+    },
     "loadbusgrounding_b2661": {
       "B_1_1": 0,
       "_pmd": {
@@ -5863,28 +5884,6 @@
       "bus": "b3045",
       "G_1_1": 0.1
     },
-    "loadbusgrounding_b1918": {
-      "B_1_1": 0,
-      "_pmd": {
-        "b_fr": [
-          0
-        ],
-        "g_to": [
-          0
-        ],
-        "b_to": [
-          0
-        ],
-        "g_fr": [
-          0
-        ]
-      },
-      "terminal_map": [
-        "n"
-      ],
-      "bus": "b1918",
-      "G_1_1": 0.1
-    },
     "loadbusgrounding_b1541": {
       "B_1_1": 0,
       "_pmd": {
@@ -5907,7 +5906,7 @@
       "bus": "b1541",
       "G_1_1": 0.1
     },
-    "loadbusgrounding_b2419": {
+    "loadbusgrounding_b1918": {
       "B_1_1": 0,
       "_pmd": {
         "b_fr": [
@@ -5926,7 +5925,7 @@
       "terminal_map": [
         "n"
       ],
-      "bus": "b2419",
+      "bus": "b1918",
       "G_1_1": 0.1
     },
     "loadbusgrounding_b1708": {
@@ -7447,28 +7446,6 @@
       "bus": "b477",
       "G_1_1": 0.1
     },
-    "loadbusgrounding_b93": {
-      "B_1_1": 0,
-      "_pmd": {
-        "b_fr": [
-          0
-        ],
-        "g_to": [
-          0
-        ],
-        "b_to": [
-          0
-        ],
-        "g_fr": [
-          0
-        ]
-      },
-      "terminal_map": [
-        "n"
-      ],
-      "bus": "b93",
-      "G_1_1": 0.1
-    },
     "loadbusgrounding_b1919": {
       "B_1_1": 0,
       "_pmd": {
@@ -7535,6 +7512,28 @@
       "bus": "b2689",
       "G_1_1": 0.1
     },
+    "loadbusgrounding_b2472": {
+      "B_1_1": 0,
+      "_pmd": {
+        "b_fr": [
+          0
+        ],
+        "g_to": [
+          0
+        ],
+        "b_to": [
+          0
+        ],
+        "g_fr": [
+          0
+        ]
+      },
+      "terminal_map": [
+        "n"
+      ],
+      "bus": "b2472",
+      "G_1_1": 0.1
+    },
     "loadbusgrounding_b3059": {
       "B_1_1": 0,
       "_pmd": {
@@ -7557,7 +7556,7 @@
       "bus": "b3059",
       "G_1_1": 0.1
     },
-    "loadbusgrounding_b2472": {
+    "loadbusgrounding_b93": {
       "B_1_1": 0,
       "_pmd": {
         "b_fr": [
@@ -7576,7 +7575,7 @@
       "terminal_map": [
         "n"
       ],
-      "bus": "b2472",
+      "bus": "b93",
       "G_1_1": 0.1
     }
   },

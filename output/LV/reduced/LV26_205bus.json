@@ -1152,8 +1152,7 @@
       "terminal_map": [
         "1",
         "2",
-        "3",
-        "n"
+        "3"
       ],
       "bus": "b1386",
       "configuration": "WYE"
@@ -3141,10 +3140,10 @@
       ],
       "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
     },
-    "l_4042": {
-      "length": 10.3103125001,
-      "bus_from": "b2184",
-      "bus_to": "b988",
+    "l_2191": {
+      "length": 12.1809544401,
+      "bus_from": "b501",
+      "bus_to": "b3106",
       "terminal_map_from": [
         "1",
         "2",
@@ -3159,10 +3158,10 @@
       ],
       "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
     },
-    "l_2191": {
-      "length": 12.1809544401,
-      "bus_from": "b501",
-      "bus_to": "b3106",
+    "l_4042": {
+      "length": 10.3103125001,
+      "bus_from": "b2184",
+      "bus_to": "b988",
       "terminal_map_from": [
         "1",
         "2",
@@ -3429,24 +3428,6 @@
       ],
       "linecode": "uglv_240al_xlpe/nyl/pvc_ug_4w_bundled"
     },
-    "l_3379": {
-      "length": 45.32653373030001,
-      "bus_from": "b176",
-      "bus_to": "b1740",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "uglv_240al_xlpe/nyl/pvc_ug_4w_bundled"
-    },
     "l_2904": {
       "length": 17.6819166421,
       "bus_from": "b3337",
@@ -3464,6 +3445,24 @@
         "n"
       ],
       "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_3379": {
+      "length": 45.32653373030001,
+      "bus_from": "b176",
+      "bus_to": "b1740",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "uglv_240al_xlpe/nyl/pvc_ug_4w_bundled"
     },
     "l_4056": {
       "length": 5.23355290563,
@@ -3519,10 +3518,10 @@
       ],
       "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
     },
-    "l_3573": {
-      "length": 10.3252024706,
-      "bus_from": "b1236",
-      "bus_to": "b3408",
+    "l_1600": {
+      "length": 26.6574467372,
+      "bus_from": "b1208",
+      "bus_to": "b1923",
       "terminal_map_from": [
         "1",
         "2",
@@ -3537,10 +3536,10 @@
       ],
       "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
     },
-    "l_1600": {
-      "length": 26.6574467372,
-      "bus_from": "b1208",
-      "bus_to": "b1923",
+    "l_3573": {
+      "length": 10.3252024706,
+      "bus_from": "b1236",
+      "bus_to": "b3408",
       "terminal_map_from": [
         "1",
         "2",
@@ -3573,24 +3572,6 @@
       ],
       "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
     },
-    "l_2835": {
-      "length": 25.480357417,
-      "bus_from": "b3053",
-      "bus_to": "b471",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "uglv_240al_xlpe/nyl/pvc_ug_4w_bundled"
-    },
     "l_900": {
       "length": 9.634675062429999,
       "bus_from": "b3356",
@@ -3608,6 +3589,24 @@
         "n"
       ],
       "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_2835": {
+      "length": 25.480357417,
+      "bus_from": "b3053",
+      "bus_to": "b471",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "uglv_240al_xlpe/nyl/pvc_ug_4w_bundled"
     },
     "l_4225": {
       "length": 33.6181713784,
@@ -3717,10 +3716,10 @@
       ],
       "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
     },
-    "l_2947": {
-      "length": 10.7424929068,
-      "bus_from": "b1781",
-      "bus_to": "b2707",
+    "l_2659": {
+      "length": 23.6461204407,
+      "bus_from": "b305",
+      "bus_to": "b1740",
       "terminal_map_from": [
         "1",
         "2",
@@ -3735,10 +3734,10 @@
       ],
       "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
     },
-    "l_2659": {
-      "length": 23.6461204407,
-      "bus_from": "b305",
-      "bus_to": "b1740",
+    "l_2947": {
+      "length": 10.7424929068,
+      "bus_from": "b1781",
+      "bus_to": "b2707",
       "terminal_map_from": [
         "1",
         "2",
@@ -4548,7 +4547,7 @@
   ],
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-15T02:58:17Z",
+    "created": "2026-06-17T07:57:11Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"

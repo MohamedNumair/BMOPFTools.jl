@@ -1,6 +1,6 @@
 # BMOPF Network Summary: DSuite_SPD_Rural
 
-**Generated:** 2026-06-17 12:23:34  
+**Generated:** 2026-06-17 17:49:29  
 **Findings:** 1 errors · 10 warnings · 21 info  
 **Convention:** MV_6.4kV: mixed; LV_242V: mixed; implicit (Kron-style) grounding
 

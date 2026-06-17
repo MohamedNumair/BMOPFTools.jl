@@ -1,7 +1,7 @@
-# BMOPF Network Summary: network_7_Feeder_2
+# BMOPF Network Summary: network_7 / Feeder_2
 
-**Generated:** 2026-06-16 11:37:39  
-**Findings:** 0 errors · 2 warnings · 5 info  
+**Generated:** 2026-06-17 17:51:22  
+**Findings:** 0 errors · 6 warnings · 6 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -14,7 +14,7 @@
 | line | 604 |  |
 | linecode | 7 |  |
 | voltage_source | 1 |  |
-| load | 58 | 53.4 kW, 17.6 kvar |
+| load | 58 | 53.399 kW, 17.6 kvar |
 | generator | 1 | capacity: 0.0 W |
 | shunt | 1 |  |
 | switch | 0 |  |
@@ -69,7 +69,7 @@
 
 | | Value |
 |--|-------|
-| Total load P | 53.4 kW |
+| Total load P | 53.399 kW |
 | Total load Q | 17.6 kvar |
 | Total gen capacity | 0.0 W |
 | Generation/load ratio | 0.0% |
@@ -125,7 +125,7 @@
 
 | Spec conformance | Value |
 |------------------|------:|
-| Conformance issues | 0 |
+| Conformance issues | 1 |
 | Voltage sources (spec requires 1) | 1 |
 
 | Structural integrity | Value |
@@ -143,6 +143,10 @@
 | Buses with \|V\| bounds | 0.0% |
 | Buses with vpn / vpp / vpos bounds | 0 / 0 / 0 |
 | Lines with thermal limits | 100.0% |
+| Generators with no DOF (p\_min≈p\_max) | 0 |
+| Generators with zero cost (dispatchable) | 0 |
+| Same-cost generator pairs (≤1 hop) | 0 |
+| Loads with zero p\_nom | 0 |
 
 **Augmentation needed:**
 
@@ -150,11 +154,13 @@
 - no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground)
 - no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF
 
+> 🟡 **[W.SPEC.CONFIG_ARITY]** generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
+
 > 🔵 **[I.BENCH.AUGMENTATION]** Case needs augmentation to be a non-trivial OPF benchmark: only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF.
 
 ## 9. Data Quality Summary
 
-**Total findings:** 7 (0 errors, 2 warnings, 5 info)
+**Total findings:** 12 (0 errors, 6 warnings, 6 info)
 
 ### 🟡 Warnings
 
@@ -162,6 +168,14 @@
   18 bus(es) are degree-1 with no attached load, generator, or shunt.
 - **[W.OPS.IMPORT_DEPENDENT]** `network`  
   Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.05 MW).
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line10`  
+  Line 'line10' has ||Z||_F = 9.95e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line256`  
+  Line 'line256' has ||Z||_F = 8.84e-6 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line325`  
+  Line 'line325' has ||Z||_F = 8.09e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.SPEC.CONFIG_ARITY]** `slack_source`  
+  generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
 
 ### 🔵 Info
 
@@ -171,6 +185,8 @@
   605 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.DOM.LINE_IMPEDANCE_SPREAD]** `line`  
+  Adjacent lines 'line256' and 'line265' at bus '257' have ||Z||_F ratio 1210.0× — large impedance contrasts between neighbouring lines cause ill-conditioned KKT Jacobians; consider per-unit scaling or network reformulation.
 - **[I.RED.MERGEABLE_LINES]** `line`  
   95 group(s) of series lines (548 lines total) can be merged — intermediate buses have no other connections.
 - **[I.BENCH.AUGMENTATION]** `network`  

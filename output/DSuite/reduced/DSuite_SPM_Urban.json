@@ -12086,7 +12086,7 @@
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
     "source": "D-Suite Alpha v1.1",
     "reference": "M. Deakin, DOI: 10.25405/data.ncl.27175317",
-    "created": "2026-06-17T02:23:19Z",
+    "created": "2026-06-17T07:49:34Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -18648,19 +18648,6 @@
       "element_id": "6355676"
     },
     {
-      "message": "Merged line 6355145 (1.7 m) into 10429680 at pass-through bus 16939709; new length 10.149999999999999 m.",
-      "detail": {
-        "new_length": 10.149999999999999,
-        "absorbed_line": "6355145",
-        "removed_bus": "16939709"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "10429680"
-    },
-    {
       "message": "Merged line 10435904 (2.66 m) into 6365168 at pass-through bus 16671347; new length 5.67 m.",
       "detail": {
         "new_length": 5.67,
@@ -18672,6 +18659,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "6365168"
+    },
+    {
+      "message": "Merged line 6355145 (1.7 m) into 10429680 at pass-through bus 16939709; new length 10.149999999999999 m.",
+      "detail": {
+        "new_length": 10.149999999999999,
+        "absorbed_line": "6355145",
+        "removed_bus": "16939709"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "10429680"
     },
     {
       "message": "Lines 6010064 (linecode cable_230v_0.15_al) and 6354652 (linecode cable_230v_185_al_wave) at bus 16829651 have different linecodes — not merged.",

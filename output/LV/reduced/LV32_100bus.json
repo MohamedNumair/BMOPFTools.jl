@@ -328,8 +328,7 @@
       "terminal_map": [
         "1",
         "2",
-        "3",
-        "n"
+        "3"
       ],
       "bus": "b2234",
       "configuration": "WYE"
@@ -1867,14 +1866,14 @@
   ],
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-15T02:58:17Z",
+    "created": "2026-06-17T07:57:11Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
     }
   },
   "shunt": {
-    "loadbusgrounding_b1071": {
+    "loadbusgrounding_b1554": {
       "B_1_1": 0,
       "_pmd": {
         "b_fr": [
@@ -1893,7 +1892,7 @@
       "terminal_map": [
         "n"
       ],
-      "bus": "b1071",
+      "bus": "b1554",
       "G_1_1": 0.1
     },
     "loadbusgrounding_b1687": {
@@ -2336,28 +2335,6 @@
       "bus": "b219",
       "G_1_1": 0.1
     },
-    "loadbusgrounding_b1554": {
-      "B_1_1": 0,
-      "_pmd": {
-        "b_fr": [
-          0
-        ],
-        "g_to": [
-          0
-        ],
-        "b_to": [
-          0
-        ],
-        "g_fr": [
-          0
-        ]
-      },
-      "terminal_map": [
-        "n"
-      ],
-      "bus": "b1554",
-      "G_1_1": 0.1
-    },
     "loadbusgrounding_b1728": {
       "B_1_1": 0,
       "_pmd": {
@@ -2378,6 +2355,28 @@
         "n"
       ],
       "bus": "b1728",
+      "G_1_1": 0.1
+    },
+    "loadbusgrounding_b1071": {
+      "B_1_1": 0,
+      "_pmd": {
+        "b_fr": [
+          0
+        ],
+        "g_to": [
+          0
+        ],
+        "b_to": [
+          0
+        ],
+        "g_fr": [
+          0
+        ]
+      },
+      "terminal_map": [
+        "n"
+      ],
+      "bus": "b1071",
       "G_1_1": 0.1
     }
   },

@@ -1,7 +1,7 @@
 # Network graph  (7 buses)
 
 b2577 (SRC G1)
-└── [tx3170: Dyn9 11.0kV/433V]── b179
+└── [tx3170: Dyn1 11.0kV/433V]── b179
     └── b2734
         ├── b232
         │   └── b3230 (L1)

@@ -552,8 +552,7 @@
       "terminal_map": [
         "1",
         "2",
-        "3",
-        "n"
+        "3"
       ],
       "bus": "b2700",
       "configuration": "WYE"
@@ -2137,7 +2136,7 @@
   ],
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-15T02:58:17Z",
+    "created": "2026-06-17T07:57:11Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -3259,7 +3258,7 @@
       "bus": "b2044",
       "configuration": "SINGLE_PHASE"
     },
-    "ld175_load_b": {
+    "ld768_load_b": {
       "p_nom": [
         10000
       ],
@@ -3275,7 +3274,7 @@
         "2",
         "n"
       ],
-      "bus": "b2696",
+      "bus": "b2545",
       "configuration": "SINGLE_PHASE"
     },
     "ld940_load_b": {
@@ -3905,25 +3904,6 @@
       "bus": "b17",
       "configuration": "SINGLE_PHASE"
     },
-    "ld768_load_b": {
-      "p_nom": [
-        10000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.249992666559,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        5000
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "b2545",
-      "configuration": "SINGLE_PHASE"
-    },
     "ld4031_load_c": {
       "p_nom": [
         10000
@@ -3941,6 +3921,25 @@
         "n"
       ],
       "bus": "b1276",
+      "configuration": "SINGLE_PHASE"
+    },
+    "ld175_load_b": {
+      "p_nom": [
+        10000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.249992666559,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        5000
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "b2696",
       "configuration": "SINGLE_PHASE"
     }
   },
