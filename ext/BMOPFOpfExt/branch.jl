@@ -11,25 +11,29 @@
 #   vr_fr[k] − vr_to[k]  =  Σ_j ( R[k,j]·cr_fr[j] − X[k,j]·ci_fr[j] )
 #   vi_fr[k] − vi_to[k]  =  Σ_j ( R[k,j]·ci_fr[j] + X[k,j]·cr_fr[j] )
 #
-# Series current is identical at both ends (no current lost in the ideal
-# series element):
-#   cr_to[k] = −cr_fr[k],  ci_to[k] = −ci_fr[k]
+# cr_fr[k] is the only independent series current variable (from → to direction).
+# The to-side series current is the AffExpr alias:
+#   cr_to[k] := −cr_fr[k],  ci_to[k] := −ci_fr[k]
 #
-# π-shunt current leaving bus b at conductor k (linear in voltage variables):
-#   I^r_k = Σ_j ( G_kj · vr[b,t_j] − B_kj · vi[b,t_j] )
-#   I^i_k = Σ_j ( G_kj · vi[b,t_j] + B_kj · vr[b,t_j] )
+# π-shunt current leaving bus b at conductor k (AffExpr, linear in vr/vi):
+#   ish^r_k = Σ_j ( G_kj · vr[b,t_j] − B_kj · vi[b,t_j] )
+#   ish^i_k = Σ_j ( G_kj · vi[b,t_j] + B_kj · vr[b,t_j] )
 #
-# KCL contributions (positive = into bus):
-#   bus_from, tmfr[k]: −cr_fr[k] − I^r_sh_fr[k]   (series + shunt leave)
-#   bus_to,   tmto[k]: −cr_to[k] − I^r_sh_to[k]   (series arrives, shunt leaves)
+# Total current (series + shunt) — AffExpr, substituted directly into KCL and limits:
+#   I^tot_fr[k] = cr_fr[k] + ish^r_fr[k]      (leaving from-bus)
+#   I^tot_to[k] = −cr_fr[k] + ish^r_to[k]     (leaving to-bus)
 #
-# Current magnitude limit (total current at each end):
-#   |cr_fr[k] + I^r_sh_fr[k]|² + |ci_fr[k] + I^i_sh_fr[k]|² ≤ I_max[k]²
-#   |cr_to[k] + I^r_sh_to[k]|² + |ci_to[k] + I^i_sh_to[k]|² ≤ I_max[k]²
+# KCL contributions (sign convention: positive = into bus):
+#   bus_from, tmfr[k]: −I^tot_fr[k]
+#   bus_to,   tmto[k]: −I^tot_to[k]
 #
-# When G_from = B_from = G_to = B_to = 0 (no shunt), the π-shunt terms vanish,
-# the two magnitude constraints are identical (since cr_to = −cr_fr), and the
-# result reduces to the original series-only formulation.
+# Current magnitude limits:
+#   (I^tot_fr[k])² ≤ I_max[k]²
+#   (I^tot_to[k])² ≤ I_max[k]²
+#
+# When shunts are zero, I^tot_fr = cr_fr and I^tot_to = −cr_fr, so the two
+# limits are symmetric and either alone would suffice; both are kept for
+# generality when shunts are non-zero.
 
 """
     _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
@@ -39,10 +43,11 @@ contributions.
 
 For each line this adds:
 - KVL across the series impedance (real and imaginary parts per conductor)
-- Series current balance: `cr_to = −cr_fr`
 - π-shunt KCL contributions at both buses (linear in voltage variables)
 - Thermal current magnitude limits on the **total** current (series + π-shunt)
   at both the from- and to-ends
+
+`cr_to`/`ci_to` are `AffExpr` aliases (`−cr_fr`) — no equality constraints needed.
 
 Shunt conductance (`G_from`, `G_to`) and susceptance (`B_from`, `B_to`) are
 read from the linecode and scaled by line length. Missing or all-zero shunt
@@ -67,7 +72,7 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
         tmto  = Vector{String}(get(line, "terminal_map_to",   String[]))
         n_map = min(length(tmfr), length(tmto), n_c)
 
-        # ── KVL + series current balance ──────────────────────────────────────
+        # ── KVL ───────────────────────────────────────────────────────────────
         for k in 1:n_map
             t_fr = tmfr[k]; t_to = tmto[k]
             @constraint(model,
@@ -76,8 +81,6 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
             @constraint(model,
                 vi[(b_fr, t_fr)] - vi[(b_to, t_to)] ==
                 sum(R[k,j]*ci_fr[(lid,j)] + X[k,j]*cr_fr[(lid,j)] for j in 1:n_map))
-            @constraint(model, cr_to[(lid,k)] == -cr_fr[(lid,k)])
-            @constraint(model, ci_to[(lid,k)] == -ci_fr[(lid,k)])
         end
 
         # ── π-shunt currents (linear in voltage variables) ────────────────────
