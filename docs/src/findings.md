@@ -1,6 +1,6 @@
 # Finding-code reference
 
-The complete catalogue of the 103 finding codes, grouped by family. Codes are
+The complete catalogue of the 123 finding codes, grouped by family. Codes are
 **stable identifiers** — filter on `f.code`, never on message text. Severity
 prefix: `E.` error, `W.` warning, `I.` info (see
 [Analysis & reports](analysis.md) for the severity semantics).
@@ -27,6 +27,7 @@ prefix: `E.` error, `W.` warning, `I.` info (see
 | Code | Sev | Trigger & rationale |
 |---|---|---|
 | `E.CONN.DISCONNECTED` | E | More than one connected component (over lines, closed switches and transformers). Buses without a path to a source have no defined operating point. |
+| `E.CONN.SELF_LOOP` | E | A line, switch, or transformer has identical `bus_from` and `bus_to` — a zero-length branch that creates a degenerate KVL constraint and is almost always a wiring error. |
 | `W.CONN.MESHED` | W | Physical branch count exceeds the spanning-forest count — cycles exist. Counted over *branch elements*, so electrically parallel lines are correctly detected as meshes. Not an error (the spec supports meshes) but radial-only methods will fail. |
 | `W.CONN.DANGLING` | W | Degree-1 buses with no load, generator or shunt attached — dead ends that contribute variables and constraints but no physics; often conversion artifacts (e.g. switch far-ends). |
 
@@ -48,6 +49,7 @@ Symmetries in data create symmetric optima and degrade NLP convergence
 |---|---|---|
 | `W.DIV.LOAD_SYMMETRIC` | W | More than half of the loads share identical `(p_nom, q_nom)` tuples — copy-paste parameterisation; dispatch among them is interchangeable. |
 | `I.DIV.LOAD_CV_LOW` | I | Load `p_nom` coefficient of variation < 0.05 across ≥3 loads — essentially uniform loading. |
+| `I.DIV.LOAD_PF_DSS_DEFAULT` | I | Load power factor mean is within 1 % of 0.88 with CV < 0.05 — strongly suggests reactive power was never explicitly set and the OpenDSS default PF was inherited throughout. Compare with `I.PROV.DSS_DEFAULT_PF`, which detects the exact 0.88 value per load; this finding detects the statistical signature across all loads. |
 | `I.DIV.LOAD_IMBALANCE` | I | A multi-phase load with >20 % spread between its phase setpoints — noteworthy unbalance (often intended; this is context, not criticism). |
 | `I.DIV.LINE_SYMMETRIC` | I | ≥80 % of the lines sharing a linecode have lengths within ±10 % of the median — electrically near-identical sections. |
 | `I.DIV.BUS_UNIFORM_VMIN` | I | Every bus that has `v_min` has the *same* value — no spatial differentiation of the lower voltage envelope. |
@@ -60,6 +62,7 @@ Symmetries in data create symmetric optima and degrade NLP convergence
 | `W.OPS.IMPORT_DEPENDENT` | W | Local generation capacity below 5 % of total load — the case is a pure import feeder; with only a slack source the dispatch problem is loss minimisation at best. |
 | `W.OPS.XFMR_OVERLOADED` | W | Estimated downstream apparent load exceeds 90 % of a transformer's rating at nominal setpoints — little OPF headroom, or a rating entered on the wrong base (see the regulator/autotransformer discussion in [methodology](methodology.md)). |
 | `W.OPS.LINE_UNCONSTRAINED` | W | Lines without any thermal limit (`i_max`/`s_max` on the line or its linecode) — the OPF will have no flow constraints there. |
+| `I.OPS.UNLOADED_PHASE` | I | A phase terminal is present on buses in a galvanic zone (connected via lines and closed switches; transformers are boundaries) but no load connects to it anywhere in that zone. Reported per zone and per terminal. Common in partial-phase feeders; worth reviewing before interpreting unbalance results. |
 
 ## PRE — infeasibility pre-flight
 
@@ -170,6 +173,8 @@ the table).
 
 | Code | Sev | Trigger & rationale |
 |---|---|---|
+| `I.PROV.NO_PI_SHUNT` | I | All linecodes have π-shunt admittance keys present but every entry is zero — the shunt capacitance/conductance of every cable was not populated. Line charging is absent from the model; this is common for short LV cables but is worth confirming for longer MV feeders. |
+| `I.PROV.PARTIAL_PI_SHUNT` | I | Some linecodes have non-zero π-shunt admittance and others do not — mixed shunt population. May be intentional (e.g. short spurs vs long trunk cables) but is worth reviewing for consistency. |
 | `W.PROV.REGULATOR_PATTERN` | W | A transformer that looks like a voltage-regulator/autotransformer encoding: either both windings on one bus (the explicit EPRI autotransformer form) or a near-1:1 wye unit with same-level endpoints / very low impedance / non-unity tap. The data model has no regulator object — a control device has been frozen into a fixed branch. |
 
 ## INT — structural integrity
@@ -199,7 +204,13 @@ Rules the JSON Schema cannot express.
 | `W.SPEC.N_SOURCES` | W | Voltage-source count ≠ 1 (spec Eq. 17 requires exactly one in this version). |
 | `W.SPEC.BAD_CONFIG` | W | A configuration string outside `SINGLE_PHASE`/`WYE`/`DELTA`. |
 | `W.SPEC.CONFIG_ARITY` | W | Terminal-map arity inconsistent with the configuration (SINGLE_PHASE = 2, WYE = 4, DELTA = 3). |
+| `E.SPEC.DUPLICATE_TERMINAL` | E | A component's `terminal_map` (or `terminal_map_from`/`terminal_map_to` for lines/switches) contains the same terminal label more than once — a degenerate connection that collapses two distinct conductors onto one. |
 | `I.SPEC.GEN_CONFIG_FUTURE` | I | Generator configurations marked future-support in the spec (only WYE is current). |
+| `I.SPEC.LOAD_PHASE_TO_PHASE` | I | A `SINGLE_PHASE` load/generator whose two terminals are both phase conductors (neither is the bus neutral) — a phase-to-phase (delta-connected) single-phase element. Valid per spec; flagged as context because the modelling is distinct from the more common phase-to-neutral case. |
+| `E.SPEC.WYE_MISSING_NEUTRAL` | E | A `WYE` load/generator whose last terminal is not the neutral of its bus — the return path is not the neutral conductor, which violates the spec's WYE connection semantics. |
+| `E.SPEC.WYE_DUPLICATE_PHASE` | E | A `WYE` load/generator has duplicate phase terminals in the non-neutral slots. |
+| `E.SPEC.DELTA_HAS_NEUTRAL` | E | A `DELTA` load/generator includes the bus neutral in its terminal map — delta elements must be phase-to-phase only. |
+| `E.SPEC.DELTA_DUPLICATE_PHASE` | E | A `DELTA` load/generator has duplicate phase terminals. |
 | `W.SPEC.XFMR_TMAP_ARITY` | W | Transformer terminal-map lengths off the per-subtype spec values — also the deliberate tripwire for unconverted wye-wye units. |
 | `W.SPEC.TERMINAL_TYPES` | W | The source file used non-string terminal identifiers; they were coerced at parse (aliases or verbatim — the finding says which). |
 | `I.SPEC.MATRIX_TRIANGULAR` | I | Impedance matrices stored upper-triangular; the spec defines full row-first storage. Read fine; normalise before publishing. |
