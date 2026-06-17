@@ -3,7 +3,7 @@
 # Index conventions:
 #   vr/vi        : Dict{Tuple{String,String}, VariableRef}  (bus_id, terminal)
 #   cr_fr/ci_fr  : Dict{Tuple{String,Int},    VariableRef}  (line_id, conductor_pos)
-#   cr_to/ci_to  : Dict{Tuple{String,Int},    AffExpr}      (line_id, conductor_pos) = -cr_fr
+#   cr_to/ci_to  : Dict{Tuple{String,Int},    AffExpr}      (line_id, conductor_pos) = -cr_fr / -ci_fr
 #   crd/cid      : Dict{Tuple{String,Int},    VariableRef}  (load_id, conductor_pos)
 #   crg/cig      : Dict{Tuple{String,Int},    VariableRef}  (gen_id,  conductor_pos)
 #   cr_src/ci_src: Dict{Tuple{String,Int},    VariableRef}  (src_id,  conductor_pos)
