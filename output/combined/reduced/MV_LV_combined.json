@@ -17222,8 +17222,7 @@
       "terminal_map": [
         "1",
         "2",
-        "3",
-        "n"
+        "3"
       ],
       "bus": "b1726",
       "configuration": "WYE"
@@ -55996,10 +55995,10 @@
       ],
       "linecode": "ughv_240cu_xlpe/nyl/pvc_ug_4w_bundled"
     },
-    "l_130": {
-      "length": 8.16322563412,
-      "bus_from": "b1974",
-      "bus_to": "b2313",
+    "l_2866": {
+      "length": 15.0499780574,
+      "bus_from": "b148",
+      "bus_to": "b47",
       "terminal_map_from": [
         "1",
         "2",
@@ -56014,10 +56013,10 @@
       ],
       "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
     },
-    "l_2866": {
-      "length": 15.0499780574,
-      "bus_from": "b148",
-      "bus_to": "b47",
+    "l_130": {
+      "length": 8.16322563412,
+      "bus_from": "b1974",
+      "bus_to": "b2313",
       "terminal_map_from": [
         "1",
         "2",
@@ -73354,7 +73353,7 @@
   ],
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-15T02:58:18Z",
+    "created": "2026-06-17T07:57:12Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -103240,9 +103239,9 @@
           "3"
         ],
         "terminal_map_to": [
+          "1",
           "2",
           "3",
-          "1",
           "n"
         ],
         "v_ref_from": 11000,

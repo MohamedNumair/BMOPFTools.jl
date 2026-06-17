@@ -1,6 +1,6 @@
 # BMOPF Network Summary: DSuite_SPM_Suburban
 
-**Generated:** 2026-06-17 12:23:37  
+**Generated:** 2026-06-17 17:49:33  
 **Findings:** 1 errors · 67 warnings · 20 info  
 **Convention:** MV_6.4kV: mixed; LV_242V: mixed; implicit (Kron-style) grounding
 

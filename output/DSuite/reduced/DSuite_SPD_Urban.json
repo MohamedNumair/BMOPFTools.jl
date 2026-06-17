@@ -63,13 +63,13 @@
   },
   "name": "DSuite_SPD_Urban",
   "line": {
-    "9896887": {
-      "length": 4.205,
+    "9892551": {
+      "length": 1.3050000000000002,
       "_merged_from": [
-        "9894794"
+        "9896429"
       ],
-      "bus_from": "15092400",
-      "bus_to": "15092407",
+      "bus_from": "14999408",
+      "bus_to": "13134350",
       "terminal_map_from": [
         "1",
         "2",
@@ -80,7 +80,7 @@
         "2",
         "3"
       ],
-      "linecode": "cable_230v_240_al_consac"
+      "linecode": "cable_230v_0.1_al"
     },
     "9895880": {
       "length": 2.537,
@@ -6117,6 +6117,25 @@
       ],
       "linecode": "cable_230v_0.2_al"
     },
+    "9894794": {
+      "length": 4.205,
+      "_merged_from": [
+        "9896887"
+      ],
+      "bus_from": "15092407",
+      "bus_to": "15092400",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3"
+      ],
+      "linecode": "cable_230v_240_al_consac"
+    },
     "4607088": {
       "length": 0.917,
       "bus_from": "15457078",
@@ -8683,25 +8702,6 @@
       ],
       "linecode": "cable_230v_35_al_asct"
     },
-    "9896429": {
-      "length": 1.3050000000000002,
-      "_merged_from": [
-        "9892551"
-      ],
-      "bus_from": "13134350",
-      "bus_to": "14999408",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3"
-      ],
-      "linecode": "cable_230v_0.1_al"
-    },
     "9564280": {
       "length": 1.6741000000000001,
       "_merged_from": [
@@ -11114,7 +11114,7 @@
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
     "source": "D-Suite Alpha v1.1",
     "reference": "M. Deakin, DOI: 10.25405/data.ncl.27175317",
-    "created": "2026-06-17T02:23:18Z",
+    "created": "2026-06-17T07:49:30Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -17968,17 +17968,17 @@
       "element_id": "9518491"
     },
     {
-      "message": "Merged line 9894794 (3.7 m) into 9896887 at pass-through bus 15092404; new length 4.205 m.",
+      "message": "Merged line 9896887 (0.505 m) into 9894794 at pass-through bus 15092404; new length 4.205 m.",
       "detail": {
         "new_length": 4.205,
-        "absorbed_line": "9894794",
+        "absorbed_line": "9896887",
         "removed_bus": "15092404"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "9896887"
+      "element_id": "9894794"
     },
     {
       "message": "Merged line 4586468 (0.178 m) into 3481954 at pass-through bus 17701205; new length 0.394 m.",
@@ -18743,17 +18743,17 @@
       "element_id": "9549374"
     },
     {
-      "message": "Merged line 9892551 (0.384 m) into 9896429 at pass-through bus 14999411; new length 1.3050000000000002 m.",
+      "message": "Merged line 9896429 (0.921 m) into 9892551 at pass-through bus 14999411; new length 1.3050000000000002 m.",
       "detail": {
         "new_length": 1.3050000000000002,
-        "absorbed_line": "9892551",
+        "absorbed_line": "9896429",
         "removed_bus": "14999411"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "9896429"
+      "element_id": "9892551"
     },
     {
       "message": "Merged line 9895668 (2.0 m) into 9895674 at pass-through bus 15013154; new length 3.58 m.",
@@ -20341,10 +20341,10 @@
     }
   ],
   "bus": {
-    "15785277": {
+    "15786694": {
       "_pmd": {
-        "lat": 0.00463,
-        "lon": 0.0102
+        "lat": -0.00686,
+        "lon": -0.0107
       },
       "terminal_names": [
         "1",
@@ -28658,10 +28658,10 @@
         "3"
       ]
     },
-    "15786694": {
+    "15785277": {
       "_pmd": {
-        "lat": -0.00686,
-        "lon": -0.0107
+        "lat": 0.00463,
+        "lon": 0.0102
       },
       "terminal_names": [
         "1",

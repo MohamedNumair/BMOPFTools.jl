@@ -58,7 +58,7 @@
       ]
     }
   },
-  "name": "network_5_Feeder_8",
+  "name": "network_5 / Feeder_8",
   "line": {
     "line68": {
       "length": 29.97389,
@@ -1746,7 +1746,7 @@
   },
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-15T02:57:24Z",
+    "created": "2026-06-17T07:51:17Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -1787,8 +1787,7 @@
       "terminal_map": [
         "1",
         "2",
-        "3",
-        "n"
+        "3"
       ],
       "bus": "sourcebus",
       "configuration": "WYE"

@@ -147,7 +147,7 @@
         "n"
       ]
     },
-    "b468": {
+    "b2176": {
       "terminal_names": [
         "1",
         "2",
@@ -155,7 +155,7 @@
         "n"
       ]
     },
-    "b2176": {
+    "b468": {
       "terminal_names": [
         "1",
         "2",
@@ -699,6 +699,14 @@
         "n"
       ]
     },
+    "b696": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
     "b1132": {
       "terminal_names": [
         "1",
@@ -716,14 +724,6 @@
       ]
     },
     "b771": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b696": {
       "terminal_names": [
         "1",
         "2",
@@ -851,7 +851,7 @@
         "n"
       ]
     },
-    "b52": {
+    "b1285": {
       "terminal_names": [
         "1",
         "2",
@@ -859,7 +859,7 @@
         "n"
       ]
     },
-    "b1285": {
+    "b52": {
       "terminal_names": [
         "1",
         "2",
@@ -899,7 +899,7 @@
         "n"
       ]
     },
-    "b3161": {
+    "b2880": {
       "terminal_names": [
         "1",
         "2",
@@ -907,7 +907,7 @@
         "n"
       ]
     },
-    "b2880": {
+    "b3161": {
       "terminal_names": [
         "1",
         "2",
@@ -923,7 +923,7 @@
         "n"
       ]
     },
-    "b2117": {
+    "b1401": {
       "terminal_names": [
         "1",
         "2",
@@ -931,7 +931,7 @@
         "n"
       ]
     },
-    "b1401": {
+    "b2117": {
       "terminal_names": [
         "1",
         "2",
@@ -947,7 +947,7 @@
         "n"
       ]
     },
-    "b2335": {
+    "b2205": {
       "terminal_names": [
         "1",
         "2",
@@ -955,7 +955,7 @@
         "n"
       ]
     },
-    "b2205": {
+    "b2335": {
       "terminal_names": [
         "1",
         "2",
@@ -1067,7 +1067,7 @@
         "n"
       ]
     },
-    "b1070": {
+    "b567": {
       "terminal_names": [
         "1",
         "2",
@@ -1075,7 +1075,7 @@
         "n"
       ]
     },
-    "b567": {
+    "b1070": {
       "terminal_names": [
         "1",
         "2",
@@ -1099,23 +1099,7 @@
         "n"
       ]
     },
-    "b1354": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
     "b1121": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b1530": {
       "terminal_names": [
         "1",
         "2",
@@ -1131,6 +1115,14 @@
         "n"
       ]
     },
+    "b1530": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
     "b2433": {
       "terminal_names": [
         "1",
@@ -1139,7 +1131,7 @@
         "n"
       ]
     },
-    "b2149": {
+    "b1354": {
       "terminal_names": [
         "1",
         "2",
@@ -1148,6 +1140,14 @@
       ]
     },
     "b2291": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b2149": {
       "terminal_names": [
         "1",
         "2",
@@ -1371,7 +1371,7 @@
         "n"
       ]
     },
-    "b575": {
+    "b157": {
       "terminal_names": [
         "1",
         "2",
@@ -1379,7 +1379,7 @@
         "n"
       ]
     },
-    "b157": {
+    "b575": {
       "terminal_names": [
         "1",
         "2",
@@ -1443,14 +1443,6 @@
         "n"
       ]
     },
-    "b1762": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
     "b2326": {
       "terminal_names": [
         "1",
@@ -1459,7 +1451,7 @@
         "n"
       ]
     },
-    "b2877": {
+    "b1762": {
       "terminal_names": [
         "1",
         "2",
@@ -1484,6 +1476,14 @@
       ]
     },
     "b2890": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b2877": {
       "terminal_names": [
         "1",
         "2",
@@ -1531,7 +1531,7 @@
         "n"
       ]
     },
-    "b315": {
+    "b795": {
       "terminal_names": [
         "1",
         "2",
@@ -1539,7 +1539,7 @@
         "n"
       ]
     },
-    "b795": {
+    "b315": {
       "terminal_names": [
         "1",
         "2",
@@ -1888,8 +1888,7 @@
       "terminal_map": [
         "1",
         "2",
-        "3",
-        "n"
+        "3"
       ],
       "bus": "b271",
       "configuration": "WYE"
@@ -6455,17 +6454,6 @@
       "element_id": "l_2961"
     },
     {
-      "message": "Removed dangling line l_2380 and its leaf bus b1902 (leaf has no active elements).",
-      "detail": {
-        "removed_bus": "b1902"
-      },
-      "severity": "info",
-      "operation": "remove_dangling_lines",
-      "code": "LINE_REMOVED",
-      "element_type": "line",
-      "element_id": "l_2380"
-    },
-    {
       "message": "Removed dangling line l_702 and its leaf bus b1230 (leaf has no active elements).",
       "detail": {
         "removed_bus": "b1230"
@@ -6475,6 +6463,17 @@
       "code": "LINE_REMOVED",
       "element_type": "line",
       "element_id": "l_702"
+    },
+    {
+      "message": "Removed dangling line l_2380 and its leaf bus b1902 (leaf has no active elements).",
+      "detail": {
+        "removed_bus": "b1902"
+      },
+      "severity": "info",
+      "operation": "remove_dangling_lines",
+      "code": "LINE_REMOVED",
+      "element_type": "line",
+      "element_id": "l_2380"
     },
     {
       "message": "Removed dangling line l_2940 and its leaf bus b613 (leaf has no active elements).",
@@ -7168,7 +7167,7 @@
   ],
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-15T02:58:17Z",
+    "created": "2026-06-17T07:57:11Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -11185,6 +11184,44 @@
       "bus": "b303",
       "configuration": "SINGLE_PHASE"
     },
+    "ld4106_load_c": {
+      "p_nom": [
+        10000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.249992666559,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        5000
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "b2728",
+      "configuration": "SINGLE_PHASE"
+    },
+    "ld3642_load_b": {
+      "p_nom": [
+        10000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.249992666559,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        5000
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "b2826",
+      "configuration": "SINGLE_PHASE"
+    },
     "ld1622_load_a": {
       "p_nom": [
         10000
@@ -11221,44 +11258,6 @@
         "n"
       ],
       "bus": "b2675",
-      "configuration": "SINGLE_PHASE"
-    },
-    "ld2483_load_c": {
-      "p_nom": [
-        10000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.249992666559,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        5000
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "b1813",
-      "configuration": "SINGLE_PHASE"
-    },
-    "ld1654_load_c": {
-      "p_nom": [
-        10000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.249992666559,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        5000
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "b2362",
       "configuration": "SINGLE_PHASE"
     },
     "ld1973_load_c": {
@@ -11299,7 +11298,7 @@
       "bus": "b201",
       "configuration": "SINGLE_PHASE"
     },
-    "ld4106_load_c": {
+    "ld2483_load_c": {
       "p_nom": [
         10000
       ],
@@ -11315,10 +11314,10 @@
         "3",
         "n"
       ],
-      "bus": "b2728",
+      "bus": "b1813",
       "configuration": "SINGLE_PHASE"
     },
-    "ld3642_load_b": {
+    "ld1654_load_c": {
       "p_nom": [
         10000
       ],
@@ -11331,10 +11330,10 @@
         5000
       ],
       "terminal_map": [
-        "2",
+        "3",
         "n"
       ],
-      "bus": "b2826",
+      "bus": "b2362",
       "configuration": "SINGLE_PHASE"
     },
     "ld159_load_b": {

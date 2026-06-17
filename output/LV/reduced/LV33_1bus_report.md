@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV33_1bus
 
-**Generated:** 2026-06-16 11:42:47  
-**Findings:** 2 errors · 2 warnings · 12 info  
+**Generated:** 2026-06-17 17:57:11  
+**Findings:** 2 errors · 3 warnings · 12 info  
 **Convention:** MV_6.4kV: 4-wire; implicit (Kron-style) grounding
 
 ---
@@ -132,7 +132,7 @@
 
 | Spec conformance | Value |
 |------------------|------:|
-| Conformance issues | 0 |
+| Conformance issues | 1 |
 | Voltage sources (spec requires 1) | 1 |
 
 | Structural integrity | Value |
@@ -149,6 +149,10 @@
 | Buses with \|V\| bounds | 0.0% |
 | Buses with vpn / vpp / vpos bounds | 0 / 0 / 0 |
 | Lines with thermal limits | 0.0% |
+| Generators with no DOF (p\_min≈p\_max) | 0 |
+| Generators with zero cost (dispatchable) | 0 |
+| Same-cost generator pairs (≤1 hop) | 0 |
+| Loads with zero p\_nom | 0 |
 
 **Augmentation needed:**
 
@@ -158,11 +162,13 @@
 
 > 🔴 **[E.INT.NO_VOLTAGE_REFERENCE]** Galvanic island of 1 bus(es) has no voltage reference (no source, perfect grounding, or grounding shunt) — voltages are defined only up to a shift (rank-deficient): b2650.
 
+> 🟡 **[W.SPEC.CONFIG_ARITY]** generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
+
 > 🔵 **[I.BENCH.AUGMENTATION]** Case needs augmentation to be a non-trivial OPF benchmark: only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF.
 
 ## 9. Data Quality Summary
 
-**Total findings:** 16 (2 errors, 2 warnings, 12 info)
+**Total findings:** 17 (2 errors, 3 warnings, 12 info)
 
 ### 🔴 Errors
 
@@ -177,6 +183,8 @@
   2 bus(es) have no reachable voltage source — may be islanded.
 - **[W.CONN.DANGLING]** `bus`  
   1 bus(es) are degree-1 with no attached load, generator, or shunt.
+- **[W.SPEC.CONFIG_ARITY]** `slack_source`  
+  generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
 
 ### 🔵 Info
 

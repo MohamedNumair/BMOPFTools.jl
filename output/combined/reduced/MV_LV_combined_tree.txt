@@ -36,7 +36,7 @@ b1726 (SRC G1)
                 │                           │           │           │                   │                       └── b866
                 │                           │           │           │                   │                           └── b843
                 │                           │           │           │                   │                               ├── b2577
-                │                           │           │           │                   │                               │   └── [tx3170: Dyn9 11.0kV/433V]── → Section 14: tx3170  (6 buses, 2 loads)
+                │                           │           │           │                   │                               │   └── [tx3170: Dyn1 11.0kV/433V]── → Section 14: tx3170  (6 buses, 2 loads)
                 │                           │           │           │                   │                               └── b2703
                 │                           │           │           │                   │                                   └── b2926
                 │                           │           │           │                   │                                       └── b2804
@@ -1558,7 +1558,7 @@ Loads (94 total):
   … and 44 more (pass legend_limit= to show all)
 
 ────────────────────────────────────────────────────────────
-# Section 14: tx3170  (tx3170: Dyn9 11.0kV/433V,  6 buses)
+# Section 14: tx3170  (tx3170: Dyn1 11.0kV/433V,  6 buses)
 
 b179
 └── b2734

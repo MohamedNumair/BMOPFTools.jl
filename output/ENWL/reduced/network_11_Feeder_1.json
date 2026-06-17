@@ -58,7 +58,7 @@
       ]
     }
   },
-  "name": "network_11_Feeder_1",
+  "name": "network_11 / Feeder_1",
   "line": {
     "line68": {
       "length": 126.065554,
@@ -829,7 +829,7 @@
   },
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-15T02:57:11Z",
+    "created": "2026-06-17T07:49:57Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -870,8 +870,7 @@
       "terminal_map": [
         "1",
         "2",
-        "3",
-        "n"
+        "3"
       ],
       "bus": "sourcebus",
       "configuration": "WYE"
@@ -1632,19 +1631,6 @@
       "element_id": "85"
     },
     {
-      "message": "Merged line line3 (0.095341 m) into line2 at pass-through bus 3; new length 0.190782 m.",
-      "detail": {
-        "new_length": 0.190782,
-        "absorbed_line": "line3",
-        "removed_bus": "3"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line2"
-    },
-    {
       "message": "Merged line line30 (0.08271 m) into line29 at pass-through bus 30; new length 0.179962 m.",
       "detail": {
         "new_length": 0.179962,
@@ -1656,6 +1642,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line29"
+    },
+    {
+      "message": "Merged line line3 (0.095341 m) into line2 at pass-through bus 3; new length 0.190782 m.",
+      "detail": {
+        "new_length": 0.190782,
+        "absorbed_line": "line3",
+        "removed_bus": "3"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line2"
     },
     {
       "message": "Merged line line27 (19.9569 m) into line26 at pass-through bus 27; new length 20.49776 m.",

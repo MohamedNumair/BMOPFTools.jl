@@ -1,7 +1,7 @@
 # BMOPF Network Summary: MV_LV_combined
 
-**Generated:** 2026-06-16 11:42:50  
-**Findings:** 0 errors · 14 warnings · 15 info  
+**Generated:** 2026-06-17 17:57:15  
+**Findings:** 0 errors · 15 warnings · 16 info  
 **Convention:** MV_6.4kV: mixed; LV_250V: 4-wire; 1289 grounding point(s)
 
 ---
@@ -18,7 +18,7 @@
 | generator | 1 | capacity: 0.0 W |
 | shunt | 1288 |  |
 | switch | 279 |  |
-| transformer | 33 | Dyn1×32, Dyn9×1 |
+| transformer | 33 | Dyn1×33 |
 
 ## 2. Voltage Levels
 
@@ -48,7 +48,7 @@
 - `tx2177`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
 - `tx1840`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
 - `tx2187`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
-- `tx3170`: MV_6.4kV → LV_250V (delta_wye, Dyn9)
+- `tx3170`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
 - `tx4271`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
 - `tx1621`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
 - `tx381`: MV_6.4kV → LV_250V (delta_wye, Dyn1)
@@ -263,7 +263,7 @@
 
 | Spec conformance | Value |
 |------------------|------:|
-| Conformance issues | 0 |
+| Conformance issues | 1 |
 | Voltage sources (spec requires 1) | 1 |
 
 | Structural integrity | Value |
@@ -281,6 +281,10 @@
 | Buses with \|V\| bounds | 0.0% |
 | Buses with vpn / vpp / vpos bounds | 0 / 0 / 0 |
 | Lines with thermal limits | 100.0% |
+| Generators with no DOF (p\_min≈p\_max) | 0 |
+| Generators with zero cost (dispatchable) | 0 |
+| Same-cost generator pairs (≤1 hop) | 0 |
+| Loads with zero p\_nom | 0 |
 
 **Augmentation needed:**
 
@@ -288,11 +292,13 @@
 - no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground)
 - no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF
 
+> 🟡 **[W.SPEC.CONFIG_ARITY]** generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
+
 > 🔵 **[I.BENCH.AUGMENTATION]** Case needs augmentation to be a non-trivial OPF benchmark: only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF.
 
 ## 9. Data Quality Summary
 
-**Total findings:** 29 (0 errors, 14 warnings, 15 info)
+**Total findings:** 31 (0 errors, 15 warnings, 16 info)
 
 ### 🟡 Warnings
 
@@ -324,6 +330,8 @@
   Transformer 'tx2677' is at 210.2% utilisation at nominal load — little OPF headroom.
 - **[W.OPS.XFMR_OVERLOADED]** `tx2382`  
   Transformer 'tx2382' is at 270.6% utilisation at nominal load — little OPF headroom.
+- **[W.SPEC.CONFIG_ARITY]** `slack_source`  
+  generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
 
 ### 🔵 Info
 
@@ -349,6 +357,8 @@
   3409 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.DOM.LINE_IMPEDANCE_SPREAD]** `line`  
+  Adjacent lines 'l_3238' and 'l_3095' at bus 'b706' have ||Z||_F ratio 1130.0× — large impedance contrasts between neighbouring lines cause ill-conditioned KKT Jacobians; consider per-unit scaling or network reformulation.
 - **[I.RED.MERGEABLE_LINES]** `line`  
   130 group(s) of series lines (341 lines total) can be merged — intermediate buses have no other connections.
 - **[I.RED.UNUSED_LINECODES]** `linecode`  
