@@ -9,13 +9,16 @@ Julia package extension that implements the four-wire rectangular current-voltag
 
 Variables (all rectangular, SI units — V and A):
 - `vr / vi`       — real/imaginary voltage at every bus terminal
-- `cr_fr / ci_fr` — series current leaving each line's from-terminal
-- `cr_to / ci_to` — series current entering each line's to-terminal
+- `cr_fr / ci_fr` — series current in each line, from-terminal direction (independent variable)
 - `crd / cid`     — load current (one per phase conductor)
 - `crg / cig`     — generator current (one per phase conductor)
 - `cr_src/ci_src` — slack-bus injection current (unconstrained)
 - `cr_xf / ci_xf` — transformer branch current (from- and to-side)
 - `cr_sw / ci_sw` — switch current (zeroed when open)
+
+The to-side series current `cr_to = −cr_fr` is an `AffExpr`, not a variable.
+The total branch current at each end (series + π-shunt) is also an `AffExpr`
+in `cr_fr` and `vr`/`vi`, substituted directly into KCL and thermal limits.
 
 KCL sign convention: positive current flows **into** the bus.  Every component
 function adds its contribution to the KCL accumulator dicts `(kcl_r, kcl_i)`;
