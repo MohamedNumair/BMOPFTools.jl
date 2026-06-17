@@ -100,6 +100,25 @@ struct SummaryReport
     findings::Vector{Finding}
 end
 
+"""
+    SolutionReport
+
+Output of [`profile_solution`](@ref). Holds the network name, result metadata,
+per-check summary dicts, and the complete finding log for the solution profile.
+Pass to [`render_solution`](@ref) for Markdown output.
+"""
+struct SolutionReport
+    network_name::Union{String,Nothing}
+    generated_at::DateTime
+    result_meta::Dict{String,Any}   # termination_status, objective, solve_time
+    results::Dict{Symbol,Dict{String,Any}}
+    findings::Vector{Finding}
+end
+
+errors(r::SolutionReport)   = errors(r.findings)
+warnings(r::SolutionReport) = warnings(r.findings)
+infos(r::SolutionReport)    = infos(r.findings)
+
 # ---------------------------------------------------------------------------
 # Accessors on Finding collections
 # ---------------------------------------------------------------------------
@@ -167,6 +186,28 @@ function _neutral_terminal(names::AbstractVector)::Union{String,Nothing}
     nothing
 end
 
+"""
+    _neutral_pos(terminal_map) -> Union{Int,Nothing}
+
+Return the 1-based position of the neutral terminal in `terminal_map`,
+or `nothing` if none is identified.
+"""
+function _neutral_pos(terminal_map::AbstractVector)::Union{Int,Nothing}
+    nt = _neutral_terminal(terminal_map)
+    nt === nothing && return nothing
+    findfirst(==(nt), string.(terminal_map))
+end
+
+"""
+    _phase_positions(terminal_map) -> Vector{Int}
+
+Return the 1-based positions of the non-neutral conductors in `terminal_map`.
+"""
+function _phase_positions(terminal_map::AbstractVector)::Vector{Int}
+    np = _neutral_pos(terminal_map)
+    [k for k in eachindex(terminal_map) if k != np]
+end
+
 # ---------------------------------------------------------------------------
 # Submodule includes — order matters; IO first, then analysis, then report
 # ---------------------------------------------------------------------------
@@ -192,6 +233,7 @@ include("validation/redundancy.jl")
 include("validation/integrity.jl")
 include("validation/spec_conformance.jl")
 include("validation/roundtrip.jl")
+include("validation/solution.jl")
 
 include("network/simplify.jl")
 
@@ -199,6 +241,7 @@ include("report/formatting.jl")
 include("report/render_terminal.jl")
 include("report/render_markdown.jl")
 include("report/render_ascii_tree.jl")
+include("report/render_solution_markdown.jl")
 
 include("infeasibility/infeasibility.jl")
 
@@ -282,6 +325,53 @@ function render(report::SummaryReport, path::AbstractString; verbose::Bool=true)
     end
 end
 
+"""
+    profile_solution(net, result; t_index::Int=1) -> SolutionReport
+
+Profile an OPF result dict against the BMOPF network that produced it.
+Checks bound satisfaction (voltage, thermal, generator dispatch), constraint
+residuals, power balance, and produces informational summaries (loss fraction,
+neutral shift).
+
+`net` may be a snapshot or time-series network dict; `t_index` selects the
+snapshot when time-series data is present. `result` is the dict returned by
+[`solve_opf`](@ref) or any compatible solver.
+
+Returns a [`SolutionReport`](@ref) which can be rendered to Markdown with
+[`render_solution`](@ref).
+"""
+function profile_solution(net::Dict{String,Any}, result::Dict{String,Any};
+                           t_index::Int=1)
+    working  = is_timeseries(net) ? get_snapshot(net, t_index) : net
+    findings = Finding[]
+    results  = Dict{Symbol,Dict{String,Any}}()
+    results[:solution] = solution_check(working, result, findings)
+    meta = Dict{String,Any}(
+        "termination_status" => get(result, "termination_status", "UNKNOWN"),
+        "objective"          => get(result, "objective",          NaN),
+        "solve_time"         => get(result, "solve_time",         NaN),
+    )
+    SolutionReport(get(net, "name", nothing), now(), meta, results, findings)
+end
+
+"""
+    render_solution(report::SolutionReport, dest; verbose::Bool=true)
+
+Render a [`SolutionReport`](@ref) to `dest`.
+
+- `dest::IO`             — writes Markdown text
+- `dest::AbstractString` — writes to file (`.md` extension recommended)
+"""
+function render_solution(report::SolutionReport, dest::IO; verbose::Bool=true)
+    render_solution_markdown(report, dest; verbose=verbose)
+end
+
+function render_solution(report::SolutionReport, path::AbstractString; verbose::Bool=true)
+    open(path, "w") do io
+        render_solution_markdown(report, io; verbose=verbose)
+    end
+end
+
 # ---------------------------------------------------------------------------
 # OPF entry point — implementation lives in ext/BMOPFOpfExt (loaded when
 # JuMP and Ipopt are both available in the calling environment).
@@ -338,8 +428,9 @@ export solve_feasibility_opf
 # ---------------------------------------------------------------------------
 
 export Severity, ERROR, WARNING, INFO
-export Finding, SummaryReport
+export Finding, SummaryReport, SolutionReport
 export errors, warnings, infos
+export profile_solution, render_solution, solution_check
 export parse_bmopf, write_bmopf
 export from_pmd, to_pmd
 export from_dss

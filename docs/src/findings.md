@@ -1,6 +1,6 @@
 # Finding-code reference
 
-The complete catalogue of the 88 finding codes, grouped by family. Codes are
+The complete catalogue of the 103 finding codes, grouped by family. Codes are
 **stable identifiers** — filter on `f.code`, never on message text. Severity
 prefix: `E.` error, `W.` warning, `I.` info (see
 [Analysis & reports](analysis.md) for the severity semantics).
@@ -203,6 +203,27 @@ Rules the JSON Schema cannot express.
 | `W.SPEC.XFMR_TMAP_ARITY` | W | Transformer terminal-map lengths off the per-subtype spec values — also the deliberate tripwire for unconverted wye-wye units. |
 | `W.SPEC.TERMINAL_TYPES` | W | The source file used non-string terminal identifiers; they were coerced at parse (aliases or verbatim — the finding says which). |
 | `I.SPEC.MATRIX_TRIANGULAR` | I | Impedance matrices stored upper-triangular; the spec defines full row-first storage. Read fine; normalise before publishing. |
+
+## SOL — solution profiling
+
+Produced by [`profile_solution`](@ref) when checking an OPF result dict against
+its network. See [`SolutionReport`](@ref) and [`render_solution`](@ref).
+
+| Code | Sev | Trigger & rationale |
+|---|---|---|
+| `E.SOL.INFEASIBLE` | E | Solver termination status is not `LOCALLY_SOLVED`, `OPTIMAL`, or `ALMOST_LOCALLY_SOLVED`. All subsequent bound and residual checks are skipped. |
+| `E.SOL.NAN_IN_RESULT` | E | One or more numeric fields in the result dict contain `NaN` or `Inf`. Indicates a solver failure or extraction bug even when the termination status appears feasible. |
+| `E.SOL.VOLT_VIOLATION` | E | A bus terminal voltage magnitude (vm, vpn, vpp, or sequence component) lies outside its declared bound. |
+| `W.SOL.VOLT_ACTIVE` | W | A voltage magnitude is within 1 % of its bound — the constraint is near-active (binding at the tolerance level). |
+| `E.SOL.THERMAL_VIOLATION` | E | A line or switch current magnitude exceeds the component's or linecode's `i_max` limit. |
+| `W.SOL.THERMAL_ACTIVE` | W | Current magnitude is within 1 % of `i_max` — the thermal limit is near-active. |
+| `E.SOL.GEN_VIOLATION` | E | A generator's active or reactive dispatch (`pg`/`qg` per terminal) falls outside its declared `p_min`/`p_max`/`q_min`/`q_max` bounds. |
+| `W.SOL.GEN_ACTIVE` | W | Generator dispatch is within 1 % of a bound — the bound is near-active. |
+| `W.SOL.LOAD_RESIDUAL` | W | Solved load power (`pd`/`qd`) differs from the nominal setpoint (`p_nom`/`q_nom`) by more than 1 W / 1 var — the load constraint has non-trivial residual. |
+| `W.SOL.POWER_BALANCE` | W | Network-wide active power balance error (Σpg − Σpd − Σp_loss) exceeds 1 % of total load — a significant mismatch that may indicate a lossy model, a missing component, or a result extraction issue. |
+| `I.SOL.BINDING_SUMMARY` | I | Summary count of violated and near-active bounds across all categories (voltage, thermal, generator). Always emitted for feasible solutions. |
+| `I.SOL.LOSS_FRACTION` | I | Line losses exceed 20 % of total generation — unusually high; may indicate a high-impedance feeder, a model issue, or an extreme operating point. |
+| `I.SOL.NEUTRAL_SHIFT` | I | Maximum neutral terminal voltage magnitude across all buses, with the bus identifier. Non-zero neutral shift indicates load unbalance or grounding impedance. |
 
 ## BENCH — benchmark readiness
 
