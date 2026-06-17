@@ -22,10 +22,13 @@ PowerModelsDistribution and your own code.
 OpenDSS .dss ──(PowerModelsDistribution)──► ENGINEERING dict
                                                  │ from_pmd
                                                  ▼
-   BMOPF JSON ◄──── write_bmopf ────── BMOPF Dict{String,Any}
-                                                 │ analyze
-                                                 ▼
-                                          SummaryReport ──► render (terminal / Markdown)
+   BMOPF JSON ◄──── write_bmopf ────── BMOPF Dict{String,Any} ──── to_pmd ──► PMD
+                                                 │ analyze                │ solve_opf
+                                                 ▼                        ▼
+                                          SummaryReport        result Dict{String,Any}
+                                                 │                        │ profile_solution
+                                                 ▼                        ▼
+                                              render              SolutionReport ──► render_solution
 ```
 
 - **Conversion**: `from_pmd` / `to_pmd` translate between PMD's ENGINEERING
@@ -40,28 +43,46 @@ OpenDSS .dss ──(PowerModelsDistribution)──► ENGINEERING dict
   (sequence-derived impedances, Kron-reduction likelihood, earthing-system
   tagging, OpenDSS default fingerprints, regulator patterns) and
   **benchmark readiness**.
-- **Reporting**: every `analyze` run produces a `SummaryReport` with ~80
-  stable, documented finding codes, rendered to terminal or Markdown.
+- **Reporting**: every `analyze` run produces a `SummaryReport` with a
+  complete catalogue of stable, documented finding codes, rendered to
+  terminal or Markdown.
+- **Solution profiling**: given a BMOPF network and an OPF result dict,
+  `profile_solution` flags bound violations, near-active constraints,
+  constraint residuals, and solution-quality issues without access to solver
+  internals.
 
 ## Quickstart
+
+Analysing an existing BMOPF JSON case:
 
 ```julia
 using BMOPFTools
 
-# from an existing BMOPF JSON file
 net    = parse_bmopf("case.json")
 report = analyze(net)
 render(report, stdout)              # terminal report
 render(report, "case_report.md")    # Markdown report
-write_bmopf(net, "case_clean.json")
 
-# programmatic access
-errors(report)                       # Vector{Finding} with ERROR severity
+errors(report)                      # findings with ERROR severity
 report.results[:provenance]["convention"]
 ```
 
-Converting from OpenDSS (requires PowerModelsDistribution in the
-environment):
+Profiling an OPF result dict (requires `solve_opf` or any compatible solver):
+
+```julia
+using BMOPFTools, JuMP, Ipopt
+
+net    = parse_bmopf("case.json")
+result = solve_opf(net; optimizer=Ipopt.Optimizer)
+
+report = profile_solution(net, result)
+render_solution(report, "solution.md")
+
+errors(report)    # bound violations and infeasibility findings
+warnings(report)  # near-active bounds and residual warnings
+```
+
+Converting from OpenDSS (requires PowerModelsDistribution in the environment):
 
 ```julia
 using BMOPFTools, PowerModelsDistribution
@@ -81,11 +102,14 @@ BMOPFTools `Pkg.develop`ed into it). The test suite skips the OpenDSS
 integration test when PMD is absent.
 
 ```sh
-# full test suite (with PMD, from the parent project root)
-julia --project=. BMOPFTools/test/runtests.jl
+# full test suite (with PMD, from the package root)
+julia --project=. -e "using Pkg; Pkg.test()"
 
-# batch-convert every test case and generate reports into BMOPFTools/output/
-julia --project=. BMOPFTools/examples/generate_reports.jl
+# convert D-Suite networks from DSS to BMOPF JSON
+julia --project=. scripts/generate_dsuite.jl
+
+# generate analysis reports and simplified variants for all output/ networks
+julia --project=. scripts/generate_output.jl
 ```
 
 ## Documentation
@@ -110,4 +134,4 @@ Force draft specification.
 - `examples/lv1_14bus_walkthrough.jl` — step-by-step tour of every analysis
   on a real 14-bus LV feeder.
 - `examples/generate_reports.jl` — batch conversion + reporting over all
-  test datasets (LV/MV library, combined MV+LV system, ENWL).
+  test datasets.
