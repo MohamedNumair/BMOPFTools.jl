@@ -83,6 +83,19 @@ function _load_diversity(net::Dict{String,Any},
             "Load p_nom has very low coefficient of variation ($(round(r["p_nom"]["cv"], digits=3))) — all loads nearly identical.",
             nothing))
     end
+    if haskey(r, "power_factor") && n_total >= 3
+        pf_mean = get(r["power_factor"], "mean", NaN)
+        pf_cv   = get(r["power_factor"], "cv",   NaN)
+        if isfinite(pf_mean) && isfinite(pf_cv) &&
+           abs(pf_mean - 0.88) < 0.01 && pf_cv < 0.05
+            push!(findings, Finding(INFO, "I.DIV.LOAD_PF_DSS_DEFAULT", :diversity,
+                :load, nothing,
+                "Load power factor mean $(round(pf_mean, digits=3)) is within 1% of " *
+                "the OpenDSS default PF=0.88 (CV=$(round(pf_cv, digits=3))) — " *
+                "reactive power may not have been explicitly set.",
+                Dict{String,Any}("pf_mean" => pf_mean, "pf_cv" => pf_cv)))
+        end
+    end
 
     # Phase imbalance for multi-phase loads
     imbalances = Float64[]

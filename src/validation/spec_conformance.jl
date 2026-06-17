@@ -62,7 +62,13 @@ function spec_conformance_check(net::Dict{String,Any},
             Dict{String,Any}("n" => n_src)))
     end
 
-    # --- nodal element configuration / arity ---
+    # --- nodal element configuration / arity / semantic terminal checks ---
+    buses = get(net, "bus", Dict())
+    bus_neutral(bid) = begin
+        b = get(buses, bid, nothing)
+        b isa Dict ? _neutral_terminal(b) : nothing
+    end
+
     for (comp_type, allowed) in (("load", keys(_CONFIG_ARITY)),
                                   ("generator", ("WYE",)))
         for (id, c) in get(net, comp_type, Dict())
@@ -85,7 +91,7 @@ function spec_conformance_check(net::Dict{String,Any},
                     "currently supported.", nothing))
             end
             arity = _CONFIG_ARITY[cfg]
-            tm = get(c, "terminal_map", String[])
+            tm = Vector{String}(string.(get(c, "terminal_map", String[])))
             if length(tm) != arity
                 n_issues += 1
                 push!(findings, Finding(WARNING, "W.SPEC.CONFIG_ARITY", :spec,
@@ -94,6 +100,106 @@ function spec_conformance_check(net::Dict{String,Any},
                     "terminal(s), terminal_map has $(length(tm)).",
                     Dict{String,Any}("configuration" => cfg,
                                      "arity" => length(tm))))
+                continue   # semantic checks below assume correct arity
+            end
+
+            # --- duplicate terminals ---
+            if length(unique(tm)) < length(tm)
+                dups = [t for t in unique(tm) if count(==(t), tm) > 1]
+                n_issues += 1
+                push!(findings, Finding(ERROR, "E.SPEC.DUPLICATE_TERMINAL", :spec,
+                    Symbol(comp_type), id,
+                    "$comp_type '$id' has duplicate terminal(s) in terminal_map " *
+                    "$(tm): $(join(dups, ", ")).",
+                    Dict{String,Any}("terminal_map" => tm, "duplicates" => dups)))
+            end
+
+            bid = get(c, "bus", nothing)
+            nn  = bid isa AbstractString ? bus_neutral(bid) : nothing
+
+            # --- semantic checks per configuration ---
+            if cfg == "SINGLE_PHASE" && nn !== nothing
+                t1, t2 = tm[1], tm[2]
+                if t1 != nn && t2 != nn
+                    # both phase conductors — phase-to-phase (delta) single-phase
+                    push!(findings, Finding(INFO, "I.SPEC.LOAD_PHASE_TO_PHASE", :spec,
+                        Symbol(comp_type), id,
+                        "$comp_type '$id' (SINGLE_PHASE) connects terminals " *
+                        "'$t1' and '$t2', neither of which is the neutral '$nn' of " *
+                        "bus '$bid' -- this is a phase-to-phase (delta-connected) " *
+                        "single-phase element.",
+                        Dict{String,Any}("bus" => bid, "terminals" => tm,
+                                         "neutral" => nn)))
+                end
+                # t1==nn && t2!=nn is already caught by E.TMAP.PHASE_TO_NEUTRAL
+            end
+
+            if cfg == "WYE" && nn !== nothing
+                phase_tms = tm[1:end-1]
+                neutral_tm = tm[end]
+                if neutral_tm != nn
+                    n_issues += 1
+                    push!(findings, Finding(ERROR, "E.SPEC.WYE_MISSING_NEUTRAL", :spec,
+                        Symbol(comp_type), id,
+                        "$comp_type '$id' (WYE) last terminal '$neutral_tm' is not " *
+                        "the neutral '$nn' of bus '$bid' -- return path is not the neutral.",
+                        Dict{String,Any}("bus" => bid, "terminal_map" => tm,
+                                         "neutral" => nn, "last_terminal" => neutral_tm)))
+                end
+                dups_phase = [t for t in unique(phase_tms) if count(==(t), phase_tms) > 1]
+                if !isempty(dups_phase)
+                    n_issues += 1
+                    push!(findings, Finding(ERROR, "E.SPEC.WYE_DUPLICATE_PHASE", :spec,
+                        Symbol(comp_type), id,
+                        "$comp_type '$id' (WYE) has duplicate phase terminal(s): " *
+                        "$(join(dups_phase, ", ")).",
+                        Dict{String,Any}("terminal_map" => tm,
+                                         "duplicates" => dups_phase)))
+                end
+            end
+
+            if cfg == "DELTA" && nn !== nothing
+                neutral_in_delta = filter(t -> t == nn, tm)
+                if !isempty(neutral_in_delta)
+                    n_issues += 1
+                    push!(findings, Finding(ERROR, "E.SPEC.DELTA_HAS_NEUTRAL", :spec,
+                        Symbol(comp_type), id,
+                        "$comp_type '$id' (DELTA) has neutral terminal '$nn' in " *
+                        "terminal_map $(tm) -- delta elements must connect phase-to-phase only.",
+                        Dict{String,Any}("bus" => bid, "terminal_map" => tm,
+                                         "neutral" => nn)))
+                end
+                phase_tms = filter(t -> t != nn, tm)
+                dups_phase = [t for t in unique(phase_tms) if count(==(t), phase_tms) > 1]
+                if !isempty(dups_phase)
+                    n_issues += 1
+                    push!(findings, Finding(ERROR, "E.SPEC.DELTA_DUPLICATE_PHASE", :spec,
+                        Symbol(comp_type), id,
+                        "$comp_type '$id' (DELTA) has duplicate phase terminal(s): " *
+                        join(dups_phase, ", ") * ".",
+                        Dict{String,Any}("terminal_map" => tm,
+                                         "duplicates" => dups_phase)))
+                end
+            end
+        end
+    end
+
+    # --- duplicate terminals in lines and switches ---
+    for comp_type in ("line", "switch")
+        for (id, c) in get(net, comp_type, Dict())
+            c isa Dict || continue
+            for side in ("terminal_map_from", "terminal_map_to")
+                tm = Vector{String}(string.(get(c, side, String[])))
+                if length(unique(tm)) < length(tm)
+                    dups = [t for t in unique(tm) if count(==(t), tm) > 1]
+                    n_issues += 1
+                    push!(findings, Finding(ERROR, "E.SPEC.DUPLICATE_TERMINAL", :spec,
+                        Symbol(comp_type), id,
+                        "$comp_type '$id' $side has duplicate terminal(s): " *
+                        join(dups, ", ") * ".",
+                        Dict{String,Any}("side" => side, "terminal_map" => tm,
+                                         "duplicates" => dups)))
+                end
             end
         end
     end
@@ -110,8 +216,8 @@ function spec_conformance_check(net::Dict{String,Any},
                 n_issues += 1
                 push!(findings, Finding(WARNING, "W.SPEC.XFMR_TMAP_ARITY", :spec,
                     :transformer, id,
-                    "transformer ($subtype) '$id': spec requires terminal maps " *
-                    "of length ($a_from, $a_to); found ($nf, $nt).",
+                    "transformer $subtype '$id': spec requires terminal maps " *
+                    "of length $a_from/$a_to; found $nf/$nt.",
                     Dict{String,Any}("subtype" => subtype,
                                      "from" => nf, "to" => nt)))
             end
