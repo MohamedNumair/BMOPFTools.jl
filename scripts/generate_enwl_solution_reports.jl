@@ -28,14 +28,12 @@ using JuMP, Ipopt
 
 const REDUCED_DIR = joinpath(@__DIR__, "..", "output", "ENWLbenchmark", "reduced")
 
-const IPOPT_OPTS = (
-    "max_iter"    => 500,
-    "print_level" => 0,
-    "tol"         => 1e-6,
-)
-
 function _optimizer()
-    optimizer_with_attributes(Ipopt.Optimizer, IPOPT_OPTS...)
+    optimizer_with_attributes(Ipopt.Optimizer,
+        "max_iter"    => 500,
+        "print_level" => 0,
+        "tol"         => 1e-6,
+    )
 end
 
 source_files = sort([
