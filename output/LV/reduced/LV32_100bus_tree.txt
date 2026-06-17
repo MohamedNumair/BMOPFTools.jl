@@ -41,28 +41,28 @@ b2234 (SRC G1)
             └── b387 (L2)
 
 Loads (22 total):
-  L1 = ld1031_load_c      10.0 kW  SINGLE_PHASE  phases: 3
-  L2 = ld1396_load_a      10.0 kW  SINGLE_PHASE  phases: 1
-  L3 = ld1441_load_b      10.0 kW  SINGLE_PHASE  phases: 2
-  L4 = ld2010_load_c      10.0 kW  SINGLE_PHASE  phases: 3
-  L5 = ld2273_load_a      10.0 kW  SINGLE_PHASE  phases: 1
-  L6 = ld279_load_a       10.0 kW  SINGLE_PHASE  phases: 1
-  L7 = ld3043_load_b      10.0 kW  SINGLE_PHASE  phases: 2
-  L8 = ld3398_load_c      10.0 kW  SINGLE_PHASE  phases: 3
-  L9 = ld3519_load_a      10.0 kW  SINGLE_PHASE  phases: 1
-  L10 = ld3623_load_b      10.0 kW  SINGLE_PHASE  phases: 2
-  L11 = ld3627_load_c      10.0 kW  SINGLE_PHASE  phases: 3
-  L12 = ld3772_load_a      10.0 kW  SINGLE_PHASE  phases: 1
-  L13 = ld3880_load_b      10.0 kW  SINGLE_PHASE  phases: 2
-  L14 = ld3966_load_c      10.0 kW  SINGLE_PHASE  phases: 3
-  L15 = ld4049_load_a      10.0 kW  SINGLE_PHASE  phases: 1
-  L16 = ld4060_load_b      10.0 kW  SINGLE_PHASE  phases: 2
-  L17 = ld4469_load_c      10.0 kW  SINGLE_PHASE  phases: 3
-  L18 = ld452_load_b       10.0 kW  SINGLE_PHASE  phases: 2
-  L19 = ld4613_load_a      10.0 kW  SINGLE_PHASE  phases: 1
-  L20 = ld498_load_c       10.0 kW  SINGLE_PHASE  phases: 3
-  L21 = ld969_load_a       10.0 kW  SINGLE_PHASE  phases: 1
-  L22 = ld971_load_b       10.0 kW  SINGLE_PHASE  phases: 2
+  L1 = ld1031_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
+  L2 = ld1396_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
+  L3 = ld1441_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
+  L4 = ld2010_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
+  L5 = ld2273_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
+  L6 = ld279_load_a       10.0 kW  SINGLE_PHASE  terminals: 1,n
+  L7 = ld3043_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
+  L8 = ld3398_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
+  L9 = ld3519_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
+  L10 = ld3623_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
+  L11 = ld3627_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
+  L12 = ld3772_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
+  L13 = ld3880_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
+  L14 = ld3966_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
+  L15 = ld4049_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
+  L16 = ld4060_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
+  L17 = ld4469_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
+  L18 = ld452_load_b       10.0 kW  SINGLE_PHASE  terminals: 2,n
+  L19 = ld4613_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
+  L20 = ld498_load_c       10.0 kW  SINGLE_PHASE  terminals: 3,n
+  L21 = ld969_load_a       10.0 kW  SINGLE_PHASE  terminals: 1,n
+  L22 = ld971_load_b       10.0 kW  SINGLE_PHASE  terminals: 2,n
 
 Generators (1 total):
-  G1 = slack_source     max    0.0 kW
+  G1 = slack_source     max    0.0 kW  terminals: 1,2,3

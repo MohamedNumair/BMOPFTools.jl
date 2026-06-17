@@ -61,8 +61,8 @@ sourcebus (SRC G1)
                                                                                                                                                                                                                                 └── 58 (L2)
 
 Loads (2 total):
-  L1 = load1              1.97 kW  SINGLE_PHASE  phases: 1
-  L2 = load2              0.31 kW  SINGLE_PHASE  phases: 2
+  L1 = load1              1.97 kW  SINGLE_PHASE  terminals: 1,n
+  L2 = load2              0.31 kW  SINGLE_PHASE  terminals: 2,n
 
 Generators (1 total):
-  G1 = slack_source     max    0.0 kW
+  G1 = slack_source     max    0.0 kW  terminals: 1,2,3

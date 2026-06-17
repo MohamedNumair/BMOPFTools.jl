@@ -1,7 +1,7 @@
 # BMOPF Network Summary: Three-wire-Kron-reduced / network_20 / Feeder_1
 
-**Generated:** 2026-06-17 17:52:49  
-**Findings:** 0 errors · 35 warnings · 7 info  
+**Generated:** 2026-06-18 08:49:14  
+**Findings:** 0 errors · 35 warnings · 8 info  
 **Convention:** LV_240V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -121,6 +121,7 @@
 |------|------:|-------|------------|------------------:|---------------|
 | 240.0 V | 78 | ≤3-wire | solid | 25 | indeterminate (3-wire / Kron-style implicit grounding) |
 
+> 🔵 **[I.PROV.NO_PI_SHUNT]** All 2 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 > 🔵 **[I.PROV.DSS_DEFAULT_LENGTH]** 1 of 77 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
 > 🔵 **[I.PROV.IMPEDANCE_TRANSFORM_KR]** 2 three-wire linecode(s) match the impedance signature of Kron reduction — neutral row/column eliminated from the original four-wire Carson impedance matrix via Schur complement. Exact when every neutral is perfectly grounded; approximate with finite grounding. Zero-sequence behaviour is not captured by the three-wire representation.: lc1, lc8.
 
@@ -163,7 +164,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 42 (0 errors, 35 warnings, 7 info)
+**Total findings:** 43 (0 errors, 35 warnings, 8 info)
 
 ### 🟡 Warnings
 
@@ -242,6 +243,8 @@
 
 - **[I.DIV.LINE_SYMMETRIC]** `line`  
   25 lines share linecode 'lc1' with similar length (±10%) — electrically near-identical.
+- **[I.PROV.NO_PI_SHUNT]** `linecode`  
+  All 2 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PROV.DSS_DEFAULT_LENGTH]** `line`  
   1 of 77 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
 - **[I.PROV.IMPEDANCE_TRANSFORM_KR]** `linecode`  

@@ -1,6 +1,6 @@
 # BMOPF Network Summary: LV20_26bus
 
-**Generated:** 2026-06-17 17:57:10  
+**Generated:** 2026-06-18 08:53:35  
 **Findings:** 0 errors · 4 warnings · 14 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 6 grounding point(s)
 

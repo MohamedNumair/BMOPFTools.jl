@@ -294,8 +294,7 @@ function render_ascii_tree(net::Dict{String,Any}, io::IO;
                 p_kw = round(p_w / 1000, digits=2)
                 cfg  = get(l, "configuration", "WYE")
                 tm   = get(l, "terminal_map", [])
-                ph   = filter(t -> string(t) != "n", string.(tm))
-                println(io, "  $(load_num[lid]) = $(rpad(lid, 16)) $(lpad(p_kw, 6)) kW  $cfg  phases: $(join(ph,","))")
+                println(io, "  $(load_num[lid]) = $(rpad(lid, 16)) $(lpad(p_kw, 6)) kW  $cfg  terminals: $(join(string.(tm),","))")
             end
             shown < length(lids) &&
                 println(io, "  … and $(length(lids) - shown) more (pass legend_limit= to show all)")
@@ -306,7 +305,9 @@ function render_ascii_tree(net::Dict{String,Any}, io::IO;
                 g     = get(gens, gid, Dict())
                 p_max = sum(Float64.(get(g, "p_max", Float64[])); init=0.0)
                 p_kw  = round(p_max / 1000, digits=2)
-                println(io, "  $(gen_num[gid]) = $(rpad(gid, 16)) max $(lpad(p_kw, 6)) kW")
+                tm_g  = get(g, "terminal_map", [])
+                tm_str = isempty(tm_g) ? "" : "  terminals: $(join(string.(tm_g), ","))"
+                println(io, "  $(gen_num[gid]) = $(rpad(gid, 16)) max $(lpad(p_kw, 6)) kW$tm_str")
             end
         end
     end

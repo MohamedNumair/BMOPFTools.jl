@@ -1,6 +1,6 @@
 # Simplification log: LV22_80bus
 
-**Generated:** 2026-06-17 17:57:10  
+**Generated:** 2026-06-18 08:53:36  
 **Buses:** 81 → 48 (−33)  
 **Lines:** 71 → 46 (−25)  
 **Operations:** 44

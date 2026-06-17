@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_7_Feeder_4
 
-**Generated:** 2026-06-16 19:48:28  
-**Findings:** 0 errors · 1 warnings · 51 info  
+**Generated:** 2026-06-18 08:55:45  
+**Findings:** 0 errors · 1 warnings · 52 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -14,8 +14,8 @@
 | line | 353 |  |
 | linecode | 7 |  |
 | voltage_source | 1 |  |
-| load | 186 | 162.9 kW, 53.5 kvar |
-| generator | 48 | capacity: 1.17 MW |
+| load | 186 | 162.905 kW, 53.5 kvar |
+| generator | 48 | capacity: 1.165 MW |
 | shunt | 1 |  |
 | switch | 0 |  |
 | transformer | 0 |  |
@@ -75,9 +75,9 @@
 
 | | Value |
 |--|-------|
-| Total load P | 162.9 kW |
+| Total load P | 162.905 kW |
 | Total load Q | 53.5 kvar |
-| Total gen capacity | 1.17 MW |
+| Total gen capacity | 1.165 MW |
 | Generation/load ratio | 715.4% |
 
 ## 6. Infeasibility Pre-flight
@@ -123,6 +123,8 @@
 |------|------:|-------|------------|------------------:|---------------|
 | 240.0 V | 354 | 4-wire | solid | 0 | TN-S or TT (source-earthed only — protective-earth side not representable in the data model) |
 
+> 🔵 **[I.PROV.NO_PI_SHUNT]** All 7 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
+
 ## 8. Spec Conformance & Benchmark Readiness
 
 | Spec conformance | Value |
@@ -155,8 +157,8 @@
 - no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground)
 
 > 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_1237' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
-> 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_1360' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 > 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_316' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
+> 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_1360' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 > 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_1000' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 > 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_1499' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 > 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_1296' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
@@ -206,7 +208,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 52 (0 errors, 1 warnings, 51 info)
+**Total findings:** 53 (0 errors, 1 warnings, 52 info)
 
 ### 🟡 Warnings
 
@@ -215,6 +217,8 @@
 
 ### 🔵 Info
 
+- **[I.PROV.NO_PI_SHUNT]** `linecode`  
+  All 7 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PRE.NO_VOLT_BOUNDS]** `bus`  
   354 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
@@ -223,10 +227,10 @@
   4 group(s) of series lines (10 lines total) can be merged — intermediate buses have no other connections.
 - **[I.SPEC.GEN_CONFIG_FUTURE]** `der_1237`  
   Generator 'der_1237' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
-- **[I.SPEC.GEN_CONFIG_FUTURE]** `der_1360`  
-  Generator 'der_1360' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 - **[I.SPEC.GEN_CONFIG_FUTURE]** `der_316`  
   Generator 'der_316' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
+- **[I.SPEC.GEN_CONFIG_FUTURE]** `der_1360`  
+  Generator 'der_1360' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 - **[I.SPEC.GEN_CONFIG_FUTURE]** `der_1000`  
   Generator 'der_1000' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 - **[I.SPEC.GEN_CONFIG_FUTURE]** `der_1499`  

@@ -1,6 +1,6 @@
 # BMOPF Network Summary: LV1_14bus
 
-**Generated:** 2026-06-17 17:57:10  
+**Generated:** 2026-06-18 08:53:35  
 **Findings:** 0 errors · 3 warnings · 12 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 4 grounding point(s)
 

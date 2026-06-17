@@ -59937,9 +59937,9 @@
       "bus": "160",
       "configuration": "SINGLE_PHASE"
     },
-    "der_316": {
+    "der_202": {
       "cost": [
-        0.000193824817
+        0.000192408796
       ],
       "p_max": [
         4000
@@ -59948,10 +59948,10 @@
         0
       ],
       "terminal_map": [
-        "1",
+        "2",
         "n"
       ],
-      "bus": "316",
+      "bus": "202",
       "configuration": "SINGLE_PHASE"
     },
     "der_3117": {
@@ -59971,9 +59971,9 @@
       "bus": "3117",
       "configuration": "SINGLE_PHASE"
     },
-    "der_202": {
+    "der_316": {
       "cost": [
-        0.000192408796
+        0.000193824817
       ],
       "p_max": [
         4000
@@ -59982,10 +59982,10 @@
         0
       ],
       "terminal_map": [
-        "2",
+        "1",
         "n"
       ],
-      "bus": "202",
+      "bus": "316",
       "configuration": "SINGLE_PHASE"
     },
     "der_1806": {

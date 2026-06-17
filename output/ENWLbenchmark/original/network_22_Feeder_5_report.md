@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_22_Feeder_5
 
-**Generated:** 2026-06-16 19:48:06  
-**Findings:** 0 errors · 1 warnings · 13 info  
+**Generated:** 2026-06-18 08:55:22  
+**Findings:** 0 errors · 1 warnings · 14 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -14,8 +14,8 @@
 | line | 619 |  |
 | linecode | 4 |  |
 | voltage_source | 1 |  |
-| load | 29 | 24.6 kW, 8.1 kvar |
-| generator | 9 | capacity: 179.6 kW |
+| load | 29 | 24.594 kW, 8.1 kvar |
+| generator | 9 | capacity: 179.564 kW |
 | shunt | 1 |  |
 | switch | 0 |  |
 | transformer | 0 |  |
@@ -75,9 +75,9 @@
 
 | | Value |
 |--|-------|
-| Total load P | 24.6 kW |
+| Total load P | 24.594 kW |
 | Total load Q | 8.1 kvar |
-| Total gen capacity | 179.6 kW |
+| Total gen capacity | 179.564 kW |
 | Generation/load ratio | 730.1% |
 
 ## 6. Infeasibility Pre-flight
@@ -123,6 +123,7 @@
 |------|------:|-------|------------|------------------:|---------------|
 | 240.0 V | 620 | 4-wire | solid | 0 | TN-S or TT (source-earthed only — protective-earth side not representable in the data model) |
 
+> 🔵 **[I.PROV.NO_PI_SHUNT]** All 4 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 > 🔵 **[I.PROV.DSS_DEFAULT_LENGTH]** 1 of 619 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
 
 ## 8. Spec Conformance & Benchmark Readiness
@@ -169,7 +170,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 14 (0 errors, 1 warnings, 13 info)
+**Total findings:** 15 (0 errors, 1 warnings, 14 info)
 
 ### 🟡 Warnings
 
@@ -178,6 +179,8 @@
 
 ### 🔵 Info
 
+- **[I.PROV.NO_PI_SHUNT]** `linecode`  
+  All 4 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PROV.DSS_DEFAULT_LENGTH]** `line`  
   1 of 619 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
 - **[I.PRE.NO_VOLT_BOUNDS]** `bus`  

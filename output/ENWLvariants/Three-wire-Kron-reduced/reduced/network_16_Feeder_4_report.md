@@ -1,7 +1,7 @@
 # BMOPF Network Summary: Three-wire-Kron-reduced / network_16 / Feeder_4
 
-**Generated:** 2026-06-17 17:52:24  
-**Findings:** 0 errors · 2 warnings · 5 info  
+**Generated:** 2026-06-18 08:48:49  
+**Findings:** 0 errors · 2 warnings · 6 info  
 **Convention:** LV_240V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -117,6 +117,7 @@
 |------|------:|-------|------------|------------------:|---------------|
 | 240.0 V | 126 | ≤3-wire | solid | 58 | indeterminate (3-wire / Kron-style implicit grounding) |
 
+> 🔵 **[I.PROV.NO_PI_SHUNT]** All 8 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 > 🔵 **[I.PROV.IMPEDANCE_TRANSFORM_KR]** 8 three-wire linecode(s) match the impedance signature of Kron reduction — neutral row/column eliminated from the original four-wire Carson impedance matrix via Schur complement. Exact when every neutral is perfectly grounded; approximate with finite grounding. Zero-sequence behaviour is not captured by the three-wire representation.: lc1, lc2, lc3, lc4, lc5, lc6, lc8, lc9.
 
 ## 8. Spec Conformance & Benchmark Readiness
@@ -158,7 +159,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 7 (0 errors, 2 warnings, 5 info)
+**Total findings:** 8 (0 errors, 2 warnings, 6 info)
 
 ### 🟡 Warnings
 
@@ -169,6 +170,8 @@
 
 ### 🔵 Info
 
+- **[I.PROV.NO_PI_SHUNT]** `linecode`  
+  All 8 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PROV.IMPEDANCE_TRANSFORM_KR]** `linecode`  
   8 three-wire linecode(s) match the impedance signature of Kron reduction — neutral row/column eliminated from the original four-wire Carson impedance matrix via Schur complement. Exact when every neutral is perfectly grounded; approximate with finite grounding. Zero-sequence behaviour is not captured by the three-wire representation.: lc1, lc2, lc3, lc4, lc5, lc6, lc8, lc9.
 - **[I.PRE.NO_VOLT_BOUNDS]** `bus`  

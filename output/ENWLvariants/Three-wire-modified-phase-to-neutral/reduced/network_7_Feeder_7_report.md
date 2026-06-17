@@ -1,7 +1,7 @@
 # BMOPF Network Summary: Three-wire-modified-phase-to-neutral / network_7 / Feeder_7
 
-**Generated:** 2026-06-17 17:55:10  
-**Findings:** 0 errors · 2 warnings · 7 info  
+**Generated:** 2026-06-18 08:51:35  
+**Findings:** 0 errors · 2 warnings · 8 info  
 **Convention:** LV_240V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -119,6 +119,7 @@
 |------|------:|-------|------------|------------------:|---------------|
 | 240.0 V | 38 | ≤3-wire | solid | 22 | indeterminate (3-wire / Kron-style implicit grounding) |
 
+> 🔵 **[I.PROV.NO_PI_SHUNT]** All 4 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 > 🔵 **[I.PROV.IMPEDANCE_TRANSFORM_MPN]** 4 three-wire linecode(s) match the impedance signature of modified phase-to-neutral approximation — both R and X blocks are circulant with mutual ≈ ½ self. X is further symmetrised relative to the standard phase-to-neutral form, introducing additional modelling error particularly for asymmetric cable geometries.: lc3, lc4, lc5, lc6.
 
 ## 8. Spec Conformance & Benchmark Readiness
@@ -160,7 +161,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 9 (0 errors, 2 warnings, 7 info)
+**Total findings:** 10 (0 errors, 2 warnings, 8 info)
 
 ### 🟡 Warnings
 
@@ -173,6 +174,8 @@
 
 - **[I.DIV.LINE_SYMMETRIC]** `line`  
   18 lines share linecode 'lc6' with similar length (±10%) — electrically near-identical.
+- **[I.PROV.NO_PI_SHUNT]** `linecode`  
+  All 4 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PROV.IMPEDANCE_TRANSFORM_MPN]** `linecode`  
   4 three-wire linecode(s) match the impedance signature of modified phase-to-neutral approximation — both R and X blocks are circulant with mutual ≈ ½ self. X is further symmetrised relative to the standard phase-to-neutral form, introducing additional modelling error particularly for asymmetric cable geometries.: lc3, lc4, lc5, lc6.
 - **[I.PRE.NO_VOLT_BOUNDS]** `bus`  

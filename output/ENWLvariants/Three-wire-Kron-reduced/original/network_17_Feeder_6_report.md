@@ -1,7 +1,7 @@
 # BMOPF Network Summary: Three-wire-Kron-reduced / network_17 / Feeder_6
 
-**Generated:** 2026-06-17 17:52:37  
-**Findings:** 0 errors · 168 warnings · 6 info  
+**Generated:** 2026-06-18 08:49:01  
+**Findings:** 0 errors · 168 warnings · 7 info  
 **Convention:** LV_240V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -121,6 +121,7 @@
 |------|------:|-------|------------|------------------:|---------------|
 | 240.0 V | 3856 | ≤3-wire | solid | 223 | indeterminate (3-wire / Kron-style implicit grounding) |
 
+> 🔵 **[I.PROV.NO_PI_SHUNT]** All 7 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 > 🔵 **[I.PROV.DSS_DEFAULT_LENGTH]** 2 of 3855 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
 > 🔵 **[I.PROV.IMPEDANCE_TRANSFORM_KR]** 7 three-wire linecode(s) match the impedance signature of Kron reduction — neutral row/column eliminated from the original four-wire Carson impedance matrix via Schur complement. Exact when every neutral is perfectly grounded; approximate with finite grounding. Zero-sequence behaviour is not captured by the three-wire representation.: lc1, lc2, lc3, lc4, lc5, lc6, lc8.
 
@@ -163,7 +164,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 174 (0 errors, 168 warnings, 6 info)
+**Total findings:** 175 (0 errors, 168 warnings, 7 info)
 
 ### 🟡 Warnings
 
@@ -506,6 +507,8 @@
 
 ### 🔵 Info
 
+- **[I.PROV.NO_PI_SHUNT]** `linecode`  
+  All 7 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PROV.DSS_DEFAULT_LENGTH]** `line`  
   2 of 3855 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
 - **[I.PROV.IMPEDANCE_TRANSFORM_KR]** `linecode`  

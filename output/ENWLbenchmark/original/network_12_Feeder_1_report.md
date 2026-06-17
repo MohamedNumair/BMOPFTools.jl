@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_12_Feeder_1
 
-**Generated:** 2026-06-16 19:47:14  
-**Findings:** 0 errors · 169 warnings · 45 info  
+**Generated:** 2026-06-18 08:54:29  
+**Findings:** 0 errors · 169 warnings · 46 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -14,8 +14,8 @@
 | line | 3155 |  |
 | linecode | 8 |  |
 | voltage_source | 1 |  |
-| load | 157 | 138.1 kW, 45.4 kvar |
-| generator | 41 | capacity: 988.8 kW |
+| load | 157 | 138.128 kW, 45.4 kvar |
+| generator | 41 | capacity: 988.77 kW |
 | shunt | 1 |  |
 | switch | 0 |  |
 | transformer | 0 |  |
@@ -77,9 +77,9 @@
 
 | | Value |
 |--|-------|
-| Total load P | 138.1 kW |
+| Total load P | 138.128 kW |
 | Total load Q | 45.4 kvar |
-| Total gen capacity | 988.8 kW |
+| Total gen capacity | 988.77 kW |
 | Generation/load ratio | 715.8% |
 
 ## 6. Infeasibility Pre-flight
@@ -125,6 +125,7 @@
 |------|------:|-------|------------|------------------:|---------------|
 | 240.0 V | 3156 | 4-wire | solid | 0 | TN-S or TT (source-earthed only — protective-earth side not representable in the data model) |
 
+> 🔵 **[I.PROV.NO_PI_SHUNT]** All 8 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 > 🔵 **[I.PROV.DSS_DEFAULT_LENGTH]** 1 of 3155 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
 
 ## 8. Spec Conformance & Benchmark Readiness
@@ -162,9 +163,9 @@
 > 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_2711' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 > 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_2709' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 > 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_160' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
-> 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_316' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
-> 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_3117' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 > 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_202' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
+> 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_3117' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
+> 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_316' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 > 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_1806' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 > 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_296' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 > 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_161' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
@@ -203,7 +204,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 214 (0 errors, 169 warnings, 45 info)
+**Total findings:** 215 (0 errors, 169 warnings, 46 info)
 
 ### 🟡 Warnings
 
@@ -548,6 +549,8 @@
 
 ### 🔵 Info
 
+- **[I.PROV.NO_PI_SHUNT]** `linecode`  
+  All 8 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PROV.DSS_DEFAULT_LENGTH]** `line`  
   1 of 3155 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
 - **[I.PRE.NO_VOLT_BOUNDS]** `bus`  
@@ -564,12 +567,12 @@
   Generator 'der_2709' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 - **[I.SPEC.GEN_CONFIG_FUTURE]** `der_160`  
   Generator 'der_160' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
-- **[I.SPEC.GEN_CONFIG_FUTURE]** `der_316`  
-  Generator 'der_316' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
-- **[I.SPEC.GEN_CONFIG_FUTURE]** `der_3117`  
-  Generator 'der_3117' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 - **[I.SPEC.GEN_CONFIG_FUTURE]** `der_202`  
   Generator 'der_202' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
+- **[I.SPEC.GEN_CONFIG_FUTURE]** `der_3117`  
+  Generator 'der_3117' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
+- **[I.SPEC.GEN_CONFIG_FUTURE]** `der_316`  
+  Generator 'der_316' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 - **[I.SPEC.GEN_CONFIG_FUTURE]** `der_1806`  
   Generator 'der_1806' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 - **[I.SPEC.GEN_CONFIG_FUTURE]** `der_296`  

@@ -1,6 +1,6 @@
 # BMOPF Network Summary: LV4_36bus
 
-**Generated:** 2026-06-17 17:57:12  
+**Generated:** 2026-06-18 08:53:37  
 **Findings:** 0 errors · 3 warnings · 13 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 3 grounding point(s)
 

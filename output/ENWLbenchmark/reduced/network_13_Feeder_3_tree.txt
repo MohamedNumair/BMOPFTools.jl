@@ -8,9 +8,9 @@ sourcebus (SRC G2)
         └── 84 (L1)
 
 Loads (2 total):
-  L1 = load1              1.97 kW  SINGLE_PHASE  phases: 1
-  L2 = load2              0.31 kW  SINGLE_PHASE  phases: 2
+  L1 = load1              1.97 kW  SINGLE_PHASE  terminals: 1,n
+  L2 = load2              0.31 kW  SINGLE_PHASE  terminals: 2,n
 
 Generators (2 total):
-  G1 = der_107          max    4.0 kW
-  G2 = grid             max  13.64 kW
+  G1 = der_107          max    4.0 kW  terminals: 2,n
+  G2 = grid             max  13.64 kW  terminals: 1,2,3,n

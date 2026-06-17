@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_10_Feeder_5
 
-**Generated:** 2026-06-16 19:47:09  
-**Findings:** 0 errors · 49 warnings · 10 info  
+**Generated:** 2026-06-18 08:54:24  
+**Findings:** 0 errors · 49 warnings · 11 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -14,8 +14,8 @@
 | line | 450 |  |
 | linecode | 6 |  |
 | voltage_source | 1 |  |
-| load | 11 | 13.2 kW, 4.3 kvar |
-| generator | 4 | capacity: 91.1 kW |
+| load | 11 | 13.188 kW, 4.3 kvar |
+| generator | 4 | capacity: 91.128 kW |
 | shunt | 1 |  |
 | switch | 0 |  |
 | transformer | 0 |  |
@@ -78,9 +78,9 @@
 
 | | Value |
 |--|-------|
-| Total load P | 13.2 kW |
+| Total load P | 13.188 kW |
 | Total load Q | 4.3 kvar |
-| Total gen capacity | 91.1 kW |
+| Total gen capacity | 91.128 kW |
 | Generation/load ratio | 691.0% |
 
 ## 6. Infeasibility Pre-flight
@@ -126,6 +126,7 @@
 |------|------:|-------|------------|------------------:|---------------|
 | 240.0 V | 451 | 4-wire | solid | 0 | TN-S or TT (source-earthed only — protective-earth side not representable in the data model) |
 
+> 🔵 **[I.PROV.NO_PI_SHUNT]** All 6 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 > 🔵 **[I.PROV.DSS_DEFAULT_LENGTH]** 1 of 450 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
 
 ## 8. Spec Conformance & Benchmark Readiness
@@ -167,7 +168,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 59 (0 errors, 49 warnings, 10 info)
+**Total findings:** 60 (0 errors, 49 warnings, 11 info)
 
 ### 🟡 Warnings
 
@@ -276,6 +277,8 @@
   11 lines share linecode 'lc3' with similar length (±10%) — electrically near-identical.
 - **[I.DIV.LINE_SYMMETRIC]** `line`  
   9 lines share linecode 'lc1' with similar length (±10%) — electrically near-identical.
+- **[I.PROV.NO_PI_SHUNT]** `linecode`  
+  All 6 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PROV.DSS_DEFAULT_LENGTH]** `line`  
   1 of 450 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
 - **[I.PRE.NO_VOLT_BOUNDS]** `bus`  

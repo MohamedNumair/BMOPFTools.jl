@@ -1,6 +1,6 @@
 # BMOPF Network Summary: MV_LV_combined
 
-**Generated:** 2026-06-17 17:57:15  
+**Generated:** 2026-06-18 08:53:41  
 **Findings:** 0 errors · 15 warnings · 16 info  
 **Convention:** MV_6.4kV: mixed; LV_250V: 4-wire; 1289 grounding point(s)
 

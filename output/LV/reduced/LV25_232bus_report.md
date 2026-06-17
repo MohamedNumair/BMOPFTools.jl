@@ -1,6 +1,6 @@
 # BMOPF Network Summary: LV25_232bus
 
-**Generated:** 2026-06-17 17:57:11  
+**Generated:** 2026-06-18 08:53:36  
 **Findings:** 0 errors · 4 warnings · 14 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 114 grounding point(s)
 
