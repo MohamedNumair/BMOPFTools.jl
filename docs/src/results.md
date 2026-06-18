@@ -37,6 +37,7 @@ The `termination_status` and `solve_time` fields are always valid.
 | `load` | Dict | Per-load, per-phase current and absorbed power |
 | `generator` | Dict | Per-generator, per-phase current and produced power |
 | `transformer` | Dict | Per-transformer, per-winding-side currents |
+| `initialisation` | Dict | Per-bus, per-terminal Ipopt start values (see below) |
 
 ## `bus` — voltages
 
@@ -195,6 +196,56 @@ terminals of the source-bus generator:
 ```julia
 slack = result["generator"]["_auto_slack"]   # or your explicit generator id
 p_grid = sum(v["pg"] for v in values(slack))
+```
+
+## `initialisation` — Ipopt start values
+
+```
+result["initialisation"][bus_id][terminal] => Dict
+```
+
+The start values set on the `vr`/`vi` JuMP variables before `optimize!` is
+called. These are captured immediately after the warm-start setup and before the
+solver overwrites them. The section is always present (even for infeasible
+results), so it can be read without checking `termination_status` first.
+
+| Field | Unit | Description |
+|---|---|---|
+| `vr_init` | V | Real part of the start voltage |
+| `vi_init` | V | Imaginary part of the start voltage |
+| `vm_init` | V | Start voltage magnitude: `√(vr_init² + vi_init²)` |
+| `va_init` | rad | Start voltage angle: `atan(vi_init, vr_init)` |
+
+Grounded terminals are recorded as all-zero regardless of the start-value
+setting, because they are fixed in the JuMP model and the solver ignores their
+start value.
+
+**Convergence diagnostics.** `profile_solution` reads this section and emits
+warnings when the start values differ substantially from the solved values:
+
+- `W.SOL.INIT_LEVEL_MISMATCH` — a terminal where `vm_init / vm_solved` is
+  outside [0.1, 10]. The most common cause is applying the source voltage
+  magnitude to buses on a different voltage level (e.g. a 6.35 kV source
+  voltage applied to a 230 V LV bus via flat initialisation). The solver may
+  still converge but the path is longer and local-minimum risk is higher.
+- `W.SOL.INIT_LARGE_ERROR` — a phase terminal where the init error exceeds
+  20 % of the solved voltage magnitude. The start was a poor approximation.
+- `I.SOL.INIT_NEUTRAL_NONZERO` — a neutral terminal with `vm_init > 0`.
+  Neutral start values should be zero; a non-zero value indicates an
+  initialisation inconsistency.
+
+To compare start and solved voltages manually:
+
+```julia
+init  = result["initialisation"]
+buses = result["bus"]
+for (bid, t_dict) in init
+    for (t, ivals) in t_dict
+        vm_s = buses[bid][t]["vm"]
+        vm_i = ivals["vm_init"]
+        vm_s > 0 && println("$bid.$t  ratio=$(round(vm_i/vm_s, digits=2))")
+    end
+end
 ```
 
 ## Coordinate spaces and sign conventions
