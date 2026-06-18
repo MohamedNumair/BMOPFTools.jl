@@ -7,38 +7,60 @@ you need.
 
 Construct with keyword arguments:
 
-    recipe = AugmentationRecipe(mv_v_pu = (0.90, 1.10))
+    recipe = AugmentationRecipe(vpn_lv_pu = (0.85, 1.15))
 
 or use [`default_recipe`](@ref) to get the unmodified defaults.
+
+## Declared supply voltage fallbacks
+
+Voltage bounds are expressed as percentages of a *declared supply voltage*,
+not the transformer rated voltage.  The authoritative source is the optional
+`v_declared` field on the bus (V).  When absent, the recipe fallbacks below
+are used; when those are `nothing`, the bus's `v_nom` from voltage-level
+analysis is used as a last resort.
+
+Set the fallbacks to the standard declared voltage for the deployment region,
+e.g. `v_declared_lv = 230.0` for Europe/Australia.
 """
 Base.@kwdef struct AugmentationRecipe
-    # ── Phase-to-ground envelope (solver regularisation) ─────────────────────
-    # Wider than the EN 50160 customer-facing guarantee so the solver has room
-    # to find a feasible point even at the boundary of the power-quality window.
-    # MV uses the tighter DSO operational planning band (UK/EU practice: ±6 %)
-    # so that downstream LV buses can still satisfy their ±10 % guarantee after
-    # the MV→LV transformer voltage drop.
-    lv_v_pu :: Tuple{Float64,Float64} = (0.85, 1.15)
-    mv_v_pu :: Tuple{Float64,Float64} = (0.94, 1.06)   # ±6 %, DSO planning
-    hv_v_pu :: Tuple{Float64,Float64} = (0.95, 1.05)   # ±5 %, transmission
+    # ── Declared supply voltage fallbacks (V) ────────────────────────────────
+    # Used when bus["v_declared"] is absent. `nothing` → fall back to v_nom.
+    v_declared_lv :: Union{Float64,Nothing} = nothing   # e.g. 230.0 for EU/AU
+    v_declared_mv :: Union{Float64,Nothing} = nothing   # e.g. 11000.0
+    v_declared_hv :: Union{Float64,Nothing} = nothing
 
-    # ── Phase-to-neutral bounds (EN 50160:2010 §3.5/§3.6) ────────────────────
-    # 95-%-of-week criterion: Un ±10 % for both LV (230 V) and MV.
-    # Applied as a fraction of the per-bus nominal phase-to-neutral voltage.
-    vpn_pu :: Tuple{Float64,Float64} = (0.90, 1.10)
+    # ── Phase-to-neutral bounds (four-wire buses with neutral) ────────────────
+    # Applied as fractions of the declared phase-to-neutral voltage.
+    # EN 50160:2010 §3.5/§3.6: 95-%-of-week criterion, ±10 % for LV and MV.
+    # MV operational planning practice often uses ±6 % to budget for downstream
+    # voltage drop to LV customers.
+    vpn_lv_pu :: Tuple{Float64,Float64} = (0.90, 1.10)   # EN 50160 LV
+    vpn_mv_pu :: Tuple{Float64,Float64} = (0.94, 1.06)   # DSO planning MV ±6 %
 
-    # ── Phase-to-phase bounds (EN 50160:2010, same ±10 % band) ───────────────
-    # Vpp_nom = Vpn_nom × √3; same percentage window as vpn.
-    vpp_pu :: Tuple{Float64,Float64} = (0.90, 1.10)
+    # ── Phase-to-phase bounds ─────────────────────────────────────────────────
+    # Four-wire buses: vpp_nom = vpn_nom × √3; same percentage window as vpn.
+    # Three-wire buses: vpp_nom = v_nom (declared line voltage); this is the
+    # only phase-voltage constraint available without a neutral.
+    # HV (three-wire only in practice): ±5 % transmission planning band.
+    vpp_lv_pu :: Tuple{Float64,Float64} = (0.90, 1.10)   # EN 50160 LV ±10 %
+    vpp_mv_pu :: Tuple{Float64,Float64} = (0.94, 1.06)   # DSO planning MV ±6 %
+    vpp_hv_pu :: Tuple{Float64,Float64} = (0.95, 1.05)   # transmission ±5 %
 
     # ── Negative-sequence upper bound (EN 50160:2010 §3.5) ───────────────────
     # "Under normal operating conditions … the negative-sequence component
     # shall not exceed 2 % of the positive-sequence component."
     vneg_max_pu :: Float64 = 0.02
 
+    # ── Solver regularisation: phase-to-ground envelope ──────────────────────
+    # This is a hyperparameter, not a power-quality guarantee.  It widens the
+    # feasible set so the solver has room to find a feasible point even at the
+    # edge of the power-quality window.  Applied to ALL buses that lack v_min/
+    # v_max, regardless of voltage level or wire configuration.  Set to
+    # `nothing` to disable (no v_min/v_max injection).
+    v_min_pu :: Union{Float64,Nothing} = 0.85
+    v_max_pu :: Union{Float64,Nothing} = 1.15
+
     # ── Thermal limits ───────────────────────────────────────────────────────
-    # Cable/overhead type selects the ampacity column from the IEC 60228 /
-    # IEC 60364-5-52 lookup table.
     conductor_type :: Symbol = :underground   # :underground | :overhead
 
     # Minimum provenance confidence required before inferring i_max from R₁₁.
@@ -54,8 +76,6 @@ Base.@kwdef struct AugmentationRecipe
     q_capability_pf :: Float64 = 0.90
 
     # ── Slack generator ──────────────────────────────────────────────────────
-    # Cost assigned to the injected slack generator ($/kWh).  Matches the
-    # from_pmd default so augmented cases behave consistently with imported ones.
     slack_cost :: Float64 = 1.0
 
     # ── Pass enable flags ────────────────────────────────────────────────────

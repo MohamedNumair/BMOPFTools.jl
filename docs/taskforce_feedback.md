@@ -280,6 +280,113 @@ bounded within the range.  This also cleanly separates the *angle reference*
 role (one terminal, sign constraint only) from the *voltage magnitude reference*
 role (hard equality), which the current model conflates.
 
+## 16. Declared supply voltage (`v_declared`) is absent from the data model
+
+Voltage bound augmentation requires a *declared supply voltage* — the nominal
+voltage relative to which power-quality standards (EN 50160, AS 61000.3.100,
+etc.) define their percentage envelopes — but the spec provides no field for it.
+
+The problem is that transformer rated voltages (the natural `v_nom` in a
+power-flow dataset) routinely differ from the declared voltage.  For example,
+240 V and 250 V distribution transformers are common in Australia, while
+AS 61000.3.100 mandates a supply within ±10 % of **230 V**.  Using the
+transformer rated voltage as the percentage base silently shifts the bound
+window and can under- or over-constrain the OPF.
+
+**Alternatives considered:**
+
+1. *Snap-to-standard-table (OpenDSS approach)*: a lookup list of canonical
+   nominal voltages (e.g. `[120, 230, 400, 11000, 33000]` V) is used to round
+   each bus's `v_nom` to the nearest declared level.  Convenient but introduces
+   an implicit country-specific table that varies by deployment context and is
+   invisible in the data file itself.
+
+2. *Explicit `v_declared` field on the bus*: an optional bus-level field carries
+   the declared supply voltage (V).  If absent, the tool falls back to `v_nom`.
+   This is explicit, auditable, and travels with the data.
+
+3. *Recipe-level scalar override*: the augmentation tool's configuration carries
+   `v_declared_lv`, `v_declared_mv`, `v_declared_hv` scalars.  Simple for
+   single-country datasets but cannot handle mixed-voltage networks (e.g. 120 V
+   and 230 V LV buses in the same case).
+
+**Suggestion:** add an optional `v_declared` (V) field to the bus object (option 2).
+When present it takes precedence over `v_nom` for percentage-based bound
+computation.  Option 3 (tool-level fallback) is complementary: if `v_declared`
+is absent and the tool has a recipe scalar set for that voltage level, use that;
+otherwise fall back to `v_nom`.
+
+In our implementation we are currently treating `v_declared` as an informal
+extension field (read with `get(bus, "v_declared", nothing)`) and populating it
+at import time from DSS `baseKV` / PMD nominal voltage.  It would be cleaner
+to make this official so all compliant tools share a common field name.
+
+## 17. Solver regularisation bounds vs power-quality bounds are conceptually distinct
+
+The spec defines `v_min`/`v_max` (phase-to-ground), `vpn_min`/`vpn_max`
+(phase-to-neutral), and `vpp_min`/`vpp_max` (phase-to-phase) without
+distinguishing two fundamentally different purposes these bounds serve:
+
+**Power-quality bounds** — derived from supply standards (EN 50160, AS
+61000.3.100, etc.).  They are engineering constraints that correspond to a
+customer's right to supply within a defined voltage envelope.  Their values
+are set relative to a declared supply voltage (see item 16) and are
+*meaningful* in the context of the OPF: a binding constraint signals a
+potential supply quality violation.
+
+**Solver regularisation bounds** — wide phase-to-ground bounds that exist
+solely to prevent the NLP solver from wandering into numerically pathological
+regions far from the operating point.  They are *hyperparameters* of the
+solution algorithm, not engineering constraints: a typical value might be
+0.85–1.15 pu, which is wider than any supply standard would permit, precisely
+so the solver can always find a feasible starting point.  A binding
+regularisation bound is a solver artifact, not an engineering violation.
+
+Conflating these two in the same field (`v_min`/`v_max`) creates an ambiguity:
+tools that inspect bound activity cannot distinguish a genuine supply quality
+issue from a solver warm-start artefact without out-of-band metadata.
+
+**Suggestions:**
+
+1. *Separate field names* — introduce `v_reg_min`/`v_reg_max` for the
+   regularisation hyperparameters, keeping `v_min`/`v_max` for
+   engineering bounds.  This makes bound activity unambiguous in solution
+   profiling.
+
+2. *Provenance tag* — add an optional `bound_source` metadata field per
+   bound entry (e.g. `"standard"` vs `"regularisation"`) so that the
+   distinction is recorded without renaming fields.
+
+3. *Documented convention* — leave the fields as-is but state explicitly in
+   the spec that `v_min`/`v_max` on non-source buses *should* reflect
+   engineering bounds (from a standard), and that solver regularisation is
+   the implementer's responsibility, not a data model concern.
+
+In our implementation we chose option 3 as a practical interim: `augment_case`
+injects engineering `vpn`/`vpp` bounds from standards, and separately injects
+`v_min`/`v_max` as a configurable regularisation hyperparameter (default
+0.85/1.15 pu, same for all voltage levels) — recorded in the manifest with
+source `"solver_regularisation"` rather than `"standard"` so callers can
+distinguish them.
+
+### Corollary: vpn vs vpp applicability depends on wire configuration
+
+A related modelling ambiguity: `vpn_min`/`vpn_max` are physically meaningful
+only on **four-wire buses** that have a neutral terminal.  On a three-wire MV
+bus there is no neutral voltage to constrain, and adding `vpn` bounds would
+reference a non-existent terminal.  Conversely, on a four-wire bus the
+relevant standard bound is the phase-to-neutral voltage (what the customer
+measures at their socket), not phase-to-ground.
+
+The spec does not state which bound types are applicable to which terminal
+configurations.  Our implementation applies:
+- `vpn` + `vpp` + `vneg_max` to four-wire buses (neutral terminal present)
+- `vpp` only to three-wire buses (no neutral)
+- `v_min`/`v_max` (regularisation) to all buses regardless of configuration
+
+**Suggestion:** add a note in §4.2 (or in the bound field descriptions) stating
+the intended terminal-configuration preconditions for each voltage bound type.
+
 ## Validation experience (what worked)
 
 For what it's worth to the TF: the data model proved very checkable. On top

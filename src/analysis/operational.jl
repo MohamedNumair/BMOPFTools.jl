@@ -177,55 +177,6 @@ function operational_analysis(net::Dict{String,Any},
 end
 
 """
-    _galvanic_zones(net) -> Vector{Set{String}}
-
-Partition buses into galvanic zones: connected subgraphs joined by lines and
-closed switches only. Transformers are galvanic isolation boundaries and are
-NOT included as edges. Returns a list of bus-name sets, one per zone.
-"""
-function _galvanic_zones(net::Dict{String,Any})::Vector{Set{String}}
-    buses = collect(keys(get(net, "bus", Dict())))
-    isempty(buses) && return Set{String}[]
-
-    adj = Dict{String,Vector{String}}()
-    for b in buses; adj[b] = String[]; end
-
-    add!(a, b) = begin
-        push!(get!(adj, a, String[]), b)
-        push!(get!(adj, b, String[]), a)
-    end
-
-    for (_, l) in get(net, "line", Dict())
-        f = get(l, "bus_from", nothing); t = get(l, "bus_to", nothing)
-        (f isa AbstractString && t isa AbstractString && f != t) && add!(f, t)
-    end
-    for (_, sw) in get(net, "switch", Dict())
-        get(sw, "open_switch", false) && continue
-        f = get(sw, "bus_from", nothing); t = get(sw, "bus_to", nothing)
-        (f isa AbstractString && t isa AbstractString && f != t) && add!(f, t)
-    end
-
-    visited = Set{String}()
-    zones   = Vector{Set{String}}()
-    for b in buses
-        b in visited && continue
-        zone = Set{String}()
-        queue = String[b]
-        while !isempty(queue)
-            cur = popfirst!(queue)
-            cur in visited && continue
-            push!(visited, cur)
-            push!(zone, cur)
-            for nb in get(adj, cur, String[])
-                nb in visited || push!(queue, nb)
-            end
-        end
-        push!(zones, zone)
-    end
-    zones
-end
-
-"""
 Sum apparent power of all loads electrically downstream of a transformer.
 
 Method: build the bus adjacency from lines, closed switches, and all
