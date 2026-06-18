@@ -105,6 +105,10 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
         end
 
         # ── Thermal current limits on total current at each end ───────────────
+        # When the to-side π-shunt is zero, cr_to = −cr_fr and ish_to = 0, so
+        # the to-side magnitude equals the from-side magnitude and only one
+        # constraint is needed. Both are added only when G_to or B_to is present.
+        has_to_shunt = !(G_to === nothing && B_to === nothing)
         lc = get(linecodes, get(line, "linecode", ""), nothing)
         if lc !== nothing
             i_max = get(lc, "i_max", nothing)
@@ -113,10 +117,12 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
                     ilim = Float64(i_max[k])
                     cfr_r = @expression(model, cr_fr[(lid,k)] + ish_fr_r[k])
                     cfr_i = @expression(model, ci_fr[(lid,k)] + ish_fr_i[k])
-                    cto_r = @expression(model, cr_to[(lid,k)] + ish_to_r[k])
-                    cto_i = @expression(model, ci_to[(lid,k)] + ish_to_i[k])
                     @constraint(model, cfr_r^2 + cfr_i^2 <= ilim^2)
-                    @constraint(model, cto_r^2 + cto_i^2 <= ilim^2)
+                    if has_to_shunt
+                        cto_r = @expression(model, cr_to[(lid,k)] + ish_to_r[k])
+                        cto_i = @expression(model, ci_to[(lid,k)] + ish_to_i[k])
+                        @constraint(model, cto_r^2 + cto_i^2 <= ilim^2)
+                    end
                 end
             end
         end
