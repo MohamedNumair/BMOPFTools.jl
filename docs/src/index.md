@@ -84,13 +84,22 @@ analyze(net) |> r -> render(r, "case_report.md")
 OpenDSS .dss ──(PMD parse_file)──► ENGINEERING dict
                                         │  from_pmd
                                         ▼
-  BMOPF JSON ◄── write_bmopf ── BMOPF Dict{String,Any} ── to_pmd ──► PMD
-                                        │  analyze              │  solve_opf
-                                        ▼                       ▼
-                                 SummaryReport          result Dict{String,Any}
-                                        │                       │  profile_solution
-                                        ▼                       ▼
-                                     render              SolutionReport ──► render_solution
+  BMOPF JSON ◄── write_bmopf ── BMOPF Dict{String,Any}
+                                        │  analyze
+                                        ▼
+                                 SummaryReport ──► render
+                                        │  fix_case
+                                        ▼
+                                 net′ (repaired)
+                                        │  augment_case
+                                        ▼
+                                 net″ (benchmark-ready) ──► write_bmopf
+                                        │  solve_opf / to_pmd
+                                        ▼
+                                 result Dict{String,Any}
+                                        │  profile_solution
+                                        ▼
+                                 SolutionReport ──► render_solution
 ```
 
 `analyze` runs fourteen passes (see [Analysis & reports](analysis.md)) and
@@ -110,4 +119,10 @@ normalisations) so the case's assumptions are explicit rather than implied.
   with triggers and rationale.
 - [Methodology notes](methodology.md) — the physics and linear algebra
   behind the provenance checks, with literature references.
+- [Optimal power flow](opf.md) — running `solve_opf`, solver options, and
+  the OPF extension model.
+- [OPF result dictionary](results.md) — structure of the result dict returned
+  by `solve_opf`, including the `"initialisation"` diagnostics block.
+- [Case augmentation](augmentation.md) — `fix_case` structural repairs and
+  `augment_case` standards-grounded gap-filling, with the manifest audit trail.
 - [API reference](api.md).
