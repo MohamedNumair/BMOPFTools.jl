@@ -164,7 +164,7 @@ function operational_analysis(net::Dict{String,Any},
 
     if !isempty(unloaded_findings)
         for (zone_label, terminal, _) in unloaded_findings
-            push!(findings, Finding(INFO, "I.OPR.UNLOADED_PHASE", :operational,
+            push!(findings, Finding(INFO, "I.OPS.UNLOADED_PHASE", :operational,
                 :network, nothing,
                 "Galvanic zone anchored at bus '$zone_label' has no load connected " *
                 "to phase terminal '$terminal'.",
