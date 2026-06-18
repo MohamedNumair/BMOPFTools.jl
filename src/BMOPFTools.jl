@@ -397,6 +397,9 @@ Returns a results dict with keys:
 - `"line"` — per-line from/to current results per conductor
 - `"generator"` — per-generator P/Q dispatch results
 - `"voltage_source"` — per-source current injection results
+- `"initialisation"` — per-bus, per-terminal Ipopt start values:
+  `"vr_init"`, `"vi_init"`, `"vm_init"`, `"va_init"` (SI, same units as `"bus"`).
+  Always present. Pass to [`profile_solution`](@ref) to diagnose convergence issues.
 """
 function solve_opf end
 export solve_opf

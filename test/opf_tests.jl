@@ -702,4 +702,115 @@
         @test !haskey(res, "voltage_source")
     end
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # Initialisation block
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "Initialisation block — structure and values" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","2","3","n"],
+                   "perfectly_grounded_terminals":["n"]},
+            "b1": {"terminal_names":["1","2","3","n"],
+                   "perfectly_grounded_terminals":["n"],
+                   "v_min":900.0,"v_max":1100.0}},
+         "voltage_source":{"vs":{"bus":"src",
+             "terminal_map":["1","2","3"],
+             "v_magnitude":[1000.0,1000.0,1000.0],
+             "v_angle":[0.0,-2.0944,2.0944]}},
+         "linecode":{"lc":{"R_series_1_1":0.1,"R_series_2_2":0.1,"R_series_3_3":0.1}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1","2","3"],"terminal_map_to":["1","2","3"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld":{"bus":"b1","terminal_map":["1","2","3","n"],
+             "configuration":"WYE",
+             "p_nom":[10000.0,10000.0,10000.0],"q_nom":[0.0,0.0,0.0]}}}
+        """; from_string=true)
+
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+
+        # "initialisation" key always present
+        @test haskey(res, "initialisation")
+        init = res["initialisation"]
+        @test init isa Dict
+
+        # Every bus and terminal in the solved result has a matching init entry
+        for (bid, t_dict) in res["bus"]
+            @test haskey(init, bid)
+            for (t, _) in t_dict
+                @test haskey(init[bid], t)
+            end
+        end
+
+        # Each init entry has all four fields
+        for (bid, t_dict) in init
+            for (t, ivals) in t_dict
+                @test haskey(ivals, "vr_init")
+                @test haskey(ivals, "vi_init")
+                @test haskey(ivals, "vm_init")
+                @test haskey(ivals, "va_init")
+                @test ivals["vm_init"] ≈ sqrt(ivals["vr_init"]^2 + ivals["vi_init"]^2)
+            end
+        end
+
+        # Grounded neutral terminal init is exactly zero
+        @test init["src"]["n"]["vm_init"] == 0.0
+        @test init["b1"]["n"]["vm_init"]  == 0.0
+
+        # Phase terminals initialised at the source v_magnitude (1000 V)
+        @test init["src"]["1"]["vm_init"] ≈ 1000.0   atol=1e-6
+        @test init["b1"]["1"]["vm_init"]  ≈ 1000.0   atol=1e-6
+
+        # per_unit=true: init values are returned in SI (same V_base rescaling as "bus")
+        res_pu = solve_opf(net; per_unit=true)
+        @test haskey(res_pu, "initialisation")
+        # SI values match within floating point
+        @test res_pu["initialisation"]["src"]["1"]["vm_init"] ≈
+              res["initialisation"]["src"]["1"]["vm_init"]   rtol=1e-4
+    end
+
+    @testset "Initialisation profiling — level mismatch flagged" begin
+        # Build a two-voltage-level network (MV source → LV load via transformer).
+        # _set_voltage_start_values! uses source vm (6350 V) for all buses, so
+        # LV buses (~230 V solved) will have vm_init ≈ 6350 V → ratio >> 10×.
+        net = parse_bmopf("""
+        {"bus":{
+            "hv":{"terminal_names":["a","b","c","n"],
+                  "perfectly_grounded_terminals":["n"],
+                  "v_min":5500.0,"v_max":7000.0},
+            "lv":{"terminal_names":["a","b","c","n"],
+                  "perfectly_grounded_terminals":["n"],
+                  "v_min":200.0,"v_max":260.0}},
+         "voltage_source":{"vs":{"bus":"hv",
+             "terminal_map":["a","b","c"],
+             "v_magnitude":[6350.0,6350.0,6350.0],
+             "v_angle":[0.0,-2.0944,2.0944]}},
+         "transformer":{"single_phase":{"tx":{"bus_from":"hv","bus_to":"lv",
+             "terminal_map_from":["a","b","c"],
+             "terminal_map_to":["a","b","c"],
+             "s_rating":100000.0,
+             "v_ref_from":11000.0,"v_ref_to":400.0,
+             "r_series_from":0.01,"r_series_to":0.0001,
+             "x_series_from":0.05,"x_series_to":0.0005}}},
+         "load":{"ld":{"bus":"lv","terminal_map":["a","b","c","n"],
+             "configuration":"WYE",
+             "p_nom":[5000.0,5000.0,5000.0],"q_nom":[0.0,0.0,0.0]}}}
+        """; from_string=true)
+
+        res    = solve_opf(net)
+        report = profile_solution(net, res)
+
+        @test haskey(res, "initialisation")
+        # LV bus solved voltage should be ~230 V, init was ~6350 V → level mismatch
+        vm_lv_sol  = res["bus"]["lv"]["a"]["vm"]
+        vm_lv_init = res["initialisation"]["lv"]["a"]["vm_init"]
+        @test vm_lv_init / vm_lv_sol > 10.0
+
+        @test any(f -> f.code == "W.SOL.INIT_LEVEL_MISMATCH", report.findings)
+        # HV bus (same level as source) should NOT trigger the mismatch
+        vm_hv_sol  = res["bus"]["hv"]["a"]["vm"]
+        vm_hv_init = res["initialisation"]["hv"]["a"]["vm_init"]
+        @test 0.1 < vm_hv_init / vm_hv_sol < 10.0
+    end
+
 end  # @testset "OPF — solve_opf extension"

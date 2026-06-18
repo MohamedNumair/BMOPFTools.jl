@@ -302,6 +302,18 @@ function _from_per_unit(result_pu::Dict{String,Any}, bases, net::Dict{String,Any
         end
     end
 
+    # Initialisation start values: same V_base scaling as solved bus voltages
+    for (bid, t_dict) in get(result, "initialisation", Dict())
+        vb = get(bases.v_base, bid, 1.0)
+        for (_, tvals) in t_dict
+            tvals isa Dict || continue
+            for f in ("vr_init", "vi_init", "vm_init")
+                haskey(tvals, f) && (tvals[f] = tvals[f] * vb)
+            end
+            # va_init is an angle — unchanged
+        end
+    end
+
     # Line currents: ← × I_base[bus_from]
     lines = get(net, "line", Dict())
     for (lid, cond_dict) in get(result, "line", Dict())
