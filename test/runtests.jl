@@ -2096,6 +2096,10 @@ const IEEE13_FIXTURE = """
     # Power-flow comparison — BMOPF vs OpenDSS reference solver
     # Requires JuMP, Ipopt, PowerModelsDistribution, and OpenDSSDirect.
     # -----------------------------------------------------------------------
+    @testset "Augmentation" begin
+        include("augmentation_tests.jl")
+    end
+
     @testset "Power-flow comparison vs OpenDSS" begin
         if !_HAS_JUMP_IPOPT || !_HAS_PMD || !_HAS_ODS
             @test_skip "Requires JuMP, Ipopt, PowerModelsDistribution, and OpenDSSDirect"

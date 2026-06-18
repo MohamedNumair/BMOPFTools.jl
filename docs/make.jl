@@ -19,6 +19,7 @@ makedocs(
         "Methodology notes"       => "methodology.md",
         "Optimal power flow"      => "opf.md",
         "OPF result dictionary"   => "results.md",
+        "Case augmentation"       => "augmentation.md",
         "API reference"           => "api.md",
     ],
     checkdocs = :exports,
