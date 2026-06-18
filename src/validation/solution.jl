@@ -20,6 +20,9 @@
 #   I.SOL.BINDING_SUMMARY    — aggregate count of active / violated bounds
 #   I.SOL.LOSS_FRACTION      — line losses as fraction of total load
 #   I.SOL.NEUTRAL_SHIFT      — maximum neutral terminal voltage across non-source buses
+#   W.SOL.INIT_LEVEL_MISMATCH — init voltage differs from solved by > 10× (wrong voltage level)
+#   W.SOL.INIT_LARGE_ERROR   — init voltage error > 20 % of solved value on a phase terminal
+#   I.SOL.INIT_NEUTRAL_NONZERO — neutral terminal initialised non-zero
 
 """
     solution_check(net, result, findings) -> Dict{String,Any}
@@ -545,6 +548,88 @@ function solution_check(net::Dict{String,Any},
             "p_loss=$(round(p_loss/1e3;digits=2)) kW.",
             Dict{String,Any}("p_gen"=>p_gen,"p_load"=>p_load,"p_loss"=>p_loss,
                              "balance_err"=>balance_err)))
+    end
+
+    # ── Initialisation quality ────────────────────────────────────────────────
+    # Only meaningful when the solver found a feasible point and the result
+    # contains an "initialisation" block (written by solve_opf).
+    init_res = get(result, "initialisation", nothing)
+    if init_res isa Dict
+        n_level_mismatch = 0
+        n_large_error    = 0
+        n_neutral_nonzero = 0
+        level_mismatch_locs  = String[]
+        large_error_locs     = String[]
+        neutral_nonzero_locs = String[]
+
+        for (bid, bus) in buses
+            bus isa Dict || continue
+            nt     = _neutral_terminal(bus)
+            t_init = get(init_res, bid, nothing)
+            t_init isa Dict || continue
+            t_sol  = get(bus_res,  bid, nothing)
+            t_sol  isa Dict || continue
+
+            for (t, ivals) in t_init
+                ivals isa Dict || continue
+                vm_init = get(ivals, "vm_init", NaN)
+                isfinite(vm_init) || continue
+
+                # Non-zero neutral init — should always start at 0
+                if t == nt && vm_init > 1e-6
+                    n_neutral_nonzero += 1
+                    push!(neutral_nonzero_locs, "$bid.$t (vm_init=$(_fmt_v(vm_init)))")
+                    continue
+                end
+                t == nt && continue   # zero neutral — nothing further to check
+
+                svals   = get(t_sol, t, nothing)
+                svals isa Dict || continue
+                vm_sol  = get(svals, "vm", NaN)
+                isfinite(vm_sol) && vm_sol > 0 || continue
+
+                ratio = vm_init / vm_sol
+                if ratio > 10.0 || ratio < 0.1
+                    n_level_mismatch += 1
+                    push!(level_mismatch_locs,
+                          "$bid.$t (vm_init=$(_fmt_v(vm_init)), vm_sol=$(_fmt_v(vm_sol)))")
+                elseif abs(vm_init - vm_sol) / vm_sol > 0.20
+                    n_large_error += 1
+                    push!(large_error_locs,
+                          "$bid.$t (vm_init=$(_fmt_v(vm_init)), vm_sol=$(_fmt_v(vm_sol)))")
+                end
+            end
+        end
+
+        out["n_init_level_mismatches"]  = n_level_mismatch
+        out["n_init_large_errors"]      = n_large_error
+        out["n_init_neutral_nonzero"]   = n_neutral_nonzero
+
+        if n_level_mismatch > 0
+            push!(findings, Finding(WARNING, "W.SOL.INIT_LEVEL_MISMATCH", :solution,
+                :network, nothing,
+                "$n_level_mismatch terminal(s) were initialised at a voltage more than " *
+                "10× away from the solved value — the initialisation used the wrong " *
+                "voltage level (source voltage applied to LV buses). Convergence to the " *
+                "physical solution is not guaranteed; consider using per-unit mode or " *
+                "level-aware initialisation.",
+                Dict{String,Any}("terminals" => level_mismatch_locs)))
+        end
+        if n_large_error > 0
+            push!(findings, Finding(WARNING, "W.SOL.INIT_LARGE_ERROR", :solution,
+                :network, nothing,
+                "$n_large_error phase terminal(s) have an initialisation error > 20 % " *
+                "of the solved voltage magnitude — the starting point was a poor " *
+                "approximation, which may slow convergence or indicate a local minimum.",
+                Dict{String,Any}("terminals" => large_error_locs)))
+        end
+        if n_neutral_nonzero > 0
+            push!(findings, Finding(INFO, "I.SOL.INIT_NEUTRAL_NONZERO", :solution,
+                :network, nothing,
+                "$n_neutral_nonzero neutral terminal(s) were initialised with non-zero " *
+                "voltage — neutral start values should be zero.",
+                Dict{String,Any}("terminals" => neutral_nonzero_locs)))
+        end
     end
 
     # ── Informational: binding summary ────────────────────────────────────────
