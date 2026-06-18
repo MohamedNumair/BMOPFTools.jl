@@ -19,20 +19,28 @@ PowerModelsDistribution and your own code.
 ## What it does
 
 ```
-OpenDSS .dss ──(PowerModelsDistribution)──► ENGINEERING dict
-                                                 │ from_pmd
+OpenDSS .dss ──(powerio)──► BMOPF Dict{String,Any} ◄──── parse_bmopf ◄── BMOPF JSON
+OpenDSS .dss ──(PMD)──► ENGINEERING dict ──(from_pmd)──┘          └──── write_bmopf
+                                                 │ analyze
                                                  ▼
-   BMOPF JSON ◄──── write_bmopf ────── BMOPF Dict{String,Any} ──── to_pmd ──► PMD
-                                                 │ analyze                │ solve_opf
-                                                 ▼                        ▼
-                                          SummaryReport        result Dict{String,Any}
-                                                 │                        │ profile_solution
-                                                 ▼                        ▼
-                                              render              SolutionReport ──► render_solution
+                                          SummaryReport ──► render
+                                                 │ fix_case
+                                                 ▼
+                                         net′ (repaired)
+                                                 │ augment_case
+                                                 ▼
+                                    net″ (benchmark-ready) ──► write_bmopf
+                                                 │ solve_opf / to_pmd
+                                                 ▼
+                                        result Dict{String,Any}
+                                                 │ profile_solution
+                                                 ▼
+                                       SolutionReport ──► render_solution
 ```
 
-- **Conversion**: `from_pmd` / `to_pmd` translate between PMD's ENGINEERING
-  model and the BMOPF data model, handling earth-terminal conventions,
+- **Conversion**: `from_dss` (via the [powerio](https://github.com/eigenergy/powerio)
+  CLI) and `from_pmd` / `to_pmd` (via PowerModelsDistribution) translate
+  OpenDSS networks into BMOPF dicts, handling earth-terminal conventions,
   grounding reactors, transformer impedance bases, and adding an explicit
   slack generator at the source.
 - **Validation**: required fields, spec conformance (configuration/arity
@@ -46,6 +54,12 @@ OpenDSS .dss ──(PowerModelsDistribution)──► ENGINEERING dict
 - **Reporting**: every `analyze` run produces a `SummaryReport` with a
   complete catalogue of stable, documented finding codes, rendered to
   terminal or Markdown.
+- **Case preparation**: `fix_case` (structural repairs — remove inert
+  elements, convert near-zero impedance lines to switches, drop disconnected
+  islands) and `augment_case` (standards-grounded gap-filling — inject
+  voltage bounds, infer thermal limits, add slack generation) prepare a raw
+  import for use as an OPF benchmark.  Both return a `TransformationManifest`
+  audit trail.
 - **Solution profiling**: given a BMOPF network and an OPF result dict,
   `profile_solution` flags bound violations, near-active constraints,
   constraint residuals, and solution-quality issues without access to solver
@@ -82,7 +96,18 @@ errors(report)    # bound violations and infeasibility findings
 warnings(report)  # near-active bounds and residual warnings
 ```
 
-Converting from OpenDSS (requires PowerModelsDistribution in the environment):
+Converting from OpenDSS via powerio (recommended):
+
+```julia
+using BMOPFTools
+
+net    = from_dss("Master.dss")     # requires powerio binary on PATH
+net′,  fix_mf  = fix_case(net)
+net″,  aug_mf  = augment_case(net′)
+write_bmopf("case.json", net″)
+```
+
+Converting from OpenDSS via PowerModelsDistribution:
 
 ```julia
 using BMOPFTools, PowerModelsDistribution
@@ -94,11 +119,12 @@ report = analyze(net)
 
 ## Environments
 
-The package depends on `Graphs`, `JSON3`, `LinearAlgebra`, `Statistics`,
-`Dates`, `Logging`, and `PowerModelsDistribution`. PMD is used by `from_pmd`
-/ `to_pmd` for the ENGINEERING-model conversion; it accepts plain dicts so no
-PMD types leak into BMOPF data. The test suite skips the OpenDSS integration
-test when `OpenDSSDirect` is absent.
+Core dependencies: `Graphs`, `JSON3`, `LinearAlgebra`, `Statistics`, `Dates`,
+`Logging`. PowerModelsDistribution is an optional dependency used only by
+`from_pmd` / `to_pmd`; it is not loaded unless those functions are called. The
+`from_dss` path requires the [powerio](https://github.com/eigenergy/powerio)
+binary on `PATH` (or `BMOPFTOOLS_POWERIO_PATH` env var). The test suite skips
+OpenDSS integration tests when `OpenDSSDirect` is absent.
 
 ```sh
 # full test suite (with PMD, from the package root)
@@ -120,7 +146,9 @@ julia --project=docs docs/make.jl
 
 Pages: data-model conventions, the conversion guide (every deliberate
 `from_pmd`/`to_pmd` decision), the analysis/report guide, the **complete
-finding-code reference**, and methodology notes with literature references.
+finding-code reference** (128 codes), methodology notes with literature
+references, the case augmentation guide (`fix_case` + `augment_case`), the
+OPF guide, and the OPF result dictionary reference.
 
 `docs/taskforce_feedback.md` collects implementation feedback on the Task
 Force draft specification.
