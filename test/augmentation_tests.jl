@@ -114,18 +114,24 @@ end
     mv = net′["bus"]["mv_src"]
     lv = net′["bus"]["lv_bus"]
 
-    # MV source bus gets v bounds (but not vpn/vpp — it's a source bus)
-    # MV v_min = 6350 * 0.94 (±6%)
-    @test mv["v_min"] ≈ 6350.0 * 0.94  atol=1.0
+    # v_min/v_max are solver regularisation — same pu band at all levels
+    @test mv["v_min"] ≈ 6350.0 * 0.85  atol=1.0
+    @test mv["v_max"] ≈ 6350.0 * 1.15  atol=1.0
 
-    # LV bus: v_min = V_nom × 0.85 (LV band)
+    # MV source bus gets v_min/v_max but NOT vpn/vpp/vneg (source bus)
+    @test !haskey(mv, "vpn_min")
+    @test !haskey(mv, "vpp_min")
+
+    # LV bus: v_min/v_max use same 0.85/1.15 band
     lv_vnom = get(voltage_level_analysis(net, Finding[])["bus_voltage_map"], "lv_bus", NaN)
     @test lv["v_min"] ≈ lv_vnom * 0.85  atol=1.0
+    @test lv["v_max"] ≈ lv_vnom * 1.15  atol=1.0
 
-    # MV band is strictly tighter than LV band
-    mv_range = mv["v_max"] - mv["v_min"]
-    lv_range = lv["v_max"] - lv["v_min"]
-    @test mv_range / mv["v_max"] < lv_range / lv["v_max"]
+    # MV vpn band (±6%) is tighter than LV vpn band (±10%) in per-unit terms
+    # lv_bus is a four-wire LV bus so it gets vpn bounds
+    lv_vpn_range = lv["vpn_max"] - lv["vpn_min"]
+    lv_vpn_nom   = lv_vnom / sqrt(3.0)
+    @test lv_vpn_range / lv_vpn_nom ≈ 0.20  atol=0.01   # ±10 % → 20 % window
 end
 
 @testset "T1: Voltage bounds — never overwrite existing" begin

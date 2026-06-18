@@ -51,24 +51,62 @@ existing value** — augmentation only fills gaps.
 Sets `v_min`/`v_max`, `vpn_min`/`vpn_max`, `vpp_min`/`vpp_max`, and
 `vneg_max` on buses that lack them.
 
-| Bound | Applies to | Default (pu) | Standard |
-|---|---|---|---|
-| `v_min`/`v_max` | LV buses (≤ 1 kV) | 0.85 / 1.15 | Solver regularisation; wider than EN 50160 to allow feasibility margin |
-| `v_min`/`v_max` | MV buses (1–35 kV) | 0.94 / 1.06 | DSO operational planning practice (UK/EU ±6 %); tighter than LV to budget for downstream voltage drop |
-| `v_min`/`v_max` | HV buses (> 35 kV) | 0.95 / 1.05 | Transmission planning practice (±5 %) |
-| `vpn_min`/`vpn_max` | All non-source buses with a neutral | 0.90 / 1.10 | EN 50160:2010 §3.5/§3.6 — 95 %-of-week criterion, both LV (230 V) and MV |
-| `vpp_min`/`vpp_max` | Buses with ≥ 2 phase terminals | 0.90 / 1.10 | EN 50160:2010 §3.5, same ±10 % band |
-| `vneg_max` | 3-phase non-source buses | 0.02 × V_pn_nom | EN 50160:2010 §3.5 — "negative-sequence component shall not exceed 2 % of positive-sequence" |
+Bounds are expressed as fractions of a **declared supply voltage** — the
+nominal voltage defined by the relevant power-quality standard, which may
+differ from the transformer rated voltage in the network model (e.g. a 240 V
+transformer in a grid declared at 230 V per EN 50160).  The declared voltage
+is resolved per bus in priority order:
 
-**Source buses** receive `v_min`/`v_max` only — their phase voltages are
-fixed by the voltage source object and `vpn`/`vpp`/`vneg` bounds are
-meaningless there.
+1. `bus["v_declared"]` — explicit field set at import time (e.g. by
+   `from_pmd` from the PMD voltage base)
+2. `AugmentationRecipe` fields `v_declared_lv` / `v_declared_mv` /
+   `v_declared_hv` — regional fallback (e.g. `v_declared_lv = 230.0` for
+   Europe/Australia)
+3. `v_nom` from `voltage_level_analysis` — last resort when neither of
+   the above is set
+
+#### Solver regularisation bounds (`v_min` / `v_max`)
+
+`v_min` and `v_max` are **hyperparameters**, not power-quality guarantees.
+They widen the feasible set so the solver can find a feasible point even when
+the operating point sits at the edge of the physical window.  The same values
+are applied to all buses regardless of voltage level.
+
+| Field | Default (pu of `v_declared`) | Purpose |
+|---|---|---|
+| `v_min` | 0.85 | Lower regularisation bound — disable with `v_min_pu = nothing` |
+| `v_max` | 1.15 | Upper regularisation bound — disable with `v_max_pu = nothing` |
+
+**Source buses** receive `v_min`/`v_max` only — `vpn`/`vpp`/`vneg` bounds
+are meaningless there because the voltage source pins the terminal voltages.
+
+#### Power-quality bounds
+
+Applied to all non-source buses.  Percentage windows follow EN 50160:2010.
+
+**Four-wire buses** (have a neutral terminal) receive `vpn` bounds, since
+customers experience the phase-to-neutral voltage.  `vpp` bounds are also
+set when ≥ 2 phase terminals are present.
+
+| Bound | Level | Default (pu of `v_declared`) | Standard |
+|---|---|---|---|
+| `vpn_min`/`vpn_max` | LV (≤ 1 kV) | 0.90 / 1.10 | EN 50160:2010 §3.5/§3.6, 95 %-of-week ±10 % |
+| `vpn_min`/`vpn_max` | MV (1–35 kV) | 0.94 / 1.06 | DSO planning practice ±6 %, budgets for LV voltage drop |
+| `vpp_min`/`vpp_max` | LV | 0.90 / 1.10 | EN 50160:2010 §3.5, same ±10 % band |
+| `vpp_min`/`vpp_max` | MV | 0.94 / 1.06 | Same ±6 % band as `vpn` |
+| `vpp_min`/`vpp_max` | HV (> 35 kV) | 0.95 / 1.05 | Transmission planning ±5 % |
+
+**Three-wire buses** (no neutral terminal) receive `vpp` bounds only.
 
 **Single-phase buses** (one phase terminal + neutral) receive `vpn` but not
 `vpp` or `vneg_max`.
 
 **Unassigned buses** (islanded from all voltage sources) are skipped; the
 manifest records a note.
+
+| Bound | Applies to | Default | Standard |
+|---|---|---|---|
+| `vneg_max` | Four-wire, ≥ 2 phases, non-source | 0.02 × vpn_declared | EN 50160:2010 §3.5 — VUF ≤ 2 % |
 
 ### Pass 2 — Thermal limits
 

@@ -118,6 +118,51 @@ function _load_diversity(net::Dict{String,Any},
         cfg_counts[c] = get(cfg_counts, c, 0) + 1
     end
     r["configurations"] = cfg_counts
+
+    # Per-galvanic-zone phase balance: sum p_nom by phase terminal label.
+    # Flag zones where the phase totals are within 2% of each other — the
+    # network is secretly balanced and a simpler per-phase model would suffice.
+    buses = get(net, "bus", Dict())
+    vsrc_buses = Set(string(get(vs, "bus", ""))
+                     for (_, vs) in get(net, "voltage_source", Dict()))
+    n_balanced_zones = 0
+    for zone in _galvanic_zones(net)
+        phase_power = Dict{String,Float64}()
+        for (_, l) in loads
+            get(l, "bus", "") in zone || continue
+            tm = get(l, "terminal_map", String[])
+            p  = Float64.(get(l, "p_nom", Float64[]))
+            bus_id = get(l, "bus", "")
+            nt = _neutral_terminal(get(buses, bus_id, Dict()))
+            for (i, t) in enumerate(tm)
+                t = string(t)
+                (t == nt || i > length(p)) && continue
+                phase_power[t] = get(phase_power, t, 0.0) + p[i]
+            end
+        end
+        length(phase_power) < 2 && continue
+        totals = collect(values(phase_power))
+        total_max = maximum(totals)
+        total_max <= 0 && continue
+        spread = (total_max - minimum(totals)) / total_max
+        spread > 0.02 && continue
+
+        n_balanced_zones += 1
+        zone_label = let src = intersect(zone, vsrc_buses)
+            isempty(src) ? minimum(zone) : first(src)
+        end
+        push!(findings, Finding(INFO, "I.DIV.LOAD_PHASE_BALANCED", :diversity, :load, nothing,
+            "Galvanic zone anchored at '$zone_label' has balanced aggregate load across " *
+            "$(length(phase_power)) phase(s) (max spread $(round(spread*100, digits=2))%) — " *
+            "the network is effectively balanced and a single-phase equivalent would suffice.",
+            Dict{String,Any}(
+                "zone_anchor"    => zone_label,
+                "phase_totals_W" => phase_power,
+                "spread_pct"     => round(spread * 100, digits=2))))
+        flag = true
+    end
+    r["n_balanced_zones"] = n_balanced_zones
+
     r["symmetry_flag"] = flag
     r
 end
