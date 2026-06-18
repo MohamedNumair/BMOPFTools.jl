@@ -22,6 +22,9 @@ Returned top-level keys
 - `"generator"`  — `gen_id => terminal_name => {crg, cig [A], pg [W], qg [var]}`
 - `"transformer"`— `xfmr_id => {"fr" => {k => {cr, ci [A]}}, "to" => {k => {cr, ci [A]}}}`
 - `"voltage_source"` — `src_id => terminal => {cr, ci [A], ps [W], qs [var]}`
+- `"initialisation"` — `bus_id => terminal => {vr_init, vi_init, vm_init [V], va_init [rad]}`
+  Ipopt start values set before `optimize!`. Always present; used by `profile_solution`
+  to flag wrong-voltage-level and large-error initialisation.
 
 Line and switch conductors are keyed by terminal name (using `terminal_map_from`
 for lines, `terminal_map_from` for switches), not by position index.  When
@@ -198,6 +201,35 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
     # Exposing these unconstrained variables in the result would be misleading,
     # so voltage_source does not appear as a result section.
 
+    # ── Initialisation start values ──────────────────────────────────────────
+    # Capture the start values set by _set_voltage_start_values! /
+    # _set_level_aware_start_values! before the solver overwrites them.
+    # JuMP.start_value returns nothing for fixed (grounded) terminals — these
+    # are always 0 V and are recorded as such.
+    init_res = Dict{String,Any}()
+    for (bid, terminals) in bus_terminals
+        t_dict = Dict{String,Any}()
+        for t in terminals
+            vr_i = if (bid, t) in grounded
+                0.0
+            else
+                something(JuMP.start_value(vr_v[(bid, t)]), 0.0)
+            end
+            vi_i = if (bid, t) in grounded
+                0.0
+            else
+                something(JuMP.start_value(vi_v[(bid, t)]), 0.0)
+            end
+            t_dict[t] = Dict{String,Any}(
+                "vr_init" => vr_i,
+                "vi_init" => vi_i,
+                "vm_init" => sqrt(vr_i^2 + vi_i^2),
+                "va_init" => atan(vi_i, vr_i),
+            )
+        end
+        init_res[bid] = t_dict
+    end
+
     Dict{String,Any}(
         "termination_status" => status,
         "objective"          => obj,
@@ -208,5 +240,6 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
         "load"               => load_res,
         "generator"          => gen_res,
         "transformer"        => xfmr_res,
+        "initialisation"     => init_res,
     )
 end
