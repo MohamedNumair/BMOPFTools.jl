@@ -97,12 +97,4 @@ benchmark_readiness_check
 
 ## Case augmentation
 
-```@docs
-augment_case
-AugmentationRecipe
-default_recipe
-TransformationManifest
-TransformEntry
-manifest_to_dict
-render_manifest
-```
+See [Case augmentation](augmentation.md) for the full reference.
