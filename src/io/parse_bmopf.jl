@@ -76,6 +76,7 @@ Post-processing after JSON parse:
 function _postprocess(raw::Dict{String,Any},
                       terminal_aliases::Dict=_DEFAULT_TERMINAL_ALIASES)::Dict{String,Any}
     d = _deep_convert(raw)
+    d = migrate(d)
     n_coerced, mode = _normalize_terminals!(d, terminal_aliases)
     # Stamp parse time if no metadata present
     if !haskey(d, "_meta")
