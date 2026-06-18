@@ -9,6 +9,54 @@
             "type": "string",
             "description": "Test case name"
         },
+        "meta": {
+            "type": "object",
+            "description": "Case metadata block",
+            "properties": {
+                "$schema":     { "type": "string" },
+                "version":     { "type": "string" },
+                "title":       { "type": "string" },
+                "description": { "type": "string" },
+                "created":     { "type": "string" },
+                "modified":    { "type": "string" },
+                "license":     { "type": "string" },
+                "authors": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name":  { "type": "string" },
+                            "email": { "type": "string" },
+                            "orcid": { "type": "string" }
+                        },
+                        "additionalProperties": false
+                    }
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name":    { "type": "string" },
+                            "url":     { "type": "string" },
+                            "format":  { "type": "string" },
+                            "doi":     { "type": "string" },
+                            "version": { "type": "string" }
+                        },
+                        "additionalProperties": false
+                    }
+                },
+                "generator": {
+                    "type": "object",
+                    "properties": {
+                        "tool":    { "type": "string" },
+                        "version": { "type": "string" }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "additionalProperties": false
+        },
         "bus": {
             "type": "object",
             "description": "Collection of buses",
@@ -268,8 +316,11 @@
                         }
                     },
                     "cost": {
-                        "type": "number",
-                        "description": "Generating cost if active power [$/kWh]"
+                        "type": "array",
+                        "description": "Per-phase linear generating cost [$/kWh], one entry per phase conductor",
+                        "items": {
+                            "type": "number"
+                        }
                     },
                     "bus": {
                         "$ref": "#/$defs/bus_type"

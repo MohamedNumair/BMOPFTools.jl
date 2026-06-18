@@ -82,6 +82,7 @@ function _apply_voltage_bounds!(net′::Dict{String,Any},
         is_source && continue   # skip power-quality bounds on source buses
 
         # ── vpn_min / vpn_max (four-wire only) ───────────────────────────────
+        # Per-phase arrays, one entry per phase conductor (length = n_phase).
         if r.apply_vpn_bounds && is_four_wire
             # Phase-to-neutral declared voltage: for multi-phase buses the
             # declared line voltage is phase-to-phase, so vpn_nom = v_dec / √3.
@@ -91,12 +92,12 @@ function _apply_voltage_bounds!(net′::Dict{String,Any},
 
             for (field, pu) in (("vpn_min", lo_pu), ("vpn_max", hi_pu))
                 if !haskey(bus, field)
-                    val = v_pn_dec * pu
+                    val = fill(v_pn_dec * pu, n_phase)
                     bus[field] = val
                     push!(entries, TransformEntry(
                         :bus, bid, field, nothing, val,
                         "EN50160:2010§3.5", :standard,
-                        "vpn_declared=$(round(v_pn_dec, digits=1)) V × $pu"))
+                        "vpn_declared=$(round(v_pn_dec, digits=1)) V × $pu ($(n_phase) phase(s))"))
                 end
             end
 
@@ -114,20 +115,23 @@ function _apply_voltage_bounds!(net′::Dict{String,Any},
         end
 
         # ── vpp_min / vpp_max ─────────────────────────────────────────────────
+        # Per phase-pair arrays, length = n_phase*(n_phase-1)/2.
         # Four-wire: vpp_nom = v_dec (declared line voltage = phase-to-phase).
         # Three-wire: same — v_dec is the declared line voltage directly.
-        # Requires ≥ 2 phase terminals.
+        # Requires ≥ 2 phase terminals (spec: only meaningful if |Nᵢ| ≥ 3,
+        # but we also support the single phase-pair case, length 1).
         if r.apply_vpp_bounds && n_phase >= 2
+            n_pairs = n_phase * (n_phase - 1) ÷ 2
             lo_pu, hi_pu = _vpp_pu(v_nom, r)
 
             for (field, pu) in (("vpp_min", lo_pu), ("vpp_max", hi_pu))
                 if !haskey(bus, field)
-                    val = v_dec * pu
+                    val = fill(v_dec * pu, n_pairs)
                     bus[field] = val
                     push!(entries, TransformEntry(
                         :bus, bid, field, nothing, val,
                         "EN50160:2010§3.5", :standard,
-                        "vpp_declared=$(round(v_dec, digits=1)) V × $pu"))
+                        "vpp_declared=$(round(v_dec, digits=1)) V × $pu ($(n_pairs) pair(s))"))
                 end
             end
         end
