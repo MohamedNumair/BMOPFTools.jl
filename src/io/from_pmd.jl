@@ -231,6 +231,13 @@ function _bus_from_pmd(pmd_bus::Dict{String,Any}, id::String,
     vbase_kv = get(vbases, id, nothing)
     vbase_v  = vbase_kv !== nothing ? Float64(vbase_kv) * vscale : nothing
 
+    # PMD's vbase is the transformer-rated voltage. Store it as v_declared so
+    # augment_case can use it as the percentage-bound reference, falling back
+    # to v_nom from voltage-level analysis only when this is absent.
+    if vbase_v !== nothing
+        b["v_declared"] = vbase_v
+    end
+
     # voltage bounds: PMD vm_lb/vm_ub are in p.u. → scale to V
     if vbase_v !== nothing
         if haskey(pmd_bus, "vm_lb")

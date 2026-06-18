@@ -1,17 +1,25 @@
 # Voltage bound injection pass.
 #
-# For each bus that is missing bounds, computes SI values from the per-unit
-# recipe fractions and the nominal voltage assigned by voltage_level_analysis.
+# For each bus that is missing bounds, injects v_min/v_max (solver
+# regularisation), vpn/vpp (power-quality standards), and vneg_max.
 #
 # Never overwrites existing bounds.  Source buses are skipped for vpn/vpp/vneg
 # (their voltages are fixed by the voltage source, not constrained by bounds).
+#
+# Declared supply voltage priority:
+#   1. bus["v_declared"]          — explicit field set at import time
+#   2. recipe.v_declared_lv/mv/hv — recipe-level regional fallback
+#   3. v_nom from voltage_level_analysis — last resort
 
-# Return the (lo_pu, hi_pu) phase-to-ground envelope for a given nominal
-# voltage in Volts.
-function _v_pu_for_level(v_nom::Float64, r::AugmentationRecipe)
-    v_nom <= 1_000.0  && return r.lv_v_pu
-    v_nom <= 35_000.0 && return r.mv_v_pu
-    return r.hv_v_pu
+# Return the declared supply voltage (phase-to-ground, V) for a bus.
+function _v_declared(bus::Dict{String,Any}, v_nom::Float64,
+                     r::AugmentationRecipe)::Float64
+    vd = get(bus, "v_declared", nothing)
+    vd isa Number && return Float64(vd)
+    fallback = v_nom <= 1_000.0  ? r.v_declared_lv :
+               v_nom <= 35_000.0 ? r.v_declared_mv :
+                                   r.v_declared_hv
+    fallback isa Number ? Float64(fallback) : v_nom
 end
 
 function _level_name(v_nom::Float64)::String
@@ -20,9 +28,14 @@ function _level_name(v_nom::Float64)::String
     return "HV"
 end
 
-function _v_standard(v_nom::Float64)::String
-    v_nom <= 35_000.0 && return "EN50160:2010§3.5-3.6+DSO_planning_practice"
-    return "transmission_planning_±5%"
+function _vpn_pu(v_nom::Float64, r::AugmentationRecipe)::Tuple{Float64,Float64}
+    v_nom <= 1_000.0 ? r.vpn_lv_pu : r.vpn_mv_pu
+end
+
+function _vpp_pu(v_nom::Float64, r::AugmentationRecipe)::Tuple{Float64,Float64}
+    v_nom <= 1_000.0  ? r.vpp_lv_pu :
+    v_nom <= 35_000.0 ? r.vpp_mv_pu :
+                        r.vpp_hv_pu
 end
 
 function _apply_voltage_bounds!(net′::Dict{String,Any},
@@ -31,7 +44,6 @@ function _apply_voltage_bounds!(net′::Dict{String,Any},
                                  bus_voltage_map::Dict{String,Float64})
     buses = get(net′, "bus", Dict())
 
-    # Collect source buses (their phase voltages are fixed; skip vpn/vpp/vneg)
     source_buses = Set{String}()
     for (_, vs) in get(net′, "voltage_source", Dict())
         b = get(vs, "bus", nothing)
@@ -43,80 +55,79 @@ function _apply_voltage_bounds!(net′::Dict{String,Any},
         v_nom = get(bus_voltage_map, bid, nothing)
         v_nom === nothing && continue   # islanded bus — skip
 
-        # ── v_min / v_max (phase-to-ground envelope) ─────────────────────────
-        if r.apply_v_bounds
-            lo_pu, hi_pu = _v_pu_for_level(v_nom, r)
-            std = _v_standard(v_nom)
-            lvl = _level_name(v_nom)
+        lvl = _level_name(v_nom)
+        v_dec = _v_declared(bus, v_nom, r)
+        is_source = bid in source_buses
 
-            for (field, pu) in (("v_min", lo_pu), ("v_max", hi_pu))
+        nt       = _neutral_terminal(bus)
+        terms    = get(bus, "terminal_names", String[])
+        n_phase  = count(t -> string(t) != nt, terms)
+        has_neutral = nt !== nothing && any(t -> string(t) == nt, terms)
+        is_four_wire = has_neutral && n_phase >= 1
+
+        # ── v_min / v_max (solver regularisation) ────────────────────────────
+        if r.apply_v_bounds && r.v_min_pu !== nothing && r.v_max_pu !== nothing
+            for (field, pu) in (("v_min", r.v_min_pu), ("v_max", r.v_max_pu))
                 if !haskey(bus, field)
-                    val = v_nom * pu
+                    val = v_dec * pu
                     bus[field] = val
                     push!(entries, TransformEntry(
                         :bus, bid, field, nothing, val,
-                        std, :standard,
-                        "$lvl bus; v_nom=$(round(v_nom, digits=1)) V"))
+                        "solver_regularisation", :heuristic,
+                        "$lvl bus; v_declared=$(round(v_dec, digits=1)) V × $pu"))
                 end
             end
         end
 
-        is_source = bid in source_buses
+        is_source && continue   # skip power-quality bounds on source buses
 
-        # ── vpn_min / vpn_max (phase-to-neutral, EN 50160) ───────────────────
-        if r.apply_vpn_bounds && !is_source
-            nt = _neutral_terminal(bus)
-            terms = get(bus, "terminal_names", String[])
-            n_phase = count(t -> t != nt, terms)
-            (nt === nothing || n_phase == 0) && continue
-
-            # For 3-phase buses v_pn_nom = v_nom / √3; for single-phase
-            # (two terminals: one phase + neutral) v_nom is already phase-to-ground.
-            v_pn_nom = n_phase >= 2 ? v_nom / sqrt(3.0) : v_nom
-            lo_pu, hi_pu = r.vpn_pu
+        # ── vpn_min / vpn_max (four-wire only) ───────────────────────────────
+        if r.apply_vpn_bounds && is_four_wire
+            # Phase-to-neutral declared voltage: for multi-phase buses the
+            # declared line voltage is phase-to-phase, so vpn_nom = v_dec / √3.
+            # For single-phase (one phase + neutral) v_dec is already vpn.
+            v_pn_dec = n_phase >= 2 ? v_dec / sqrt(3.0) : v_dec
+            lo_pu, hi_pu = _vpn_pu(v_nom, r)
 
             for (field, pu) in (("vpn_min", lo_pu), ("vpn_max", hi_pu))
                 if !haskey(bus, field)
-                    val = v_pn_nom * pu
+                    val = v_pn_dec * pu
                     bus[field] = val
                     push!(entries, TransformEntry(
                         :bus, bid, field, nothing, val,
                         "EN50160:2010§3.5", :standard,
-                        "vpn_nom=$(round(v_pn_nom, digits=1)) V ×$(pu)"))
+                        "vpn_declared=$(round(v_pn_dec, digits=1)) V × $pu"))
                 end
             end
 
             # ── vneg_max (EN 50160: VUF ≤ 2 %) ──────────────────────────────
             if r.apply_vneg_bounds && n_phase >= 2
                 if !haskey(bus, "vneg_max")
-                    val = v_pn_nom * r.vneg_max_pu
+                    val = v_pn_dec * r.vneg_max_pu
                     bus["vneg_max"] = val
                     push!(entries, TransformEntry(
                         :bus, bid, "vneg_max", nothing, val,
                         "EN50160:2010§3.5_VUF≤2%", :standard,
-                        "$(r.vneg_max_pu*100)% of vpn_nom=$(round(v_pn_nom, digits=1)) V"))
+                        "$(r.vneg_max_pu*100)% of vpn_declared=$(round(v_pn_dec, digits=1)) V"))
                 end
             end
         end
 
-        # ── vpp_min / vpp_max (phase-to-phase, EN 50160) ─────────────────────
-        if r.apply_vpp_bounds && !is_source
-            terms = get(bus, "terminal_names", String[])
-            nt    = _neutral_terminal(bus)
-            n_phase = count(t -> t != nt, terms)
-            n_phase < 2 && continue
-
-            v_pp_nom = v_nom   # line voltage equals v_nom for 3-phase buses
-            lo_pu, hi_pu = r.vpp_pu
+        # ── vpp_min / vpp_max ─────────────────────────────────────────────────
+        # Four-wire: vpp_nom = v_dec (declared line voltage = phase-to-phase).
+        # Three-wire: same — v_dec is the declared line voltage directly.
+        # Requires ≥ 2 phase terminals.
+        if r.apply_vpp_bounds && n_phase >= 2
+            lo_pu, hi_pu = _vpp_pu(v_nom, r)
 
             for (field, pu) in (("vpp_min", lo_pu), ("vpp_max", hi_pu))
                 if !haskey(bus, field)
-                    val = v_pp_nom * pu
+                    val = v_dec * pu
                     bus[field] = val
                     push!(entries, TransformEntry(
                         :bus, bid, field, nothing, val,
                         "EN50160:2010§3.5", :standard,
-                        "vpp_nom=$(round(v_pp_nom, digits=1)) V ×$(pu)"))
+                        "vpp_declared=$(round(v_dec, digits=1)) V × $pu"))
                 end
             end
         end
