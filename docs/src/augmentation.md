@@ -5,33 +5,42 @@ ready for use as OPF benchmarks.  They typically lack voltage bounds,
 thermal limits, and dispatchable generation — deficiencies that
 [`benchmark_readiness_check`](@ref) flags explicitly.
 
-`augment_case` closes these gaps in a standards-grounded, traceable way.
-Every field it writes is justified by a cited standard or documented
-practice; the returned [`TransformationManifest`](@ref) is a machine-readable
-audit trail of exactly what changed and why.
+BMOPFTools provides two complementary functions for preparing a case:
 
-## Workflow
+- **`fix_case`** — structural repairs: remove inert elements, drop disconnected
+  islands, convert near-zero impedance lines to switches, strip redundant bounds.
+  All passes are lossless or explicitly opt-in.
+- **`augment_case`** — standards-grounded gap-filling: inject voltage bounds,
+  infer thermal limits, add slack generation.  Never overwrites existing values.
+
+Both return `(net′, TransformationManifest)`.  `net` is never mutated.
+
+## Recommended workflow
 
 ```julia
 using BMOPFTools
 
-net    = parse_bmopf("my_feeder.json")           # or from_pmd / from_dss
-report = analyze(net)                            # optional: pre-compute analysis
+net = parse_bmopf("my_feeder.json")          # or from_pmd / from_dss
 
-net′, manifest = augment_case(net; analysis=report.analysis)
+net′,  fix_mf  = fix_case(net)               # structural repairs first
+net″,  aug_mf  = augment_case(net′)          # then fill missing bounds/limits
 
-render_manifest(manifest)                        # human-readable diff
-write_bmopf("my_feeder_augmented.json", net′)
+render_manifest(fix_mf)                      # inspect what was repaired
+render_manifest(aug_mf)                      # inspect what was added
 
-result = solve_opf(net′)
-report′ = profile_solution(net′, result)
+write_bmopf("my_feeder_fixed_augmented.json", net″)
+
+result  = solve_opf(net″)
+report′ = profile_solution(net″, result)
 ```
 
-Passing the `analysis` result avoids re-running the voltage-level and
-provenance analyses internally.  If omitted, `augment_case` runs them
-automatically.
+Passing the pre-computed `analyze` result to `augment_case` avoids
+re-running voltage-level and provenance analyses internally:
 
-## Augmentation passes
+```julia
+report  = analyze(net′)
+net″, aug_mf = augment_case(net′; analysis=report.analysis)
+```
 
 Three passes run in order.  Each can be disabled independently via the
 [`AugmentationRecipe`](@ref) `apply_*` flags.  **No pass ever overwrites an
@@ -136,7 +145,29 @@ Default `pf = 0.90` (EN 50549-1:2019, LV grid-connected DERs):
 Q_max ≈ 0.484 × P_max.  Set `q_capability_pf = 0.95` for IEEE 1547-2018
 (ANSI) deployments: Q_max ≈ 0.329 × P_max.
 
-## `AugmentationRecipe`
+## `fix_case` — structural repairs
+
+Seven passes run in order.  Each is independently controlled by the
+corresponding `apply_*` flag in [`FixRecipe`](@ref).  All passes default to
+`true` except the two that change power-system semantics, which default to
+`false` and must be opted into explicitly.
+
+| # | Pass | Default | Notes |
+|---|---|---|---|
+| 1 | Largest connected component | `true` | Drops buses, lines, loads, generators, and shunts that have no path to a voltage source. |
+| 2 | Simplify network | `true` | Merges consecutive same-linecode series lines; removes dangling stub lines (wraps [`simplify_network`](@ref)). |
+| 3 | Remove zero loads | `true` | Deletes loads with `p_nom = q_nom = 0` on all phases — electrically inert. |
+| 4 | Low-impedance lines → switches | `true` | Replaces lines with total series impedance `\|Z\| < threshold` (default 10⁻⁴ Ω) with closed switches. |
+| 5 | Source bus bounds | `true` | Strips all voltage bounds from source buses — redundant because the voltage source pins the terminal voltages exactly. |
+| 6 | Adjacent current bounds | `false` | Infers `i_max` for lines/switches that lack it from directly adjacent elements (one hop). Transformers contribute `s_rating / (√3 × V_ref)`; lines and switches propagate their own `i_max`. Takes the minimum over all adjacent bounds. |
+| 7 | Perfect grounding | `false` | Promotes grounding shunts whose `1/\|Y₁₁\| < threshold` (default 0.1 Ω) to `perfectly_grounded_terminals` and removes the shunt. **Changes OPF physics** (forces `V_n = 0`). |
+
+```@docs
+fix_case
+FixRecipe
+```
+
+## `augment_case` — standards-grounded gap-filling
 
 ```@docs
 AugmentationRecipe

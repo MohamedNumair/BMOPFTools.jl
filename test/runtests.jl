@@ -389,6 +389,38 @@ const IEEE13_FIXTURE = """
 
         # unused linecodes: lc601, lc605, lc607 are all used, none unused
         @test result["unused_linecodes"]["n"] == 0
+
+        # no parallel lines in the fixture
+        @test result["parallel_lines"]["n_groups"] == 0
+    end
+
+    @testset "Redundancy — parallel lines" begin
+        make_net(lines) = Dict{String,Any}("line" => lines)
+
+        # Two lines between the same bus pair → flagged
+        net = make_net(Dict(
+            "l1" => Dict("bus_from"=>"a","bus_to"=>"b","linecode"=>"lc","length"=>100.0),
+            "l2" => Dict("bus_from"=>"a","bus_to"=>"b","linecode"=>"lc","length"=>100.0)))
+        r = redundancy_check(net, Finding[])
+        @test r["parallel_lines"]["n_groups"] == 1
+        @test sort(r["parallel_lines"]["groups"][1]["line_ids"]) == ["l1","l2"]
+        findings = Finding[]
+        redundancy_check(net, findings)
+        @test any(f -> f.code == "I.RED.PARALLEL_LINES", findings)
+
+        # Direction-agnostic: (A,B) and (B,A) are the same pair
+        net2 = make_net(Dict(
+            "l1" => Dict("bus_from"=>"a","bus_to"=>"b","linecode"=>"lc","length"=>100.0),
+            "l2" => Dict("bus_from"=>"b","bus_to"=>"a","linecode"=>"lc","length"=>100.0)))
+        r2 = redundancy_check(net2, Finding[])
+        @test r2["parallel_lines"]["n_groups"] == 1
+
+        # Different bus pairs → no flag
+        net3 = make_net(Dict(
+            "l1" => Dict("bus_from"=>"a","bus_to"=>"b","linecode"=>"lc","length"=>100.0),
+            "l2" => Dict("bus_from"=>"b","bus_to"=>"c","linecode"=>"lc","length"=>100.0)))
+        r3 = redundancy_check(net3, Finding[])
+        @test r3["parallel_lines"]["n_groups"] == 0
     end
 
     @testset "Redundancy — sparse phase loads" begin
@@ -2098,6 +2130,10 @@ const IEEE13_FIXTURE = """
     # -----------------------------------------------------------------------
     @testset "Augmentation" begin
         include("augmentation_tests.jl")
+    end
+
+    @testset "Fix case" begin
+        include("fix_tests.jl")
     end
 
     @testset "Power-flow comparison vs OpenDSS" begin
