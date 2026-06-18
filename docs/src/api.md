@@ -94,3 +94,15 @@ integrity_check
 spec_conformance_check
 benchmark_readiness_check
 ```
+
+## Case augmentation
+
+```@docs
+augment_case
+AugmentationRecipe
+default_recipe
+TransformationManifest
+TransformEntry
+manifest_to_dict
+render_manifest
+```

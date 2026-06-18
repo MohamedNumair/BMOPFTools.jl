@@ -1,0 +1,161 @@
+# Thermal limit inference pass.
+#
+# Infers i_max for linecodes that lack it by matching the diagonal series
+# resistance R₁₁ against an IEC 60228:2004 / IEC 60364-5-52:2009 lookup
+# table of cross-section → ampacity.
+#
+# The neutral conductor carries the same rating as the phase conductors in
+# this implementation (no derating applied).  IEC 60364-5-52:2009 Table B.52
+# permits a reduced neutral cross-section above 16 mm² when the load is
+# sufficiently balanced, but the appropriate derating is installation- and
+# load-specific.  See the augmentation documentation for guidance.
+#
+# Only linecodes whose provenance confidence is at or above
+# recipe.thermal_min_confidence are processed.  This prevents assigning
+# ratings derived from a fictitious sequence-impedance matrix.
+
+# ── IEC 60228:2004 + IEC 60364-5-52:2009 lookup table ───────────────────────
+# Columns: (R₁₁ mΩ/m at 20 °C, cross_section mm², underground XLPE A, overhead AAC A)
+# Overhead AAC values marked nothing for cross-sections not commonly overhead.
+const _IEC_CONDUCTOR_TABLE = [
+    (4.950, 4,    34,  nothing),
+    (3.300, 6,    41,  nothing),
+    (1.980, 10,   57,  70),
+    (1.240, 16,   76,  95),
+    (0.787, 25,  104, 130),
+    (0.559, 35,  134, 160),
+    (0.396, 50,  170, 200),
+    (0.283, 70,  220, 260),
+    (0.209, 95,  277, 320),
+    (0.164, 120, 326, 375),
+    (0.132, 150, 386, 430),
+    (0.107, 185, 451, 490),
+    (0.082, 240, 541, 600),
+]  # Source: IEC 60228:2004 (resistance), IEC 60364-5-52:2009 Table B.52 (ampacity)
+
+const _THERMAL_TOLERANCE = 0.15   # 15 % relative tolerance for R₁₁ matching
+
+# Confidence ordering for threshold comparison
+const _CONFIDENCE_ORDER = Dict(:low => 1, :medium => 2, :high => 3)
+
+function _confidence_ok(c::Symbol, min_c::Symbol)::Bool
+    get(_CONFIDENCE_ORDER, c, 0) >= get(_CONFIDENCE_ORDER, min_c, 0)
+end
+
+"""
+    _linecode_confidence(classification::String) -> Symbol
+
+Map a provenance linecode classification string to a confidence level for
+thermal inference.
+"""
+function _linecode_confidence(classification::String)::Symbol
+    classification == "distinct"        && return :high
+    classification == "near_balanced"   && return :medium
+    return :low   # exactly_balanced, decoupled, or unknown
+end
+
+"""
+    _lookup_ampacity(r11_ohm_per_m, conductor_type) -> (mm2, ampacity, note)
+
+Find the nearest IEC 60228 table entry for the given R₁₁ (Ω/m).
+Returns (cross_section_mm2, ampacity_A, note_string) or nothing if no match
+within tolerance.
+"""
+function _lookup_ampacity(r11_ohm_per_m::Float64, conductor_type::Symbol)
+    r11_mohm = r11_ohm_per_m * 1000.0   # convert to mΩ/m
+
+    best_row  = nothing
+    best_reld = Inf
+    for row in _IEC_CONDUCTOR_TABLE
+        rel = abs(r11_mohm - row[1]) / row[1]
+        if rel < best_reld
+            best_reld = rel
+            best_row  = row
+        end
+    end
+
+    best_row === nothing && return nothing
+    best_reld > _THERMAL_TOLERANCE && return nothing
+
+    r_tab, mm2, amp_ug, amp_oh = best_row
+    amp = if conductor_type == :overhead
+        amp_oh === nothing && return nothing
+        Float64(amp_oh)
+    else
+        Float64(amp_ug)
+    end
+
+    note = "R₁₁=$(round(r11_mohm, digits=3)) mΩ/m matched to $(mm2) mm² " *
+           "(table: $(r_tab) mΩ/m, Δ=$(round(best_reld*100, digits=1))%); " *
+           "$(conductor_type == :overhead ? "overhead AAC" : "underground XLPE")"
+    (mm2, amp, note)
+end
+
+function _apply_thermal!(net′::Dict{String,Any},
+                          entries::Vector{TransformEntry},
+                          r::AugmentationRecipe,
+                          linecode_classifications::Dict{String,String})
+    r.apply_thermal || return
+
+    linecodes = get(net′, "linecode", Dict())
+
+    for (lcid, lc) in linecodes
+        lc isa Dict || continue
+        haskey(lc, "i_max") && continue   # already present — never overwrite
+
+        # Determine confidence from provenance classification
+        cls        = get(linecode_classifications, lcid, "unknown")
+        confidence = _linecode_confidence(cls)
+        _confidence_ok(confidence, r.thermal_min_confidence) || begin
+            push!(entries, TransformEntry(
+                :linecode, lcid, "i_max", nothing, nothing,
+                "IEC60228:2004+IEC60364-5-52:2009", confidence,
+                "skipped: confidence $(confidence) below threshold " *
+                "$(r.thermal_min_confidence) (classification: $(cls))"))
+            continue
+        end
+
+        # Read R₁₁ — must be present and positive
+        r11 = get(lc, "R_series_1_1", nothing)
+        (r11 isa Number && r11 > 0) || begin
+            push!(entries, TransformEntry(
+                :linecode, lcid, "i_max", nothing, nothing,
+                "IEC60228:2004+IEC60364-5-52:2009", confidence,
+                "skipped: R_series_1_1 absent or non-positive"))
+            continue
+        end
+
+        result = _lookup_ampacity(Float64(r11), r.conductor_type)
+        if result === nothing
+            push!(entries, TransformEntry(
+                :linecode, lcid, "i_max", nothing, nothing,
+                "IEC60228:2004+IEC60364-5-52:2009", confidence,
+                "skipped: R₁₁=$(round(Float64(r11)*1000, digits=3)) mΩ/m " *
+                "outside lookup range (no match within $(round(_THERMAL_TOLERANCE*100))%)"))
+            continue
+        end
+
+        _, ampacity, note = result
+
+        # Count conductors from R_series matrix keys
+        n_cond = _count_conductors(lc)
+        i_max_vec = fill(ampacity, n_cond)
+
+        lc["i_max"] = i_max_vec
+        push!(entries, TransformEntry(
+            :linecode, lcid, "i_max", nothing, i_max_vec,
+            "IEC60228:2004+IEC60364-5-52:2009", confidence, note))
+    end
+end
+
+"""Count conductors in a linecode from the R_series diagonal keys."""
+function _count_conductors(lc::Dict{String,Any})::Int
+    n = 0
+    for k in keys(lc)
+        m = match(r"^R_series_(\d+)_\1$", k)
+        m === nothing && continue
+        idx = parse(Int, m.captures[1])
+        n = max(n, idx)
+    end
+    n == 0 ? 1 : n   # fallback to 1 if no diagonal keys found
+end
