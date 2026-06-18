@@ -212,6 +212,7 @@ end
 # Submodule includes — order matters; IO first, then analysis, then report
 # ---------------------------------------------------------------------------
 
+include("io/migrate.jl")
 include("io/parse_bmopf.jl")
 include("io/write_bmopf.jl")
 include("io/from_pmd.jl")
@@ -435,7 +436,7 @@ export Severity, ERROR, WARNING, INFO
 export Finding, SummaryReport, SolutionReport
 export errors, warnings, infos
 export profile_solution, render_solution, solution_check
-export parse_bmopf, write_bmopf
+export parse_bmopf, write_bmopf, migrate
 export from_pmd, to_pmd
 export from_dss
 export analyze, render
