@@ -94,3 +94,7 @@ integrity_check
 spec_conformance_check
 benchmark_readiness_check
 ```
+
+## Case augmentation
+
+See [Case augmentation](augmentation.md) for the full reference.

@@ -245,6 +245,8 @@ include("report/render_solution_markdown.jl")
 
 include("infeasibility/infeasibility.jl")
 
+include("augmentation.jl")
+
 # ---------------------------------------------------------------------------
 # Top-level entry points
 # ---------------------------------------------------------------------------
@@ -456,6 +458,8 @@ export integrity_check
 export spec_conformance_check
 export benchmark_readiness_check
 export render_markdown, render_terminal, render_ascii_tree
+export augment_case, AugmentationRecipe, default_recipe
+export TransformationManifest, TransformEntry, manifest_to_dict, render_manifest
 export diagnose_infeasibility
 export merge_series_lines, remove_dangling_lines
 export remove_open_switches, collapse_closed_switches

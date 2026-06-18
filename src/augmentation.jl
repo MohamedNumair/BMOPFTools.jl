@@ -1,0 +1,6 @@
+include("augmentation/recipe.jl")
+include("augmentation/manifest.jl")
+include("augmentation/voltage_bounds.jl")
+include("augmentation/thermal.jl")
+include("augmentation/generation.jl")
+include("augmentation/augment.jl")
