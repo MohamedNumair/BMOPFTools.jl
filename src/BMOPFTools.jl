@@ -378,7 +378,7 @@ end
 # ---------------------------------------------------------------------------
 
 """
-    solve_opf(net::Dict{String,Any}; optimizer=nothing, t_index::Int=1,
+    solve_opf(net::Dict{String,Any}; optimizer=Ipopt.Optimizer, t_index::Int=1,
               per_unit::Bool=false, s_base::Float64=1e6) -> Dict{String,Any}
 
 Solve the four-wire rectangular current-voltage (IVR-EN) optimal power flow

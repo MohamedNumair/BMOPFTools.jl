@@ -94,19 +94,15 @@ report = analyze(net)
 
 ## Environments
 
-The package itself depends only on `Graphs`, `JSON3`, `LinearAlgebra`,
-`Statistics`, `Dates`, `Logging`. PowerModelsDistribution is **not** a
-dependency — the converter accepts its plain-dict ENGINEERING model, so run
-conversion from an environment that has PMD (e.g. the parent project, with
-BMOPFTools `Pkg.develop`ed into it). The test suite skips the OpenDSS
-integration test when PMD is absent.
+The package depends on `Graphs`, `JSON3`, `LinearAlgebra`, `Statistics`,
+`Dates`, `Logging`, and `PowerModelsDistribution`. PMD is used by `from_pmd`
+/ `to_pmd` for the ENGINEERING-model conversion; it accepts plain dicts so no
+PMD types leak into BMOPF data. The test suite skips the OpenDSS integration
+test when `OpenDSSDirect` is absent.
 
 ```sh
 # full test suite (with PMD, from the package root)
 julia --project=. -e "using Pkg; Pkg.test()"
-
-# convert D-Suite networks from DSS to BMOPF JSON
-julia --project=. scripts/generate_dsuite.jl
 
 # generate analysis reports and simplified variants for all output/ networks
 julia --project=. scripts/generate_output.jl
@@ -133,5 +129,3 @@ Force draft specification.
 
 - `examples/lv1_14bus_walkthrough.jl` — step-by-step tour of every analysis
   on a real 14-bus LV feeder.
-- `examples/generate_reports.jl` — batch conversion + reporting over all
-  test datasets.
