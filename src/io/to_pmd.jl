@@ -359,6 +359,10 @@ end
 """
 Reconstruct an n×n matrix from flat pattern keys, e.g. "R_series_1_1" → rs[1,1].
 Returns `nothing` if no matching keys found.
+
+For symmetric matrices stored in upper-triangular shorthand (only `i_j` with i≤j
+present), the missing lower-triangle entry `i_j` is filled from `j_i` automatically.
+Full storage always takes precedence: if both `i_j` and `j_i` are present, `i_j` is used.
 """
 function _pattern_keys_to_matrix(d::Dict{String}, prefix::String)
     # find the size from existing keys; prefix ends with "_" so the
