@@ -95,6 +95,11 @@ spec_conformance_check
 benchmark_readiness_check
 ```
 
-## Case augmentation
+## Case preparation
 
-See [Case augmentation](augmentation.md) for the full reference.
+See [Case augmentation](augmentation.md) for the full reference and worked
+examples.  The main entry points are `fix_case` / `FixRecipe` (structural
+repairs) and `augment_case` / `AugmentationRecipe` / `default_recipe`
+(standards-grounded gap-filling), together with the shared
+`TransformationManifest` / `TransformEntry` / `manifest_to_dict` /
+`render_manifest` audit trail.
