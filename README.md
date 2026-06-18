@@ -16,6 +16,12 @@ The network data model is a plain `Dict{String,Any}` that mirrors the BMOPF
 JSON schema exactly: no wrapper types, so data flows naturally between JSON,
 PowerModelsDistribution and your own code.
 
+## Licensing
+
+The *code* on this repository is licensed under the BSD-3-Clause License.
+
+*Data licenses* apply to *everything in /output and /test/data*. Please check those subfolders, for the appropriate license conditions.
+
 ## What it does
 
 ```
@@ -157,3 +163,22 @@ Force draft specification.
 
 - `examples/lv1_14bus_walkthrough.jl` — step-by-step tour of every analysis
   on a real 14-bus LV feeder.
+
+## Contributions
+All case files are provided under a Creative Commons License, which allows anyone to share or adapt these cases as long as they give appropriate credit to the orginal author, provide a link to the license, and indicate if changes were made.
+
+Community-based recommendations and contributions are welcome and encouraged. Please feel free to submit comments and questions in the issue tracker. Corrections and new network contributions are welcome via pull requests. All data contributions are subject to a quality assurance review by the repository curator(s).
+
+## Case File Overview
+In this repository the network data files currently in /output/.
+
+For most of these, you can find the original OpenDSS cases in /test/data/.
+
+
+## Peer initiatives
+This initiative was inspired by the [PG Lib](https://power-grid-lib.github.io/) initiative, who also released a [report](https://arxiv.org/abs/1908.02788) on their significant achievements. 
+
+## Citation Guidelines
+This repository is not static. Consequently, it is critically important to indicate the version number when referencing this repository in scholarly work.
+
+Users of this these cases are encouraged to cite the original source documents that are indicated in the file headers.
