@@ -17,7 +17,7 @@ JSON without conversion.
     render(report, stdout)              # terminal output
     render(report, "report.md")         # markdown file
 
-See also: `write_bmopf`, `to_pmd`, `check_roundtrip` (requires OpenDSSDirect ext).
+See also: `write_bmopf`, `to_pmd`.
 """
 module BMOPFTools
 
@@ -232,7 +232,6 @@ include("validation/domain_rules.jl")
 include("validation/redundancy.jl")
 include("validation/integrity.jl")
 include("validation/spec_conformance.jl")
-include("validation/roundtrip.jl")
 include("validation/solution.jl")
 
 include("network/simplify.jl")
