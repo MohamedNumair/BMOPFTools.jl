@@ -9,18 +9,49 @@
 A Julia library for **parsing, validating, analysing and reporting** on
 BMOPF-format distribution network datasets — the JSON data model developed by
 the IEEE Task Force on *Benchmarking Multiconductor OPF for Distribution
-Systems* for up-to-four-wire optimal power flow currently hosted at 
-https://github.com/frederikgeth/bmopf-report
+Systems* for up-to-four-wire optimal power flow, currently hosted at
+https://github.com/frederikgeth/bmopf-report.
 
 The network data model is a plain `Dict{String,Any}` that mirrors the BMOPF
 JSON schema exactly: no wrapper types, so data flows naturally between JSON,
 PowerModelsDistribution and your own code.
 
+## IEEE PES Task Force
+
+**Benchmarking Multiconductor OPF for Distribution Systems**
+
+| Role | Name | Affiliation |
+|---|---|---|
+| Chair | Matthew Deakin | Newcastle University, UK |
+| Co-chair | Frederik Geth | University of Queensland, Australia |
+| Secretary | Amrit Pandey | University of Vermont, USA |
+
+## Motivation
+
+Reliable benchmarks are essential for validating and comparing power system
+algorithms, yet unbalanced distribution networks have historically
+lacked a common, open benchmark format.  This repository is part of the IEEE
+PES Task Force effort to fill that gap — motivated by the success of
+community benchmark libraries such as [PGLib](https://power-grid-lib.github.io/)
+in the broader power systems and optimisation communities.
+
+BMOPFTools provides the tooling needed to convert real utility-derived OpenDSS
+networks into clean, spec-conformant BMOPF benchmark cases, validate them
+against the data model, and confirm that they are well-posed OPF instances
+before publication.  The companion `/output` directory contains the resulting
+benchmark cases. We will move the accepted test cases to another repository down 
+the line, to enable versioning and control. 
+
 ## Licensing
 
-The *code* on this repository is licensed under the BSD-3-Clause License.
+**Code** — BSD-3-Clause License.
 
-*Data licenses* apply to *everything in /output and /test/data*. Please check those subfolders, for the appropriate license conditions.
+**Benchmark cases and task force outputs** (everything in `/output`,
+`/test/data`, and `docs/taskforce_feedback.md`) — [Creative Commons Attribution
+4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
+Anyone may copy, redistribute, and adapt these materials provided appropriate
+credit is given, a link to the licence is included, and changes are indicated. 
+Note that some cases are restricted to non-commercial use ("MV" and "LV"). 
 
 ## What it does
 
@@ -164,21 +195,27 @@ Force draft specification.
 - `examples/lv1_14bus_walkthrough.jl` — step-by-step tour of every analysis
   on a real 14-bus LV feeder.
 
-## Contributions
-All case files are provided under a Creative Commons License, which allows anyone to share or adapt these cases as long as they give appropriate credit to the orginal author, provide a link to the license, and indicate if changes were made.
+## Case file overview
 
-Community-based recommendations and contributions are welcome and encouraged. Please feel free to submit comments and questions in the issue tracker. Corrections and new network contributions are welcome via pull requests. All data contributions are subject to a quality assurance review by the repository curator(s).
+Converted benchmark cases live in `/output/`.  The original OpenDSS source
+files are in `/test/data/`.
 
-## Case File Overview
-In this repository the network data files currently in /output/.
+## How to contribute
 
-For most of these, you can find the original OpenDSS cases in /test/data/.
+BMOPFTools is a community-driven initiative.  Contributions of all kinds are
+welcome:
 
+- **Bug reports and questions** — open an issue in the tracker.
+- **New network cases** — fork the repository, convert and validate your case
+  with BMOPFTools, then submit a pull request.  All data contributions go
+  through a quality-assurance review before merging.
+- **Tooling improvements** — pull requests for new analysis passes, conversion
+  fixes, or documentation are encouraged.
 
-## Peer initiatives
-This initiative was inspired by the [PG Lib](https://power-grid-lib.github.io/) initiative, who also released a [report](https://arxiv.org/abs/1908.02788) on their significant achievements. 
+By contributing data you agree to release it under CC BY 4.0.
 
-## Citation Guidelines
-This repository is not static. Consequently, it is critically important to indicate the version number when referencing this repository in scholarly work.
+## Citation
 
-Users of this these cases are encouraged to cite the original source documents that are indicated in the file headers.
+This repository is not static; please include the version number when citing
+it in scholarly work.  Case files carry original-source attribution in their
+headers — cite those sources when using specific networks.
