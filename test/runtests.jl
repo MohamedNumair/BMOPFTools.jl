@@ -1791,13 +1791,13 @@ const IEEE13_FIXTURE = """
         @test !any(f -> f.code == "E.CONN.SELF_LOOP", findings)
     end
 
-    @testset "Operational — I.OPR.UNLOADED_PHASE: phase without load" begin
+    @testset "Operational — I.OPS.UNLOADED_PHASE: phase without load" begin
         # b1 has phases a,b,c,n — only phase a has a load
         net = _spec_net()
         findings = Finding[]
         result = operational_analysis(net, findings)
         # phases b and c are unloaded
-        unloaded = [f for f in findings if f.code == "I.OPR.UNLOADED_PHASE"]
+        unloaded = [f for f in findings if f.code == "I.OPS.UNLOADED_PHASE"]
         terminals = Set(f.detail["terminal"] for f in unloaded)
         @test "b" in terminals
         @test "c" in terminals
@@ -1805,7 +1805,7 @@ const IEEE13_FIXTURE = """
         @test result["unloaded_phase_findings"] >= 2
     end
 
-    @testset "Operational — no I.OPR.UNLOADED_PHASE when all phases loaded" begin
+    @testset "Operational — no I.OPS.UNLOADED_PHASE when all phases loaded" begin
         # Start from base net and manually add b/c loads so the "load" key merges
         net = _spec_net()
         net["load"]["ld_b"] = Dict{String,Any}(
@@ -1818,7 +1818,7 @@ const IEEE13_FIXTURE = """
             "p_nom" => [1e4], "q_nom" => [0.0])
         findings = Finding[]
         result = operational_analysis(net, findings)
-        @test !any(f -> f.code == "I.OPR.UNLOADED_PHASE", findings)
+        @test !any(f -> f.code == "I.OPS.UNLOADED_PHASE", findings)
         @test result["unloaded_phase_findings"] == 0
     end
 
