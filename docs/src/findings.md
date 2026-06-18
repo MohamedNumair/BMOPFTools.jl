@@ -235,6 +235,9 @@ its network. See [`SolutionReport`](@ref) and [`render_solution`](@ref).
 | `I.SOL.BINDING_SUMMARY` | I | Summary count of violated and near-active bounds across all categories (voltage, thermal, generator). Always emitted for feasible solutions. |
 | `I.SOL.LOSS_FRACTION` | I | Line losses exceed 20 % of total generation — unusually high; may indicate a high-impedance feeder, a model issue, or an extreme operating point. |
 | `I.SOL.NEUTRAL_SHIFT` | I | Maximum neutral terminal voltage magnitude across all buses, with the bus identifier. Non-zero neutral shift indicates load unbalance or grounding impedance. |
+| `W.SOL.INIT_LEVEL_MISMATCH` | W | One or more terminals have `vm_init / vm_solved` outside [0.1, 10] — the initialisation used the wrong voltage level (e.g. source voltage applied to an LV bus via flat warm-start). Solver may still converge but local-minimum risk is elevated. Only emitted when `result["initialisation"]` is present. |
+| `W.SOL.INIT_LARGE_ERROR` | W | One or more phase terminals have an initialisation error exceeding 20 % of the solved voltage magnitude — the start point was a poor approximation of the solution. |
+| `I.SOL.INIT_NEUTRAL_NONZERO` | I | One or more neutral terminals were initialised with non-zero voltage. Neutral start values should be zero; non-zero values indicate an initialisation inconsistency. |
 
 ## BENCH — benchmark readiness
 
