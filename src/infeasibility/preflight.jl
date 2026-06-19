@@ -14,10 +14,11 @@ function infeasibility_preflight(net::Dict{String,Any},
                                   findings::Vector{Finding})::Dict{String,Any}
     result = Dict{String,Any}()
 
-    result["generation_adequacy"]   = _check_generation_adequacy(net, findings)
+    result["generation_adequacy"]     = _check_generation_adequacy(net, findings)
     result["voltage_bound_tightness"] = _check_voltage_bounds(net, findings)
-    result["constraint_conflicts"]  = _check_constraint_conflicts(net, findings)
-    result["topological_risk"]      = _check_topological_risk(net, findings)
+    result["constraint_conflicts"]    = _check_constraint_conflicts(net, findings)
+    result["source_setpoints"]        = _check_source_setpoints(net, findings)
+    result["topological_risk"]        = _check_topological_risk(net, findings)
     result["tpia_status"]           = "not_run"   # stub for future TPIA module
 
     result
@@ -125,6 +126,58 @@ function _check_constraint_conflicts(net::Dict{String,Any},
         "n_conflicts" => length(conflicts),
         "conflicts"   => conflicts
     )
+end
+
+function _check_source_setpoints(net::Dict{String,Any},
+                                  findings::Vector{Finding})::Dict{String,Any}
+    # Voltage source v_magnitude values are pinned as hard equality constraints
+    # in the OPF. If they fall outside a bus's declared v_min/v_max the bound
+    # is trivially violated before the solver starts — a guaranteed infeasibility.
+    # Also flag sources whose setpoints disagree with each other (multi-terminal
+    # sources with inconsistent magnitudes per phase are unusual but not forbidden).
+    n_oob = 0
+    violations = Dict{String,Any}[]
+
+    for (sid, vs) in get(net, "voltage_source", Dict())
+        vs isa Dict || continue
+        bid = get(vs, "bus", nothing)
+        bid isa AbstractString || continue
+        bus = get(get(net, "bus", Dict()), bid, nothing)
+        bus isa Dict || continue
+
+        vm_arr = get(vs, "v_magnitude", nothing)
+        vm_arr === nothing && continue
+        vms = vm_arr isa AbstractVector ? Float64.(vm_arr) : [Float64(vm_arr)]
+        isempty(vms) && continue
+
+        v_min = get(bus, "v_min", nothing)
+        v_max = get(bus, "v_max", nothing)
+        v_min === nothing && v_max === nothing && continue
+
+        for (k, vm) in enumerate(vms)
+            isfinite(vm) || continue
+            lo_viol = v_min !== nothing && vm < Float64(v_min)
+            hi_viol = v_max !== nothing && vm > Float64(v_max)
+            if lo_viol || hi_viol
+                n_oob += 1
+                bound = lo_viol ? "below v_min=$(Float64(v_min)) V" :
+                                  "above v_max=$(Float64(v_max)) V"
+                push!(violations, Dict{String,Any}(
+                    "source" => sid, "bus" => bid, "phase" => k,
+                    "vm" => vm, "v_min" => v_min, "v_max" => v_max))
+                push!(findings, Finding(WARNING, "W.PRE.SOURCE_VOLTAGE_OOB",
+                    :preflight, :voltage_source, sid,
+                    "Voltage source '$sid' phase $k: setpoint vm=$(round(vm; digits=2)) V " *
+                    "is $bound on bus '$bid'. The source pins this voltage as a hard " *
+                    "equality — the bus voltage bound is trivially violated before " *
+                    "the OPF starts.",
+                    Dict{String,Any}("source"=>sid,"bus"=>bid,"phase"=>k,
+                                     "vm"=>vm,"v_min"=>v_min,"v_max"=>v_max)))
+            end
+        end
+    end
+
+    Dict{String,Any}("n_source_oob" => n_oob, "violations" => violations)
 end
 
 function _check_topological_risk(net::Dict{String,Any},

@@ -422,6 +422,29 @@ degrees, WGS 84) to the bus object in §4.2.  A coordinate reference system
 (CRS) tag at the network level (e.g. in the `meta` block) would also be
 useful for datasets that use projected coordinates rather than geographic ones.
 
+## 19. No `status` field for enabling/disabling individual components
+
+The V0.2 data model has no `status` field on any component (bus, line, switch,
+load, generator, shunt, transformer).  PowerModels.jl and
+PowerModelsDistribution.jl both provide a binary `status` flag (0 = disabled,
+1 = enabled) that allows individual elements to be taken out of service without
+deleting them from the data structure — important for contingency analysis, N-1
+security assessment, planned maintenance scenarios, and iterative network
+build-out studies.
+
+Without a `status` field the only way to model a de-energised component is to
+delete it from the dict, which is destructive and loses the component's
+parameter data.  For switches the `open_switch` boolean partially fills this
+role, but there is no equivalent for lines, loads, generators, or buses.
+
+**Suggestion:** add an optional boolean `enabled` field (or integer `status`
+following the PM/PMD convention) to all component types in §4.  The default
+when absent should be `true`/`1` (enabled) so existing cases are unaffected.
+Solvers and analysis tools should skip disabled components — both in the OPF
+model and in reporting.  A network-level `base_scenario` / `contingency` tag
+in `meta` could indicate whether the case represents a normal operating point
+or a contingency.
+
 ## Validation experience (what worked)
 
 For what it's worth to the TF: the data model proved very checkable. On top
