@@ -25,6 +25,7 @@ function domain_rules_check(net::Dict{String,Any},
     _check_zero_length(net, findings, n_checks)
     _check_angle_units(net, findings, n_checks)
     _check_negative_loads(net, findings, n_checks)
+    _check_load_models(net, findings, n_checks)
     _check_low_impedance_lines(net, findings, thresholds, n_checks)
     _check_adjacent_line_impedance_spread(net, findings, thresholds, n_checks, result)
 
@@ -188,6 +189,127 @@ function _check_angle_units(net, findings, n_checks)
                 "in the data model; this looks like degrees.",
                 Dict{String,Any}("v_angle" => vals)))
         end
+    end
+end
+
+# Validate voltage-dependent load model fields (ZIP / exponential).
+# (`_n_subloads` and `_as_vec` are defined in analysis/load_models.jl.)
+# Constant-power loads (no `model`, or model="constant_power") are unaffected.
+function _check_load_models(net, findings, n_checks)
+    for (id, l) in get(net, "load", Dict())
+        l isa Dict || continue
+        model = get(l, "model", "constant_power")
+
+        # Fields that belong to each family — used to flag stray/ignored fields.
+        zip_fields = ("alpha_z","alpha_i","alpha_p","beta_z","beta_i","beta_p")
+        exp_fields = ("gamma_p","gamma_q")
+        has_zip = any(k -> haskey(l, k), zip_fields)
+        has_exp = any(k -> haskey(l, k), exp_fields)
+
+        if model == "constant_power"
+            if has_zip || has_exp
+                push!(findings, Finding(INFO, "I.LOAD.MODEL_FIELDS_IGNORED",
+                    :domain_rules, :load, id,
+                    "Load '$id' has model=constant_power but carries ZIP/exponential " *
+                    "coefficient fields; they will be ignored.", nothing))
+            end
+            continue
+        end
+
+        n_checks[] += 1
+        n_sub = _n_subloads(l)
+
+        # All voltage-dependent models require v_nom.
+        vnom = get(l, "v_nom", nothing)
+        if vnom === nothing
+            push!(findings, Finding(ERROR, "E.LOAD.VNOM_MISSING", :domain_rules,
+                :load, id,
+                "Load '$id' has model=$model but no v_nom; the reference voltage " *
+                "for the load model is undefined.", nothing))
+        elseif vnom isa AbstractVector && !(length(vnom) in (1, n_sub))
+            push!(findings, Finding(ERROR, "E.LOAD.VNOM_ARITY", :domain_rules,
+                :load, id,
+                "Load '$id' v_nom has length $(length(vnom)); expected 1 or " *
+                "$n_sub (one per sub-load).", nothing))
+        elseif vnom isa AbstractVector && any(<=(0.0), Float64.(vnom))
+            push!(findings, Finding(ERROR, "E.LOAD.VNOM_NONPOSITIVE", :domain_rules,
+                :load, id, "Load '$id' has non-positive v_nom entries.", nothing))
+        end
+
+        # Named degenerate ZIP models: no coefficient fields required.
+        if model in ("constant_current", "constant_impedance")
+            if has_zip || has_exp
+                push!(findings, Finding(INFO, "I.LOAD.MODEL_FIELDS_IGNORED",
+                    :domain_rules, :load, id,
+                    "Load '$id' has model=$model; ZIP/exponential coefficient fields " *
+                    "are redundant and will be ignored.", nothing))
+            end
+        elseif model == "zip"
+            has_exp && push!(findings, Finding(WARNING, "W.LOAD.MODEL_MIXED",
+                :domain_rules, :load, id,
+                "Load '$id' is model=zip but also carries gamma_p/gamma_q; " *
+                "exponential fields are ignored.", nothing))
+            _check_zip_coeffs(id, l, n_sub, findings)
+        elseif model == "exponential"
+            has_zip && push!(findings, Finding(WARNING, "W.LOAD.MODEL_MIXED",
+                :domain_rules, :load, id,
+                "Load '$id' is model=exponential but also carries ZIP coefficients; " *
+                "they are ignored.", nothing))
+            _check_exp_coeffs(id, l, n_sub, findings)
+        end
+    end
+end
+
+# ZIP coefficient checks: per-family arity, and sum ≈ 1 (warning, not error,
+# because experimentally-fitted coefficients need not sum exactly to 1).
+function _check_zip_coeffs(id, l, n_sub, findings)
+    for (z, i, p, lbl) in (("alpha_z","alpha_i","alpha_p","active"),
+                           ("beta_z","beta_i","beta_p","reactive"))
+        cz = get(l, z, nothing); ci = get(l, i, nothing); cp = get(l, p, nothing)
+        all(x -> x === nothing, (cz, ci, cp)) && continue
+        for (name, c) in ((z,cz),(i,ci),(p,cp))
+            c isa AbstractVector && !(length(c) in (1, n_sub)) &&
+                push!(findings, Finding(ERROR, "E.LOAD.ZIP_ARITY", :domain_rules,
+                    :load, id,
+                    "Load '$id' $name has length $(length(c)); expected 1 or $n_sub.",
+                    nothing))
+        end
+        # element-wise sum over the broadcast coefficients
+        vz = _as_vec(cz, n_sub); vi = _as_vec(ci, n_sub); vp = _as_vec(cp, n_sub)
+        (vz === nothing || vi === nothing || vp === nothing) && continue
+        for k in 1:n_sub
+            s = vz[k] + vi[k] + vp[k]
+            if abs(s - 1.0) > 1e-3
+                push!(findings, Finding(WARNING, "W.LOAD.ZIP_SUM", :domain_rules,
+                    :load, id,
+                    "Load '$id' $lbl ZIP coefficients sum to $(round(s, digits=4)) " *
+                    "(≠ 1) on sub-load $k; p_nom/q_nom scaling will be off.", nothing))
+                break
+            end
+        end
+    end
+end
+
+# Exponential exponent checks: γ outside (0,2) has no power-cone form (INFO,
+# documentary), γ < 0 is physically unusual (WARNING).
+function _check_exp_coeffs(id, l, n_sub, findings)
+    for (g, lbl) in (("gamma_p","active"), ("gamma_q","reactive"))
+        c = get(l, g, nothing)
+        c === nothing && continue
+        c isa AbstractVector && !(length(c) in (1, n_sub)) &&
+            push!(findings, Finding(ERROR, "E.LOAD.EXP_ARITY", :domain_rules,
+                :load, id,
+                "Load '$id' $g has length $(length(c)); expected 1 or $n_sub.",
+                nothing))
+        vals = c isa AbstractVector ? Float64.(c) : [Float64(c)]
+        any(<(0.0), vals) && push!(findings, Finding(WARNING,
+            "W.LOAD.GAMMA_NEGATIVE", :domain_rules, :load, id,
+            "Load '$id' has negative $g ($lbl); power increases as voltage falls — " *
+            "verify this is intended.", nothing))
+        any(x -> x < 0.0 || x > 2.0, vals) && push!(findings, Finding(INFO,
+            "I.LOAD.GAMMA_RANGE", :domain_rules, :load, id,
+            "Load '$id' $g has entries outside (0,2); no convex power-cone " *
+            "relaxation exists — exact NLP form required.", nothing))
     end
 end
 

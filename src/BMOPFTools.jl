@@ -225,6 +225,7 @@ include("analysis/voltage_levels.jl")
 include("analysis/connectivity.jl")
 include("analysis/diversity.jl")
 include("analysis/operational.jl")
+include("analysis/load_models.jl")
 include("analysis/provenance.jl")
 include("infeasibility/preflight.jl")
 
@@ -272,6 +273,7 @@ function analyze(net::Dict{String,Any}; t_index::Int=1)
     results[:connectivity]   = connectivity_analysis(working, findings)
     results[:diversity]      = diversity_analysis(working, findings)
     results[:operational]    = operational_analysis(working, findings)
+    results[:load_models]    = load_model_analysis(working, findings)
     results[:provenance]     = provenance_analysis(working, findings)
     results[:preflight]      = infeasibility_preflight(working, findings)
 
@@ -450,6 +452,7 @@ export voltage_level_analysis
 export connectivity_analysis
 export diversity_analysis
 export operational_analysis
+export load_model_analysis
 export provenance_analysis
 export infeasibility_preflight
 export schema_check
