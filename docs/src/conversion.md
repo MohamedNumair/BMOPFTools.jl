@@ -127,20 +127,43 @@ B = sqrt(Y_mag² − G²)                                 → b_no_load  (S)
 
 Both fields are omitted when zero.
 
-**`wye_delta` / `delta_wye`** (single wye-side fields, the delta windings
-being ideal per the spec math model): referring the delta-winding impedance
-through the turns ratio lands on the same base — the √3 factors of the
-line-to-line `v_ref` cancel against the per-winding power S/3 — so
+**`wye_delta` / `delta_wye`** (2-winding, per-winding T-model):
+
+These now use the same per-winding field set as `single_phase` — separate
+`r/x_series_from` (wye/primary winding) and `r/x_series_to` (delta/secondary
+winding), plus a `g/b_no_load` core-loss branch — matching the OpenDSS /
+PMD `eng2math` reference loss network. The series impedance enters the OPF as
+a voltage drop on the winding currents behind the ideal Yd/Dy transform; the
+delta side is no longer assumed ideal.
 
 ```
-Z_base = v_ref_wye² / s_rating
-r_series = (rw₁ + rw₂) · Z_base
-x_series = xsc₁ · Z_base
+Z_base,from = v_ref_from² / s_rating
+Z_base,to   = v_ref_to²   / s_rating
+r_series_from = rw₁ · Z_base,from
+r_series_to   = rw₂ · Z_base,to
+x_series_from = xsc₁ · Z_base,from     # PMD lumps all leakage on winding 1
+x_series_to   = 0                      # 2-winding star: LV branch is zero
 ```
 
-`to_pmd` inverts with an even split (`rw = [r_pu/2, r_pu/2]`); the original
-per-winding split is not representable in the spec model and is therefore
-not preserved (the totals are exact).
+The no-load branch maps as for the two-winding types:
+
+```
+Y_base = s_rating / v_ref_from²
+g_no_load =  (noloadloss) · Y_base       # noloadloss = %noloadloss / 100
+b_no_load = -(cmag)       · Y_base       # cmag       = %imag       / 100
+```
+
+!!! note "Leakage placement"
+    For a 2-winding unit PMD's star conversion (`_sc2br_impedance`) puts the
+    *entire* `xhl` leakage on the winding-1 (HV) branch, with **zero** on the
+    LV branch — not an even split. BMOPFTools follows that convention for
+    `wye_delta`/`delta_wye`.
+
+**Legacy single-impedance form.** A network carrying the older single
+`r_series`/`x_series` (wye-side lumped, delta ideal) is still accepted: it is
+migrated onto `r_series_from`/`x_series_from` with the secondary branch zero,
+reproducing the previous ideal-delta behaviour. `to_pmd` writes the
+per-winding fields back to PMD `rw`/`xsc`.
 
 ## Known limitations
 
