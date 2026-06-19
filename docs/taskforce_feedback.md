@@ -402,6 +402,26 @@ configurations.  Our implementation applies:
 **Suggestion:** add a note in §4.2 (or in the bound field descriptions) stating
 the intended terminal-configuration preconditions for each voltage bound type.
 
+## 18. Bus geographic coordinates have no data model field
+
+Several real-world datasets include geographic coordinates per bus (e.g. the
+D-Suite Alpha v1.1 networks carry an OpenDSS `Buscoords` file with `bus_id,
+longitude, latitude`).  The V0.2 data model has no field for this information,
+so it cannot be round-tripped through the JSON format or used by downstream
+tools (network visualisation, georeferenced constraint tightening, spatial
+clustering for aggregation, etc.).
+
+In our implementation we sideload coordinates as informal extension fields
+`"longitude"` and `"latitude"` (decimal degrees, WGS 84) on the bus object.
+These are currently treated as unknown fields by the schema checker (INFO
+finding) but are preserved across write/parse round-trips and through network
+simplification.
+
+**Suggestion:** add optional `longitude` and `latitude` fields (decimal
+degrees, WGS 84) to the bus object in §4.2.  A coordinate reference system
+(CRS) tag at the network level (e.g. in the `meta` block) would also be
+useful for datasets that use projected coordinates rather than geographic ones.
+
 ## Validation experience (what worked)
 
 For what it's worth to the TF: the data model proved very checkable. On top
