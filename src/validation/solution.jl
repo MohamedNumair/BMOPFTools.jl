@@ -148,6 +148,8 @@ function solution_check(net::Dict{String,Any},
     end
 
     # ── Phase-to-neutral voltage bounds (vpn_min / vpn_max) ──────────────────
+    # vpn_min/vpn_max are per-phase arrays ordered by terminal_names phase order.
+    # Index k in the bound array corresponds to the k-th phase terminal.
     for (bid, bus) in buses
         bus isa Dict || continue
         vpn_min = get(bus, "vpn_min", nothing)
@@ -161,31 +163,42 @@ function solution_check(net::Dict{String,Any},
         vi_n = get(get(t_res, nt, Dict()), "vi", NaN)
         isfinite(vr_n) && isfinite(vi_n) || continue
 
-        for (t, tvals) in t_res
+        # Phase terminals in terminal_names order (neutral excluded)
+        term_names = Vector{String}(get(bus, "terminal_names", String[]))
+        phase_ts_ordered = [t for t in term_names if t != nt]
+
+        for (k, t) in enumerate(phase_ts_ordered)
+            haskey(t_res, t) || continue
+            tvals = t_res[t]
             tvals isa Dict || continue
-            t == nt && continue
-            lowercase(t) == "n" && continue
             vr_t = get(tvals, "vr", NaN); vi_t = get(tvals, "vi", NaN)
             isfinite(vr_t) && isfinite(vi_t) || continue
             vpn = sqrt((vr_t - vr_n)^2 + (vi_t - vi_n)^2)
-            viol, act = _bound_status(vpn, vpn_min, vpn_max)
+            # Index into per-phase bound arrays; fall back to scalar for
+            # backward-compatibility with hand-written files that use a scalar.
+            lb = vpn_min isa AbstractVector ? get(vpn_min, k, nothing) : vpn_min
+            ub = vpn_max isa AbstractVector ? get(vpn_max, k, nothing) : vpn_max
+            viol, act = _bound_status(vpn, lb, ub)
             if viol
                 n_volt_viol += 1
                 push!(findings, Finding(ERROR, "E.SOL.VOLT_VIOLATION", :solution, :bus, bid,
                     "Bus '$bid' terminal '$t': |Vpn|=$(_fmt_v(vpn)) violates vpn bounds.",
                     Dict{String,Any}("bus"=>bid,"terminal"=>t,"vpn"=>vpn,
-                                     "vpn_min"=>vpn_min,"vpn_max"=>vpn_max,"flavour"=>"vpn")))
+                                     "vpn_min"=>lb,"vpn_max"=>ub,"flavour"=>"vpn")))
             elseif act
                 n_volt_active += 1
                 push!(findings, Finding(WARNING, "W.SOL.VOLT_ACTIVE", :solution, :bus, bid,
                     "Bus '$bid' terminal '$t': |Vpn|=$(_fmt_v(vpn)) is near a vpn bound.",
                     Dict{String,Any}("bus"=>bid,"terminal"=>t,"vpn"=>vpn,
-                                     "vpn_min"=>vpn_min,"vpn_max"=>vpn_max,"flavour"=>"vpn")))
+                                     "vpn_min"=>lb,"vpn_max"=>ub,"flavour"=>"vpn")))
             end
         end
     end
 
     # ── Phase-to-phase voltage bounds (vpp_min / vpp_max) ────────────────────
+    # vpp_min/vpp_max are per-pair arrays. Pairs are enumerated in the same
+    # order as the upper triangle of phase terminals in terminal_names order:
+    # (ts[1],ts[2]), (ts[1],ts[3]), (ts[2],ts[3]), i.e. i < j in terminal order.
     for (bid, bus) in buses
         bus isa Dict || continue
         vpp_min = get(bus, "vpp_min", nothing)
@@ -194,31 +207,35 @@ function solution_check(net::Dict{String,Any},
         t_res = get(bus_res, bid, nothing)
         t_res isa Dict || continue
         nt = _neutral_terminal(bus)
-        phase_ts = [t for t in keys(t_res) if t != nt && lowercase(t) != "n"
-                                            && get(get(t_res,t,Dict()),"vm",NaN) > 0]
-        length(phase_ts) < 2 && continue
+        term_names = Vector{String}(get(bus, "terminal_names", String[]))
+        phase_ts_ordered = [t for t in term_names if t != nt && haskey(t_res, t)]
+        length(phase_ts_ordered) < 2 && continue
 
-        for i in eachindex(phase_ts), j in (i+1):length(phase_ts)
-            ta = phase_ts[i]; tb = phase_ts[j]
+        pair_idx = 0
+        for i in eachindex(phase_ts_ordered), j in (i+1):length(phase_ts_ordered)
+            pair_idx += 1
+            ta = phase_ts_ordered[i]; tb = phase_ts_ordered[j]
             va = t_res[ta]; vb = t_res[tb]
             dvr = get(va,"vr",NaN) - get(vb,"vr",NaN)
             dvi = get(va,"vi",NaN) - get(vb,"vi",NaN)
             isfinite(dvr) && isfinite(dvi) || continue
             vpp = sqrt(dvr^2 + dvi^2)
-            viol, act = _bound_status(vpp, vpp_min, vpp_max)
+            lb = vpp_min isa AbstractVector ? get(vpp_min, pair_idx, nothing) : vpp_min
+            ub = vpp_max isa AbstractVector ? get(vpp_max, pair_idx, nothing) : vpp_max
+            viol, act = _bound_status(vpp, lb, ub)
             pair = "$ta-$tb"
             if viol
                 n_volt_viol += 1
                 push!(findings, Finding(ERROR, "E.SOL.VOLT_VIOLATION", :solution, :bus, bid,
                     "Bus '$bid' phase pair $pair: |Vpp|=$(_fmt_v(vpp)) violates vpp bounds.",
                     Dict{String,Any}("bus"=>bid,"pair"=>pair,"vpp"=>vpp,
-                                     "vpp_min"=>vpp_min,"vpp_max"=>vpp_max,"flavour"=>"vpp")))
+                                     "vpp_min"=>lb,"vpp_max"=>ub,"flavour"=>"vpp")))
             elseif act
                 n_volt_active += 1
                 push!(findings, Finding(WARNING, "W.SOL.VOLT_ACTIVE", :solution, :bus, bid,
                     "Bus '$bid' phase pair $pair: |Vpp|=$(_fmt_v(vpp)) is near a vpp bound.",
                     Dict{String,Any}("bus"=>bid,"pair"=>pair,"vpp"=>vpp,
-                                     "vpp_min"=>vpp_min,"vpp_max"=>vpp_max,"flavour"=>"vpp")))
+                                     "vpp_min"=>lb,"vpp_max"=>ub,"flavour"=>"vpp")))
             end
         end
     end

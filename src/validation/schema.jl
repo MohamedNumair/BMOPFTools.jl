@@ -1,12 +1,118 @@
 # validation/schema.jl
 #
-# Schema-conformance checks implemented natively (no JSONSchema.jl dependency
-# for the field-level checks). Full JSON Schema validation can be layered on
-# later; the unknown-field catalogue below covers the "undocumented/additional
-# fields" requirement directly.
+# Two-layer schema validation:
+#
+#   Layer 1 — JSONSchema.jl structural validation against the bundled JSON
+#             Schema for the spec version declared in meta.$schema. Catches
+#             type errors, missing required fields, enum violations, and
+#             additional properties not defined in the spec.
+#
+#   Layer 2 — hand-rolled unknown-field catalogue (fallback when the spec
+#             version is unrecognised, and a cross-check for layer 1). Also
+#             catalogues fields that are present but not in the schema for
+#             dataset-assessment reporting.
 
-# Known fields per component type: required + optional + structural.
-# Pattern-matched fields (matrix keys) are handled by _KNOWN_PATTERNS.
+using JSONSchema
+
+# ---------------------------------------------------------------------------
+# Schema registry — map spec version tag → loaded JSONSchema.Schema object.
+# Schemas are loaded lazily on first use and cached here.
+# ---------------------------------------------------------------------------
+
+const _SCHEMA_FILES = Dict{Symbol,String}(
+    :draft => joinpath(@__DIR__, "schemas", "draft_bmopf_schema.json"),
+)
+
+const _SCHEMA_CACHE = Dict{Symbol,JSONSchema.Schema}()
+
+function _get_schema(version::Symbol)::Union{JSONSchema.Schema,Nothing}
+    haskey(_SCHEMA_CACHE, version) && return _SCHEMA_CACHE[version]
+    path = get(_SCHEMA_FILES, version, nothing)
+    path === nothing && return nothing
+    isfile(path) || return nothing
+    raw = JSON3.read(read(path, String))
+    schema = JSONSchema.Schema(raw)
+    _SCHEMA_CACHE[version] = schema
+    schema
+end
+
+# ---------------------------------------------------------------------------
+# Strip internal keys before passing to JSONSchema.
+# The schema uses additionalProperties:false so _meta, _pmd etc. would be
+# spurious failures. Internal keys always start with "_".
+# ---------------------------------------------------------------------------
+
+function _strip_internal(@nospecialize(x))
+    x isa Dict || return x
+    out = Dict{String,Any}()
+    for (k, v) in x
+        startswith(string(k), "_") && continue
+        out[string(k)] = _strip_internal(v)
+    end
+    out
+end
+
+# ---------------------------------------------------------------------------
+# Convert a JSONSchema.jl SingleIssue into a Finding.
+#
+# JSONSchema.jl v1.5 returns a JSONSchema.SingleIssue with fields:
+#   x      — the offending instance value
+#   path   — Vector of path segments to the failing location
+#   reason — keyword: "type", "required", "enum", "minimum", "additionalProperties", …
+#   val    — the schema value that was violated (e.g. "number", ["x","y"], …)
+#
+# validate() returns the *first* issue found, not all issues. We emit one
+# Finding per call and note in the message that further issues may exist.
+# ---------------------------------------------------------------------------
+
+function _single_issue_to_finding!(findings::Vector{Finding}, issue)
+    reason = string(issue.reason)
+    # JSONSchema.jl v1.5: issue.path is a pre-formatted String like "[bus][306][vpn_min]"
+    path = isempty(issue.path) ? "(top-level)" : issue.path
+
+    sev, code, msg = if reason == "required"
+        ERROR, "E.SCHEMA.REQUIRED",
+        "Missing required field at $path (expected: $(issue.val))."
+    elseif reason == "type"
+        ERROR, "E.SCHEMA.TYPE",
+        "Type error at $path: got $(typeof(issue.x)), expected $(issue.val)."
+    elseif reason == "enum"
+        ERROR, "E.SCHEMA.ENUM",
+        "Invalid value at $path: $(repr(issue.x)) not in allowed values $(issue.val)."
+    elseif reason in ("minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum")
+        ERROR, "E.SCHEMA.RANGE",
+        "Value $(issue.x) at $path violates $reason constraint $(issue.val)."
+    elseif reason == "additionalProperties"
+        INFO, "I.SCHEMA.UNKNOWN_FIELDS",
+        "Additional property not defined in schema at $path."
+    else
+        INFO, "I.SCHEMA.OTHER",
+        "Schema violation ($reason) at $path."
+    end
+
+    # Extract component_type and component_id from the path string.
+    # Format is "[comp_type][comp_id][field]", e.g. "[bus][306][vpn_min]".
+    comp_type = :network
+    comp_id   = nothing
+    segments  = [m.match for m in eachmatch(r"\[([^\]]+)\]", path)]
+    if length(segments) >= 2
+        comp_type = Symbol(segments[1])
+        comp_id   = segments[2]
+    elseif length(segments) == 1
+        comp_type = Symbol(segments[1])
+    end
+
+    push!(findings, Finding(sev, code, :schema, comp_type, comp_id, msg,
+        Dict{String,Any}("reason" => reason, "path" => path,
+                         "schema_value" => string(issue.val))))
+end
+
+# ---------------------------------------------------------------------------
+# Known fields — fallback hand-rolled allowlist (layer 2).
+# Used when spec version is unrecognised, and to catalogue additional fields
+# present in the data regardless of JSONSchema result.
+# ---------------------------------------------------------------------------
+
 const _KNOWN_FIELDS = Dict{String,Set{String}}(
     "bus" => Set(["terminal_names", "neutral_terminal", "perfectly_grounded_terminals",
                   "v_min", "v_max", "vpn_min", "vpn_max",
@@ -38,7 +144,6 @@ const _KNOWN_TRANSFORMER_FIELDS = Dict{String,Set{String}}(
                            "terminal_map_from", "terminal_map_to",
                            "v_ref_from", "v_ref_to",
                            "i_max_from", "i_max_to"]),
-    # Per TF spec: wye_delta/delta_wye carry a single wye-side impedance
     "wye_delta"    => Set(["s_rating", "r_series", "x_series", "bus_from",
                            "bus_to", "terminal_map_from", "terminal_map_to",
                            "v_ref_from", "v_ref_to",
@@ -49,35 +154,17 @@ const _KNOWN_TRANSFORMER_FIELDS = Dict{String,Set{String}}(
                            "i_max_from", "i_max_to"])
 )
 
-# Pattern-matched (matrix) key prefixes per component type, matching the
-# schema's patternProperties regexes.
 const _KNOWN_PATTERNS = Dict{String,Vector{Regex}}(
-    # \d+ (not \d) to support two-digit conductor indices (10-conductor linecodes)
     "linecode" => [r"^R_series_\d+_\d+$", r"^X_series_\d+_\d+$",
                    r"^G_from_\d+_\d+$",   r"^G_to_\d+_\d+$",
                    r"^B_from_\d+_\d+$",   r"^B_to_\d+_\d+$"],
     "shunt"    => [r"^G_\d+_\d+$", r"^B_\d+_\d+$"]
 )
 
-# Keys that are always tolerated and never reported:
-# internal bookkeeping, PMD passthrough, and the time-series convention.
 const _TOLERATED_KEYS = Set(["_meta", "_pmd", "time_series"])
 
-"""
-    schema_check(net, findings) -> Dict{String,Any}
-
-Catalogue fields present in the data that are not defined in the BMOPF
-schema. Unknown fields are reported as INFO findings (not errors) so that
-PMD-carried extras and schema-evolution candidates are visible without
-blocking the pipeline.
-
-Returns per-component-type counts and a field → occurrence-count map of
-unknown keys, which directly feeds the "undocumented/additional fields"
-section of the dataset assessment.
-"""
-function schema_check(net::Dict{String,Any},
-                      findings::Vector{Finding})::Dict{String,Any}
-    result = Dict{String,Any}()
+function _catalogue_unknown_fields(net::Dict{String,Any},
+                                    findings::Vector{Finding})::Dict{String,Any}
     unknown_by_type = Dict{String,Dict{String,Int}}()
 
     for (comp_type, known) in _KNOWN_FIELDS
@@ -85,7 +172,6 @@ function schema_check(net::Dict{String,Any},
         components isa Dict || continue
         patterns = get(_KNOWN_PATTERNS, comp_type, Regex[])
         unknown = Dict{String,Int}()
-
         for (_, comp) in components
             comp isa Dict || continue
             for k in keys(comp)
@@ -95,11 +181,9 @@ function schema_check(net::Dict{String,Any},
                 unknown[k] = get(unknown, k, 0) + 1
             end
         end
-
         isempty(unknown) || (unknown_by_type[comp_type] = unknown)
     end
 
-    # transformer subtypes
     xfmr = get(net, "transformer", nothing)
     if xfmr isa Dict
         for (subtype, known) in _KNOWN_TRANSFORMER_FIELDS
@@ -119,7 +203,6 @@ function schema_check(net::Dict{String,Any},
         end
     end
 
-    # unknown top-level keys
     known_top = Set(["name", "meta", "bus", "line", "linecode", "voltage_source",
                      "load", "generator", "shunt", "switch", "transformer",
                      "time_series", "_meta"])
@@ -135,17 +218,74 @@ function schema_check(net::Dict{String,Any},
             Dict{String,Any}("fields" => unknown)))
     end
 
-    # validate meta block if present
+    unknown_by_type
+end
+
+# ---------------------------------------------------------------------------
+# Public entry point
+# ---------------------------------------------------------------------------
+
+"""
+    schema_check(net, findings) -> Dict{String,Any}
+
+Two-layer schema validation:
+
+**Layer 1** — JSONSchema.jl validation against the bundled JSON Schema for
+the spec version declared in `meta.\$schema`. Catches type errors, missing
+required fields, enum violations (`configuration` must be `"WYE"`, `"DELTA"`,
+or `"SINGLE_PHASE"`), and `nonnegative_number` range constraints. Errors are
+reported as `ERROR` findings; additional (unknown) properties as `INFO`.
+
+**Layer 2** — hand-rolled unknown-field catalogue. Always runs; produces the
+`unknown_fields_by_type` result dict used by the dataset-assessment report
+section regardless of whether layer 1 ran.
+
+Layer 1 is skipped (with an `INFO` finding) when the spec version in
+`meta.\$schema` is not recognised — the hand-rolled catalogue still runs as
+a fallback.
+"""
+function schema_check(net::Dict{String,Any},
+                      findings::Vector{Finding})::Dict{String,Any}
+    result = Dict{String,Any}()
+
+    # ── Layer 1: JSONSchema structural validation ─────────────────────────────
+    version = _detect_spec_version(net)
+    schema  = _get_schema(version)
+
+    if schema === nothing
+        push!(findings, Finding(INFO, "I.SCHEMA.VERSION_UNKNOWN", :schema,
+            :network, nothing,
+            "Spec version '$version' has no bundled JSON Schema; " *
+            "structural validation skipped. Unknown-field catalogue still runs.",
+            nothing))
+        result["jsonschema_ran"] = false
+    else
+        clean = _strip_internal(net)
+        err   = JSONSchema.validate(schema, clean)
+        if err === nothing
+            result["jsonschema_valid"] = true
+        else
+            result["jsonschema_valid"] = false
+            _single_issue_to_finding!(findings, err)
+        end
+        result["jsonschema_ran"]   = true
+        result["spec_version"]     = string(version)
+    end
+
+    # ── Layer 2: unknown-field catalogue ─────────────────────────────────────
+    unknown_by_type = _catalogue_unknown_fields(net, findings)
+    result["unknown_fields_by_type"]          = unknown_by_type
+    result["n_component_types_with_unknown"]  = length(unknown_by_type)
+
+    # ── meta block validation ─────────────────────────────────────────────────
     meta = get(net, "meta", nothing)
     meta isa Dict && _check_meta(meta, findings)
 
-    result["unknown_fields_by_type"] = unknown_by_type
-    result["n_component_types_with_unknown"] = length(unknown_by_type)
     result
 end
 
 # ---------------------------------------------------------------------------
-# meta block validation
+# meta block validation (unchanged)
 # ---------------------------------------------------------------------------
 
 const _META_KNOWN_FIELDS = Set([
@@ -161,7 +301,6 @@ const _ISO8601_RE          = r"^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?Z?)?$"
 const _URI_RE              = r"^https?://"
 
 function _check_meta(meta::Dict, findings::Vector{Finding})
-    # Unknown fields
     unknown = [k for k in keys(meta) if !(k in _META_KNOWN_FIELDS)]
     if !isempty(unknown)
         push!(findings, Finding(INFO, "I.SCHEMA.UNKNOWN_FIELDS", :schema,
@@ -170,7 +309,6 @@ function _check_meta(meta::Dict, findings::Vector{Finding})
             Dict{String,Any}("fields" => Dict(k => 1 for k in unknown))))
     end
 
-    # $schema should be a URI
     s = get(meta, "\$schema", nothing)
     if s isa String && !occursin(_URI_RE, s)
         push!(findings, Finding(WARNING, "W.SCHEMA.META_SCHEMA_URI", :schema,
@@ -178,7 +316,6 @@ function _check_meta(meta::Dict, findings::Vector{Finding})
             "meta.\$schema does not look like a URI: \"$s\"."))
     end
 
-    # created / modified should be ISO 8601
     for field in ("created", "modified")
         v = get(meta, field, nothing)
         if v isa String && !occursin(_ISO8601_RE, v)
@@ -188,7 +325,6 @@ function _check_meta(meta::Dict, findings::Vector{Finding})
         end
     end
 
-    # license should be a URI (SPDX expressions are strings without //)
     lic = get(meta, "license", nothing)
     if lic isa String && !occursin(_URI_RE, lic) && length(lic) > 30
         push!(findings, Finding(INFO, "I.SCHEMA.META_LICENSE_URI", :schema,
@@ -196,7 +332,6 @@ function _check_meta(meta::Dict, findings::Vector{Finding})
             "meta.license looks long for an SPDX identifier; consider using a URI."))
     end
 
-    # authors
     authors = get(meta, "authors", nothing)
     if authors isa Vector
         for (i, a) in enumerate(authors)
@@ -215,7 +350,6 @@ function _check_meta(meta::Dict, findings::Vector{Finding})
         end
     end
 
-    # sources
     sources = get(meta, "sources", nothing)
     if sources isa Vector
         for (i, src) in enumerate(sources)
@@ -233,7 +367,6 @@ function _check_meta(meta::Dict, findings::Vector{Finding})
         end
     end
 
-    # generator
     gen = get(meta, "generator", nothing)
     if gen isa Dict
         bad = [k for k in keys(gen) if !(k in _META_GEN_FIELDS)]
