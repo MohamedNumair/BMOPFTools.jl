@@ -378,18 +378,30 @@ function _check_transformer_ratings(net, findings, thresh, n_checks)
             vt = get(t, "v_ref_to",   nothing)
             (vf === nothing || vt === nothing) && continue
             n_checks[] += 1
-            vf, vt = Float64(vf), Float64(vt)
-            (vf <= 0 || vt <= 0) && continue
+            vf_f, vt_f = Float64(vf), Float64(vt)
+
+            # Non-positive v_ref yields an undefined or infinite turns ratio —
+            # the OPF will fail to build.
+            if vf_f <= 0 || vt_f <= 0
+                push!(findings, Finding(ERROR, "E.DOM.XFMR_VREF_INVALID", :domain_rules,
+                    :transformer, id,
+                    "Transformer '$id' has non-positive v_ref_from=$(vf) V or " *
+                    "v_ref_to=$(vt) V. The turns ratio N = v_ref_from/v_ref_to " *
+                    "is undefined; the OPF cannot be built.",
+                    Dict{String,Any}("v_ref_from" => vf, "v_ref_to" => vt)))
+                continue
+            end
+
             # direction-agnostic step ratio: 11kV/433V and 433V/11kV are the
             # same physical transformer
-            step = max(vt / vf, vf / vt)
+            step = max(vt_f / vf_f, vf_f / vt_f)
             if step > ratio_max
                 push!(findings, Finding(WARNING, "W.DOM.XFMR_RATIO_OOB", :domain_rules,
                     :transformer, id,
                     "Transformer '$id' step ratio $(round(step, digits=1)):1 exceeds " *
                     "plausibility threshold $(ratio_max):1.",
                     Dict{String,Any}("step_ratio" => step,
-                                     "v_ref_from" => vf, "v_ref_to" => vt)))
+                                     "v_ref_from" => vf_f, "v_ref_to" => vt_f)))
             end
         end
     end
