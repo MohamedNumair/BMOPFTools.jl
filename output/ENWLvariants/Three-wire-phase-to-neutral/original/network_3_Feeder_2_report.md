@@ -1,7 +1,7 @@
 # BMOPF Network Summary: Three-wire-phase-to-neutral / network_3 / Feeder_2
 
-**Generated:** 2026-06-18 09:39:46  
-**Findings:** 0 errors · 63 warnings · 9 info  
+**Generated:** 2026-06-19 10:45:58  
+**Findings:** 0 errors · 63 warnings · 11 info  
 **Convention:** LV_240V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -163,7 +163,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 72 (0 errors, 63 warnings, 9 info)
+**Total findings:** 74 (0 errors, 63 warnings, 11 info)
 
 ### 🟡 Warnings
 
@@ -308,6 +308,10 @@
   1016 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `[sourcebus]`  
+  Additional property not defined in schema at [bus][sourcebus].
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
+  bus has field(s) not in the BMOPF schema: v_declared.
 - **[I.DOM.LINE_IMPEDANCE_SPREAD]** `line`  
   Adjacent lines 'line936' and 'line932' at bus '933' have ||Z||_F ratio 2160.0× — large impedance contrasts between neighbouring lines cause ill-conditioned KKT Jacobians; consider per-unit scaling or network reformulation.
 - **[I.RED.MERGEABLE_LINES]** `line`  

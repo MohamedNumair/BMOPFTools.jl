@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV8_14bus
 
-**Generated:** 2026-06-18 09:40:10  
-**Findings:** 0 errors · 3 warnings · 17 info  
+**Generated:** 2026-06-19 10:46:24  
+**Findings:** 0 errors · 3 warnings · 20 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 4 grounding point(s)
 
 ---
@@ -51,7 +51,7 @@
 
 **Overall symmetry score:** MODERATE
 
-### load
+### load ⚠
 
 | Parameter | Min | Max | CV | n |
 |-----------|-----|-----|----|---|
@@ -70,6 +70,7 @@
 |-----------|-----|-----|----|---|
 | R_series_1_1 | 0.000146 | 0.00457 | 1.723 | 22 |
 
+> 🔵 **[I.DIV.LOAD_PHASE_BALANCED]** Galvanic zone anchored at 'b1349' has balanced aggregate load across 2 phase(s) (max spread 0.0%) — the network is effectively balanced and a single-phase equivalent would suffice.
 > 🔵 **[I.DIV.LINE_SYMMETRIC]** 6 lines share linecode 'ughv_400al_triplex_ug_4w_bundled' with similar length (±10%) — electrically near-identical.
 
 ## 5. Loading & Operational Summary
@@ -88,10 +89,10 @@
 | tx3676 | 1.0 MVA | 2.2% |
 
 > 🟡 **[W.OPS.IMPORT_DEPENDENT]** Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.02 MW).
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1349' has no load connected to phase terminal '3'.
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b548' has no load connected to phase terminal '1'.
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b548' has no load connected to phase terminal '2'.
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b548' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1349' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b548' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b548' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b548' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -187,7 +188,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 20 (0 errors, 3 warnings, 17 info)
+**Total findings:** 23 (0 errors, 3 warnings, 20 info)
 
 ### 🟡 Warnings
 
@@ -200,15 +201,17 @@
 
 ### 🔵 Info
 
+- **[I.DIV.LOAD_PHASE_BALANCED]** `load`  
+  Galvanic zone anchored at 'b1349' has balanced aggregate load across 2 phase(s) (max spread 0.0%) — the network is effectively balanced and a single-phase equivalent would suffice.
 - **[I.DIV.LINE_SYMMETRIC]** `line`  
   6 lines share linecode 'ughv_400al_triplex_ug_4w_bundled' with similar length (±10%) — electrically near-identical.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'b1349' has no load connected to phase terminal '3'.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'b548' has no load connected to phase terminal '1'.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'b548' has no load connected to phase terminal '2'.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'b548' has no load connected to phase terminal '3'.
 - **[I.PROV.B_OFFDIAG]** `abc4x95_lv_oh_4w_bundled`  
   Linecode 'abc4x95_lv_oh_4w_bundled' B_from_block has positive mutual susceptance — deviates from the Maxwell sign pattern; typical of screen-eliminated/bundled cable reductions, otherwise a sign-convention suspect.
@@ -228,6 +231,10 @@
   15 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `[b548]`  
+  Additional property not defined in schema at [bus][b548].
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
+  bus has field(s) not in the BMOPF schema: v_declared.
 - **[I.RED.UNUSED_LINECODES]** `linecode`  
   20 linecode(s) defined but not referenced by any line.
 - **[I.RED.DUPLICATE_LINECODES]** `linecode`  

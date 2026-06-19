@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV6_17bus
 
-**Generated:** 2026-06-18 09:40:10  
-**Findings:** 0 errors · 3 warnings · 17 info  
+**Generated:** 2026-06-19 10:46:24  
+**Findings:** 0 errors · 3 warnings · 19 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 3 grounding point(s)
 
 ---
@@ -79,11 +79,11 @@
 | tx1902 | 500.0 kVA | 2.2% |
 
 > 🟡 **[W.OPS.IMPORT_DEPENDENT]** Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.01 MW).
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1372' has no load connected to phase terminal '2'.
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1372' has no load connected to phase terminal '3'.
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2918' has no load connected to phase terminal '1'.
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2918' has no load connected to phase terminal '2'.
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2918' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1372' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b1372' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2918' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2918' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b2918' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -179,7 +179,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 20 (0 errors, 3 warnings, 17 info)
+**Total findings:** 22 (0 errors, 3 warnings, 19 info)
 
 ### 🟡 Warnings
 
@@ -192,15 +192,15 @@
 
 ### 🔵 Info
 
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'b1372' has no load connected to phase terminal '2'.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'b1372' has no load connected to phase terminal '3'.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'b2918' has no load connected to phase terminal '1'.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'b2918' has no load connected to phase terminal '2'.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'b2918' has no load connected to phase terminal '3'.
 - **[I.PROV.B_OFFDIAG]** `abc4x95_lv_oh_4w_bundled`  
   Linecode 'abc4x95_lv_oh_4w_bundled' B_from_block has positive mutual susceptance — deviates from the Maxwell sign pattern; typical of screen-eliminated/bundled cable reductions, otherwise a sign-convention suspect.
@@ -220,6 +220,10 @@
   18 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `[b2918]`  
+  Additional property not defined in schema at [bus][b2918].
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
+  bus has field(s) not in the BMOPF schema: v_declared.
 - **[I.RED.UNUSED_LINECODES]** `linecode`  
   19 linecode(s) defined but not referenced by any line.
 - **[I.RED.DUPLICATE_LINECODES]** `linecode`  

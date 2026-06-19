@@ -1,7 +1,7 @@
 # BMOPF Network Summary: Three-wire-phase-to-neutral / network_23 / Feeder_3
 
-**Generated:** 2026-06-18 09:39:36  
-**Findings:** 0 errors · 9 warnings · 9 info  
+**Generated:** 2026-06-19 10:45:48  
+**Findings:** 0 errors · 9 warnings · 11 info  
 **Convention:** LV_240V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -73,7 +73,7 @@
 | Generation/load ratio | 0.0% |
 
 > 🟡 **[W.OPS.IMPORT_DEPENDENT]** Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.0 MW).
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -162,7 +162,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 18 (0 errors, 9 warnings, 9 info)
+**Total findings:** 20 (0 errors, 9 warnings, 11 info)
 
 ### 🟡 Warnings
 
@@ -187,7 +187,7 @@
 
 ### 🔵 Info
 
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 - **[I.PROV.NO_PI_SHUNT]** `linecode`  
   All 3 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
@@ -201,6 +201,10 @@
   59 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `[sourcebus]`  
+  Additional property not defined in schema at [bus][sourcebus].
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
+  bus has field(s) not in the BMOPF schema: v_declared.
 - **[I.RED.MERGEABLE_LINES]** `line`  
   1 group(s) of series lines (56 lines total) can be merged — intermediate buses have no other connections.
 - **[I.BENCH.AUGMENTATION]** `network`  

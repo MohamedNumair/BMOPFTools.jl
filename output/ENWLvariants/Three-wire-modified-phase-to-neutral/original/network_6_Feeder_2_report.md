@@ -1,7 +1,7 @@
 # BMOPF Network Summary: Three-wire-modified-phase-to-neutral / network_6 / Feeder_2
 
-**Generated:** 2026-06-18 09:37:58  
-**Findings:** 0 errors · 9 warnings · 8 info  
+**Generated:** 2026-06-19 10:44:07  
+**Findings:** 0 errors · 9 warnings · 10 info  
 **Convention:** LV_240V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -164,7 +164,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 17 (0 errors, 9 warnings, 8 info)
+**Total findings:** 19 (0 errors, 9 warnings, 10 info)
 
 ### 🟡 Warnings
 
@@ -201,6 +201,10 @@
   1030 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `[sourcebus]`  
+  Additional property not defined in schema at [bus][sourcebus].
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
+  bus has field(s) not in the BMOPF schema: v_declared.
 - **[I.RED.MERGEABLE_LINES]** `line`  
   89 group(s) of series lines (912 lines total) can be merged — intermediate buses have no other connections.
 - **[I.BENCH.AUGMENTATION]** `network`  

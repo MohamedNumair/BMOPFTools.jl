@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV3_55bus
 
-**Generated:** 2026-06-18 09:40:10  
-**Findings:** 0 errors · 4 warnings · 17 info  
+**Generated:** 2026-06-19 10:46:23  
+**Findings:** 0 errors · 4 warnings · 20 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 14 grounding point(s)
 
 ---
@@ -72,6 +72,7 @@
 
 > 🟡 **[W.DIV.LOAD_SYMMETRIC]** 11 of 12 loads share identical (p_nom, q_nom) — possible copy-paste symmetry.
 > 🔵 **[I.DIV.LOAD_CV_LOW]** Load p_nom has very low coefficient of variation (0.0) — all loads nearly identical.
+> 🔵 **[I.DIV.LOAD_PHASE_BALANCED]** Galvanic zone anchored at 'b1006' has balanced aggregate load across 3 phase(s) (max spread 0.0%) — the network is effectively balanced and a single-phase equivalent would suffice.
 
 ## 5. Loading & Operational Summary
 
@@ -89,9 +90,9 @@
 | tx3703 | 500.0 kVA | 26.8% |
 
 > 🟡 **[W.OPS.IMPORT_DEPENDENT]** Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.12 MW).
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b804' has no load connected to phase terminal '1'.
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b804' has no load connected to phase terminal '2'.
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b804' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b804' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b804' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'b804' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -187,7 +188,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 21 (0 errors, 4 warnings, 17 info)
+**Total findings:** 24 (0 errors, 4 warnings, 20 info)
 
 ### 🟡 Warnings
 
@@ -204,11 +205,13 @@
 
 - **[I.DIV.LOAD_CV_LOW]** `load`  
   Load p_nom has very low coefficient of variation (0.0) — all loads nearly identical.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.DIV.LOAD_PHASE_BALANCED]** `load`  
+  Galvanic zone anchored at 'b1006' has balanced aggregate load across 3 phase(s) (max spread 0.0%) — the network is effectively balanced and a single-phase equivalent would suffice.
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'b804' has no load connected to phase terminal '1'.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'b804' has no load connected to phase terminal '2'.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'b804' has no load connected to phase terminal '3'.
 - **[I.PROV.B_OFFDIAG]** `abc4x95_lv_oh_4w_bundled`  
   Linecode 'abc4x95_lv_oh_4w_bundled' B_from_block has positive mutual susceptance — deviates from the Maxwell sign pattern; typical of screen-eliminated/bundled cable reductions, otherwise a sign-convention suspect.
@@ -228,6 +231,10 @@
   56 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `[b804]`  
+  Additional property not defined in schema at [bus][b804].
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
+  bus has field(s) not in the BMOPF schema: v_declared.
 - **[I.RED.MERGEABLE_LINES]** `line`  
   3 group(s) of series lines (6 lines total) can be merged — intermediate buses have no other connections.
 - **[I.RED.UNUSED_LINECODES]** `linecode`  

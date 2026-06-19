@@ -1,6 +1,6 @@
 # Simplification log: Three-wire-Kron-reduced / network_22 / Feeder_6
 
-**Generated:** 2026-06-18 09:35:37  
+**Generated:** 2026-06-19 10:41:40  
 **Buses:** 602 → 77 (−525)  
 **Lines:** 601 → 76 (−525)  
 **Operations:** 529
