@@ -181,6 +181,10 @@ A *closed* switch short-circuits its two terminals (zero-impedance coupling):
 
 An *open* switch has its current fixed to zero by `_add_switch_variables!`; no
 voltage coupling is imposed (terminals are electrically disconnected).
+
+If the switch carries an `i_max` vector (A, one entry per conductor), a thermal
+current limit is enforced on the from-side current. No to-side constraint is
+needed because switches have no shunt (from and to magnitudes are equal).
 """
 function _add_switch_constraints!(model, net, vars, kcl_r, kcl_i)
     vr = vars[:vr]; vi = vars[:vi]
@@ -192,6 +196,7 @@ function _add_switch_constraints!(model, net, vars, kcl_r, kcl_i)
         tmfr  = Vector{String}(get(sw, "terminal_map_from", String[]))
         tmto  = Vector{String}(get(sw, "terminal_map_to",   String[]))
         is_open = get(sw, "open_switch", false)
+        i_max   = get(sw, "i_max", nothing)
         n_c = min(length(tmfr), length(tmto))
 
         for k in 1:n_c
@@ -201,6 +206,10 @@ function _add_switch_constraints!(model, net, vars, kcl_r, kcl_i)
             end
             _kcl_add!(kcl_r, kcl_i, b_fr, tmfr[k], -cr_sw[(sid,k)], -ci_sw[(sid,k)])
             _kcl_add!(kcl_r, kcl_i, b_to, tmto[k],  cr_sw[(sid,k)],  ci_sw[(sid,k)])
+            if i_max !== nothing && k <= length(i_max)
+                ilim = Float64(i_max[k])
+                @constraint(model, cr_sw[(sid,k)]^2 + ci_sw[(sid,k)]^2 <= ilim^2)
+            end
         end
     end
 end
