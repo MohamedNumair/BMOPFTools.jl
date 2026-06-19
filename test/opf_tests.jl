@@ -703,6 +703,80 @@
     end
 
     # ─────────────────────────────────────────────────────────────────────────
+    # T15: Switch current limit
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T15: switch i_max enforced" begin
+        # Same topology as T14 but with a tight i_max on the switch.
+        # The load demands 50 W through a 1000 V source → ~0.05 A.
+        # Setting i_max=[0.03] makes the limit binding and forces the solver
+        # to shed load via the generator or go infeasible; here the generator
+        # is unconstrained so we just verify the switch current is ≤ i_max.
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus": {"terminal_names":["1","n"],
+                          "perfectly_grounded_terminals":["n"]},
+            "switchbus": {"terminal_names":["1","n"],
+                          "perfectly_grounded_terminals":["n"]},
+            "bus1":      {"terminal_names":["1","n"],
+                          "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.1}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"switchbus",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "switch":{"sw1":{"bus_from":"switchbus","bus_to":"bus1",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "open_switch":false,"i_max":[0.03]}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[50000.0],"q_nom":[0.0]}},
+         "generator":{"gen1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "cost":0.01}}}
+        """; from_string=true)
+
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        cm = res["switch"]["sw1"]["1"]["cm"]
+        @test cm <= 0.03 + 1e-6
+    end
+
+    @testset "T15b: switch without i_max is unconstrained" begin
+        # Identical to T15 but no i_max field — the solve must still complete
+        # and the switch current is not clipped.
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus": {"terminal_names":["1","n"],
+                          "perfectly_grounded_terminals":["n"]},
+            "switchbus": {"terminal_names":["1","n"],
+                          "perfectly_grounded_terminals":["n"]},
+            "bus1":      {"terminal_names":["1","n"],
+                          "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.1}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"switchbus",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "switch":{"sw1":{"bus_from":"switchbus","bus_to":"bus1",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "open_switch":false}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[50000.0],"q_nom":[0.0]}},
+         "generator":{"gen1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "cost":0.01}}}
+        """; from_string=true)
+
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        # current flows freely — no artificial clip
+        @test res["switch"]["sw1"]["1"]["cm"] > 0.03
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
     # Initialisation block
     # ─────────────────────────────────────────────────────────────────────────
     @testset "Initialisation block — structure and values" begin
