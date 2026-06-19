@@ -34,6 +34,7 @@ write_bmopf
 migrate
 is_timeseries
 get_snapshot
+sideload_coordinates!
 ```
 
 ## Conversion

@@ -1,6 +1,6 @@
 # Finding-code reference
 
-The complete catalogue of the 141 finding codes, grouped by family. Codes are
+The complete catalogue of the 144 finding codes, grouped by family. Codes are
 **stable identifiers** — filter on `f.code`, never on message text. Severity
 prefix: `E.` error, `W.` warning, `I.` info (see
 [Analysis & reports](analysis.md) for the severity semantics).
@@ -112,6 +112,7 @@ and [`load_model_analysis`](@ref) (`load_models` pass).
 | `W.LOAD.ZIP_SUM` | W | For a ZIP load, the active ($\alpha^Z + \alpha^I + \alpha^P$) or reactive ($\beta^Z + \beta^I + \beta^P$) coefficients do not sum to 1. At nominal voltage the load will not consume its nominal power; usually a data entry error. |
 | `W.LOAD.GAMMA_NEGATIVE` | W | An exponential exponent $\gamma < 0$ — power increases as voltage falls. Physically possible for some device classes but extremely unusual in distribution-network demand models; almost always a sign error. |
 | `W.LOAD.MODEL_MIXED` | W | A `zip` load carries `gamma_p`/`gamma_q` fields, or an `exponential` load carries ZIP coefficient fields. The extra fields are ignored; this finding flags the likely copy-paste error. |
+| `W.LOAD.VNOM_MISMATCH` | W | A load's `v_nom` differs from the BFS-inferred bus nominal voltage by more than 25 %. For WYE loads `v_nom` is compared against the inferred phase-to-neutral voltage; for DELTA loads against phase-to-neutral × √3 (line-to-line). A large deviation means the power setpoint and voltage sensitivity are referenced to the wrong operating point — a common OpenDSS conversion error where the load `kV` field is left at a default or is set to the wrong voltage level. |
 | `I.LOAD.GAMMA_RANGE` | I | An exponential exponent $\gamma \notin (0, 2)$ — outside the range typical of distribution loads (motors ≈ 0.08, constant-impedance = 2). Still valid; flagged as context. |
 | `I.LOAD.MODEL_FIELDS_IGNORED` | I | A `constant_power`, `constant_current`, or `constant_impedance` load carries ZIP or exponential coefficient fields. These fields are redundant for named degenerate models and will be ignored by the OPF. |
 
@@ -259,7 +260,9 @@ its network. See [`SolutionReport`](@ref) and [`render_solution`](@ref).
 | `W.SOL.THERMAL_ACTIVE` | W | Current magnitude is within 1 % of `i_max` — the thermal limit is near-active. |
 | `E.SOL.GEN_VIOLATION` | E | A generator's active or reactive dispatch (`pg`/`qg` per terminal) falls outside its declared `p_min`/`p_max`/`q_min`/`q_max` bounds. |
 | `W.SOL.GEN_ACTIVE` | W | Generator dispatch is within 1 % of a bound — the bound is near-active. |
-| `W.SOL.LOAD_RESIDUAL` | W | Solved load power (`pd`/`qd`) differs from the nominal setpoint (`p_nom`/`q_nom`) by more than 1 W / 1 var — the load constraint has non-trivial residual. |
+| `W.SOL.LOAD_RESIDUAL` | W | For a `constant_power` load, solved `pd`/`qd` differs from `p_nom`/`q_nom` by more than 1 W / 1 var — the bilinear constant-power constraint has a non-trivial residual; the solver may not have converged tightly. Not emitted for voltage-dependent models (where `pd ≠ p_nom` is expected). |
+| `W.SOL.LOAD_MODEL_RESIDUAL` | W | For a voltage-dependent load, the realised `pd`/`qd` is inconsistent with what the load model predicts at the solved terminal voltage by more than 1 W / 1 var. Indicates the load model constraint was not satisfied — a solver convergence or result extraction issue. |
+| `I.SOL.LOAD_VD_SUMMARY` | I | Aggregate realised vs nominal P/Q across all voltage-dependent sub-loads. Quantifies the total demand shift due to voltage sensitivity at the solved operating point. |
 | `W.SOL.POWER_BALANCE` | W | Network-wide active power balance error (Σpg − Σpd − Σp_loss) exceeds 1 % of total load — a significant mismatch that may indicate a lossy model, a missing component, or a result extraction issue. |
 | `I.SOL.BINDING_SUMMARY` | I | Summary count of violated and near-active bounds across all categories (voltage, thermal, generator). Always emitted for feasible solutions. |
 | `I.SOL.LOSS_FRACTION` | I | Line losses exceed 20 % of total generation — unusually high; may indicate a high-impedance feeder, a model issue, or an extreme operating point. |
