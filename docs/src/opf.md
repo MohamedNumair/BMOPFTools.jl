@@ -59,7 +59,7 @@ Minimise total active-power generation cost (linear in current variables):
 $$\min \sum_{g \in \mathcal{G}} \sum_{k=1}^{|\mathcal{T}_g^\phi|}
   c^g_1 \cdot \bigl(\Delta v^r_k \, c^{r,g}_{g,k} + \Delta v^i_k \, c^{i,g}_{g,k}\bigr)$$
 
-where $c^g_1$ (\$/W) is the linear cost coefficient and $\Delta v_k$ is the
+where $c^g_1$ (currency/W) is the linear cost coefficient and $\Delta v_k$ is the
 phase-to-neutral (WYE) or line-to-line (DELTA) voltage at generator $g$'s
 $k$-th phase terminal (see [Generators](@ref generators-section) below).
 

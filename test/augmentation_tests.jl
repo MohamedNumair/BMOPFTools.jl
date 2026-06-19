@@ -79,14 +79,18 @@ end
     @test b1["v_min"] ≈ 230.0 * 0.85   atol=1e-6
     @test b1["v_max"] ≈ 230.0 * 1.15   atol=1e-6
 
-    # vpn: 230 V / √3 × 0.90 / 1.10
+    # vpn: per-phase array (length = n_phase = 3), value = 230/√3 × pu
     v_pn = 230.0 / sqrt(3.0)
-    @test b1["vpn_min"] ≈ v_pn * 0.90  atol=1e-6
-    @test b1["vpn_max"] ≈ v_pn * 1.10  atol=1e-6
+    @test b1["vpn_min"] isa Vector && length(b1["vpn_min"]) == 3
+    @test b1["vpn_max"] isa Vector && length(b1["vpn_max"]) == 3
+    @test all(b1["vpn_min"] .≈ v_pn * 0.90)
+    @test all(b1["vpn_max"] .≈ v_pn * 1.10)
 
-    # vpp: 230 V (line voltage for a 230 V source) × 0.90 / 1.10
-    @test b1["vpp_min"] ≈ 230.0 * 0.90  atol=1e-6
-    @test b1["vpp_max"] ≈ 230.0 * 1.10  atol=1e-6
+    # vpp: per-pair array (length = n_pairs = 3 for 3 phases), value = 230 × pu
+    @test b1["vpp_min"] isa Vector && length(b1["vpp_min"]) == 3
+    @test b1["vpp_max"] isa Vector && length(b1["vpp_max"]) == 3
+    @test all(b1["vpp_min"] .≈ 230.0 * 0.90)
+    @test all(b1["vpp_max"] .≈ 230.0 * 1.10)
 
     # vneg_max: 2% of v_pn
     @test b1["vneg_max"] ≈ v_pn * 0.02  atol=1e-6
@@ -114,18 +118,25 @@ end
     mv = net′["bus"]["mv_src"]
     lv = net′["bus"]["lv_bus"]
 
-    # MV source bus gets v bounds (but not vpn/vpp — it's a source bus)
-    # MV v_min = 6350 * 0.94 (±6%)
-    @test mv["v_min"] ≈ 6350.0 * 0.94  atol=1.0
+    # v_min/v_max are solver regularisation — same pu band at all levels
+    @test mv["v_min"] ≈ 6350.0 * 0.85  atol=1.0
+    @test mv["v_max"] ≈ 6350.0 * 1.15  atol=1.0
 
-    # LV bus: v_min = V_nom × 0.85 (LV band)
+    # MV source bus gets v_min/v_max but NOT vpn/vpp/vneg (source bus)
+    @test !haskey(mv, "vpn_min")
+    @test !haskey(mv, "vpp_min")
+
+    # LV bus: v_min/v_max use same 0.85/1.15 band
     lv_vnom = get(voltage_level_analysis(net, Finding[])["bus_voltage_map"], "lv_bus", NaN)
     @test lv["v_min"] ≈ lv_vnom * 0.85  atol=1.0
+    @test lv["v_max"] ≈ lv_vnom * 1.15  atol=1.0
 
-    # MV band is strictly tighter than LV band
-    mv_range = mv["v_max"] - mv["v_min"]
-    lv_range = lv["v_max"] - lv["v_min"]
-    @test mv_range / mv["v_max"] < lv_range / lv["v_max"]
+    # MV vpn band (±6%) is tighter than LV vpn band (±10%) in per-unit terms
+    # lv_bus is a four-wire LV bus so it gets vpn bounds (per-phase array, length 3)
+    lv_vpn_nom = lv_vnom / sqrt(3.0)
+    @test lv["vpn_min"] isa Vector && length(lv["vpn_min"]) == 3
+    lv_vpn_range = first(lv["vpn_max"]) - first(lv["vpn_min"])
+    @test lv_vpn_range / lv_vpn_nom ≈ 0.20  atol=0.01   # ±10 % → 20 % window
 end
 
 @testset "T1: Voltage bounds — never overwrite existing" begin

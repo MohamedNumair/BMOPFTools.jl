@@ -17,7 +17,7 @@ JSON without conversion.
     render(report, stdout)              # terminal output
     render(report, "report.md")         # markdown file
 
-See also: `write_bmopf`, `to_pmd`, `check_roundtrip` (requires OpenDSSDirect ext).
+See also: `write_bmopf`, `to_pmd`.
 """
 module BMOPFTools
 
@@ -212,6 +212,7 @@ end
 # Submodule includes — order matters; IO first, then analysis, then report
 # ---------------------------------------------------------------------------
 
+include("io/migrate.jl")
 include("io/parse_bmopf.jl")
 include("io/write_bmopf.jl")
 include("io/from_pmd.jl")
@@ -233,7 +234,6 @@ include("validation/domain_rules.jl")
 include("validation/redundancy.jl")
 include("validation/integrity.jl")
 include("validation/spec_conformance.jl")
-include("validation/roundtrip.jl")
 include("validation/solution.jl")
 
 include("network/simplify.jl")
@@ -437,7 +437,7 @@ export Severity, ERROR, WARNING, INFO
 export Finding, SummaryReport, SolutionReport
 export errors, warnings, infos
 export profile_solution, render_solution, solution_check
-export parse_bmopf, write_bmopf
+export parse_bmopf, write_bmopf, migrate
 export from_pmd, to_pmd
 export from_dss
 export sideload_coordinates!
