@@ -1,6 +1,6 @@
 # Finding-code reference
 
-The complete catalogue of the 144 finding codes, grouped by family. Codes are
+The complete catalogue of the 146 finding codes, grouped by family. Codes are
 **stable identifiers** — filter on `f.code`, never on message text. Severity
 prefix: `E.` error, `W.` warning, `I.` info (see
 [Analysis & reports](analysis.md) for the severity semantics).
@@ -74,6 +74,7 @@ Symmetries in data create symmetric optima and degrade NLP convergence
 | `E.PRE.QBOUND_CONFLICT` | E | Generator `q_min > q_max` — same. |
 | `I.PRE.NO_VOLT_BOUNDS` | I | Buses with no voltage bounds at all — voltages are unconstrained there (spec semantics for absent optional bounds). |
 | `I.PRE.SINGLE_SOURCE` | I | Exactly one voltage source. The spec *requires* this in the current version; operationally it is still a single point of failure worth knowing about. |
+| `W.PRE.SOURCE_VOLTAGE_OOB` | W | A voltage source setpoint (`v_magnitude`) falls outside the bus's declared `v_min`/`v_max`. The source pins that voltage as a hard equality in the OPF, so the bound is trivially violated before the solver starts — a guaranteed infeasibility. Common cause: `v_magnitude` set in kV while bounds are in V, or an augmented bound tighter than the actual supply voltage. |
 
 ## DOM — domain plausibility
 
@@ -86,6 +87,7 @@ Symmetries in data create symmetric optima and degrade NLP convergence
 | `W.DOM.GEN_COST_NEGATIVE` | W | Negative generation cost — the optimizer will dispatch it to its bound; verify it is intended (e.g. must-run subsidy). |
 | `W.DOM.GEN_COST_HIGH` | W | Cost above 10 \$/kWh — beyond any realistic tariff; suspect units. |
 | `W.DOM.LC_ZERO_R` | W | Near-zero or negative self-resistance on **any** linecode diagonal — a superconducting conductor, usually a placeholder. |
+| `E.DOM.XFMR_VREF_INVALID` | E | A transformer has `v_ref_from ≤ 0` or `v_ref_to ≤ 0`. The turns ratio N = v\_ref\_from / v\_ref\_to is undefined or infinite; the OPF cannot be built. Usually caused by a missing field defaulting to zero or a unit error (kV entered as 0.0). |
 | `W.DOM.XFMR_RATIO_OOB` | W | Direction-agnostic transformer step ratio `max(r, 1/r)` above 1000:1. Calibrated so standard distribution step-downs (e.g. 11 kV/433 V ≈ 25:1) do **not** flag. |
 | `W.DOM.ZERO_LIMIT` | W | An `i_max`/`s_max` entry exactly 0. Read literally this forces zero flow; in source tools 0 usually means "no limit" — classic semantic abuse. Drop the field instead. |
 | `W.DOM.ZERO_LENGTH` | W | A zero-length line — degenerate impedance; the spec's lossless switch object is the right model for such sections ([ref. 2](methodology.md#refs)). |
