@@ -1,6 +1,6 @@
 # Analysis & reports
 
-[`analyze`](@ref) runs fourteen passes over a network dict and returns a
+[`analyze`](@ref) runs fifteen passes over a network dict and returns a
 [`SummaryReport`](@ref) holding per-pass result dicts (`report.results`)
 and the combined finding log (`report.findings`). For time-series networks
 the snapshot at `t_index` is materialised first.
@@ -14,11 +14,12 @@ the snapshot at `t_index` is materialised first.
 | `:connectivity` | [`connectivity_analysis`](@ref) | connected components, radial/meshed (physical branch count, parallel-aware), degree statistics, tree depth, dangling buses |
 | `:diversity` | [`diversity_analysis`](@ref) | parameter spread per category (CV, duplicate tuples), phase imbalance, symmetry score |
 | `:operational` | [`operational_analysis`](@ref) | total load/generation, transformer utilisation at nominal load (downstream BFS), line thermal-limit coverage |
+| `:load_models` | [`load_model_analysis`](@ref) | load model breakdown by type, voltage-dependent load count, exponential loads that are ZIP-equivalent (integer exponents), nonlinear loads on buses without a lower voltage bound |
 | `:provenance` | [`provenance_analysis`](@ref) | impedance classification (balance tiers, passivity, sign structure), wires per level / Kron likelihood, neutral grounding structure, earthing-system tags, OpenDSS default fingerprints, regulator patterns, the **convention statement** |
 | `:preflight` | [`infeasibility_preflight`](@ref) | generation adequacy, voltage-bound coverage, bound-pair conflicts (v/vpn/vpp/vpos, p, q), topological risk |
 | `:schema` | [`schema_check`](@ref) | fields present but not in the data model (catalogued, not rejected) |
 | `:completeness` | [`completeness_check`](@ref) | required fields per component type, incl. transformer subtypes; optional-field coverage |
-| `:domain_rules` | [`domain_rules_check`](@ref) | numerical plausibility: bounds signs, power factors, costs, impedance diagonals, transformer step ratios, zero limits/lengths, angle units |
+| `:domain_rules` | [`domain_rules_check`](@ref) | numerical plausibility: bounds signs, power factors, costs, impedance diagonals, transformer step ratios, zero limits/lengths, angle units, load model coefficient validity |
 | `:redundancy` | [`redundancy_check`](@ref) | zero loads/shunts, mergeable series lines (junction-aware), unused/duplicate linecodes |
 | `:integrity` | [`integrity_check`](@ref) | referential integrity, dimension consistency, padded matrices, voltage reference per galvanic island, wye-without-neutral, low-impedance lines, generator cost symmetry |
 | `:spec` | [`spec_conformance_check`](@ref) | TF-spec rules the JSON Schema cannot express: single source, configuration/arity, transformer map arities, terminal types, matrix storage |
