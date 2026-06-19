@@ -454,6 +454,85 @@ function _check_opendss_defaults(net::Dict{String,Any},
 end
 
 # ---------------------------------------------------------------------------
+# Switch-like line detection
+# ---------------------------------------------------------------------------
+
+# Threshold for "effectively zero" series impedance.
+# Per-unit-length: < 1e-6 Ω/m on every diagonal entry.
+# Effective (Z * length): < 1e-4 Ω total on every diagonal entry.
+const _SWITCH_LIKE_Z_PER_M  = 1e-6   # Ω/m
+const _SWITCH_LIKE_Z_TOTAL  = 1e-4   # Ω
+
+"""
+    _check_switch_like_lines(net, findings) -> Dict{String,Any}
+
+Flag lines whose series impedance is so small they are functionally switches.
+Two independent conditions are checked for each line that references a linecode:
+
+1. **Per-unit-length** — every diagonal entry of R and X (per metre) is below
+   `$_SWITCH_LIKE_Z_PER_M` Ω/m. Catches very low-impedance linecodes regardless
+   of line length.
+2. **Effective total** — every diagonal entry of R·length and X·length is below
+   `$_SWITCH_LIKE_Z_TOTAL` Ω. Catches short lines with otherwise normal impedance.
+
+A line meeting either condition gets an `I.PROV.LINE_SWITCH_LIKE` info finding.
+"""
+function _check_switch_like_lines(net::Dict{String,Any},
+                                   findings::Vector{Finding})::Dict{String,Any}
+    linecodes = get(net, "linecode", Dict())
+    hits = Dict{String, Vector{String}}()   # line_id => reasons
+
+    for (lid, line) in get(net, "line", Dict())
+        line isa Dict || continue
+        lcid = get(line, "linecode", nothing)
+        lcid === nothing && continue
+        lc = get(linecodes, lcid, nothing)
+        lc === nothing && continue
+
+        R = _pattern_keys_to_matrix(lc, "R_series_")
+        X = _pattern_keys_to_matrix(lc, "X_series_")
+        (R isa AbstractMatrix) || continue
+        n = size(R, 1)
+        Xm = (X isa AbstractMatrix && size(X) == size(R)) ? X :
+              zeros(Float64, n, n)
+
+        reasons = String[]
+
+        # Condition 1: per-unit-length impedance
+        diag_r = [abs(R[k,k]) for k in 1:n]
+        diag_x = [abs(Xm[k,k]) for k in 1:n]
+        if all(<(_SWITCH_LIKE_Z_PER_M), diag_r) && all(<(_SWITCH_LIKE_Z_PER_M), diag_x)
+            push!(reasons, "linecode impedance < $(_SWITCH_LIKE_Z_PER_M) Ω/m on all diagonals")
+        end
+
+        # Condition 2: effective total impedance (R * length, X * length)
+        len = get(line, "length", nothing)
+        if len !== nothing
+            len_f = Float64(len)
+            if all(<(_SWITCH_LIKE_Z_TOTAL), diag_r .* len_f) &&
+               all(<(_SWITCH_LIKE_Z_TOTAL), diag_x .* len_f)
+                push!(reasons, "effective impedance (Z·length) < $(_SWITCH_LIKE_Z_TOTAL) Ω on all diagonals")
+            end
+        end
+
+        isempty(reasons) && continue
+        hits[lid] = reasons
+    end
+
+    lines = get(net, "line", Dict())
+    for (lid, reasons) in sort(collect(hits), by = x -> x[1])
+        lcid = get(get(lines, lid, Dict()), "linecode", nothing)
+        push!(findings, Finding(INFO, "I.PROV.LINE_SWITCH_LIKE", :provenance,
+            :line, lid,
+            "Line '$lid' has near-zero series impedance and may be modelled " *
+            "more accurately as a switch: $(join(reasons, "; ")).",
+            Dict{String,Any}("linecode" => lcid, "reasons" => reasons)))
+    end
+
+    Dict{String,Any}("n" => length(hits), "ids" => sort(collect(keys(hits))))
+end
+
+# ---------------------------------------------------------------------------
 # Regulator / autotransformer encodings
 # ---------------------------------------------------------------------------
 # OpenDSS has no first-class regulator branch: modelers encode them either as
