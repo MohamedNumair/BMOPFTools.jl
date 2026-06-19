@@ -80,6 +80,7 @@ voltage_level_analysis
 connectivity_analysis
 diversity_analysis
 operational_analysis
+load_model_analysis
 provenance_analysis
 infeasibility_preflight
 ```

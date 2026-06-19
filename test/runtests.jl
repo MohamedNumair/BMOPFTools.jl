@@ -2136,6 +2136,93 @@ const IEEE13_FIXTURE = """
         include("fix_tests.jl")
     end
 
+    @testset "Load models — validation and analysis" begin
+        mk(extra) = parse_bmopf("""
+        {"bus":{"src":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
+                "b1":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"],
+                      "vpn_min":[207.0,207.0,207.0]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[230.0,230.0,230.0],"v_angle":[0.0,-2.0944,2.0944]}},
+         "linecode":{"lc":{"R_series_1_1":0.001,"R_series_2_2":0.001,"R_series_3_3":0.001}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1","terminal_map_from":["1","2","3","n"],
+             "terminal_map_to":["1","2","3","n"],"linecode":"lc","length":100.0}},
+         "load":{"ld":{"bus":"b1","terminal_map":["1","2","3","n"],"configuration":"WYE",
+             "p_nom":[1000.0,1000.0,1000.0],"q_nom":[0.0,0.0,0.0]$extra}}}
+        """; from_string=true)
+
+        codes(net) = (f = Finding[]; domain_rules_check(net, f);
+                      [x.code for x in f if startswith(x.code, "E.LOAD") ||
+                                            startswith(x.code, "W.LOAD") ||
+                                            startswith(x.code, "I.LOAD")])
+
+        # clean ZIP load → no load findings
+        @test isempty(codes(mk(""","model":"zip","v_nom":[230.0],
+            "alpha_z":[0.4],"alpha_i":[0.3],"alpha_p":[0.3],
+            "beta_z":[0.4],"beta_i":[0.3],"beta_p":[0.3]""")))
+
+        # ZIP coefficients not summing to 1 → warning
+        @test "W.LOAD.ZIP_SUM" in codes(mk(""","model":"zip","v_nom":[230.0],
+            "alpha_z":[0.9],"alpha_i":[0.3],"alpha_p":[0.3]"""))
+
+        # zip/exponential without v_nom → error
+        @test "E.LOAD.VNOM_MISSING" in codes(mk(""","model":"zip",
+            "alpha_z":[0.4],"alpha_i":[0.3],"alpha_p":[0.3]"""))
+
+        # v_nom wrong arity (2 for a 3-phase WYE) → error
+        @test "E.LOAD.VNOM_ARITY" in codes(mk(""","model":"zip","v_nom":[230.0,230.0],
+            "alpha_z":[0.4],"alpha_i":[0.3],"alpha_p":[0.3]"""))
+
+        # exponent outside (0,2) → info; negative → warning
+        @test "I.LOAD.GAMMA_RANGE" in codes(mk(""","model":"exponential","v_nom":[230.0],
+            "gamma_p":[0.5],"gamma_q":[2.5]"""))
+        @test "W.LOAD.GAMMA_NEGATIVE" in codes(mk(""","model":"exponential","v_nom":[230.0],
+            "gamma_p":[-0.5]"""))
+
+        # discriminator vs stray fields
+        @test "W.LOAD.MODEL_MIXED" in codes(mk(""","model":"zip","v_nom":[230.0],
+            "alpha_z":[0.4],"alpha_i":[0.3],"alpha_p":[0.3],"gamma_p":[1.0]"""))
+        @test "I.LOAD.MODEL_FIELDS_IGNORED" in codes(mk(""","model":"constant_power",
+            "alpha_z":[0.4]"""))
+
+        # ── analysis: ZIP-equivalent exponential + nonlinear-without-vmin ────
+        afindings(net) = (f = Finding[]; load_model_analysis(net, f); f)
+
+        # integer exponents {0,1,2} → flagged ZIP-equivalent
+        net_ze = mk(""","model":"exponential","v_nom":[230.0],"gamma_p":[2.0],"gamma_q":[2.0]""")
+        res_ze = (f = Finding[]; r = load_model_analysis(net_ze, f); (r, f))
+        @test "I.LOAD.EXP_ZIP_EQUIVALENT" in [x.code for x in res_ze[2]]
+        @test res_ze[1]["by_model"]["exponential"] == 1
+        @test res_ze[1]["n_voltage_dependent"] == 1
+
+        # non-integer exponent → NOT ZIP-equivalent
+        net_ni = mk(""","model":"exponential","v_nom":[230.0],"gamma_p":[1.5]""")
+        @test !("I.LOAD.EXP_ZIP_EQUIVALENT" in [x.code for x in afindings(net_ni)])
+
+        # voltage-dependent load on a bus WITHOUT a lower voltage bound → warning
+        net_nv = parse_bmopf("""
+        {"bus":{"src":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
+                "b1":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[230.0,230.0,230.0],"v_angle":[0.0,-2.0944,2.0944]}},
+         "linecode":{"lc":{"R_series_1_1":0.001,"R_series_2_2":0.001,"R_series_3_3":0.001}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1","terminal_map_from":["1","2","3","n"],
+             "terminal_map_to":["1","2","3","n"],"linecode":"lc","length":100.0}},
+         "load":{"ld":{"bus":"b1","terminal_map":["1","2","3","n"],"configuration":"WYE",
+             "p_nom":[1000.0,1000.0,1000.0],"q_nom":[0.0,0.0,0.0],
+             "model":"zip","v_nom":[230.0],
+             "alpha_z":[1.0],"alpha_i":[0.0],"alpha_p":[0.0],
+             "beta_z":[1.0],"beta_i":[0.0],"beta_p":[0.0]}}}
+        """; from_string=true)
+        @test "W.LOAD.NL_NO_VMIN" in [x.code for x in afindings(net_nv)]
+        # the vpn_min bus above must NOT trigger it
+        @test !("W.LOAD.NL_NO_VMIN" in [x.code for x in afindings(net_ze)])
+
+        # schema_check layer-2: new load model fields are not catalogued as unknown
+        fz = Finding[]
+        rz = schema_check(net_ze, fz)
+        @test !haskey(get(rz, "unknown_fields_by_type", Dict()), "load")
+    end
+
     @testset "Power-flow comparison vs OpenDSS" begin
         if !_HAS_JUMP_IPOPT || !_HAS_PMD || !_HAS_ODS
             @test_skip "Requires JuMP, Ipopt, PowerModelsDistribution, and OpenDSSDirect"
