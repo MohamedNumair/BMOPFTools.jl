@@ -383,12 +383,25 @@ pass through the HV neutral.
 
 $$n_\text{eff} = \begin{cases} \sqrt{3}/N & \text{Yd} \\ N\sqrt{3} & \text{Dy} \end{cases}$$
 
-Voltage (delta line-to-line = wye phase-to-neutral × $n_\text{eff}$, indices cyclic):
+**Loss model (per-winding T).** Matching the OpenDSS / PMD reference, each
+winding carries its own series impedance — $R^\text{w}/X^\text{w}$
+(`r/x_series_from`, wye winding) and $R^\text{d}/X^\text{d}$
+(`r/x_series_to`, delta winding) — and a `g/b_no_load` core-loss shunt sits at
+the from-side (HV) phase terminals. The legacy single `r_series`/`x_series` is
+read as $R^\text{w} = R_\text{series}$, $R^\text{d} = 0$, recovering the ideal
+delta. The series drop enters the voltage equation behind the ideal transform:
+
+Voltage (delta line-to-line = wye phase-to-neutral × $n_\text{eff}$, less the
+winding series drop, indices cyclic):
 
 ```math
 v^r_{\text{del},t_k} - v^r_{\text{del},t_{k^+}}
 = n_\text{eff}\bigl(v^r_{\text{wye},t^\phi_k} - v^r_{\text{wye},n_\text{wye}}\bigr)
+  - \bigl(R^\text{w} c^{r,x}_{x,\text{wye},k} - X^\text{w} c^{i,x}_{x,\text{wye},k}\bigr)
+  - n_\text{eff}\bigl(R^\text{d} c^{r,x}_{x,\text{del},k} - X^\text{d} c^{i,x}_{x,\text{del},k}\bigr)
 ```
+
+When all impedance fields are zero this collapses to the ideal transform.
 
 Current (transpose of voltage transform, power-conservative):
 

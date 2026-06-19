@@ -626,21 +626,43 @@ $\sqrt{3}$ factor introduced by the delta geometry:
 Here $N_x = V^\text{ref}_\text{fr} / V^\text{ref}_\text{to}$ and both reference
 voltages are specified as phase-to-neutral equivalents.
 
+\paragraph{Loss model (per-winding T).}
+Following the OpenDSS reference model (reproduced by PowerModelsDistribution's
+\texttt{eng2math} loss network), each winding carries its own series impedance
+and a single no-load (core-loss) shunt $Y_0 = G_0 + \mathrm{j}B_0$
+(\texttt{g\_no\_load}, \texttt{b\_no\_load}, in~S) sits at the from-side (HV)
+phase terminals, phase-to-ground.  Write $R^\text{w}_x, X^\text{w}_x$
+(\texttt{r\_series\_from}, \texttt{x\_series\_from}) for the wye/primary winding
+branch and $R^\text{d}_x, X^\text{d}_x$
+(\texttt{r\_series\_to}, \texttt{x\_series\_to}) for the delta/secondary branch,
+both in~$\Omega$ on their own winding base.  A network supplying the legacy
+single \texttt{r\_series}/\texttt{x\_series} is read as
+$R^\text{w}_x = R_\text{series}$, $R^\text{d}_x = 0$ (likewise $X$),
+recovering the ideal-delta behaviour.
+
 \paragraph{Voltage constraints.}
 For $k = 1,\ldots,n_\phi$ with $k^+ = (k \bmod n_\phi)+1$, the delta line-to-line
-voltage equals the wye phase-to-neutral voltage scaled by $n_\text{eff}$:
+voltage equals the wye phase-to-neutral voltage scaled by $n_\text{eff}$, less
+the series voltage drop across the winding branches:
 %
 \begin{align}
   \vr{\text{del}}{t_k} - \vr{\text{del}}{t_{k^+}}
-  &= n_\text{eff}\bigl(\vr{\text{wye}}{t^\phi_k} - \vr{\text{wye}}{n_\text{wye}}\bigr),
+  &= n_\text{eff}\bigl(\vr{\text{wye}}{t^\phi_k} - \vr{\text{wye}}{n_\text{wye}}\bigr)
+     - \bigl(R^\text{w}_x c^{r,x}_{x,\text{wye},k} - X^\text{w}_x c^{i,x}_{x,\text{wye},k}\bigr)
+     - n_\text{eff}\bigl(R^\text{d}_x c^{r,x}_{x,\text{del},k} - X^\text{d}_x c^{i,x}_{x,\text{del},k}\bigr),
   \label{eq:yd-v-r}\\
   \vi{\text{del}}{t_k} - \vi{\text{del}}{t_{k^+}}
-  &= n_\text{eff}\bigl(\vi{\text{wye}}{t^\phi_k} - \vi{\text{wye}}{n_\text{wye}}\bigr),
+  &= n_\text{eff}\bigl(\vi{\text{wye}}{t^\phi_k} - \vi{\text{wye}}{n_\text{wye}}\bigr)
+     - \bigl(R^\text{w}_x c^{i,x}_{x,\text{wye},k} + X^\text{w}_x c^{r,x}_{x,\text{wye},k}\bigr)
+     - n_\text{eff}\bigl(R^\text{d}_x c^{i,x}_{x,\text{del},k} + X^\text{d}_x c^{r,x}_{x,\text{del},k}\bigr),
   \label{eq:yd-v-i}
 \end{align}
 %
 where $n_\text{wye}$ denotes the wye-side neutral terminal (if present; otherwise
-the wye-side neutral voltage is taken to be zero).
+the wye-side neutral voltage is taken to be zero).  When all impedance fields
+are zero these collapse to the ideal transform.  The no-load shunt contributes
+a current $Y_0 V$ at the from-side phase terminals, entering KCL exactly as the
+standalone shunt of~\S\ref{sec:shunts}.
 
 \paragraph{Current constraints.}
 The current transform is the transpose of the voltage transform, ensuring power
