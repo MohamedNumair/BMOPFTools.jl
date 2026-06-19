@@ -672,9 +672,9 @@ const IEEE13_FIXTURE = """
         # r_series_from = rw * V² / S = 0.01 * 4160² / 500e3 ≈ 0.346 Ω
         @test tx["r_series_from"] ≈ 0.01 * 4160.0^2 / 500_000.0
         @test tx["r_series_to"]   ≈ 0.01 * 480.0^2  / 500_000.0
-        # leakage reactance split evenly across windings
-        @test tx["x_series_from"] ≈ 0.03 * 4160.0^2 / 500_000.0
-        @test tx["x_series_to"]   ≈ 0.03 * 480.0^2  / 500_000.0
+        # PMD convention: total pair leakage xsc[1] all on winding-1 (from side), zero on to side
+        @test tx["x_series_from"] ≈ 0.06 * 4160.0^2 / 500_000.0
+        @test tx["x_series_to"]   ≈ 0.0
 
         # reverse direction recovers p.u. values
         eng2 = to_pmd(net)
@@ -682,10 +682,10 @@ const IEEE13_FIXTURE = """
         @test eng2["transformer"]["tx1"]["xsc"] ≈ [0.06]
     end
 
-    @testset "Delta-wye transformer — spec wye-side lumped impedance" begin
-        # Per TF spec, delta_wye carries a single r_series/x_series on the
-        # wye windings; both PMD winding impedances refer to the same base
-        # Z_base = v_ref_wye²/S, so the lumped value is (rw₁+rw₂)·Z_base.
+    @testset "Delta-wye transformer — per-winding T impedance" begin
+        # Per-winding T convention: each winding has its own series branch.
+        # from_pmd puts xsc[1] all on winding-1 (from/delta side), zero on winding-2.
+        # rw maps per-winding to their respective voltage bases.
         eng = Dict{String,Any}(
             "settings" => Dict{String,Any}(
                 "voltage_scale_factor" => 1000.0,
@@ -709,14 +709,21 @@ const IEEE13_FIXTURE = """
 
         net = from_pmd(eng; add_slack_generator=false)
         tx  = net["transformer"]["delta_wye"]["txdw"]
-        z_base = 433.0^2 / 100_000.0
-        @test tx["r_series"] ≈ 0.010 * z_base
-        @test tx["x_series"] ≈ 0.040 * z_base
-        @test !haskey(tx, "r_series_from")
+        # v_ref_from = vm_nom[1]*vscale = 11_000 V (delta winding, line voltage)
+        # v_ref_to   = vm_nom[2]*vscale = 433 V (wye winding, line voltage)
+        z_from = 11_000.0^2 / 100_000.0
+        z_to   = 433.0^2   / 100_000.0
+        # from side = delta winding (winding 1); to side = wye winding (winding 2)
+        @test tx["r_series_from"] ≈ 0.004 * z_from
+        @test tx["r_series_to"]   ≈ 0.006 * z_to
+        # xsc[1] (total pair leakage) all on winding-1 (from) side, zero on to
+        @test tx["x_series_from"] ≈ 0.04 * z_from
+        @test tx["x_series_to"]   ≈ 0.0
+        @test !haskey(tx, "r_series") && !haskey(tx, "x_series")
 
-        # reverse: even split of the lumped resistance, total reactance
+        # reverse: recover per-winding rw and total xsc
         eng2 = to_pmd(net)
-        @test eng2["transformer"]["txdw"]["rw"]  ≈ [0.005, 0.005]
+        @test eng2["transformer"]["txdw"]["rw"]  ≈ [0.004, 0.006]
         @test eng2["transformer"]["txdw"]["xsc"] ≈ [0.04]
     end
 
@@ -1992,11 +1999,10 @@ const IEEE13_FIXTURE = """
                 tx = first(values(xfmr["delta_wye"]))
                 @test tx["v_ref_from"] > tx["v_ref_to"]               # step-down
                 @test tx["v_ref_from"] / tx["v_ref_to"] ≈ 11.0/0.433  rtol=0.02
-                # spec: delta_wye carries a single wye-side r_series/x_series;
-                # the xhl from Transformers.dss must survive conversion
-                @test haskey(tx, "r_series") && tx["r_series"] > 0
-                @test haskey(tx, "x_series") && tx["x_series"] > 0
-                @test !haskey(tx, "r_series_from") && !haskey(tx, "x_series_from")
+                # per-winding T: from_pmd writes r/x_series_from/to; no legacy lumped fields
+                @test haskey(tx, "r_series_from") && tx["r_series_from"] > 0
+                @test haskey(tx, "x_series_from") && tx["x_series_from"] > 0
+                @test !haskey(tx, "r_series") && !haskey(tx, "x_series")
                 # spec arity: delta side 3 terminals, wye side 4 (incl. neutral)
                 @test length(tx["terminal_map_from"]) == 3
                 @test length(tx["terminal_map_to"])   == 4

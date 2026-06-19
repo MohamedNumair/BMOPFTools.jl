@@ -88,11 +88,17 @@ lands on the same base, so
 
 (the √3 factors of Eq. (128) cancel against the per-winding power S/3) —
 but it is exactly the kind of derivation that belongs next to the existing
-center-tap FAQ. Note the lumping loses the per-winding split (acceptable,
-since the math model cannot represent it anyway).
+center-tap FAQ. Note the lumping loses the per-winding split (acceptable for
+a balanced series-drop model, but see below).
 
 The same issue applies to `center_tap`, but the arithmetic is less obvious
 — see item 20 for the required star-network leakage conversion.
+
+This lumped form also omits the core-loss (no-load) branch entirely and
+collapses the per-winding star that OpenDSS/PMD/GridLAB-D actually use.
+**Item 21** proposes giving `wye_delta`/`delta_wye` the same per-winding
+`_from`/`_to` + `g/b_no_load` field set as the two-winding types (with this
+lumped form retained as accepted legacy shorthand).
 
 ## 6. Wye-wye three-phase transformers have no spec type
 
@@ -536,6 +542,68 @@ to the field descriptions of `g_no_load` and `b_no_load` in both
 `single_phase` and `center_tap`. The location matters for KCL bookkeeping
 (it determines which KCL nodes the shunt admittance touches) and for
 correctly inferring the neutral current.
+
+## 21. Three-phase transformer (`wye_delta`/`delta_wye`) loss model: align with the OpenDSS reference
+
+Item 5 documents how to *lump* the wye/delta winding impedances onto a single
+`r_series`/`x_series` on the wye side, treating the delta winding as ideal.
+That lumping is exact for the **series voltage drop in a balanced solution**,
+but it is a simplification of the model OpenDSS, PMD and GridLAB-D actually
+use, and — like the original `center_tap` Γ-model (item 20) — it discards
+structure that matters once the unit is loaded unbalanced or once core losses
+are wanted. Two concrete gaps:
+
+1. **No core-loss (no-load) branch.** `wye_delta`/`delta_wye` have no
+   `g_no_load`/`b_no_load` fields, even though `single_phase`/`center_tap` do
+   and OpenDSS specifies `%noloadloss`/`%imag` for all transformer types. The
+   magnetising shunt is simply unrepresentable for three-phase units today.
+
+2. **Lumped wye-side series impedance, delta ideal.** The reference model
+   (OpenDSS, reproduced by PMD's `eng2math` `_build_loss_model!`) is a
+   **per-winding star (T) network**: each winding has its own series branch
+   (`r_s[w] = rw[w]·Zbase[w]`, leakage `xhl` referred to winding 1), with a
+   single core-loss shunt `y_sh = g_sh + jb_sh` at the star node, all wrapped
+   by the *ideal* turns-ratio transform that carries the Y/Δ geometry and the
+   √3. Lumping both windings onto the wye side collapses that star and removes
+   the natural attachment point for the shunt.
+
+**Suggestion (mirrors the item-20 resolution for `center_tap`):** give
+`wye_delta`/`delta_wye` the same per-winding field set as the two-winding
+types —
+
+> `r_series_from`, `x_series_from`, `r_series_to`, `x_series_to`,
+> `g_no_load`, `b_no_load`
+
+— and model them as a **per-winding T** behind the ideal Yd/Dy transform: the
+series impedance enters as a voltage drop on the winding currents (wye-side
+and delta-side branches each carry their own `R+jX`), and the no-load shunt
+sits at the from-side (HV) phase terminals, phase-to-ground — exactly the
+placement stated in item 20d. This makes the four three-phase subtypes share
+one impedance vocabulary, matches the OpenDSS/PMD/GridLAB-D reference, and is
+required for any core-loss-sensitive benchmark.
+
+The single `r_series`/`x_series` form (item 5) can remain accepted as a
+**legacy shorthand**: it maps onto `r_series_from`/`x_series_from` (wye-side
+winding) with the secondary branch zero, reproducing the present ideal-delta
+behaviour. BMOPFTools migrates legacy data this way so existing cases keep
+solving.
+
+*Mapping to source tools (for the FAQ):*
+
+| BMOPF field | OpenDSS | GridLAB-D |
+|---|---|---|
+| `r_series_from`/`r_series_to` | `%rs` per winding × Zbase | `resistance` (p.u.), per winding |
+| `x_series_from` | `xhl` × Zbase (referred to winding 1; secondary branch 0) | `reactance` (p.u.) |
+| `x_series_to` | `0` for a 2-winding unit | — |
+| `g_no_load` | `%noloadloss/100 × Snom/Vnom²` | from `shunt_impedance` (real) |
+| `b_no_load` | `−%imag/100 × Snom/Vnom²` | from `shunt_impedance` (imag) |
+
+Note the leakage placement: for a **2-winding** unit PMD's star conversion
+(`_sc2br_impedance`) puts the *entire* `xhl` on the winding-1 (HV) branch and
+**zero** on the LV branch — not an even split. The even `xhl/2` split used by
+some converters (including BMOPFTools' historical `single_phase` path) is a
+modelling choice, not what the OpenDSS math model does; the FAQ should state
+which convention the spec intends.
 
 For what it's worth to the TF: the data model proved very checkable. On top
 of the JSON Schema we implemented semantic checks for required fields,

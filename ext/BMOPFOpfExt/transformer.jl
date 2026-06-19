@@ -454,6 +454,16 @@ Neutral KCL at the transformer star point:
 ```
   cr_xf[wye,neutral] + Σ_k cr_xf[wye,ph_k] = 0
 ```
+
+Loss model (per-winding T behind the ideal transform — matches OpenDSS / PMD):
+  - `r/x_series_from` → series impedance on the from-side winding branch
+  - `r/x_series_to`   → series impedance on the to-side winding branch
+  - `g/b_no_load`     → core-loss shunt at the from-side (HV) phase terminals
+
+The series drop enters the voltage constraint; with all impedance fields zero
+the model collapses to the previous ideal transform.  A legacy single
+`r_series`/`x_series` is read by the converter/migration as `*_series_from`
+(wye side) with the to-side branch zero.
 """
 function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
                                wye_is_from::Bool)
@@ -487,13 +497,33 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
 
     length(ph_idx) < n_ph && @warn "Transformer '$tid': wye-side phase count < delta conductors."
 
+    # Series impedance per winding (Ω). r/x_series_from is the from-side winding,
+    # r/x_series_to the to-side winding. Map to wye/delta branches by side.
+    r_fr = Float64(get(xfmr, "r_series_from", 0.0))
+    x_fr = Float64(get(xfmr, "x_series_from", 0.0))
+    r_to = Float64(get(xfmr, "r_series_to",   0.0))
+    x_to = Float64(get(xfmr, "x_series_to",   0.0))
+    if wye_is_from
+        Rw, Xw = r_fr, x_fr   # wye branch = from
+        Rd, Xd = r_to, x_to   # delta branch = to
+    else
+        Rd, Xd = r_fr, x_fr   # delta branch = from
+        Rw, Xw = r_to, x_to   # wye branch = to
+    end
+    has_series = (Rw != 0.0 || Xw != 0.0 || Rd != 0.0 || Xd != 0.0)
+
     # Voltage constraints.
     # For Yd (wye_is_from=true):  V_del[k] - V_del[k_next] = n_eff*(V_wye[k] - V_n)
     # For Dy (wye_is_from=false): V_del[k] - V_del[k_prev] = n_eff*(V_wye[k] - V_n)
     # The Dy direction matches the ODS backward-delta convention.
+    #
+    # Per-winding T: subtract the series drop across the wye branch (current
+    # I_wye,k) and the delta branch (current I_del,k, referred through n_eff):
+    #   ΔV_del = n_eff·ΔV_wye − (Rw+jXw)·I_wye,k − n_eff·(Rd+jXd)·I_del,k
     for k in 1:n_ph
         t_del_k   = tm_del[k]
-        t_wye_ph  = tm_wye[ph_idx[k]]
+        ph_pos    = ph_idx[k]
+        t_wye_ph  = tm_wye[ph_pos]
         if wye_is_from
             k_other = (k % n_ph) + 1          # k_next for Yd
         else
@@ -501,22 +531,34 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
         end
         t_del_other = tm_del[k_other]
 
+        # Wye phase-to-neutral voltage (neutral implicitly zero if absent)
         if n_pos !== nothing
             t_wye_n = tm_wye[n_pos]
-            @constraint(model,
-                vr[(b_del, t_del_k)] - vr[(b_del, t_del_other)] ==
-                n_eff * (vr[(b_wye, t_wye_ph)] - vr[(b_wye, t_wye_n)]))
-            @constraint(model,
-                vi[(b_del, t_del_k)] - vi[(b_del, t_del_other)] ==
-                n_eff * (vi[(b_wye, t_wye_ph)] - vi[(b_wye, t_wye_n)]))
+            vr_wye_pn = vr[(b_wye, t_wye_ph)] - vr[(b_wye, t_wye_n)]
+            vi_wye_pn = vi[(b_wye, t_wye_ph)] - vi[(b_wye, t_wye_n)]
         else
-            # No neutral terminal: neutral voltage is implicitly zero (grounded elsewhere)
+            vr_wye_pn = vr[(b_wye, t_wye_ph)]
+            vi_wye_pn = vi[(b_wye, t_wye_ph)]
+        end
+
+        if has_series
+            Iwr = cr_xf[(tid, side_wye, ph_pos)]; Iwi = ci_xf[(tid, side_wye, ph_pos)]
+            Idr = cr_xf[(tid, side_del, k)];      Idi = ci_xf[(tid, side_del, k)]
             @constraint(model,
                 vr[(b_del, t_del_k)] - vr[(b_del, t_del_other)] ==
-                n_eff * vr[(b_wye, t_wye_ph)])
+                n_eff * vr_wye_pn
+                - (Rw * Iwr - Xw * Iwi)
+                - n_eff * (Rd * Idr - Xd * Idi))
             @constraint(model,
                 vi[(b_del, t_del_k)] - vi[(b_del, t_del_other)] ==
-                n_eff * vi[(b_wye, t_wye_ph)])
+                n_eff * vi_wye_pn
+                - (Rw * Iwi + Xw * Iwr)
+                - n_eff * (Rd * Idi + Xd * Idr))
+        else
+            @constraint(model,
+                vr[(b_del, t_del_k)] - vr[(b_del, t_del_other)] == n_eff * vr_wye_pn)
+            @constraint(model,
+                vi[(b_del, t_del_k)] - vi[(b_del, t_del_other)] == n_eff * vi_wye_pn)
         end
     end
 
@@ -550,16 +592,52 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
             sum(ci_xf[(tid, side_wye, ph)] for ph in ph_idx) == 0)
     end
 
+    # ── No-load (core-loss) shunt at the from-side phase terminals ─────────────
+    # OpenDSS places the magnetising branch on winding 1 (from side), phase-to-
+    # ground. Split equally across the from-side phase conductors.
+    G_total = Float64(get(xfmr, "g_no_load", 0.0))
+    B_total = Float64(get(xfmr, "b_no_load", 0.0))
+    # The from side is the wye phases (Yd) or the delta phases (Dy).
+    from_is_wye = wye_is_from
+    n_from_ph   = from_is_wye ? length(ph_idx) : n_ph
+    Gph = (n_from_ph > 0) ? G_total / n_from_ph : 0.0
+    Bph = (n_from_ph > 0) ? B_total / n_from_ph : 0.0
+    has_shunt = (Gph != 0.0 || Bph != 0.0)
+
     # ── KCL contributions ─────────────────────────────────────────────────────
+    # From-side phase terminals carry winding current + magnetising shunt.
     for k in 1:n_wye
         t = tm_wye[k]
-        _kcl_add!(kcl_r, kcl_i, b_wye, t,
-                  -cr_xf[(tid, side_wye, k)], -ci_xf[(tid, side_wye, k)])
+        is_from_phase = from_is_wye && (k in ph_idx)
+        if is_from_phase && has_shunt
+            icr = JuMP.AffExpr(0.0); ici = JuMP.AffExpr(0.0)
+            JuMP.add_to_expression!(icr,  1.0, cr_xf[(tid, side_wye, k)])
+            JuMP.add_to_expression!(ici,  1.0, ci_xf[(tid, side_wye, k)])
+            JuMP.add_to_expression!(icr,  Gph, vr[(b_wye, t)])
+            JuMP.add_to_expression!(icr, -Bph, vi[(b_wye, t)])
+            JuMP.add_to_expression!(ici,  Gph, vi[(b_wye, t)])
+            JuMP.add_to_expression!(ici,  Bph, vr[(b_wye, t)])
+            _kcl_add!(kcl_r, kcl_i, b_wye, t, -icr, -ici)
+        else
+            _kcl_add!(kcl_r, kcl_i, b_wye, t,
+                      -cr_xf[(tid, side_wye, k)], -ci_xf[(tid, side_wye, k)])
+        end
     end
     for k in 1:n_ph
         t = tm_del[k]
-        _kcl_add!(kcl_r, kcl_i, b_del, t,
-                  -cr_xf[(tid, side_del, k)], -ci_xf[(tid, side_del, k)])
+        if !from_is_wye && has_shunt
+            icr = JuMP.AffExpr(0.0); ici = JuMP.AffExpr(0.0)
+            JuMP.add_to_expression!(icr,  1.0, cr_xf[(tid, side_del, k)])
+            JuMP.add_to_expression!(ici,  1.0, ci_xf[(tid, side_del, k)])
+            JuMP.add_to_expression!(icr,  Gph, vr[(b_del, t)])
+            JuMP.add_to_expression!(icr, -Bph, vi[(b_del, t)])
+            JuMP.add_to_expression!(ici,  Gph, vi[(b_del, t)])
+            JuMP.add_to_expression!(ici,  Bph, vr[(b_del, t)])
+            _kcl_add!(kcl_r, kcl_i, b_del, t, -icr, -ici)
+        else
+            _kcl_add!(kcl_r, kcl_i, b_del, t,
+                      -cr_xf[(tid, side_del, k)], -ci_xf[(tid, side_del, k)])
+        end
     end
 
     # ── Current magnitude limits ───────────────────────────────────────────────
