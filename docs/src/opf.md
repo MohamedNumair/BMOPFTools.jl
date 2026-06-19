@@ -1,5 +1,28 @@
 # Optimal power flow
 
+Despite the name, the ambition of this Task Force extends well beyond the
+classical OPF problem of minimising generation cost subject to network
+constraints.  The unifying theme of the benchmark problems targeted here is
+the need to **accurately represent distribution network physics** rather than
+any particular objective function.  Generation cost minimisation is a
+convenient and well-posed starting point — it admits a unique solution, is
+straightforward to compare across solvers, and is equivalent to loss
+minimisation under mild conditions — but the same network physics underpins a
+much broader class of distribution-network-constrained optimisation problems
+of practical relevance: maximum load delivery, conservation voltage reduction
+(CVR), Dynamic Operating Envelopes (DOEs) for distributed energy resources,
+and distribution system state estimation (DSSE).
+
+What these problems share is not a common objective but a common requirement:
+a faithful, conductor-level representation of an unbalanced network subject
+to a selectable set of bounds.  Voltage bounds, current limits, and power
+constraints are therefore **optional** in the data model, reflecting the fact
+that different problem formulations will activate different subsets of the
+feasible region.  The intent is a reusable foundation across all such problem
+classes, not merely infrastructure for a single OPF problem definition.
+
+---
+
 BMOPFTools ships a **four-wire rectangular current–voltage (IVR-EN)** optimal
 power flow engine as a Julia package extension.  It activates automatically when
 both JuMP and Ipopt are loaded:
