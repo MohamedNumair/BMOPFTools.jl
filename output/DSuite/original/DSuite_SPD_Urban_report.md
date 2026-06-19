@@ -1,7 +1,7 @@
 # BMOPF Network Summary: DSuite_SPD_Urban
 
-**Generated:** 2026-06-18 09:32:05  
-**Findings:** 1 errors · 50 warnings · 25 info  
+**Generated:** 2026-06-19 10:38:03  
+**Findings:** 1 errors · 50 warnings · 27 info  
 **Convention:** MV_6.4kV: mixed; LV_242V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -104,9 +104,9 @@
 
 > 🟡 **[W.OPS.IMPORT_DEPENDENT]** Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.27 MW).
 > 🟡 **[W.OPS.LINE_UNCONSTRAINED]** 1 of 1218 lines have no thermal limit (i_max or s_max) — OPF thermal constraints will be missing.
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '1'.
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '2'.
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '1'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -210,7 +210,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 76 (1 errors, 50 warnings, 25 info)
+**Total findings:** 78 (1 errors, 50 warnings, 27 info)
 
 ### 🔴 Errors
 
@@ -326,11 +326,11 @@
   6 lines share linecode 'busbar' with similar length (±10%) — electrically near-identical.
 - **[I.DIV.LINE_SYMMETRIC]** `line`  
   4 lines share linecode 'default' with similar length (±10%) — electrically near-identical.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '1'.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '2'.
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '3'.
 - **[I.PROV.NEGATIVE_MUTUAL_R]** `cable_230v_0.05_cu`  
   Linecode 'cable_230v_0.05_cu' has negative mutual resistance entries [(1, 2), (1, 3), (2, 3)] — unusual; Carson-derived matrices have positive mutuals.
@@ -358,6 +358,10 @@
   1220 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.SCHEMA.VERSION_UNKNOWN]** `network`  
+  Spec version 'unknown' has no bundled JSON Schema; structural validation skipped. Unknown-field catalogue still runs.
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
+  bus has field(s) not in the BMOPF schema: latitude, longitude, v_declared.
 - **[I.SCHEMA.UNKNOWN_FIELDS]** `network`  
   meta has field(s) not in the BMOPF schema: reference, source.
 - **[I.DOM.LINE_IMPEDANCE_SPREAD]** `line`  

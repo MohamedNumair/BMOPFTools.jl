@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_11 / Feeder_3
 
-**Generated:** 2026-06-18 09:32:34  
-**Findings:** 0 errors · 122 warnings · 6 info  
+**Generated:** 2026-06-19 10:38:33  
+**Findings:** 0 errors · 122 warnings · 8 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -161,7 +161,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 128 (0 errors, 122 warnings, 6 info)
+**Total findings:** 130 (0 errors, 122 warnings, 8 info)
 
 ### 🟡 Warnings
 
@@ -420,6 +420,10 @@
   1078 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `[sourcebus]`  
+  Additional property not defined in schema at [bus][sourcebus].
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
+  bus has field(s) not in the BMOPF schema: v_declared.
 - **[I.RED.MERGEABLE_LINES]** `line`  
   89 group(s) of series lines (861 lines total) can be merged — intermediate buses have no other connections.
 - **[I.BENCH.AUGMENTATION]** `network`  

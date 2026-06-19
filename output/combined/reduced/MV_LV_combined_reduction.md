@@ -1,6 +1,6 @@
 # Simplification log: MV_LV_combined
 
-**Generated:** 2026-06-18 09:40:15  
+**Generated:** 2026-06-19 10:46:28  
 **Buses:** 3409 → 2169 (−1240)  
 **Lines:** 3096 → 2135 (−961)  
 **Operations:** 1450

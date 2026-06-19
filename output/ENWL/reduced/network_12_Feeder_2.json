@@ -3669,7 +3669,7 @@
   },
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-17T23:32:39Z",
+    "created": "2026-06-19T00:38:39Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -25621,6 +25621,7 @@
       ]
     },
     "sourcebus": {
+      "v_declared": 240.17771198288432,
       "terminal_names": [
         "1",
         "2",

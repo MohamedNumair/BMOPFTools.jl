@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_17 / Feeder_2
 
-**Generated:** 2026-06-18 09:33:10  
-**Findings:** 0 errors · 39 warnings · 8 info  
+**Generated:** 2026-06-19 10:39:11  
+**Findings:** 0 errors · 39 warnings · 10 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -75,7 +75,7 @@
 | Generation/load ratio | 0.0% |
 
 > 🟡 **[W.OPS.IMPORT_DEPENDENT]** Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.01 MW).
-> 🔵 **[I.OPR.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '2'.
+> 🔵 **[I.OPS.UNLOADED_PHASE]** Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '2'.
 
 ## 6. Infeasibility Pre-flight
 
@@ -162,7 +162,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 47 (0 errors, 39 warnings, 8 info)
+**Total findings:** 49 (0 errors, 39 warnings, 10 info)
 
 ### 🟡 Warnings
 
@@ -247,7 +247,7 @@
 
 ### 🔵 Info
 
-- **[I.OPR.UNLOADED_PHASE]** `network`  
+- **[I.OPS.UNLOADED_PHASE]** `network`  
   Galvanic zone anchored at bus 'sourcebus' has no load connected to phase terminal '2'.
 - **[I.PROV.NO_PI_SHUNT]** `linecode`  
   All 6 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
@@ -257,6 +257,10 @@
   539 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `[sourcebus]`  
+  Additional property not defined in schema at [bus][sourcebus].
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
+  bus has field(s) not in the BMOPF schema: v_declared.
 - **[I.DOM.LINE_IMPEDANCE_SPREAD]** `line`  
   Adjacent lines 'line26' and 'line27' at bus '27' have ||Z||_F ratio 3000.0× — large impedance contrasts between neighbouring lines cause ill-conditioned KKT Jacobians; consider per-unit scaling or network reformulation.
 - **[I.RED.MERGEABLE_LINES]** `line`  

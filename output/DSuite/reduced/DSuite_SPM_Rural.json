@@ -1119,7 +1119,7 @@
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
     "source": "D-Suite Alpha v1.1",
     "reference": "M. Deakin, DOI: 10.25405/data.ncl.27175317",
-    "created": "2026-06-17T23:32:05Z",
+    "created": "2026-06-19T00:38:03Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -1509,6 +1509,7 @@
       ]
     },
     "17382310": {
+      "latitude": -0.0129,
       "_pmd": {
         "lat": -0.0129,
         "lon": -0.00068
@@ -1517,9 +1518,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": -0.00068
     },
     "9112626": {
+      "latitude": 0,
       "_pmd": {
         "lat": 0,
         "lon": 0
@@ -1532,9 +1535,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0
     },
     "17582392": {
+      "latitude": 0.00115,
       "_pmd": {
         "lat": 0.00115,
         "lon": 0.0211
@@ -1547,9 +1552,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0211
     },
     "14487239": {
+      "latitude": -0.00108,
       "_pmd": {
         "lat": -0.00108,
         "lon": 0.0205
@@ -1562,9 +1569,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0205
     },
     "17582385": {
+      "latitude": -0.00072,
       "_pmd": {
         "lat": -0.00072,
         "lon": -0.0163
@@ -1577,9 +1586,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": -0.0163
     },
     "14487256": {
+      "latitude": 0.0105,
       "_pmd": {
         "lat": 0.0105,
         "lon": 0.0314
@@ -1592,9 +1603,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0314
     },
     "17382315": {
+      "latitude": 0.00154,
       "_pmd": {
         "lat": 0.00154,
         "lon": 0.0485
@@ -1607,9 +1620,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0485
     },
     "14487248": {
+      "latitude": 0.00319,
       "_pmd": {
         "lat": 0.00319,
         "lon": 0.031
@@ -1622,9 +1637,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.031
     },
     "14487250": {
+      "latitude": 0.00362,
       "_pmd": {
         "lat": 0.00362,
         "lon": 0.0343
@@ -1637,9 +1654,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0343
     },
     "17582398": {
+      "latitude": 0.015,
       "_pmd": {
         "lat": 0.015,
         "lon": 0.0352
@@ -1652,9 +1671,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0352
     },
     "17582399": {
+      "latitude": -0.00185,
       "_pmd": {
         "lat": -0.00185,
         "lon": 0.0362
@@ -1663,9 +1684,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 0.0362
     },
     "14487230": {
+      "latitude": 0.00653,
       "_pmd": {
         "lat": 0.00653,
         "lon": -0.00968
@@ -1678,9 +1701,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": -0.00968
     },
     "14487264": {
+      "latitude": 0.00417,
       "_pmd": {
         "lat": 0.00417,
         "lon": 0.0488
@@ -1693,9 +1718,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0488
     },
     "17582400": {
+      "latitude": 0.00485,
       "_pmd": {
         "lat": 0.00485,
         "lon": 0.0457
@@ -1704,9 +1731,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 0.0457
     },
     "14487261": {
+      "latitude": 0.0227,
       "_pmd": {
         "lat": 0.0227,
         "lon": 0.0299
@@ -1719,9 +1748,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0299
     },
     "14489653": {
+      "latitude": 0.00393,
       "_pmd": {
         "lat": 0.00393,
         "lon": 0.05
@@ -1734,9 +1765,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.05
     },
     "17582388": {
+      "latitude": -0.00024,
       "_pmd": {
         "lat": -0.00024,
         "lon": 0
@@ -1749,9 +1782,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0
     },
     "17382325": {
+      "latitude": -0.0207,
       "_pmd": {
         "lat": -0.0207,
         "lon": -0.00731
@@ -1764,9 +1799,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": -0.00731
     },
     "14489647": {
+      "latitude": 0.00391,
       "_pmd": {
         "lat": 0.00391,
         "lon": 0.0409
@@ -1779,9 +1816,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0409
     },
     "17382314": {
+      "latitude": 0.00101,
       "_pmd": {
         "lat": 0.00101,
         "lon": 0.0353
@@ -1790,9 +1829,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 0.0353
     },
     "14487219": {
+      "latitude": -0.00341,
       "_pmd": {
         "lat": -0.00341,
         "lon": -0.00758
@@ -1805,9 +1846,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": -0.00758
     },
     "17582394": {
+      "latitude": 0.00122,
       "_pmd": {
         "lat": 0.00122,
         "lon": 0.0302
@@ -1816,9 +1859,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 0.0302
     },
     "14489699": {
+      "latitude": -0.00513,
       "_pmd": {
         "lat": -0.00513,
         "lon": 0.0025
@@ -1831,9 +1876,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0025
     },
     "14487241": {
+      "latitude": -0.00319,
       "_pmd": {
         "lat": -0.00319,
         "lon": 0.029
@@ -1846,9 +1893,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.029
     },
     "14489704": {
+      "latitude": -0.00122,
       "_pmd": {
         "lat": -0.00122,
         "lon": -0.0135
@@ -1861,9 +1910,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": -0.0135
     },
     "14487237": {
+      "latitude": 0.00372,
       "_pmd": {
         "lat": 0.00372,
         "lon": 0.0292
@@ -1876,9 +1927,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0292
     },
     "17582387": {
+      "latitude": -0.000984,
       "_pmd": {
         "lat": -0.000984,
         "lon": -0.00877
@@ -1887,9 +1940,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": -0.00877
     },
     "17582386": {
+      "latitude": 0.00173,
       "_pmd": {
         "lat": 0.00173,
         "lon": -0.00913
@@ -1898,9 +1953,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": -0.00913
     },
     "14487228": {
+      "latitude": 0.00178,
       "_pmd": {
         "lat": 0.00178,
         "lon": -0.00715
@@ -1913,9 +1970,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": -0.00715
     },
     "14489678": {
+      "latitude": -0.016,
       "_pmd": {
         "lat": -0.016,
         "lon": -0.00989
@@ -1928,9 +1987,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": -0.00989
     },
     "17582384": {
+      "latitude": -0.00072,
       "_pmd": {
         "lat": -0.00072,
         "lon": -0.0164
@@ -1939,9 +2000,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": -0.0164
     },
     "14487234": {
+      "latitude": -0.0035,
       "_pmd": {
         "lat": -0.0035,
         "lon": 0.0171
@@ -1954,9 +2017,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0171
     },
     "14489696": {
+      "latitude": -0.00545,
       "_pmd": {
         "lat": -0.00545,
         "lon": 0.00136
@@ -1969,9 +2034,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.00136
     },
     "14485921": {
+      "latitude": -0.0178,
       "_pmd": {
         "lat": -0.0178,
         "lon": -0.00632
@@ -1984,9 +2051,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": -0.00632
     },
     "14489707": {
+      "latitude": -0.00115,
       "_pmd": {
         "lat": -0.00115,
         "lon": 0.0401
@@ -1999,9 +2068,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0401
     },
     "14487253": {
+      "latitude": 0.0136,
       "_pmd": {
         "lat": 0.0136,
         "lon": 0.0338
@@ -2014,9 +2085,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0338
     },
     "14487225": {
+      "latitude": -0.00084,
       "_pmd": {
         "lat": -0.00084,
         "lon": -0.00674
@@ -2029,9 +2102,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": -0.00674
     },
     "14489644": {
+      "latitude": 0.00415,
       "_pmd": {
         "lat": 0.00415,
         "lon": 0.0422
@@ -2044,9 +2119,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0422
     },
     "17382313": {
+      "latitude": -0.000816,
       "_pmd": {
         "lat": -0.000816,
         "lon": 0.0089
@@ -2055,9 +2132,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 0.0089
     },
     "14487245": {
+      "latitude": -0.00276,
       "_pmd": {
         "lat": -0.00276,
         "lon": 0.0345
@@ -2070,9 +2149,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0345
     },
     "17582393": {
+      "latitude": -0.0011,
       "_pmd": {
         "lat": -0.0011,
         "lon": 0.0301
@@ -2081,9 +2162,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 0.0301
     },
     "14488442": {
+      "latitude": 0.00446,
       "_pmd": {
         "lat": 0.00446,
         "lon": 0.0437
@@ -2096,9 +2179,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0437
     },
     "14487270": {
+      "latitude": -0.0137,
       "_pmd": {
         "lat": -0.0137,
         "lon": 0.00233
@@ -2111,9 +2196,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.00233
     },
     "17582391": {
+      "latitude": -0.00377,
       "_pmd": {
         "lat": -0.00377,
         "lon": 0.0192
@@ -2122,9 +2209,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 0.0192
     },
     "17582397": {
+      "latitude": 0.0215,
       "_pmd": {
         "lat": 0.0215,
         "lon": 0.035
@@ -2133,9 +2222,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 0.035
     },
     "14489680": {
+      "latitude": -0.0129,
       "_pmd": {
         "lat": -0.0129,
         "lon": 0.00868
@@ -2148,9 +2239,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.00868
     },
     "17382311": {
+      "latitude": -0.00377,
       "_pmd": {
         "lat": -0.00377,
         "lon": 1.45e-5
@@ -2159,9 +2252,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 1.45e-5
     },
     "14489659": {
+      "latitude": 0.00365,
       "_pmd": {
         "lat": 0.00365,
         "lon": 0.0529
@@ -2174,9 +2269,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0529
     },
     "17582396": {
+      "latitude": 0.00751,
       "_pmd": {
         "lat": 0.00751,
         "lon": 0.0353
@@ -2185,9 +2282,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 0.0353
     },
     "17382322": {
+      "latitude": -0.00437,
       "_pmd": {
         "lat": -0.00437,
         "lon": -0.00013
@@ -2196,9 +2295,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": -0.00013
     },
     "14487232": {
+      "latitude": -0.00257,
       "_pmd": {
         "lat": -0.00257,
         "lon": 0.0113
@@ -2211,9 +2312,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0113
     },
     "14489661": {
+      "latitude": -0.0216,
       "_pmd": {
         "lat": -0.0216,
         "lon": -0.0069
@@ -2226,9 +2329,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": -0.0069
     },
     "14487258": {
+      "latitude": 0.00919,
       "_pmd": {
         "lat": 0.00919,
         "lon": 0.0292
@@ -2241,9 +2346,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0292
     },
     "14489710": {
+      "latitude": -0.00125,
       "_pmd": {
         "lat": -0.00125,
         "lon": 0.0374
@@ -2256,9 +2363,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0374
     },
     "14489656": {
+      "latitude": 0.00377,
       "_pmd": {
         "lat": 0.00377,
         "lon": 0.0516
@@ -2271,9 +2380,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0516
     },
     "17582390": {
+      "latitude": 0.00125,
       "_pmd": {
         "lat": 0.00125,
         "lon": 0.0152
@@ -2282,9 +2393,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 0.0152
     },
     "17382312": {
+      "latitude": -0.0131,
       "_pmd": {
         "lat": -0.0131,
         "lon": 0.00794
@@ -2293,9 +2406,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 0.00794
     },
     "17582395": {
+      "latitude": 0.00989,
       "_pmd": {
         "lat": 0.00989,
         "lon": 0.0305
@@ -2304,9 +2419,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 0.0305
     },
     "9586139": {
+      "latitude": -4.8e-5,
       "_pmd": {
         "lat": -4.8e-5,
         "lon": 0
@@ -2315,9 +2432,11 @@
         "1",
         "2",
         "3"
-      ]
+      ],
+      "longitude": 0
     },
     "14487267": {
+      "latitude": 0.0047,
       "_pmd": {
         "lat": 0.0047,
         "lon": 0.045
@@ -2330,9 +2449,11 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.045
     },
     "sourcebus": {
+      "v_declared": 6350.852961085883,
       "terminal_names": [
         "1",
         "2",
@@ -2344,6 +2465,7 @@
       ]
     },
     "14489686": {
+      "latitude": 0.00199,
       "_pmd": {
         "lat": 0.00199,
         "lon": 0.0138
@@ -2356,7 +2478,8 @@
       ],
       "perfectly_grounded_terminals": [
         "n"
-      ]
+      ],
+      "longitude": 0.0138
     }
   },
   "load": {
