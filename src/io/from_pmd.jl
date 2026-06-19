@@ -583,9 +583,33 @@ function _classify_transformer(id::String, pmd_xfmr::Dict{String,Any},
         end
     end
 
+    # No-load branch: PMD `noloadloss` (P_noload/S_rated) and `cmag`
+    # (|I_mag|/I_rated) → BMOPF g_no_load/b_no_load (S) referred to from side.
+    # OpenDSS places the no-load branch on winding 1 (from side).
+    # G = P_noload / V_ref_from²  = noloadloss · s_rating / v_ref_from²
+    # |Y| = |I_mag| / V_ref_from  = cmag · (s_rating/V_ref_from) / V_ref_from
+    #      = cmag · s_rating / V_ref_from²
+    # B = sqrt(|Y|² − G²)  (capacitive convention: B > 0 draws lagging I)
+    noloadloss = Float64(get(pmd_xfmr, "noloadloss", 0.0))
+    cmag       = Float64(get(pmd_xfmr, "cmag",       0.0))
+    if (noloadloss > 0.0 || cmag > 0.0) &&
+       haskey(xfmr, "v_ref_from") && haskey(xfmr, "s_rating") && xfmr["s_rating"] > 0
+        vf  = Float64(xfmr["v_ref_from"])
+        s   = Float64(xfmr["s_rating"])
+        y_base = s / vf^2
+        G = noloadloss * y_base
+        Y_mag = cmag * y_base
+        B = Y_mag^2 > G^2 ? sqrt(Y_mag^2 - G^2) : 0.0
+        G > 0.0 && (xfmr["g_no_load"] = G)
+        B > 0.0 && (xfmr["b_no_load"] = B)
+    elseif (noloadloss > 0.0 || cmag > 0.0)
+        @warn "Transformer '$id': cannot convert noloadloss/cmag to S — " *
+              "missing v_ref_from or s_rating. No-load branch omitted."
+    end
+
     _carry_extra(xfmr, pmd_xfmr,
         ("bus", "configuration", "connections", "vm_nom", "sm_nom",
-         "rw", "xsc", "nwinding", "status", "source_id"))
+         "rw", "xsc", "noloadloss", "cmag", "nwinding", "status", "source_id"))
 
     subtype, xfmr
 end
