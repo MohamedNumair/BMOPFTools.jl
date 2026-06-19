@@ -1,37 +1,124 @@
-# Load constraints — constant-power model, rectangular IVR.
+# Load constraints — constant-power, ZIP, and exponential models, rectangular IVR.
 #
-# Current variables crd/cid are indexed by phase conductor position (1-based)
-# within the phase subset of terminal_map (neutral excluded from variables).
+# Current variables crd/cid are the TOTAL sub-load current (one per phase
+# conductor for WYE/SINGLE_PHASE, one per element for DELTA; neutral excluded).
+# KCL is therefore unchanged across all load models — only the power equation
+# pinning crd/cid differs.
 #
-# ── WYE / SINGLE_PHASE ────────────────────────────────────────────────────
-# For each phase k (position in the phase-only list):
-#   t_ph = phase terminal, t_n = neutral terminal
-#   P_k = (vr[t_ph] - vr[t_n]) * crd[k] + (vi[t_ph] - vi[t_n]) * cid[k]
-#   Q_k = (vi[t_ph] - vi[t_n]) * crd[k] - (vr[t_ph] - vr[t_n]) * cid[k]
+# Realized power per sub-load (bilinear in voltage drop Δv and current):
+#   P = Δvr·crd + Δvi·cid
+#   Q = Δvi·crd − Δvr·cid
 #
-# Neutral current enforced by KCL (sum of phase currents flows back at neutral).
-# KCL contributions: bus at t_ph -= crd[k], bus at t_n += crd[k].
-#
-# ── DELTA ─────────────────────────────────────────────────────────────────
-# Element k connects terminal_map[k] (positive) to terminal_map[k%n+1] (negative).
-#   P_k = (vr[t_pos] - vr[t_neg]) * crd[k] + (vi[t_pos] - vi[t_neg]) * cid[k]
-#   Q_k = (vi[t_pos] - vi[t_neg]) * crd[k] - (vr[t_pos] - vr[t_neg]) * cid[k]
-# KCL: at t_pos -= crd[k], at t_neg += crd[k].
+# Voltage-dependent models introduce a squared-voltage-drop variable
+#   W = Δvr² + Δvi²            (bounded: (f·Vnom)² ≤ W ≤ (c·Vnom)²)
+# and, only when a constant-current term is present, s = √W (s ≥ 0, s² = W).
+# The right-hand side is then:
+#   ZIP:          P = p_nom·(αZ·W/Vnom² + αI·s/Vnom + αP)
+#   exponential:  P = p_nom·(W/Vnom²)^(γP/2)
+# Integer exponents γ ∈ {0,1,2} are routed to the constant-P/I/Z quadratic
+# terms above so the formulation stays quadratic; only genuinely non-integer
+# exponents emit the nonlinear power term.
+
+# W box, as a fraction of Vnom. These are conditioning bounds (the operational
+# voltage limits are enforced separately on the bus voltages), so they are
+# deliberately wider than any supply standard.
+const _W_FLOOR_FRAC = 0.5
+const _W_CEIL_FRAC  = 1.5
+
+# Nominal voltage for sub-load k (length-1 v_nom broadcasts to all sub-loads).
+function _load_vnom_k(load, k::Int)
+    v = get(load, "v_nom", nothing)
+    v === nothing && error("Load model requires v_nom but none is present.")
+    vv = v isa AbstractVector ? Float64.(v) : [Float64(v)]
+    length(vv) == 1 ? vv[1] : vv[k]
+end
+
+# Scalar coefficient at sub-load k (length-1 broadcasts; absent → 0).
+function _coeff_k(load, key::String, k::Int)
+    c = get(load, key, nothing)
+    c === nothing && return 0.0
+    c isa AbstractVector ? Float64(length(c) == 1 ? c[1] : c[k]) : Float64(c)
+end
+
+# ZIP coefficients (Z, I, P) for one component family at sub-load k.
+# If the family is entirely absent → constant power (0,0,1); otherwise missing
+# members default to 0 (the validator warns if Z+I+P ≠ 1).
+function _zip_coeffs(load, zkey, ikey, pkey, k::Int)
+    if get(load, zkey, nothing) === nothing &&
+       get(load, ikey, nothing) === nothing &&
+       get(load, pkey, nothing) === nothing
+        return (0.0, 0.0, 1.0)
+    end
+    (_coeff_k(load, zkey, k), _coeff_k(load, ikey, k), _coeff_k(load, pkey, k))
+end
+
+# Component right-hand-side as (const, W-coef, s-coef, nonlinear) terms.
+# `nl` is `nothing` for the quadratic-representable cases, or `(base, γ)` for a
+# genuinely non-integer exponential exponent.
+function _component_terms(load, zkeys, gkey, base::Float64, Vnom::Float64, k::Int)
+    model = get(load, "model", "constant_power")
+    if model == "constant_impedance"
+        return (cc = 0.0, cW = base / Vnom^2, cs = 0.0, nl = nothing)
+    elseif model == "constant_current"
+        return (cc = 0.0, cW = 0.0, cs = base / Vnom, nl = nothing)
+    elseif model == "zip"
+        (cz, ci, cp) = _zip_coeffs(load, zkeys[1], zkeys[2], zkeys[3], k)
+        return (cc = base * cp, cW = base * cz / Vnom^2, cs = base * ci / Vnom, nl = nothing)
+    else  # exponential
+        γ = _coeff_k(load, gkey, k)
+        γ == 0.0 && return (cc = base,            cW = 0.0,             cs = 0.0,            nl = nothing)
+        γ == 2.0 && return (cc = 0.0,             cW = base / Vnom^2,   cs = 0.0,            nl = nothing)
+        γ == 1.0 && return (cc = 0.0,             cW = 0.0,             cs = base / Vnom,    nl = nothing)
+        return (cc = 0.0, cW = 0.0, cs = 0.0, nl = (base, γ))
+    end
+end
+
+function _rhs_expr(model, t, W, s, Vnom::Float64)
+    if t.nl !== nothing
+        base, γ = t.nl
+        return @expression(model, base * (W / Vnom^2)^(γ / 2))
+    end
+    e = @expression(model, t.cc + t.cW * W)
+    t.cs != 0.0 && (e = @expression(model, e + t.cs * s))
+    e
+end
+
+# Pin one sub-load's realized power (P_tot, Q_tot) to its model.
+function _add_subload_power!(model, load, lid, k, P_tot, Q_tot, p0, q0, dvr, dvi)
+    if get(load, "model", "constant_power") == "constant_power"
+        @constraint(model, P_tot == p0)
+        @constraint(model, Q_tot == q0)
+        return
+    end
+
+    Vnom = _load_vnom_k(load, k)
+    pt = _component_terms(load, ("alpha_z","alpha_i","alpha_p"), "gamma_p", p0, Vnom, k)
+    qt = _component_terms(load, ("beta_z","beta_i","beta_p"),    "gamma_q", q0, Vnom, k)
+
+    W = @variable(model, base_name = "W_$(lid)_$(k)",
+                  lower_bound = (_W_FLOOR_FRAC * Vnom)^2,
+                  upper_bound = (_W_CEIL_FRAC  * Vnom)^2)
+    @constraint(model, W == dvr^2 + dvi^2)
+
+    s = nothing
+    if pt.cs != 0.0 || qt.cs != 0.0
+        s = @variable(model, base_name = "s_$(lid)_$(k)",
+                      lower_bound = _W_FLOOR_FRAC * Vnom,
+                      upper_bound = _W_CEIL_FRAC  * Vnom)
+        @constraint(model, s^2 == W)
+    end
+
+    @constraint(model, P_tot == _rhs_expr(model, pt, W, s, Vnom))
+    @constraint(model, Q_tot == _rhs_expr(model, qt, W, s, Vnom))
+end
 
 """
     _add_load_constraints!(model, net, vars, kcl_r, kcl_i)
 
-Add constant-power (fixed P and Q) load constraints for all loads and register
-load currents in the KCL accumulators.
-
-Both WYE and DELTA topologies use the bilinear rectangular power equations:
-```
-  P_k = Δvr·crd[k] + Δvi·cid[k]  ==  p_nom[k]
-  Q_k = Δvi·crd[k] − Δvr·cid[k]  ==  q_nom[k]
-```
-where `Δv` is phase-to-neutral (WYE) or line-to-line (DELTA).
-Neutral return current flows through KCL automatically and is not an
-independent variable.
+Add load power-balance constraints (constant-power / ZIP / exponential) for all
+loads and register load currents in the KCL accumulators. Both WYE/SINGLE_PHASE
+and DELTA topologies are supported; the neutral return current flows through KCL
+automatically and is not an independent variable.
 """
 function _add_load_constraints!(model, net, vars, kcl_r, kcl_i)
     vr = vars[:vr]; vi = vars[:vi]
@@ -54,25 +141,20 @@ function _add_load_constraints!(model, net, vars, kcl_r, kcl_i)
                 t_ph = tm[ph]
                 vr_ph = vr[(bus, t_ph)]; vi_ph = vi[(bus, t_ph)]
                 if t_n !== nothing
-                    vr_n = vr[(bus, t_n)]; vi_n = vi[(bus, t_n)]
-                    dvr = @expression(model, vr_ph - vr_n)
-                    dvi = @expression(model, vi_ph - vi_n)
+                    dvr = @expression(model, vr_ph - vr[(bus, t_n)])
+                    dvi = @expression(model, vi_ph - vi[(bus, t_n)])
                 else
                     dvr = vr_ph; dvi = vi_ph
                 end
 
-                # P: bilinear
-                @constraint(model,
-                    dvr * crd[(lid,idx)] + dvi * cid[(lid,idx)] == p_nom[idx])
-                # Q: bilinear
-                @constraint(model,
-                    dvi * crd[(lid,idx)] - dvr * cid[(lid,idx)] == q_nom[idx])
+                P_tot = @expression(model, dvr * crd[(lid,idx)] + dvi * cid[(lid,idx)])
+                Q_tot = @expression(model, dvi * crd[(lid,idx)] - dvr * cid[(lid,idx)])
+                _add_subload_power!(model, load, lid, idx, P_tot, Q_tot,
+                                    p_nom[idx], q_nom[idx], dvr, dvi)
 
-                # KCL: phase terminal loses crd, neutral terminal gains crd
                 _kcl_add!(kcl_r, kcl_i, bus, t_ph, -crd[(lid,idx)], -cid[(lid,idx)])
-                if t_n !== nothing
+                t_n !== nothing &&
                     _kcl_add!(kcl_r, kcl_i, bus, t_n, crd[(lid,idx)], cid[(lid,idx)])
-                end
             end
 
         elseif cfg == "DELTA"
@@ -81,15 +163,13 @@ function _add_load_constraints!(model, net, vars, kcl_r, kcl_i)
                 length(p_nom) >= k || continue
                 t_pos = tm[k]
                 t_neg = tm[(k % n_c) + 1]
-                vr_pos = vr[(bus, t_pos)]; vi_pos = vi[(bus, t_pos)]
-                vr_neg = vr[(bus, t_neg)]; vi_neg = vi[(bus, t_neg)]
-                dvr = @expression(model, vr_pos - vr_neg)
-                dvi = @expression(model, vi_pos - vi_neg)
+                dvr = @expression(model, vr[(bus, t_pos)] - vr[(bus, t_neg)])
+                dvi = @expression(model, vi[(bus, t_pos)] - vi[(bus, t_neg)])
 
-                @constraint(model,
-                    dvr * crd[(lid,k)] + dvi * cid[(lid,k)] == p_nom[k])
-                @constraint(model,
-                    dvi * crd[(lid,k)] - dvr * cid[(lid,k)] == q_nom[k])
+                P_tot = @expression(model, dvr * crd[(lid,k)] + dvi * cid[(lid,k)])
+                Q_tot = @expression(model, dvi * crd[(lid,k)] - dvr * cid[(lid,k)])
+                _add_subload_power!(model, load, lid, k, P_tot, Q_tot,
+                                    p_nom[k], q_nom[k], dvr, dvi)
 
                 _kcl_add!(kcl_r, kcl_i, bus, t_pos, -crd[(lid,k)], -cid[(lid,k)])
                 _kcl_add!(kcl_r, kcl_i, bus, t_neg,  crd[(lid,k)],  cid[(lid,k)])

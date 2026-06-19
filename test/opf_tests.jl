@@ -813,4 +813,77 @@
         @test 0.1 < vm_hv_init / vm_hv_sol < 10.0
     end
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # T15: Voltage-dependent load models (ZIP / exponential)
+    #
+    # Single-phase resistive feeder (as T1).  With a voltage-dependent load the
+    # KVL fixed point has closed forms:
+    #   pure-Z (γ=2):  P=Pnom·(V/Vnom)²  ⟹  V = Vs / (1 + R·Pnom/Vnom²)
+    #   pure-I (γ=1):  P=Pnom·(V/Vnom)   ⟹  V = Vs − R·Pnom/Vnom
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T15: voltage-dependent load models" begin
+        V_s = 1000.0;  R = 0.5;  Pnom = 100_000.0;  Vnom = 1000.0
+        k = R * Pnom / Vnom^2          # 0.05
+
+        mkload(extra) = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"],
+                         "v_min":850.0,"v_max":999.0}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[100000.0],"q_nom":[0.0]$extra}}}
+        """; from_string=true)
+
+        # ── pure constant-impedance via ZIP (αZ=βZ=1) ────────────────────────
+        V_z = V_s / (1 + k)            # 952.381 V
+        res = solve_opf(mkload(""","model":"zip","v_nom":[1000.0],
+            "alpha_z":[1.0],"alpha_i":[0.0],"alpha_p":[0.0],
+            "beta_z":[1.0],"beta_i":[0.0],"beta_p":[0.0]"""))
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["bus"]["bus1"]["1"]["vm"] ≈ V_z   atol=0.01
+        @test res["load"]["ld1"]["1"]["pd"] ≈ Pnom*(V_z/Vnom)^2   rtol=1e-4
+
+        # ── pure constant-current via ZIP (αI=βI=1) ──────────────────────────
+        V_i = V_s - R*Pnom/Vnom        # 950.0 V
+        res = solve_opf(mkload(""","model":"zip","v_nom":[1000.0],
+            "alpha_z":[0.0],"alpha_i":[1.0],"alpha_p":[0.0],
+            "beta_z":[0.0],"beta_i":[1.0],"beta_p":[0.0]"""))
+        @test res["bus"]["bus1"]["1"]["vm"] ≈ V_i   atol=0.01
+        @test res["load"]["ld1"]["1"]["pd"] ≈ Pnom*(V_i/Vnom)   rtol=1e-4
+
+        # ── exponential γ=2 must match pure-Z (integer-exponent routing) ─────
+        res = solve_opf(mkload(""","model":"exponential","v_nom":[1000.0],
+            "gamma_p":[2.0],"gamma_q":[2.0]"""))
+        @test res["bus"]["bus1"]["1"]["vm"] ≈ V_z   atol=0.01
+
+        # ── exponential γ=1 must match pure-I ────────────────────────────────
+        res = solve_opf(mkload(""","model":"exponential","v_nom":[1000.0],
+            "gamma_p":[1.0],"gamma_q":[1.0]"""))
+        @test res["bus"]["bus1"]["1"]["vm"] ≈ V_i   atol=0.01
+
+        # ── non-integer exponential (γ=1.5): self-consistent fixed point ─────
+        res = solve_opf(mkload(""","model":"exponential","v_nom":[1000.0],
+            "gamma_p":[1.5],"gamma_q":[1.5]"""))
+        V = res["bus"]["bus1"]["1"]["vm"];  pd = res["load"]["ld1"]["1"]["pd"]
+        @test pd ≈ Pnom*(V/Vnom)^1.5                     rtol=1e-4
+        @test V  ≈ (V_s + sqrt(V_s^2 - 4*R*pd))/2        atol=0.01
+        @test V_i < V < V_z   # between the γ=1 and γ=2 fixed points
+
+        # ── ZIP with αP=βP=1 recovers constant power (T1 value) ──────────────
+        V_cp = (V_s + sqrt(V_s^2 - 4*R*Pnom))/2          # ≈ 947.214 V
+        res = solve_opf(mkload(""","model":"zip","v_nom":[1000.0],
+            "alpha_z":[0.0],"alpha_i":[0.0],"alpha_p":[1.0],
+            "beta_z":[0.0],"beta_i":[0.0],"beta_p":[1.0]"""))
+        @test res["bus"]["bus1"]["1"]["vm"] ≈ V_cp   atol=0.01
+    end
+
 end  # @testset "OPF — solve_opf extension"
