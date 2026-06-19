@@ -15,7 +15,9 @@
 #   W.SOL.VOLT_ACTIVE        — voltage bound within the active threshold
 #   W.SOL.THERMAL_ACTIVE     — thermal limit within the active threshold
 #   W.SOL.GEN_ACTIVE         — generator bound within the active threshold
-#   W.SOL.LOAD_RESIDUAL      — |pd - p_nom| or |qd - q_nom| above tolerance
+#   W.SOL.LOAD_RESIDUAL      — |pd - p_nom| or |qd - q_nom| above tolerance (constant-power only)
+#   W.SOL.LOAD_MODEL_RESIDUAL — realised pd/qd inconsistent with load model at solved voltage
+#   I.SOL.LOAD_VD_SUMMARY    — aggregate realised vs nominal P/Q for voltage-dependent loads
 #   W.SOL.POWER_BALANCE      — network-wide active power doesn't balance
 #   I.SOL.BINDING_SUMMARY    — aggregate count of active / violated bounds
 #   I.SOL.LOSS_FRACTION      — line losses as fraction of total load
@@ -23,6 +25,47 @@
 #   W.SOL.INIT_LEVEL_MISMATCH — init voltage differs from solved by > 10× (wrong voltage level)
 #   W.SOL.INIT_LARGE_ERROR   — init voltage error > 20 % of solved value on a phase terminal
 #   I.SOL.INIT_NEUTRAL_NONZERO — neutral terminal initialised non-zero
+
+# Predict model power for sub-load `idx` given solved squared-voltage W and Vnom.
+# component is "p" (active) or "q" (reactive). Returns nothing if model unknown.
+function _load_model_power(load, component::String, idx::Int,
+                           p0::Float64, W::Float64, Vnom::Float64)
+    model = get(load, "model", "constant_power")
+    if model == "constant_impedance"
+        return p0 * W / Vnom^2
+    elseif model == "constant_current"
+        return p0 * sqrt(W) / Vnom
+    elseif model == "zip"
+        zkey = component == "p" ? "alpha_z" : "beta_z"
+        ikey = component == "p" ? "alpha_i" : "beta_i"
+        pkey = component == "p" ? "alpha_p" : "beta_p"
+        function coeff(key)
+            c = get(load, key, nothing)
+            c === nothing && return 0.0
+            c isa AbstractVector ? Float64(length(c) == 1 ? c[1] : c[idx]) : Float64(c)
+        end
+        cz = coeff(zkey); ci = coeff(ikey); cp = coeff(pkey)
+        # If all three absent, default to constant-power (sum = 1 via cp=1)
+        if get(load, zkey, nothing) === nothing &&
+           get(load, ikey, nothing) === nothing &&
+           get(load, pkey, nothing) === nothing
+            cp = 1.0
+        end
+        return p0 * (cz * W / Vnom^2 + ci * sqrt(W) / Vnom + cp)
+    elseif model == "exponential"
+        gkey = component == "p" ? "gamma_p" : "gamma_q"
+        g = get(load, gkey, nothing)
+        γ = if g === nothing
+            0.0
+        elseif g isa AbstractVector
+            Float64(length(g) == 1 ? g[1] : g[idx])
+        else
+            Float64(g)
+        end
+        return p0 * (W / Vnom^2)^(γ / 2)
+    end
+    nothing
+end
 
 """
     solution_check(net, result, findings) -> Dict{String,Any}
@@ -468,48 +511,126 @@ function solution_check(net::Dict{String,Any},
     out["n_gen_active"]     = n_gen_active
 
     # ── Load constraint residuals ─────────────────────────────────────────────
-    # For a converged solve |pd - p_nom| and |qd - q_nom| should be near zero.
-    # A large residual indicates the solver struggled to satisfy the bilinear
-    # constant-power constraint.
     resid_tol = 1.0   # 1 W / 1 var absolute tolerance
-    n_load_resid = 0
+    n_load_resid       = 0
+    n_load_model_resid = 0
+    vd_p_nom_total = 0.0;  vd_p_real_total = 0.0
+    vd_q_nom_total = 0.0;  vd_q_real_total = 0.0
+    n_vd_subloads  = 0
 
     for (lid, load) in get(net, "load", Dict())
         load isa Dict || continue
+        model = get(load, "model", "constant_power")
         p_nom = Float64.(get(load, "p_nom", Float64[]))
         q_nom = Float64.(get(load, "q_nom", Float64[]))
         ph_res = get(get(result, "load", Dict()), lid, nothing)
         ph_res isa Dict || continue
+        bus = get(load, "bus", "")
         tm  = Vector{String}(get(load, "terminal_map", String[]))
         cfg = get(load, "configuration", "WYE")
-        ph_pos = cfg == "DELTA" ? collect(eachindex(tm)) : _phase_positions(tm)
+        ph_pos    = cfg == "DELTA" ? collect(eachindex(tm)) : _phase_positions(tm)
+        n_pos_idx = cfg == "DELTA" ? nothing : _neutral_pos(tm)
+        t_n       = n_pos_idx !== nothing ? tm[n_pos_idx] : nothing
 
         for (idx, ph) in enumerate(ph_pos)
             t_ph = tm[ph]
             lvals = get(ph_res, t_ph, nothing)
             lvals isa Dict || continue
             pd = get(lvals, "pd", NaN); qd = get(lvals, "qd", NaN)
+            isfinite(pd) && isfinite(qd) || continue
             p_ref = idx <= length(p_nom) ? p_nom[idx] : 0.0
             q_ref = idx <= length(q_nom) ? q_nom[idx] : 0.0
 
-            p_err = isfinite(pd) ? abs(pd - p_ref) : NaN
-            q_err = isfinite(qd) ? abs(qd - q_ref) : NaN
+            if model == "constant_power"
+                # Residual from nominal: should be near-zero for a tight solve.
+                p_err = abs(pd - p_ref); q_err = abs(qd - q_ref)
+                if p_err > resid_tol || q_err > resid_tol
+                    n_load_resid += 1
+                    push!(findings, Finding(WARNING, "W.SOL.LOAD_RESIDUAL",
+                        :solution, :load, lid,
+                        "Load '$lid' phase '$t_ph': constant-power residual " *
+                        "|Δp|=$(round(p_err; digits=2)) W, " *
+                        "|Δq|=$(round(q_err; digits=2)) var — " *
+                        "solver may not have converged tightly.",
+                        Dict{String,Any}("load"=>lid,"terminal"=>t_ph,
+                                         "p_err"=>p_err,"q_err"=>q_err,
+                                         "p_nom"=>p_ref,"q_nom"=>q_ref)))
+                end
+            else
+                # Voltage-dependent load: pd ≠ p_nom is expected.
+                # Check model self-consistency: pd should equal p_nom·f(W/Vnom²).
+                # Reconstruct W from solved bus voltages.
+                b_res = get(bus_res, bus, nothing)
+                b_res isa Dict || continue
+                vr_ph = get(get(b_res, t_ph, Dict()), "vr", NaN)
+                vi_ph = get(get(b_res, t_ph, Dict()), "vi", NaN)
+                vr_n  = t_n !== nothing ? get(get(b_res, t_n, Dict()), "vr", 0.0) : 0.0
+                vi_n  = t_n !== nothing ? get(get(b_res, t_n, Dict()), "vi", 0.0) : 0.0
+                isfinite(vr_ph) && isfinite(vi_ph) || continue
+                dvr = vr_ph - vr_n; dvi = vi_ph - vi_n
+                W = dvr^2 + dvi^2
 
-            if (isfinite(p_err) && p_err > resid_tol) ||
-               (isfinite(q_err) && q_err > resid_tol)
-                n_load_resid += 1
-                push!(findings, Finding(WARNING, "W.SOL.LOAD_RESIDUAL",
-                    :solution, :load, lid,
-                    "Load '$lid' phase '$t_ph': constant-power residual " *
-                    "|Δp|=$(round(p_err; digits=2)) W, |Δq|=$(round(q_err; digits=2)) var " *
-                    "— solver may not have converged tightly.",
-                    Dict{String,Any}("load"=>lid,"terminal"=>t_ph,
-                                     "p_err"=>p_err,"q_err"=>q_err,
-                                     "p_nom"=>p_ref,"q_nom"=>q_ref)))
+                Vnom = let vv = get(load, "v_nom", nothing)
+                    vv === nothing ? nothing :
+                    (vv isa AbstractVector ?
+                        Float64(length(vv) == 1 ? vv[1] : (idx <= length(vv) ? vv[idx] : vv[end])) :
+                        Float64(vv))
+                end
+                Vnom === nothing && continue
+
+                pd_model = _load_model_power(load, "p", idx, p_ref, W, Vnom)
+                qd_model = _load_model_power(load, "q", idx, q_ref, W, Vnom)
+                pd_model === nothing || qd_model === nothing && continue
+
+                p_err = abs(pd - pd_model); q_err = abs(qd - qd_model)
+                if p_err > resid_tol || q_err > resid_tol
+                    n_load_model_resid += 1
+                    push!(findings, Finding(WARNING, "W.SOL.LOAD_MODEL_RESIDUAL",
+                        :solution, :load, lid,
+                        "Load '$lid' phase '$t_ph' (model=$model): realised power " *
+                        "pd=$(round(pd; digits=2)) W deviates from model prediction " *
+                        "$(round(pd_model; digits=2)) W at the solved voltage " *
+                        "(|ΔV|=$(round(sqrt(W); digits=2)) V, Vnom=$(round(Vnom; digits=1)) V). " *
+                        "The load model constraint may not be satisfied.",
+                        Dict{String,Any}("load"=>lid,"terminal"=>t_ph,
+                                         "pd"=>pd,"qd"=>qd,
+                                         "pd_model"=>pd_model,"qd_model"=>qd_model,
+                                         "p_nom"=>p_ref,"q_nom"=>q_ref,
+                                         "W"=>W,"v_nom"=>Vnom)))
+                end
+
+                # Accumulate for VD summary.
+                vd_p_nom_total  += p_ref;  vd_p_real_total += pd
+                vd_q_nom_total  += q_ref;  vd_q_real_total += qd
+                n_vd_subloads   += 1
             end
         end
     end
-    out["n_load_residuals"] = n_load_resid
+    out["n_load_residuals"]       = n_load_resid
+    out["n_load_model_residuals"] = n_load_model_resid
+
+    # ── Voltage-dependent load summary ────────────────────────────────────────
+    if n_vd_subloads > 0
+        p_shift = vd_p_real_total - vd_p_nom_total
+        q_shift = vd_q_real_total - vd_q_nom_total
+        out["vd_p_nom_total"]  = vd_p_nom_total
+        out["vd_p_real_total"] = vd_p_real_total
+        out["vd_q_nom_total"]  = vd_q_nom_total
+        out["vd_q_real_total"] = vd_q_real_total
+        push!(findings, Finding(INFO, "I.SOL.LOAD_VD_SUMMARY", :solution, :network, nothing,
+            "Voltage-dependent loads ($n_vd_subloads sub-load(s)): " *
+            "realised P=$(round(vd_p_real_total/1e3; digits=3)) kW vs nominal " *
+            "$(round(vd_p_nom_total/1e3; digits=3)) kW " *
+            "($(round(p_shift/1e3; digits=3)) kW shift); " *
+            "Q=$(round(vd_q_real_total/1e3; digits=3)) kvar vs nominal " *
+            "$(round(vd_q_nom_total/1e3; digits=3)) kvar.",
+            Dict{String,Any}(
+                "n_vd_subloads"    => n_vd_subloads,
+                "p_nom_total_W"    => vd_p_nom_total,
+                "p_real_total_W"   => vd_p_real_total,
+                "q_nom_total_var"  => vd_q_nom_total,
+                "q_real_total_var" => vd_q_real_total)))
+    end
 
     # ── Network-wide power balance ─────────────────────────────────────────────
     # Σ pg (all generators) - Σ pd (all loads) - Σ p_loss (all lines) ≈ 0
