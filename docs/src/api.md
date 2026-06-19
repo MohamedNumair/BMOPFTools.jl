@@ -31,6 +31,7 @@ infos
 ```@docs
 parse_bmopf
 write_bmopf
+migrate
 is_timeseries
 get_snapshot
 ```
