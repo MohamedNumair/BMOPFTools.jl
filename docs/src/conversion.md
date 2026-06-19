@@ -68,16 +68,64 @@ wye.
 
 ## Transformer impedance bases
 
-PMD gives per-winding resistance `rw` and winding-pair leakage `xsc`, both
-per-unit on the winding base. BMOPF wants ohms.
+PMD and OpenDSS give per-winding resistance `rw` (%) and pair-wise leakage
+`xsc`/`xhl/xlt/xht` (%), both on the winding's own kVA/kV² base.
+BMOPF stores ohms on each winding's own voltage base.
 
-**`single_phase` / `center_tap`** (per-winding fields):
+**`single_phase`** (2-winding, Γ-model):
 
 ```
-Z_base,side = v_ref_side² / s_rating
-r_series_side = rw_side · Z_base,side
-x_series_side = (xsc₁ / 2) · Z_base,side     # pair total split evenly
+Z_base,from = v_ref_from² / s_rating
+Z_base,to   = v_ref_to²   / s_rating
+r_series_from = rw₁ · Z_base,from
+r_series_to   = rw₂ · Z_base,to
+x_series_from = (xhl / 2) · Z_base,from    # half of pair leakage on each side
+x_series_to   = (xhl / 2) · Z_base,to
 ```
+
+**`center_tap`** (3-winding, T-model — star-network leakage conversion required):
+
+OpenDSS specifies three pair-wise leakage values `XHL`, `XLT`, `XHT` (%).
+These are **not** split evenly — they must be converted via the star (Steinmetz)
+network formula before storing:
+
+```
+x_series_from = (XHL + XHT − XLT) / 2  ×  Z_base,from / 100
+x_series_to   = (XHL + XLT − XHT) / 2  ×  Z_base,to   / 100
+```
+
+For the common symmetric case `XHT = XHL` (both legs same leakage to HV),
+this simplifies to `x_series_from = (XHL − XLT/2) × Z_base,from / 100`
+and `x_series_to = (XLT/2) × Z_base,to / 100`.
+
+!!! warning
+    Using `XHL/2` for both sides (copying the 2-winding formula) produces
+    identical leg voltages regardless of load imbalance.  The error is
+    ~0.4–0.5 V per leg under a 3 kW imbalance on a 120 V feeder.
+
+Resistance maps directly per winding:
+
+```
+r_series_from = rw₁ · Z_base,from      # wdg1 (HV)
+r_series_to   = rw₂ · Z_base,to        # wdg2 = wdg3 for a symmetric unit
+```
+
+Note: `v_ref_to` is the **per-leg** voltage (e.g. 120 V), not the full
+secondary span (240 V).
+
+**No-load branch** (applies to both `single_phase` and `center_tap`):
+
+OpenDSS `%noloadloss` and `%imag` (or `cmag`) convert to SI admittances
+at the HV terminals:
+
+```
+Y_base = s_rating / v_ref_from²
+G = (%noloadloss / 100) · Y_base                      → g_no_load  (S)
+Y_mag = cmag · Y_base          # cmag = %imag/100 · s_rating/v_ref_from
+B = sqrt(Y_mag² − G²)                                 → b_no_load  (S)
+```
+
+Both fields are omitted when zero.
 
 **`wye_delta` / `delta_wye`** (single wye-side fields, the delta windings
 being ideal per the spec math model): referring the delta-winding impedance

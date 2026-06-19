@@ -286,19 +286,98 @@ Q^{g,\text{min}}_{g,k}
 
 #### Transformers
 
-All transformer constraints are **linear**.
+All transformer constraints are **linear**.  The turns ratio for all subtypes
+is $N = V^\text{ref}_\text{fr} / V^\text{ref}_\text{to}$ (SI volts).
 
-**Wye–wye (YY)** — `single_phase` and `center_tap` subtypes, turns ratio
-$N = V^\text{ref}_\text{fr} / V^\text{ref}_\text{to}$:
+---
+
+**`single_phase` — Γ-equivalent model**
+
+Series impedance $R_x = R_1 + N^2 R_2$, $X_x = X_1 + N^2 X_2$ is referred
+to the HV (from) side, where $R_1, X_1$ (`r/x_series_from`, Ω on HV base)
+are the HV winding values and $R_2, X_2$ (`r/x_series_to`, Ω on LV base)
+are the LV winding values.  For each per-phase pair index $k$:
 
 ```math
-v^r_{b^\text{fr},t^\text{fr}_k} = N \, v^r_{b^\text{to},t^\text{to}_k}, \qquad
-v^i_{b^\text{fr},t^\text{fr}_k} = N \, v^i_{b^\text{to},t^\text{to}_k}
+v^r_{b^\text{fr},t^\text{fr}_k} - N\,v^r_{b^\text{to},t^\text{to}_k}
+= R_x\,c^{r,x}_{x,\text{fr},k} - X_x\,c^{i,x}_{x,\text{fr},k}
 ```
 
 ```math
-N \, c^{r,x}_{x,\text{fr},k} + c^{r,x}_{x,\text{to},k} = 0 \quad\text{(and imaginary)}
+N\,c^{r,x}_{x,\text{fr},k} + c^{r,x}_{x,\text{to},k} = 0 \quad\text{(and imaginary)}
 ```
+
+The no-load shunt $G_0 + jB_0$ (`g_no_load`, `b_no_load`, S) sits at the
+HV terminals (phase-to-ground).  The total HV terminal current entering the
+bus is series + shunt:
+
+```math
+I^\text{fr,term}_{x,k} =
+  c^{r,x}_{x,\text{fr},k}
+  + G_0\,v^r_{b^\text{fr},t^\text{fr}_k}
+  - B_0\,v^i_{b^\text{fr},t^\text{fr}_k}
+```
+
+When all loss fields are absent or zero the model reduces to the ideal
+$v^r_{b^\text{fr},t^\text{fr}_k} = N\,v^r_{b^\text{to},t^\text{to}_k}$.
+
+---
+
+**`center_tap` — T-model with per-leg secondary impedance**
+
+Terminal map: `terminal_map_from = [t_ph, t_n]` (HV phase, HV neutral),
+`terminal_map_to = [t₁, tₙ, t₂]` (leg-1, center-tap neutral, leg-2).
+$V^\text{ref}_\text{to}$ is the **per-leg** voltage (e.g. 120 V for a
+120-0-120 V unit), so $N = V^\text{ref}_\text{fr}/V^\text{ref}_\text{to} = 60$
+for a 7.2 kV / 120 V unit.
+
+Each leg has its own secondary impedance branch ($Z_2 = R_2 + jX_2$).
+For leg $\ell \in \{1, 2\}$ with LV current $c^{r,x}_{x,\ell}$ and leg
+terminals $(t_a, t_b)$:
+
+```math
+\bigl(v^r_{b^\text{fr},t^\text{ph}} - v^r_{b^\text{fr},t^\text{n}}\bigr)
+- N\bigl(v^r_{b^\text{to},t_a} - v^r_{b^\text{to},t_b}\bigr)
+= R_1\,c^{r,x}_{x,s} - X_1\,c^{i,x}_{x,s}
+  - N\bigl(R_2\,c^{r,x}_{x,\ell} - X_2\,c^{i,x}_{x,\ell}\bigr)
+```
+
+where $c^{r,x}_{x,s}$ is the HV series current (variable index 1 on `fr`
+side).  The $-N Z_2 I_\ell$ sign follows from the T-model star-node
+elimination: LV currents are defined flowing **into** the transformer from
+the bus, i.e. opposite to the direction through the winding branch from the
+star node.
+
+Current coupling (both leg currents into the transformer):
+
+```math
+N\,c^{r,x}_{x,s} + c^{r,x}_{x,\ell_1} + c^{r,x}_{x,\ell_2} = 0
+\quad\text{(and imaginary)}
+```
+
+Center-tap KCL (variable index 2 on `to` side):
+
+```math
+c^{r,x}_{x,n} + c^{r,x}_{x,\ell_1} + c^{r,x}_{x,\ell_2} = 0
+\quad\text{(and imaginary)}
+```
+
+The no-load shunt $G_0 + jB_0$ is placed at the HV phase terminal
+$t^\text{ph}$ (same convention as `single_phase`).  The HV series current
+returns through $t^\text{n}$; the shunt is phase-to-ground and does not
+pass through the HV neutral.
+
+!!! note "Leakage from OpenDSS XHL/XLT/XHT"
+    For a 3-winding OpenDSS unit, the per-pair leakage values must be
+    star-converted before storing in `x_series_from`/`x_series_to`:
+    ```
+    x_series_from = (XHL + XHT − XLT) / 2 × Vhv² / (100 · s_rating)
+    x_series_to   = (XHL + XLT − XHT) / 2 × Vlv² / (100 · s_rating)
+    ```
+    Using `XHL/2` for both (the 2-winding formula) forces equal leg voltages
+    regardless of load imbalance and is incorrect for `center_tap`.
+
+---
 
 **Wye–delta (Yd) / Delta–wye (Dy)** — effective turns ratio:
 
