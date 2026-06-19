@@ -157,6 +157,75 @@ parks them in `single_phase` with 3-phase terminal maps and the conformance
 check flags the arity (`W.SPEC.XFMR_TMAP_ARITY`) — see the
 [conversion guide](conversion.md).
 
+## Metadata blocks
+
+The network dict carries two distinct metadata containers, with different
+scopes and serialisation behaviour.
+
+### `meta` — spec-level, written to JSON
+
+`net["meta"]` is a flat `Dict{String,Any}` included verbatim in the JSON
+output by [`write_bmopf`](@ref).  All fields are optional.  Unknown fields
+are allowed (an `I.SCHEMA.UNKNOWN_FIELDS` info finding is raised, not an
+error) so callers can add project-specific keys freely.
+
+| Field | Type | Description |
+|---|---|---|
+| `$schema` | String (URI) | Schema URI for version detection and forward migration. Auto-filled by `write_bmopf`. |
+| `title` | String | Human-readable name for this dataset / case. |
+| `description` | String | Free-text description. |
+| `version` | String | Dataset version (any string; semver recommended). |
+| `created` | String | ISO 8601 datetime when the file was first created (e.g. `"2024-06-19T14:32:00Z"`). Auto-filled on first write. |
+| `modified` | String | ISO 8601 datetime of most recent edit. Not auto-filled; set explicitly when updating a file. |
+| `license` | String | SPDX identifier (e.g. `"CC-BY-4.0"`) or full URI. |
+| `authors` | Array of objects | List of contributors; each object may have `name`, `email`, `orcid`. |
+| `sources` | Array of objects | Origin datasets; each object may have `name`, `url`, `format`, `doi`, `version`. |
+| `generator` | Object | Tool provenance: `{"tool": "BMOPFTools.jl", "version": "x.y.z"}`. Auto-filled by `write_bmopf`. |
+
+**Auto-generation on write.** [`write_bmopf`](@ref) always emits a `meta`
+block.  It merges fields in priority order: the `meta` keyword argument
+→ `net["meta"]` → auto-generated defaults.  Auto-generation fills three
+fields if they are absent: `$schema`, `generator`, and `created`.
+Caller-supplied values are never overwritten.
+
+**On parse.** [`parse_bmopf`](@ref) and converters (`from_pmd`, `from_dss`)
+carry `net["meta"]` through unchanged.  [`migrate`](@ref) reads
+`meta.$schema` to detect the spec version and apply forward migrations.
+The schema checker validates known fields and flags format violations as
+warnings (`W.SCHEMA.META_*`).
+
+**Example** (passed to `write_bmopf` via the `meta` kwarg):
+
+```julia
+write_bmopf(net, "lv_feeder1.json";
+    meta = Dict(
+        "title"       => "LV network 1, Feeder 1",
+        "description" => "ENWL LV test feeder, unbalanced residential load",
+        "license"     => "https://creativecommons.org/licenses/by/4.0/",
+        "authors"     => [Dict("name" => "Frederik Geth",
+                               "orcid" => "0000-0001-9534-2265")],
+        "sources"     => [Dict("name" => "ENWL dataset",
+                               "format" => "OpenDSS",
+                               "url"    => "https://www.enwl.co.uk/")],
+    ))
+```
+
+### `_meta` — tool-private, never serialised
+
+`net["_meta"]` is a `Dict{String,Any}` used internally by BMOPFTools for
+traceability.  It is **not written to JSON** by [`write_bmopf`](@ref) and
+is never reported as a schema violation.  Its contents are informational;
+downstream code should treat them as advisory.
+
+| Key | Set by | Contents |
+|---|---|---|
+| `parsed_at` | [`parse_bmopf`](@ref) | Timestamp when the JSON was parsed. |
+| `terminal_coercions` | [`parse_bmopf`](@ref) | `{"n": <count>, "mode": "<alias|verbatim>"}` — populated when non-string terminal IDs were normalised. See `W.SPEC.TERMINAL_TYPES`. |
+| `source` | `from_pmd` | `"pmd"` — marks dicts converted from a PMD ENGINEERING model. |
+| `powerio_source` | `from_dss` | Absolute path of the `.dss` file that was converted. |
+| `powerio_warnings` | `from_dss` | Array of warning strings emitted by the DSS→JSON converter. |
+| `migration_notes` | [`migrate`](@ref) | Array of `W.MIGRATE.UPGRADED` finding dicts appended when a forward migration is applied. |
+
 ## Time series (extension)
 
 `time_series` at the root plus component-level `time_series` reference
