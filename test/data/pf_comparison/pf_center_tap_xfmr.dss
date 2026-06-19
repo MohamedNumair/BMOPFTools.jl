@@ -1,0 +1,54 @@
+! Center-tap (split-phase) transformer power-flow comparison case.
+! (BMOPF subtype: center_tap)
+!
+! Topology: hv ──[center-tap xfmr, 7.2 kV / 120-0-120 V]── lv
+!   hv: terminal 1 = HV phase, terminal 4 (node .4) = HV neutral
+!   lv: terminal 1 = leg-1, terminal 4 = center-tap (neutral), terminal 2 = leg-2
+!
+! OpenDSS node convention: .1/.2/.3 = phases, .4 = neutral, .0 = earth.
+! The center-tap is the LV neutral (node .4 of lv bus).
+! wdg=2 connects lv.1 → lv.4  (leg-1, 0–120 V)
+! wdg=3 connects lv.4 → lv.2  (leg-2, 0–120 V, reversed polarity in DSS)
+!
+! Realistic losses: %r=0.6 wdg1, %r=1.2 wdg2/3, XHL=2.04%,
+! %noloadloss=0.2% — large enough that an ideal model would give
+! >1 V error on the 120 V legs.
+!
+! Unbalanced loads: leg-1 heavier than leg-2 to exercise imbalance current
+! through the center tap.
+!
+! BMOPF terminal mapping:
+!   hv bus: terminal_names=["1","n"]  → ODS hv.1, hv.4
+!   lv bus: terminal_names=["1","n","2"] → ODS lv.1, lv.4, lv.2
+!
+! Also includes a phase-to-phase (240V) load across lv.1.2 to verify
+! that the 240 V path is correctly modelled.
+
+Clear
+
+New Circuit.pf_center_tap basekv=7.2 pu=1.0 angle=0 phases=1 bus1=hv.1.0
+
+! HV neutral earthed at source (terminal 4 of hv bus → earth).
+New Reactor.grnd_hv bus1=hv.4 bus2=hv.0 R=0.001 X=0 phases=1
+
+! 3-winding center-tap transformer.
+New Transformer.t1 phases=1 windings=3
+~ wdg=1 bus=hv.1.4   conn=wye kv=7.2   kva=25 %r=0.6
+~ wdg=2 bus=lv.1.4   conn=wye kv=0.120 kva=25 %r=1.2
+~ wdg=3 bus=lv.4.2   conn=wye kv=0.120 kva=25 %r=1.2
+~ XHL=2.04 XLT=1.36 XHT=2.04
+~ %noloadloss=0.2
+
+! LV center-tap (terminal 4 of lv bus) earthed.
+New Reactor.grnd_lv bus1=lv.4 bus2=lv.0 R=0.001 X=0 phases=1
+
+! Unbalanced 120 V loads (leg-1 heavier than leg-2).
+New Load.ld1 bus1=lv.1.4 kv=0.120 kw=5 kvar=1 phases=1 model=1 Vminpu=0 Vmaxpu=2
+New Load.ld2 bus1=lv.4.2 kv=0.120 kw=2 kvar=1 phases=1 model=1 Vminpu=0 Vmaxpu=2
+
+! 240 V load across both legs (phase-to-phase).
+New Load.ld3 bus1=lv.1.2 kv=0.240 kw=3 kvar=1 phases=1 model=1 Vminpu=0 Vmaxpu=2
+
+Set VoltageBases=[7.2, 0.120]
+CalcVoltageBases
+Solve

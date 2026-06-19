@@ -99,7 +99,8 @@ $\mc{S}$           & Switches & network \\
 $\mc{D}$           & Loads & network \\
 $\mc{G}$           & Generators & network \\
 $\mc{V}$           & Voltage sources (slack buses) & network \\
-$\mc{X}^\text{YY}$ & Wye--wye (per-phase) transformers & network \\
+$\mc{X}^\text{YY}$ & Single-phase wye--wye transformers (\texttt{single\_phase}) & network \\
+$\mc{X}^\text{CT}$ & Center-tap split-phase transformers (\texttt{center\_tap}) & network \\
 $\mc{X}^\text{Yd}$ & Wye--delta transformers & network \\
 $\mc{X}^\text{Dy}$ & Delta--wye transformers & network \\
 \bottomrule
@@ -129,6 +130,10 @@ $c^g_1$ & \$/W & Linear generation cost coefficient & \texttt{generator.cost} \\
 $V^s_{v,k}$, $\theta^s_{v,k}$ & V, rad & Voltage source magnitude and angle at terminal $k$ & \texttt{voltage\_source.v\_magnitude/angle} \\
 $v^b_\text{min}$, $v^b_\text{max}$ & V & Phase voltage magnitude limits at bus $b$ & \texttt{bus.v\_min}, \texttt{v\_max} \\
 $N_x$ & -- & Transformer turns ratio $= V^\text{ref}_\text{fr} / V^\text{ref}_\text{to}$ & \texttt{transformer.v\_ref\_from/to} \\
+$R_1, X_1$ & $\Omega$ & From-side winding resistance/reactance (HV base) & \texttt{transformer.r\_series\_from/x\_series\_from} \\
+$R_2, X_2$ & $\Omega$ & To-side winding resistance/reactance (LV base) & \texttt{transformer.r\_series\_to/x\_series\_to} \\
+$G_0$ & S & No-load (core-loss) conductance, placed at HV terminals & \texttt{transformer.g\_no\_load} \\
+$B_0$ & S & No-load (magnetising) susceptance, placed at HV terminals & \texttt{transformer.b\_no\_load} \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -423,25 +428,184 @@ All transformer constraints are linear in the voltage and current variables.
 Apparent power and thermal limits on transformers are not currently modelled
 as explicit constraints.
 
-\subsubsection*{Wye--wye (per-phase YY)}
+The turns ratio for all subtypes is
+$N_x = V^\text{ref}_\text{fr} / V^\text{ref}_\text{to}$,
+where both reference voltages are in SI volts.  For \texttt{center\_tap},
+$V^\text{ref}_\text{to}$ is the \emph{per-leg} voltage (e.g.\ 120~V), not
+the full secondary span (240~V).
 
-The \texttt{single\_phase} and \texttt{center\_tap} subtypes are modelled as
-independent per-phase ideal transformers with turns ratio
-$N_x = V^\text{ref}_\text{fr} / V^\text{ref}_\text{to}$:
+\subsubsection*{Wye--wye per-phase (\texttt{single\_phase})}
+
+The \texttt{single\_phase} subtype is modelled with a
+$\Gamma$-equivalent circuit: series impedance referred to the from (HV) side,
+and a shunt no-load admittance at the HV terminals.
+Let $R_x = R_1 + N_x^2 R_2$ and $X_x = X_1 + N_x^2 X_2$ be the combined
+series resistance and reactance referred to the HV side, where $R_1$, $X_1$
+(\texttt{r\_series\_from}, \texttt{x\_series\_from}) are the HV winding
+values in~$\Omega$ and $R_2$, $X_2$
+(\texttt{r\_series\_to}, \texttt{x\_series\_to}) are the LV winding values
+in~$\Omega$ on the LV base.
+
+\paragraph{Voltage constraints.}
+For each phase-pair index $k = 1,\ldots,n_c$:
 %
 \begin{align}
-  \vr{b^\text{fr}}{t^\text{fr}_k} &= N_x\,\vr{b^\text{to}}{t^\text{to}_k},
-  \qquad
-  \vi{b^\text{fr}}{t^\text{fr}_k} = N_x\,\vi{b^\text{to}}{t^\text{to}_k},
-  \label{eq:yy-v}\\
-  N_x\,c^{r,x}_{x,\text{fr},k} &+ c^{r,x}_{x,\text{to},k} = 0,
+  \vr{b^\text{fr}}{t^\text{fr}_k} - N_x\,\vr{b^\text{to}}{t^\text{to}_k}
+  &= R_x\,c^{r,x}_{x,\text{fr},k} - X_x\,c^{i,x}_{x,\text{fr},k},
+  \label{eq:yy-v-r}\\
+  \vi{b^\text{fr}}{t^\text{fr}_k} - N_x\,\vi{b^\text{to}}{t^\text{to}_k}
+  &= R_x\,c^{i,x}_{x,\text{fr},k} + X_x\,c^{r,x}_{x,\text{fr},k}.
+  \label{eq:yy-v-i}
+\end{align}
+%
+When all series impedance fields are absent or zero the equations reduce to
+the ideal constraint $V^\text{fr}_k = N_x V^\text{to}_k$.
+
+\paragraph{Current coupling.}
+The ideal-core coupling (power conservation) gives:
+%
+\begin{equation}
+  N_x\,c^{r,x}_{x,\text{fr},k} + c^{r,x}_{x,\text{to},k} = 0,
   \qquad
   N_x\,c^{i,x}_{x,\text{fr},k} + c^{i,x}_{x,\text{to},k} = 0.
   \label{eq:yy-i}
+\end{equation}
+
+\paragraph{No-load shunt.}
+The magnetising branch $Y_0 = G_0 + \mathrm{j}B_0$
+(\texttt{g\_no\_load}, \texttt{b\_no\_load}, in~S) is placed at the HV
+(from-side) terminals.  The total terminal current entering the HV bus
+is the sum of the series current and the shunt:
+%
+\begin{equation}
+  I^\text{fr,term}_{x,k} = c^{r,x}_{x,\text{fr},k}
+    + G_0\,\vr{b^\text{fr}}{t^\text{fr}_k}
+    - B_0\,\vi{b^\text{fr}}{t^\text{fr}_k}
+    + \mathrm{j}\!\left(c^{i,x}_{x,\text{fr},k}
+    + G_0\,\vi{b^\text{fr}}{t^\text{fr}_k}
+    + B_0\,\vr{b^\text{fr}}{t^\text{fr}_k}\right).
+  \label{eq:yy-shunt}
+\end{equation}
+%
+This terminal current (not $c^{r,x}_{x,\text{fr},k}$ alone) enters the KCL
+accumulator at terminal $t^\text{fr}_k$.
+
+\subsubsection*{Center-tap split-phase (\texttt{center\_tap})}
+
+The \texttt{center\_tap} subtype models the North American distribution
+split-phase transformer: one HV winding drives two anti-series 120~V LV legs
+sharing a center-tap neutral.
+
+\paragraph{Terminal convention.}
+\begin{itemize}
+  \item HV (from) side: two terminals $[t^\text{ph}, t^\text{n}]$ —
+        phase and neutral.
+  \item LV (to) side: three terminals $[t_1, t_\text{n}, t_2]$ —
+        leg-1, center-tap neutral, leg-2.
+\end{itemize}
+The center-tap terminal $t_\text{n}$ on the LV bus is typically
+perfectly grounded (\texttt{perfectly\_grounded\_terminals}).
+
+\paragraph{T-model physics.}
+Unlike the two-winding $\Gamma$ model, the three-winding center-tap unit has
+\emph{independent} LV winding branches.  Each leg carries a different current
+under unbalanced loading, so lumping both secondary impedances into a single
+referred-to-HV value would force identical leg voltages and fail to reproduce
+load-imbalance effects.
+
+The correct model is a T-circuit with a star node internal to the transformer:
+\begin{itemize}
+  \item HV branch: $Z_1 = R_1 + \mathrm{j}X_1$
+        (\texttt{r\_series\_from}, \texttt{x\_series\_from})
+        carries the total HV series current $I_s$.
+  \item LV branch 1 (leg-1, $t_1 \to t_\text{n}$): $Z_2 = R_2 + \mathrm{j}X_2$
+        (\texttt{r\_series\_to}, \texttt{x\_series\_to}) carries $I_{\ell_1}$.
+  \item LV branch 2 (leg-2, $t_\text{n} \to t_2$): same $Z_2$, carries
+        $I_{\ell_2}$.
+\end{itemize}
+
+Eliminating the internal star-node voltage gives the following constraint
+for each leg $\ell \in \{1, 2\}$ with LV current $I_{\ell}$ and LV terminal
+pair $(t_a, t_b)$:
+%
+\begin{align}
+  \bigl(\vr{b^\text{fr}}{t^\text{ph}} - \vr{b^\text{fr}}{t^\text{n}}\bigr)
+  - N_x\bigl(\vr{b^\text{to}}{t_a} - \vr{b^\text{to}}{t_b}\bigr)
+  &= R_1\,c^{r,x}_{x,s} - X_1\,c^{i,x}_{x,s}
+     - N_x\!\left(R_2\,c^{r,x}_{x,\ell} - X_2\,c^{i,x}_{x,\ell}\right),
+  \label{eq:ct-v-r}\\
+  \bigl(\vi{b^\text{fr}}{t^\text{ph}} - \vi{b^\text{fr}}{t^\text{n}}\bigr)
+  - N_x\bigl(\vi{b^\text{to}}{t_a} - \vi{b^\text{to}}{t_b}\bigr)
+  &= R_1\,c^{i,x}_{x,s} + X_1\,c^{r,x}_{x,s}
+     - N_x\!\left(R_2\,c^{i,x}_{x,\ell} + X_2\,c^{r,x}_{x,\ell}\right),
+  \label{eq:ct-v-i}
 \end{align}
 %
-The current relation (\ref{eq:yy-i}) is the transpose of the voltage transform
-and ensures power conservation.
+where $c^{r,x}_{x,s} = c^{r,x}_{x,\text{fr},1}$ is the HV series current
+(variable index~1 on the \texttt{fr} side) and $c^{r,x}_{x,\ell}$ is the
+corresponding LV leg current (variable index~1 or~3 on the \texttt{to} side).
+
+The $-N_x Z_2 I_\ell$ sign arises from the T-model star-node elimination:
+LV currents flow \emph{into} the transformer from the bus, hence opposite to
+the direction through the winding branch from the star node.
+
+\paragraph{Current coupling.}
+Both LV currents flow into the transformer from their respective buses;
+by power conservation at the ideal core:
+%
+\begin{equation}
+  N_x\,c^{r,x}_{x,s} + c^{r,x}_{x,\ell_1} + c^{r,x}_{x,\ell_2} = 0,
+  \qquad
+  N_x\,c^{i,x}_{x,s} + c^{i,x}_{x,\ell_1} + c^{i,x}_{x,\ell_2} = 0.
+  \label{eq:ct-i}
+\end{equation}
+
+\paragraph{Center-tap KCL.}
+The center-tap terminal $t_\text{n}$ carries the imbalance current
+$I_n = -I_{\ell_1} - I_{\ell_2}$:
+%
+\begin{equation}
+  c^{r,x}_{x,n} + c^{r,x}_{x,\ell_1} + c^{r,x}_{x,\ell_2} = 0,
+  \qquad
+  c^{i,x}_{x,n} + c^{i,x}_{x,\ell_1} + c^{i,x}_{x,\ell_2} = 0,
+  \label{eq:ct-n}
+\end{equation}
+%
+where $c^{r,x}_{x,n} = c^{r,x}_{x,\text{to},2}$ (variable index~2 on the
+\texttt{to} side).
+
+\paragraph{No-load shunt.}
+The shunt $G_0 + \mathrm{j}B_0$ is placed at the HV phase terminal
+$t^\text{ph}$ (same convention as \texttt{single\_phase}, eq.~\eqref{eq:yy-shunt}).
+The series current $I_s$ returns through the HV neutral $t^\text{n}$, so
+the HV neutral KCL contribution is $+I_s$ (current entering the bus at $t^\text{n}$).
+The shunt current is phase-to-ground and does not pass through $t^\text{n}$.
+
+\paragraph{Impedance parameters from OpenDSS.}
+For a 3-winding OpenDSS transformer with per-pair leakage values
+\texttt{XHL}, \texttt{XLT}, \texttt{XHT} (all in~\%), the star-network
+partitioning gives:
+%
+\begin{equation}
+  X_1 = \frac{X_\text{HL} + X_\text{HT} - X_\text{LT}}{2}
+        \cdot \frac{V_\text{hv}^2}{100\,S},
+  \qquad
+  X_2 = \frac{X_\text{HL} + X_\text{LT} - X_\text{HT}}{2}
+        \cdot \frac{V_\text{lv}^2}{100\,S}.
+  \label{eq:ct-star}
+\end{equation}
+%
+For the symmetric case $X_\text{HT} = X_\text{HL}$ (both legs identical)
+this simplifies to
+$X_1 = (X_\text{HL} - X_\text{LT}/2)\cdot V_\text{hv}^2/(100S)$
+and $X_2 = (X_\text{LT}/2)\cdot V_\text{lv}^2/(100S)$.
+Note that $X_2 \neq X_\text{HL}/2$; using $X_\text{HL}/2$ for both windings
+(the two-winding $\Gamma$ approximation) forces both leg voltages to be equal
+under unbalanced loading and is incorrect for \texttt{center\_tap}.
+
+The per-winding resistances map directly:
+$R_1 = (\%r_1/100)\cdot V_\text{hv}^2/S$ and
+$R_2 = (\%r_2/100)\cdot V_\text{lv}^2/S$.
 
 \subsubsection*{Wye--delta (Yd) and delta--wye (Dy)}
 

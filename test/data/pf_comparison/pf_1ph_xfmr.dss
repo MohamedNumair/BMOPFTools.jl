@@ -5,9 +5,14 @@
 !   hv.1/4  = HV phase and neutral (source side)
 !   lv.1/4  = LV phase and neutral (load side)
 !
-! Both neutrals are explicitly earthed so the neutral voltage at lv is
-! determined by the load return current and the LV neutral grounding.
-! Verifies the turns-ratio scaling and per-winding impedance handling.
+! Realistic winding impedances and no-load losses are used so that the
+! cross-validation proves the BMOPF series-impedance (Γ-model) and shunt
+! no-load branch are live in the OPF, not just parsed.
+!
+! %r=1.0  per winding  → total series R referred to HV ≈ 2%·Z_base_HV
+! xhl=4.0              → leakage reactance between windings, %
+! %noloadloss=0.3      → core/iron loss as % of rated kVA
+! %imag=1.5            → magnetising current as % of rated current
 
 Clear
 
@@ -16,13 +21,13 @@ New Circuit.pf_1ph_xfmr basekv=11.0 pu=1.0 angle=0 phases=1 bus1=hv.1.0
 ! HV neutral earthed at source.
 New Reactor.grnd_hv bus1=hv.4 bus2=hv.0 R=0.001 X=0 phases=1
 
-! 2-winding WYE-WYE → PMD classifies as 'single_phase'.
-! %r=0.1 xhl=0.1 → voltage drop < 0.2 V; within the 1 V BMOPF tolerance
-! for the ideal-transformer model that ignores series impedance.
+! 2-winding WYE-WYE single-phase transformer with realistic losses.
 New Transformer.t1 phases=1 windings=2
-~ wdg=1 bus=hv.1.4 conn=wye kv=11.0 %r=0.1 kva=50
-~ wdg=2 bus=lv.1.4 conn=wye kv=0.240 %r=0.1 kva=50
-~ xhl=0.1
+~ wdg=1 bus=hv.1.4 conn=wye kv=11.0  %r=1.0 kva=50
+~ wdg=2 bus=lv.1.4 conn=wye kv=0.240 %r=1.0 kva=50
+~ xhl=4.0
+~ %noloadloss=0.3
+~ %imag=1.5
 
 ! LV neutral earthed.
 New Reactor.grnd_lv bus1=lv.4 bus2=lv.0 R=0.001 X=0 phases=1

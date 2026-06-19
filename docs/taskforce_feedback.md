@@ -91,6 +91,9 @@ but it is exactly the kind of derivation that belongs next to the existing
 center-tap FAQ. Note the lumping loses the per-winding split (acceptable,
 since the math model cannot represent it anyway).
 
+The same issue applies to `center_tap`, but the arithmetic is less obvious
+— see item 20 for the required star-network leakage conversion.
+
 ## 6. Wye-wye three-phase transformers have no spec type
 
 The spec supports Φ, center-tap, wye-delta and delta-wye. Wye-wye
@@ -445,7 +448,94 @@ model and in reporting.  A network-level `base_scenario` / `contingency` tag
 in `meta` could indicate whether the case represents a normal operating point
 or a contingency.
 
-## Validation experience (what worked)
+## 20. Center-tap (`center_tap`) model: three corrections needed
+
+Implementing and cross-validating the `center_tap` subtype against
+OpenDSSDirect revealed three issues with how the spec currently describes or
+implies the model.
+
+### 20a. The JSON Schema reuses `single_phase_or_center_tap_transformer` — the subtypes need separate types
+
+The draft schema shares one JSON type definition between `single_phase` and
+`center_tap`. The fields are identical, but the physics are not:
+
+- **`single_phase`** uses a Γ-equivalent: both winding impedances are combined
+  into a single referred-to-HV series branch. The constraint is
+  `V_hv − N·V_lv = (R₁ + N²R₂)·Iₛ`.
+
+- **`center_tap`** requires a T-model with **per-leg** secondary impedance
+  branches. Each leg carries an independent current, so the constraint is
+  per-leg: `V_hv − N·V_legₖ = R₁·Iₛ − N·R₂·Iₗₖ`. Lumping into a single
+  `R₁ + N²R₂` term forces both leg voltages to be equal regardless of
+  load imbalance — which is wrong by approximately 0.2 V on a 120 V system
+  per 10 A of leg-current asymmetry.
+
+**Suggestion:** split into separate schema types. The `center_tap` type should
+document the T-model semantics and the terminal arity (2 from-side, 3 to-side)
+explicitly, since these differ from the (n, n) arity of `single_phase`.
+
+### 20b. The leakage reactance fields carry star-network values, not half-XHL
+
+For a **2-winding** `single_phase` transformer, `x_series_from = XHL/2 × Vhv²/(100·S)`
+and `x_series_to = XHL/2 × Vlv²/(100·S)` is correct (symmetric T → Γ).
+
+For a **3-winding** `center_tap` unit, OpenDSS specifies three pair-wise leakage
+values (`XHL`, `XLT`, `XHT`). These must first be converted via the star-network
+(Steinmetz) formula before storing in `x_series_from`/`x_series_to`:
+
+```
+x_series_from = (XHL + XHT − XLT) / 2  ×  Vhv² / (100 · s_rating)   [Ω]
+x_series_to   = (XHL + XLT − XHT) / 2  ×  Vlv² / (100 · s_rating)   [Ω]
+```
+
+For the common symmetric case `XHT = XHL` (both legs same leakage to HV):
+```
+x_series_from = (XHL − XLT/2)  ×  Vhv² / (100 · s_rating)
+x_series_to   =  XLT/2          ×  Vlv² / (100 · s_rating)
+```
+
+Using `XHL/2` for both (copying the 2-winding formula) produces incorrect per-leg
+voltage drops at any non-zero imbalance current. In the cross-validation test case
+(`XHL = XHT = 2.04%`, `XLT = 1.36%`) the error from using `XHL/2` instead of the
+star value is approximately 0.4–0.5 V on 120 V legs under 5 kW / 2 kW imbalanced
+loading.
+
+**Suggestion:** add a FAQ entry in the spec alongside the existing 3-phase
+transformer item, stating explicitly that `x_series_from`/`x_series_to` for
+`center_tap` are the Steinmetz star-network values, not half of any pair-wise
+leakage, and give the conversion formula from OpenDSS `XHL/XLT/XHT`.
+
+### 20c. `v_ref_to` is the per-leg voltage, not the full 240 V secondary span
+
+The turns ratio `N = v_ref_from / v_ref_to` is defined as the **per-leg**
+ratio. For a 7.2 kV / 120-0-120 V unit, `v_ref_to = 120 V`, giving `N = 60`,
+not `N = 30` (which `v_ref_to = 240 V` would imply). The full 240 V span is
+the line-to-line voltage across both legs combined, not the EMF of either
+individual winding.
+
+This matches how `v_ref_from` is the phase-to-neutral voltage for `single_phase`
+(not phase-to-phase), and is consistent with the T-model equations above where
+each leg equation references its own leg voltage separately. However, the spec
+does not state this explicitly.
+
+**Suggestion:** add a note to the `center_tap` description stating that
+`v_ref_to` is the nominal voltage of one LV leg (phase-to-center-tap), and
+that the full secondary span is `2 × v_ref_to`.
+
+### 20d. No-load branch placement should be stated
+
+The `g_no_load`/`b_no_load` fields are placed at the **HV (from-side)
+terminals** in the OPF formulation — consistent with OpenDSS and IEC practice
+(the shunt admittance is on winding 1). The HV series current `Iₛ` returns
+through the HV neutral terminal; the magnetising shunt current is
+phase-to-ground and does not pass through the neutral. Neither the spec text
+nor the field descriptions state where the shunt admittance is placed.
+
+**Suggestion:** add "placed at the from-side (HV) terminals, phase-to-ground"
+to the field descriptions of `g_no_load` and `b_no_load` in both
+`single_phase` and `center_tap`. The location matters for KCL bookkeeping
+(it determines which KCL nodes the shunt admittance touches) and for
+correctly inferring the neutral current.
 
 For what it's worth to the TF: the data model proved very checkable. On top
 of the JSON Schema we implemented semantic checks for required fields,
