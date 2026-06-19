@@ -100,16 +100,20 @@ end
 function _check_bus_voltage_bound_consistency(net::Dict{String,Any},
                                                findings::Vector{Finding})::Dict{String,Any}
     affected = String[]
-    pairs = [("v_min", "v_max"), ("vpn_min", "vpn_max"),
-             ("vpp_min", "vpp_max"), ("vpos_min", "vpos_max"),
-             ("va_diff_min", "va_diff_max")]
+    bound_pairs = [("v_min", "v_max"), ("vpn_min", "vpn_max"),
+                   ("vpp_min", "vpp_max"), ("vpos_min", "vpos_max"),
+                   ("va_diff_min", "va_diff_max")]
     for (bid, bus) in get(net, "bus", Dict())
         issues = String[]
-        for (lo, hi) in pairs
+        for (lo, hi) in bound_pairs
             vlo = get(bus, lo, nothing)
             vhi = get(bus, hi, nothing)
-            if vlo !== nothing && vhi !== nothing && Float64(vlo) > Float64(vhi)
-                push!(issues, "$lo ($vlo) > $hi ($vhi)")
+            if vlo !== nothing && vhi !== nothing
+                vlo_v = vlo isa AbstractVector ? Float64.(vlo) : [Float64(vlo)]
+                vhi_v = vhi isa AbstractVector ? Float64.(vhi) : [Float64(vhi)]
+                if any(lo_i > hi_i for (lo_i, hi_i) in zip(vlo_v, vhi_v))
+                    push!(issues, "$lo ($vlo) > $hi ($vhi)")
+                end
             end
         end
         if !isempty(issues)
@@ -152,6 +156,21 @@ function _check_bus_voltage_bound_applicability(net::Dict{String,Any},
         end
         if n_phase < 2 && (haskey(bus, "va_diff_min") || haskey(bus, "va_diff_max"))
             push!(issues, "va_diff_min/va_diff_max (bus) requires at least 2 phase terminals")
+        end
+        # Array-length checks: vpn_* must have length n_phase; vpp_* must have
+        # length n_phase*(n_phase-1)/2.
+        n_pairs = n_phase * (n_phase - 1) ÷ 2
+        for field in ("vpn_min", "vpn_max")
+            v = get(bus, field, nothing)
+            if v isa AbstractVector && length(v) != n_phase
+                push!(issues, "$field has length $(length(v)), expected n_phase=$n_phase")
+            end
+        end
+        for field in ("vpp_min", "vpp_max")
+            v = get(bus, field, nothing)
+            if v isa AbstractVector && length(v) != n_pairs
+                push!(issues, "$field has length $(length(v)), expected n_pairs=$n_pairs")
+            end
         end
         if !isempty(issues)
             push!(affected, bid)
