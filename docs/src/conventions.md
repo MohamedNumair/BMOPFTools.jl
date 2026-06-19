@@ -121,8 +121,8 @@ fields are in SI units (Ω or S); `v_ref_*` in V; `s_rating` in VA.
 |---|---|---|---|
 | `single_phase` | (2, 2) | Γ-equivalent, series Z referred to HV | `r/x_series_from` (HV, Ω), `r/x_series_to` (LV, Ω), `g/b_no_load` (S) |
 | `center_tap` | (2, 3) | T-model, per-leg secondary Z | same field names — see note below |
-| `wye_delta` | (4, 3) | ideal, series Z on wye winding | single `r_series`/`x_series` on the **wye** side |
-| `delta_wye` | (3, 4) | ideal, series Z on wye winding | single `r_series`/`x_series` on the **wye** side |
+| `wye_delta` | (4, 3) | per-winding T behind ideal Yd transform | `r/x_series_from` (wye), `r/x_series_to` (delta), `g/b_no_load` (S) |
+| `delta_wye` | (3, 4) | per-winding T behind ideal Dy transform | `r/x_series_from` (delta), `r/x_series_to` (wye), `g/b_no_load` (S) |
 
 **`single_phase`**: the series impedance $R = R_1 + N^2 R_2$, $X = X_1 + N^2 X_2$
 is lumped onto the HV side (Γ convention).  `r_series_from`/`x_series_from`
@@ -147,9 +147,15 @@ unbalanced loading produces different voltages on the two legs.
     Using the 2-winding shortcut `XHL/2` on both sides forces both leg
     voltages to be identical under unbalanced loading, which is wrong.
 
-**`wye_delta`/`delta_wye`**: the delta windings are ideal; all series
-impedance is on the wye winding.  `v_ref_*` are phase-to-neutral equivalents
-(the √3 factor is absorbed into the effective turns ratio `n_eff`).
+**`wye_delta`/`delta_wye`**: a per-winding T-model behind the ideal Yd/Dy
+transform, matching the OpenDSS / PMD reference loss network.  Each winding
+carries its own series impedance (`r/x_series_from`, `r/x_series_to`) and a
+`g/b_no_load` core-loss shunt sits at the from-side (HV) phase terminals.
+`v_ref_*` are phase-to-neutral equivalents (the √3 factor is absorbed into
+the effective turns ratio `n_eff`).  The older single `r_series`/`x_series`
+(wye-side lumped, delta ideal) is accepted as legacy shorthand and migrated
+onto `r_series_from`/`x_series_from` with the secondary branch zero — see the
+[conversion guide](conversion.md) and feedback item 21.
 
 There is **no wye-wye three-phase type**: three-phase wye-wye units must be
 decomposed into three `single_phase` transformers.  The converter currently
