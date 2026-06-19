@@ -1,6 +1,6 @@
 # Finding-code reference
 
-The complete catalogue of the 128 finding codes, grouped by family. Codes are
+The complete catalogue of the 141 finding codes, grouped by family. Codes are
 **stable identifiers** — filter on `f.code`, never on message text. Severity
 prefix: `E.` error, `W.` warning, `I.` info (see
 [Analysis & reports](analysis.md) for the severity semantics).
@@ -94,6 +94,33 @@ Symmetries in data create symmetric optima and degrade NLP convergence
 | `W.DOM.LINE_LOW_IMPEDANCE` | W | A line whose absolute series impedance ‖Z‖_F = ‖(R+jX)‖_F × length is below 10⁻⁴ Ω. Near-zero impedance makes the KVL constraint nearly rank-deficient; model the section as a switch instead. |
 | `W.DOM.LINE_IMPEDANCE_SPREAD` | W | The worst adjacent-line ‖Z‖_F ratio (two lines sharing an interior bus, excluding voltage-source, transformer, and switch buses) exceeds 10⁵. At this contrast the NLP Jacobian loses roughly 5 decimal digits of precision; consider per-unit scaling or network reformulation. |
 | `I.DOM.LINE_IMPEDANCE_SPREAD` | I | Same as above but ratio is between 10³ and 10⁵ — common at MV/LV boundaries and usually benign, but worth reviewing if solvers struggle to converge. The result dict key `max_adjacent_impedance_ratio` always carries the worst observed value. |
+
+## LOAD — load model validation & analysis
+
+Emitted by [`domain_rules_check`](@ref) (coefficient plausibility, `DOM` pass)
+and [`load_model_analysis`](@ref) (`load_models` pass).
+
+### Validation (domain rules)
+
+| Code | Sev | Trigger & rationale |
+|---|---|---|
+| `E.LOAD.VNOM_MISSING` | E | A voltage-dependent load (`model` ≠ `constant_power`) has no `v_nom` field. The reference voltage is required to evaluate any voltage-dependent power expression; the OPF cannot be constructed without it. |
+| `E.LOAD.VNOM_ARITY` | E | `v_nom` is an array whose length is neither 1 nor the number of sub-loads. Each entry must broadcast to exactly one sub-load. |
+| `E.LOAD.VNOM_NONPOSITIVE` | E | One or more `v_nom` entries are ≤ 0. Voltages are strictly positive; a non-positive value is unphysical and would produce division by zero in the OPF. |
+| `E.LOAD.ZIP_ARITY` | E | A ZIP coefficient array (`alpha_z/i/p` or `beta_z/i/p`) has length that is neither 1 nor the number of sub-loads. |
+| `E.LOAD.EXP_ARITY` | E | `gamma_p` or `gamma_q` has length that is neither 1 nor the number of sub-loads. |
+| `W.LOAD.ZIP_SUM` | W | For a ZIP load, the active ($\alpha^Z + \alpha^I + \alpha^P$) or reactive ($\beta^Z + \beta^I + \beta^P$) coefficients do not sum to 1. At nominal voltage the load will not consume its nominal power; usually a data entry error. |
+| `W.LOAD.GAMMA_NEGATIVE` | W | An exponential exponent $\gamma < 0$ — power increases as voltage falls. Physically possible for some device classes but extremely unusual in distribution-network demand models; almost always a sign error. |
+| `W.LOAD.MODEL_MIXED` | W | A `zip` load carries `gamma_p`/`gamma_q` fields, or an `exponential` load carries ZIP coefficient fields. The extra fields are ignored; this finding flags the likely copy-paste error. |
+| `I.LOAD.GAMMA_RANGE` | I | An exponential exponent $\gamma \notin (0, 2)$ — outside the range typical of distribution loads (motors ≈ 0.08, constant-impedance = 2). Still valid; flagged as context. |
+| `I.LOAD.MODEL_FIELDS_IGNORED` | I | A `constant_power`, `constant_current`, or `constant_impedance` load carries ZIP or exponential coefficient fields. These fields are redundant for named degenerate models and will be ignored by the OPF. |
+
+### Analysis (load model pass)
+
+| Code | Sev | Trigger & rationale |
+|---|---|---|
+| `I.LOAD.EXP_ZIP_EQUIVALENT` | I | One or more `exponential` loads have all exponents in $\{0, 1, 2\}$. These can be represented losslessly as `zip` (or the named `constant_power`/`constant_current`/`constant_impedance` models), keeping the OPF quadratic. The `loads` detail key lists the affected load IDs. |
+| `W.LOAD.NL_NO_VMIN` | W | One or more voltage-dependent loads sit on buses without any lower voltage magnitude bound (`v_min`, `vpn_min`, or `vpp_min`). The OPF squared-voltage variable $W$ will rely on the default floor bound ($0.5\,V^{\text{nom}}$) rather than an engineering limit. For loads with $\gamma < 2$ or $\alpha^I/\alpha^Z \neq 0$ the power expression grows unboundedly as voltage falls; an explicit lower bound is strongly recommended. |
 
 ## RED — redundancy
 

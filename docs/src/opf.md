@@ -185,29 +185,64 @@ Grounded terminals are absent from the voltage variable dict and contribute zero
 
 #### Loads
 
-The constant-power model expresses $S = V \cdot I^*$ in rectangular coordinates.
-For phase terminal $t^\phi_k$ and neutral $n_b$, define the voltage drop:
+For every load sub-load $k$, define the **voltage drop** across the sub-load
+(phase-to-neutral for WYE/SINGLE\_PHASE; line-to-line for DELTA):
 
 ```math
 \Delta v^r_k = v^r_{b,t^\phi_k} - v^r_{b,n_b}, \qquad
 \Delta v^i_k = v^i_{b,t^\phi_k} - v^i_{b,n_b}
 ```
 
-**WYE / SINGLE\_PHASE** (phase-to-neutral voltage):
+The **realized power** is always bilinear in these voltage drops and the load
+current variables (exact, no approximation):
 
 ```math
-\Delta v^r_k \, c^{r,d}_{d,k} + \Delta v^i_k \, c^{i,d}_{d,k} = P^{d,\text{nom}}_{d,k}
+P_k = \Delta v^r_k \, c^{r,d}_{d,k} + \Delta v^i_k \, c^{i,d}_{d,k}, \qquad
+Q_k = \Delta v^i_k \, c^{r,d}_{d,k} - \Delta v^r_k \, c^{i,d}_{d,k}
 ```
+
+The load `model` field determines the right-hand-side value that $P_k$ and
+$Q_k$ are pinned to.
+
+##### Squared-voltage-drop variable
+
+All voltage-dependent models introduce a scalar auxiliary variable per
+sub-load:
 
 ```math
-\Delta v^i_k \, c^{r,d}_{d,k} - \Delta v^r_k \, c^{i,d}_{d,k} = Q^{d,\text{nom}}_{d,k}
+W_k = (\Delta v^r_k)^2 + (\Delta v^i_k)^2
 ```
 
-**DELTA** (line-to-line voltage, element $k$ connecting $t_k$ to $t_{k^+}$
-cyclically):
+$W_k$ is bounded: $(f \cdot V^{\text{nom}}_k)^2 \leq W_k \leq (c \cdot V^{\text{nom}}_k)^2$
+with floor fraction $f = 0.5$ and ceiling fraction $c = 1.5$.  These
+conditioning bounds are deliberately wider than any supply standard; the
+bus voltage-magnitude bounds are the operative engineering constraints.
 
-Same equations with $\Delta v^r_k = v^r_{b,t_k} - v^r_{b,t_{k^+}}$,
-$\Delta v^i_k = v^i_{b,t_k} - v^i_{b,t_{k^+}}$.
+When a constant-current term is present, a further auxiliary variable
+$s_k = \sqrt{W_k}$ is introduced with $s_k^2 = W_k$, $s_k \geq 0$.
+
+##### Model types
+
+| `model` | $P_k$ pinned to | $Q_k$ pinned to | Quadratic? |
+|---|---|---|---|
+| `constant_power` (default) | $P^{\text{nom}}_k$ | $Q^{\text{nom}}_k$ | yes |
+| `constant_current` | $P^{\text{nom}}_k \cdot s_k / V^{\text{nom}}_k$ | $Q^{\text{nom}}_k \cdot s_k / V^{\text{nom}}_k$ | yes (with $s_k$) |
+| `constant_impedance` | $P^{\text{nom}}_k \cdot W_k / (V^{\text{nom}}_k)^2$ | $Q^{\text{nom}}_k \cdot W_k / (V^{\text{nom}}_k)^2$ | yes |
+| `zip` | $P^{\text{nom}}_k (\alpha^Z_k W_k/(V^{\text{nom}}_k)^2 + \alpha^I_k s_k/V^{\text{nom}}_k + \alpha^P_k)$ | analogous with $\beta$ | yes (with $s_k$ if $\alpha^I_k \neq 0$) |
+| `exponential` | $P^{\text{nom}}_k (W_k/(V^{\text{nom}}_k)^2)^{\gamma^P_k/2}$ | analogous with $\gamma^Q_k$ | only if $\gamma \in \{0,1,2\}$ |
+
+**Integer-exponent routing:** exponential loads with $\gamma \in \{0, 1, 2\}$
+are automatically routed to the constant-power, constant-current, or
+constant-impedance quadratic path respectively, keeping the formulation
+quadratic.  The data-analysis pass ([`load_model_analysis`](@ref)) flags
+these loads with `I.LOAD.EXP_ZIP_EQUIVALENT`.
+
+**v\_nom** is required for all models except `constant_power`.  It is the
+terminal voltage magnitude at which `p_nom`/`q_nom` are specified: phase-to-neutral (V) for WYE, line-to-line (V) for DELTA.  It may be a scalar
+(shared across all sub-loads) or a per-sub-load array.
+
+**DELTA** loads use line-to-line voltage drops: $\Delta v^r_k = v^r_{b,t_k} - v^r_{b,t_{k^+}}$,
+$\Delta v^i_k = v^i_{b,t_k} - v^i_{b,t_{k^+}}$ (indices cyclic).
 
 #### [Generators](@id generators-section)
 
