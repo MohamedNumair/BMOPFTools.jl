@@ -1650,6 +1650,38 @@ const IEEE13_FIXTURE = """
         @test haskey(report.results[:provenance], "convention")
     end
 
+    @testset "I.PROV.LINE_SWITCH_LIKE — near-zero impedance detection" begin
+        mk_net(R, X, length) = parse_bmopf("""
+        {"bus":{
+            "a":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "b":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"a","terminal_map":["1"],
+             "v_magnitude":[230.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":$R,"X_series_1_1":$X}},
+         "line":{"l1":{"bus_from":"a","bus_to":"b",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "linecode":"lc","length":$length}}}
+        """; from_string=true)
+
+        # condition 1: linecode impedance per-unit-length is near-zero
+        f1 = Finding[]
+        res1 = provenance_analysis(mk_net(1e-9, 1e-9, 100.0), f1)
+        @test any(f -> f.code == "I.PROV.LINE_SWITCH_LIKE" && f.component_id == "l1", f1)
+        @test res1["switch_like_lines"]["n"] == 1
+
+        # condition 2: effective impedance (Z * length) is near-zero due to short length
+        f2 = Finding[]
+        res2 = provenance_analysis(mk_net(1e-3, 1e-3, 0.05), f2)
+        @test any(f -> f.code == "I.PROV.LINE_SWITCH_LIKE" && f.component_id == "l1", f2)
+        @test res2["switch_like_lines"]["n"] == 1
+
+        # normal line: neither condition triggered
+        f3 = Finding[]
+        res3 = provenance_analysis(mk_net(3e-4, 2e-4, 100.0), f3)
+        @test !any(f -> f.code == "I.PROV.LINE_SWITCH_LIKE", f3)
+        @test res3["switch_like_lines"]["n"] == 0
+    end
+
     @testset "from_pmd — earth-bonded voltage source" begin
         # ENWL-style source: neutral bonded to earth via a grounding reactor,
         # so PMD reports connections [1,2,3,5] with vm/va aligned to them.
