@@ -537,39 +537,40 @@ function _classify_transformer(id::String, pmd_xfmr::Dict{String,Any},
     # Series impedances: PMD `rw` (per winding) and `xsc` (per winding pair)
     # are per-unit on the winding base. BMOPF wants Ω.
     #
-    # The TF spec gives wye_delta/delta_wye a SINGLE r_series/x_series, placed
-    # on the wye windings (the delta windings are ideal). Both PMD winding
-    # impedances are lumped onto the wye side: referring the delta-winding
-    # impedance through the turns ratio gives exactly rw·v_ref_wye²/S, the
-    # same base, so the lumped value is (rw₁+rw₂)·Z_base_wye.
-    # single_phase and center_tap keep per-winding _from/_to fields.
+    # All multi-winding subtypes use per-winding `_from`/`_to` fields. The
+    # OPF models a per-winding T behind the ideal transform (matches the
+    # OpenDSS / PMD `eng2math` loss network). Resistance maps per winding;
+    # for a 2-winding unit PMD's star conversion places the entire pair
+    # leakage `xsc[1]` on winding 1 (from side), zero on winding 2.
     rw  = get(pmd_xfmr, "rw",  nothing)
     xsc = get(pmd_xfmr, "xsc", nothing)
     if rw !== nothing || xsc !== nothing
         if haskey(xfmr, "v_ref_from") && haskey(xfmr, "v_ref_to") && haskey(xfmr, "s_rating") &&
            xfmr["s_rating"] > 0
-            if subtype in ("wye_delta", "delta_wye")
-                v_ref_wye = subtype == "wye_delta" ? xfmr["v_ref_from"] :
-                                                     xfmr["v_ref_to"]
-                z_base = v_ref_wye^2 / xfmr["s_rating"]
-                if rw !== nothing && length(rw) >= 2
-                    xfmr["r_series"] = (Float64(rw[1]) + Float64(rw[2])) * z_base
-                end
-                if xsc !== nothing && !isempty(xsc)
-                    xfmr["x_series"] = Float64(xsc[1]) * z_base
-                end
-            else
-                z_base_from = xfmr["v_ref_from"]^2 / xfmr["s_rating"]
-                z_base_to   = xfmr["v_ref_to"]^2   / xfmr["s_rating"]
+            z_base_from = xfmr["v_ref_from"]^2 / xfmr["s_rating"]
+            z_base_to   = xfmr["v_ref_to"]^2   / xfmr["s_rating"]
+            if subtype == "center_tap" && xsc !== nothing && length(xsc) >= 3
+                # 3-winding star (Steinmetz) network. PMD `xsc` order is
+                # [xhl, xht, xlt]; from = winding 1 (HV), to = winding 2 (one
+                # leg). Symmetric center-tap: x_series_to applies per leg.
+                xhl, xht, xlt = Float64(xsc[1]), Float64(xsc[2]), Float64(xsc[3])
+                xfmr["x_series_from"] = (xhl + xht - xlt) / 2 * z_base_from
+                xfmr["x_series_to"]   = (xhl + xlt - xht) / 2 * z_base_to
                 if rw !== nothing && length(rw) >= 2
                     xfmr["r_series_from"] = Float64(rw[1]) * z_base_from
                     xfmr["r_series_to"]   = Float64(rw[2]) * z_base_to
                 end
-                # xsc[1] is the total from↔to leakage reactance; split evenly
-                # between the windings (standard when only the pair total is known)
+            else
+                if rw !== nothing && length(rw) >= 2
+                    xfmr["r_series_from"] = Float64(rw[1]) * z_base_from
+                    xfmr["r_series_to"]   = Float64(rw[2]) * z_base_to
+                end
+                # xsc[1] is the total from↔to leakage reactance. The 2-winding
+                # star network (PMD `_sc2br_impedance`) puts it all on winding 1
+                # (from side); the to-side branch is zero.
                 if xsc !== nothing && !isempty(xsc)
-                    xfmr["x_series_from"] = Float64(xsc[1]) / 2 * z_base_from
-                    xfmr["x_series_to"]   = Float64(xsc[1]) / 2 * z_base_to
+                    xfmr["x_series_from"] = Float64(xsc[1]) * z_base_from
+                    xfmr["x_series_to"]   = 0.0
                 end
             end
         else
