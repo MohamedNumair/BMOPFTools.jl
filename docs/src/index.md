@@ -6,6 +6,15 @@ the IEEE Task Force on *Benchmarking Multiconductor OPF for Distribution
 Systems* for up-to-four-wire optimal power flow (OPF) benchmarks
 ([ref. 1](methodology.md#refs)).
 
+The term *optimal power flow* is used throughout, but the Task Force's scope
+extends well beyond generation cost minimisation.  The unifying requirement
+across all targeted problem classes — CVR, Dynamic Operating Envelopes,
+state estimation, maximum load delivery — is a faithful, conductor-level
+representation of an unbalanced distribution network subject to a selectable
+set of bounds.  Voltage limits, current ratings and power constraints are
+therefore optional in the data model; different formulations activate
+different subsets.  See [Optimal power flow](opf.md) for the full motivation.
+
 The library serves three use cases:
 
 - **Dataset producers** converting utility-derived OpenDSS models into
@@ -102,7 +111,7 @@ OpenDSS .dss ──(PMD parse_file)──► ENGINEERING dict
                                  SolutionReport ──► render_solution
 ```
 
-`analyze` runs fourteen passes (see [Analysis & reports](analysis.md)) and
+`analyze` runs fifteen passes (see [Analysis & reports](analysis.md)) and
 the report renders in nine sections, including a one-line **modeling
 convention statement** (wires per voltage level, grounding style,
 normalisations) so the case's assumptions are explicit rather than implied.
