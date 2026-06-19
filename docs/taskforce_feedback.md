@@ -176,7 +176,22 @@ EPSR roadmap). Converter authors need guidance here either way.
 
 - **`cost` shape:** §4.2 maps `cost → C_g ($/kWh)` where the math model's
   C_g is a per-phase 3-vector; examples in circulation use scalars. State
-  whether scalar shorthand is admissible.
+  whether scalar shorthand is admissible. Our implementation requires an
+  array (same length as `terminal_map`).
+
+- **`vpn_min`/`vpn_max` and `vpp_min`/`vpp_max` shape:** the spec does not
+  state the shape of these fields. In our implementation we store them as
+  **arrays** rather than scalars — `vpn_*` has length `n_phase` (one entry
+  per phase terminal in `terminal_names` order, neutral excluded), and
+  `vpp_*` has length `n_phase*(n_phase−1)/2` (one entry per upper-triangle
+  phase pair in `terminal_names` order). This makes per-phase asymmetric
+  bounds expressible (useful for triplex and split-phase configurations) and
+  makes the binding phase identifiable in solution reporting. We validate
+  array length against `n_phase` / `n_pairs` and report a warning on
+  mismatch. **Suggestion:** state the expected shape explicitly in §4.2; if
+  the intent is a uniform scalar, clarify that. If per-phase generalisation
+  is desired (we believe it is), the array form described here is a natural
+  choice.
 - **Load `p_nom`/`q_nom` shape vs configuration:** the required vector
   length (1 for SINGLE_PHASE, 3 for WYE/DELTA) is implied but could be
   stated in §4.2 alongside the terminal-map arities.

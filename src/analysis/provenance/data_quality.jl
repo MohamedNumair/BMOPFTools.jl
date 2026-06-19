@@ -157,6 +157,21 @@ function _check_bus_voltage_bound_applicability(net::Dict{String,Any},
         if n_phase < 2 && (haskey(bus, "va_diff_min") || haskey(bus, "va_diff_max"))
             push!(issues, "va_diff_min/va_diff_max (bus) requires at least 2 phase terminals")
         end
+        # Array-length checks: vpn_* must have length n_phase; vpp_* must have
+        # length n_phase*(n_phase-1)/2.
+        n_pairs = n_phase * (n_phase - 1) ÷ 2
+        for field in ("vpn_min", "vpn_max")
+            v = get(bus, field, nothing)
+            if v isa AbstractVector && length(v) != n_phase
+                push!(issues, "$field has length $(length(v)), expected n_phase=$n_phase")
+            end
+        end
+        for field in ("vpp_min", "vpp_max")
+            v = get(bus, field, nothing)
+            if v isa AbstractVector && length(v) != n_pairs
+                push!(issues, "$field has length $(length(v)), expected n_pairs=$n_pairs")
+            end
+        end
         if !isempty(issues)
             push!(affected, bid)
             push!(findings, Finding(WARNING, "W.PROV.INAPPLICABLE_VOLTAGE_BOUNDS",
