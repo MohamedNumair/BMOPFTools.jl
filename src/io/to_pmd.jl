@@ -316,8 +316,9 @@ function _transformer_to_pmd(xfmr::Dict{String,Any}, subtype::String,
         (pmd["sm_nom"] = [xfmr["s_rating"] / pscale, xfmr["s_rating"] / pscale])
 
     # BMOPF series impedances are Ω; PMD `rw`/`xsc` are per-unit on the
-    # winding base. wye_delta/delta_wye carry a single wye-side r_series/
-    # x_series (spec); single_phase/center_tap carry per-winding _from/_to.
+    # winding base. All multi-winding subtypes carry per-winding _from/_to
+    # (has_r2/has_x2). A legacy single wye-side r_series/x_series (has_r1/
+    # has_x1) on wye_delta/delta_wye is still inverted with an even split.
     has_r2 = haskey(xfmr, "r_series_from") && haskey(xfmr, "r_series_to")
     has_x2 = haskey(xfmr, "x_series_from") && haskey(xfmr, "x_series_to")
     has_r1 = haskey(xfmr, "r_series")
