@@ -167,6 +167,7 @@ function _md_operational(r::SummaryReport, io::IO)
         println(io)
     end
     _md_section_findings(r, io, :operational)
+    _md_section_findings(r, io, :load_models)
 end
 
 function _md_preflight(r::SummaryReport, io::IO)

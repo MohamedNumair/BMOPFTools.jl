@@ -214,6 +214,7 @@ function _render_operational(r::SummaryReport, io::IO; color::Bool=false)
     end
 
     _render_section_findings(r, io, :operational; color)
+    _render_section_findings(r, io, :load_models; color)
 end
 
 function _render_preflight(r::SummaryReport, io::IO; color::Bool=false)
