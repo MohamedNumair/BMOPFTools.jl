@@ -187,6 +187,13 @@ if isdir(dsuite_dir)
     end
 end
 
+# Coordinate CSVs for D-Suite networks (bus_id, longitude, latitude — no header).
+# PMD does not parse OpenDSS Buscoords, so we sideload them after conversion.
+const DSUITE_COORD_CSV = Dict(
+    key => joinpath(dsuite_dir, key, "opendss_xy_$(key)_scaled.csv")
+    for key in keys(DSUITE_NAMES)
+)
+
 sort!(cases; by = c -> (c[1], c[2]))
 
 println("Found $(length(cases)) case(s) across " *
@@ -210,6 +217,21 @@ let ok = 0, failed = 0
             net_orig["name"] = name
             meta !== nothing && (net_orig["meta"] = meta)
 
+            # Sideload bus coordinates for D-Suite cases (PMD ignores Buscoords).
+            # Coordinates from the original network propagate automatically to the
+            # reduced network because simplify_network preserves bus dicts.
+            coord_note = ""
+            if dataset == "DSuite"
+                dsuite_key = findfirst(v -> v == stem, DSUITE_NAMES)
+                if dsuite_key !== nothing
+                    csv = DSUITE_COORD_CSV[dsuite_key]
+                    if isfile(csv)
+                        n_matched, n_skipped = sideload_coordinates!(net_orig, csv)
+                        coord_note = "  coords=$(n_matched)+$(n_skipped)skipped"
+                    end
+                end
+            end
+
             net_red = simplify_network(net_orig)
 
             write_variant(net_orig, orig_dir, stem)
@@ -221,7 +243,7 @@ let ok = 0, failed = 0
             l1 = length(get(net_red,  "line", Dict()))
             dt = round(time() - t0; digits=1)
             println("✓  buses $(b0)→$(b1) (-$(b0-b1))" *
-                    "  lines $(l0)→$(l1) (-$(l0-l1))  $(dt)s")
+                    "  lines $(l0)→$(l1) (-$(l0-l1))$(coord_note)  $(dt)s")
             ok += 1
         catch e
             println("✗")

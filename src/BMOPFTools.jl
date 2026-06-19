@@ -217,6 +217,7 @@ include("io/write_bmopf.jl")
 include("io/from_pmd.jl")
 include("io/to_pmd.jl")
 include("io/from_dss.jl")
+include("io/sideload_coordinates.jl")
 
 include("analysis/inventory.jl")
 include("analysis/voltage_levels.jl")
@@ -439,6 +440,7 @@ export profile_solution, render_solution, solution_check
 export parse_bmopf, write_bmopf
 export from_pmd, to_pmd
 export from_dss
+export sideload_coordinates!
 export analyze, render
 export is_timeseries, get_snapshot      # useful for interactive use
 
