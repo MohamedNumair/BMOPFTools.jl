@@ -72,7 +72,9 @@ end
 function _check_i_max_completeness(net::Dict{String,Any},
                                     findings::Vector{Finding})::Dict{String,Any}
     linecodes  = get(net, "linecode", Dict())
-    incomplete = String[]
+
+    # Lines: i_max lives on the linecode, indexed by conductor position.
+    incomplete_lines = String[]
     for (lid, line) in get(net, "line", Dict())
         lcid = get(line, "linecode", nothing)
         lcid === nothing && continue
@@ -84,17 +86,70 @@ function _check_i_max_completeness(net::Dict{String,Any},
         n_fr = length(get(line, "terminal_map_from", String[]))
         n_to = length(get(line, "terminal_map_to",   String[]))
         n_c  = min(n_fr, n_to)
-        length(i_max) < n_c && push!(incomplete, lid)
+        length(i_max) < n_c && push!(incomplete_lines, lid)
     end
-    if !isempty(incomplete)
+    if !isempty(incomplete_lines)
         push!(findings, Finding(WARNING, "W.PROV.I_MAX_INCOMPLETE",
             :provenance, :line, nothing,
-            "$(length(incomplete)) line(s) have fewer `i_max` entries in their " *
+            "$(length(incomplete_lines)) line(s) have fewer `i_max` entries in their " *
             "linecode than conductors — current limits will not be enforced on " *
             "all conductors (the neutral conductor may be unprotected).",
-            Dict{String,Any}("lines" => incomplete)))
+            Dict{String,Any}("lines" => incomplete_lines)))
     end
-    Dict{String,Any}("n" => length(incomplete), "ids" => incomplete)
+
+    # Switches: i_max is on the switch element itself.
+    incomplete_switches = String[]
+    for (sid, sw) in get(net, "switch", Dict())
+        sw isa Dict || continue
+        i_max = get(sw, "i_max", nothing)
+        i_max === nothing && continue
+
+        n_fr = length(get(sw, "terminal_map_from", String[]))
+        n_to = length(get(sw, "terminal_map_to",   String[]))
+        n_c  = min(n_fr, n_to)
+        length(i_max) < n_c && push!(incomplete_switches, sid)
+    end
+    if !isempty(incomplete_switches)
+        push!(findings, Finding(WARNING, "W.PROV.I_MAX_INCOMPLETE_SWITCH",
+            :provenance, :switch, nothing,
+            "$(length(incomplete_switches)) switch(es) have fewer `i_max` entries " *
+            "than conductors — current limits will not be enforced on all conductors.",
+            Dict{String,Any}("switches" => incomplete_switches)))
+    end
+
+    # Transformers: i_max_from / i_max_to are per-winding, indexed by conductor.
+    # Expected lengths: len(terminal_map_from) and len(terminal_map_to) respectively.
+    incomplete_xfmr = String[]
+    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+        sub = get(get(net, "transformer", Dict()), subtype, nothing)
+        sub isa Dict || continue
+        for (tid, xfmr) in sub
+            xfmr isa Dict || continue
+            n_fr = length(get(xfmr, "terminal_map_from", String[]))
+            n_to = length(get(xfmr, "terminal_map_to",   String[]))
+            i_fr = get(xfmr, "i_max_from", nothing)
+            i_to = get(xfmr, "i_max_to",   nothing)
+            fr_short = i_fr !== nothing && length(i_fr) < n_fr
+            to_short = i_to !== nothing && length(i_to) < n_to
+            (fr_short || to_short) && push!(incomplete_xfmr, "$subtype/$tid")
+        end
+    end
+    if !isempty(incomplete_xfmr)
+        push!(findings, Finding(WARNING, "W.PROV.I_MAX_INCOMPLETE_XFMR",
+            :provenance, :transformer, nothing,
+            "$(length(incomplete_xfmr)) transformer(s) have fewer `i_max_from` or " *
+            "`i_max_to` entries than conductors — current limits will not be enforced " *
+            "on all conductors.",
+            Dict{String,Any}("transformers" => incomplete_xfmr)))
+    end
+
+    n_total = length(incomplete_lines) + length(incomplete_switches) + length(incomplete_xfmr)
+    Dict{String,Any}(
+        "n"                  => n_total,
+        "lines"              => incomplete_lines,
+        "switches"           => incomplete_switches,
+        "transformers"       => incomplete_xfmr,
+    )
 end
 
 function _check_bus_voltage_bound_consistency(net::Dict{String,Any},
