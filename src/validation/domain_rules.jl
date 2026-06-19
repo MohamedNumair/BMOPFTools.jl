@@ -196,6 +196,8 @@ end
 # (`_n_subloads` and `_as_vec` are defined in analysis/load_models.jl.)
 # Constant-power loads (no `model`, or model="constant_power") are unaffected.
 function _check_load_models(net, findings, n_checks)
+    bus_vnom = _assign_nominal_voltages(net)   # phase-to-neutral V, BFS from sources
+
     for (id, l) in get(net, "load", Dict())
         l isa Dict || continue
         model = get(l, "model", "constant_power")
@@ -256,6 +258,38 @@ function _check_load_models(net, findings, n_checks)
                 "Load '$id' is model=exponential but also carries ZIP coefficients; " *
                 "they are ignored.", nothing))
             _check_exp_coeffs(id, l, n_sub, findings)
+        end
+
+        # v_nom plausibility: compare against BFS-inferred bus nominal voltage.
+        vnom === nothing && continue
+        vnom_vals = vnom isa AbstractVector ? Float64.(vnom) : [Float64(vnom)]
+        any(<=(0.0), vnom_vals) && continue   # already flagged above
+        bid = get(l, "bus", nothing)
+        bid isa AbstractString || continue
+        v_bus_pn = get(bus_vnom, bid, nothing)
+        v_bus_pn === nothing && continue      # bus unreachable from source — skip
+
+        cfg = get(l, "configuration", "WYE")
+        # v_bus_pn is phase-to-neutral; DELTA loads reference line-to-line
+        v_expected = cfg == "DELTA" ? v_bus_pn * sqrt(3.0) : v_bus_pn
+
+        for (k, vk) in enumerate(vnom_vals)
+            ratio = vk / v_expected
+            if ratio < 0.8 || ratio > 1.25
+                push!(findings, Finding(WARNING, "W.LOAD.VNOM_MISMATCH",
+                    :domain_rules, :load, id,
+                    "Load '$id' sub-load $k: v_nom=$(round(vk; digits=1)) V differs " *
+                    "from the bus inferred nominal " *
+                    "$(cfg == "DELTA" ? "line-to-line" : "phase-to-neutral") voltage " *
+                    "$(round(v_expected; digits=1)) V by " *
+                    "$(round(abs(ratio-1)*100; digits=0)) %. " *
+                    "Power setpoint and voltage sensitivity are referenced to the " *
+                    "wrong operating point.",
+                    Dict{String,Any}("load"=>id, "sub_load"=>k,
+                                     "v_nom"=>vk, "v_expected"=>v_expected,
+                                     "ratio"=>ratio, "bus"=>bid)))
+                break  # one warning per load is enough
+            end
         end
     end
 end
