@@ -348,6 +348,25 @@ function _transformer_to_pmd(xfmr::Dict{String,Any}, subtype::String,
         end
     end
 
+    # No-load branch: BMOPF g_no_load/b_no_load (S) → PMD noloadloss/cmag
+    # (both dimensionless, relative to s_rating and v_ref_from).
+    has_g = haskey(xfmr, "g_no_load")
+    has_b = haskey(xfmr, "b_no_load")
+    if (has_g || has_b) &&
+       haskey(xfmr, "v_ref_from") && haskey(xfmr, "s_rating") &&
+       Float64(xfmr["s_rating"]) > 0
+        vf    = Float64(xfmr["v_ref_from"])
+        s     = Float64(xfmr["s_rating"])
+        y_base = s / vf^2
+        G = has_g ? Float64(xfmr["g_no_load"]) : 0.0
+        B = has_b ? Float64(xfmr["b_no_load"]) : 0.0
+        pmd["noloadloss"] = G / y_base
+        pmd["cmag"]       = sqrt(G^2 + B^2) / y_base
+    elseif has_g || has_b
+        @warn "Transformer: cannot convert g_no_load/b_no_load to PMD — " *
+              "missing v_ref_from or s_rating. No-load branch omitted."
+    end
+
     pmd["status"] = "ENABLED"
     pmd
 end
