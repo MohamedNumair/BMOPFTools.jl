@@ -36,28 +36,23 @@ through that bus's grounding impedance rather than solidly. The warning
 makes it visible; the alternative (an extra perfectly-grounded terminal) is
 exact but non-standard — see `docs/taskforce_feedback.md` item 7.
 
-## The explicit slack generator
+## Pricing the slack source
 
 The OpenDSS circuit object is simultaneously a voltage reference and an
-implicit unbounded power injection. The BMOPF `voltage_source` captures only
-the former, which leaves the generation-cost objective degenerate for every
-raw utility dataset (no generators at all). `from_pmd` therefore adds, per
-source, a generator `slack_<source_id>`:
+implicit unbounded power injection. The BMOPF `voltage_source` captures **both**:
+it is the network's current slack (see [Voltage source as current slack](opf.md#source-slack)).
+What's missing for a well-posed cost objective on a raw utility dataset (no
+generators at all) is a *price* on that imported power. `from_pmd` therefore
+attaches a per-phase **`cost`** to the source itself:
 
-- at the source bus, `WYE`, phases + bus neutral;
 - per-phase `cost` (kwarg `slack_cost`, default 1.0 \$/kWh) — minimum-cost
   dispatch then equals loss minimisation;
-- **no p/q bounds** (slack), marked `_slack: true`.
+- no flow bounds are added, so the source remains an unbounded slack;
+- no auxiliary generator is created — the cost lives on the `voltage_source`.
 
-Disable with `from_pmd(eng; add_slack_generator=false)`.
-
-!!! warning "Formulation convention required"
-    Under the spec's §3.8.1 source model the source current is a free
-    auxiliary variable. A co-located *costed unbounded* generator makes the
-    OPF unbounded unless the problem builder treats the slack generator as
-    *the* costed representation of the source injection (bind the source
-    current to it, or omit the free auxiliary current). See taskforce
-    feedback item 2.
+Disable with `from_pmd(eng; add_slack_generator=false)` (the kwarg name is kept
+for backwards compatibility; it now controls the source cost, not a generator).
+The augmentation pass applies the same default — see [Augmentation](augmentation.md).
 
 ## Load configuration
 
@@ -171,8 +166,8 @@ per-winding fields back to PMD `rw`/`xsc`.
   in `single_phase` with 3-phase terminal maps and flagged
   (`W.SPEC.XFMR_TMAP_ARITY`); the faithful decomposition into three
   single-phase units is future work.
-- **Generator costs** do not exist in PMD's ENGINEERING model; only the
-  synthesised slack carries one after conversion.
+- **Generator costs** do not exist in PMD's ENGINEERING model; after conversion
+  only the priced slack source carries a `cost`.
 - **`basefreq` mismatches** between linecodes and the circuit are a
   parse-time phenomenon (PMD warns during `parse_file`); they are not
   recoverable from the ENGINEERING dict and hence not visible to
