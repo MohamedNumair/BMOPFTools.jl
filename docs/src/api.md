@@ -37,6 +37,14 @@ get_snapshot
 sideload_coordinates!
 ```
 
+## Admittance export
+
+```@docs
+transformer_yprim
+export_yprim
+write_yprim
+```
+
 ## Conversion
 
 ```@docs
