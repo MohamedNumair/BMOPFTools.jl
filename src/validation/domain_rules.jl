@@ -28,6 +28,7 @@ function domain_rules_check(net::Dict{String,Any},
     _check_load_models(net, findings, n_checks)
     _check_low_impedance_lines(net, findings, thresholds, n_checks)
     _check_adjacent_line_impedance_spread(net, findings, thresholds, n_checks, result)
+    _check_inverter_capability(net, findings, n_checks)
 
     result["n_checks_run"] = n_checks[]
     result
@@ -364,6 +365,83 @@ function _check_negative_loads(net, findings, n_checks)
             "modeled as negative load; consider explicit generator objects: " *
             "$(join(sort(neg), ", ")).",
             Dict{String,Any}("loads" => sort(neg))))
+    end
+end
+
+# Inverter capability plausibility (inverter extension §3.6'):
+#   - s_max is the apparent-power nameplate and must be strictly positive;
+#   - active/reactive bound pairs must be ordered (p_min ≤ p_max, q_min ≤ q_max),
+#     else the feasible box is empty;
+#   - a P or Q bound whose magnitude exceeds the kVA nameplate is unreachable
+#     inside the apparent-power circle and is almost always a unit error;
+#   - a PV prime mover that can absorb active power (p_min < 0) is unphysical.
+function _check_inverter_capability(net, findings, n_checks)
+    for (id, inv) in get(net, "inverter", Dict())
+        inv isa Dict || continue
+        n_checks[] += 1
+
+        smax = get(inv, "s_max", nothing)
+        smax_arr = smax isa AbstractVector ? [Float64(x) for x in smax if x isa Number] : nothing
+        smax_total = nothing
+        if smax_arr !== nothing
+            if any(<=(0), smax_arr)
+                push!(findings, Finding(ERROR, "E.DOM.INV_SMAX_NONPOSITIVE", :domain_rules,
+                    :inverter, id,
+                    "inverter '$id' has a non-positive entry in s_max $(smax_arr) VA; " *
+                    "all per-phase apparent-power ratings must be strictly positive.",
+                    Dict{String,Any}("s_max" => smax_arr)))
+            else
+                smax_total = sum(smax_arr)
+            end
+        end
+
+        pmin = get(inv, "p_min", nothing)
+        pmax = get(inv, "p_max", nothing)
+        if pmin isa Number && pmax isa Number && Float64(pmin) > Float64(pmax)
+            push!(findings, Finding(ERROR, "E.DOM.INV_P_BOUNDS", :domain_rules,
+                :inverter, id,
+                "inverter '$id' has p_min = $(pmin) W > p_max = $(pmax) W; " *
+                "the active-power range is empty.",
+                Dict{String,Any}("p_min" => pmin, "p_max" => pmax)))
+        end
+
+        qmin = get(inv, "q_min", nothing)
+        qmax = get(inv, "q_max", nothing)
+        if qmin isa Number && qmax isa Number && Float64(qmin) > Float64(qmax)
+            push!(findings, Finding(ERROR, "E.DOM.INV_Q_BOUNDS", :domain_rules,
+                :inverter, id,
+                "inverter '$id' has q_min = $(qmin) var > q_max = $(qmax) var; " *
+                "the reactive-power range is empty.",
+                Dict{String,Any}("q_min" => qmin, "q_max" => qmax)))
+        end
+
+        # Bounds that exceed the total apparent-power nameplate are unreachable.
+        if smax_total !== nothing
+            for (field, v) in (("p_min", pmin), ("p_max", pmax),
+                               ("q_min", qmin), ("q_max", qmax))
+                v isa Number || continue
+                if abs(Float64(v)) > smax_total
+                    push!(findings, Finding(WARNING, "W.DOM.INV_BOUND_EXCEEDS_SMAX",
+                        :domain_rules, :inverter, id,
+                        "inverter '$id': |$field| = $(abs(Float64(v))) exceeds the " *
+                        "total apparent-power nameplate sum(s_max) = $(smax_total) VA; " *
+                        "this bound is unreachable inside the capability circle (unit error?).",
+                        Dict{String,Any}("field" => field, "value" => v,
+                                         "s_max_total" => smax_total)))
+                end
+            end
+        end
+
+        # PV prime movers inject only; a negative active-power floor is unphysical.
+        if get(inv, "prime_mover", nothing) == "PV" &&
+           pmin isa Number && Float64(pmin) < 0
+            push!(findings, Finding(WARNING, "W.DOM.INV_PV_ABSORBS", :domain_rules,
+                :inverter, id,
+                "inverter '$id' is prime_mover=PV but has p_min = $(pmin) W < 0 — " *
+                "PV cannot absorb active power; use prime_mover=BATTERY for " *
+                "bidirectional devices.",
+                Dict{String,Any}("p_min" => pmin)))
+        end
     end
 end
 

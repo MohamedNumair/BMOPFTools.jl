@@ -12,7 +12,7 @@
 
 Clear
 
-New Circuit.pf_3ph_line basekv=0.415 pu=1.0 angle=0 phases=3 bus1=src.1.2.3
+New Circuit.pf_3ph_line basekv=0.415 pu=1.0 angle=0 phases=3 bus1=src.1.2.3 model=ideal
 
 New Reactor.grnd bus1=src.4 bus2=src.0 R=0.001 X=0
 

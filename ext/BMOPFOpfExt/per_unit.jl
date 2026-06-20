@@ -141,6 +141,7 @@ end
 
 function _pu_scale_sources!(net, bases)
     v_base = bases.v_base
+    sb     = bases.s_base
     for (_, vs) in get(net, "voltage_source", Dict())
         bus = get(vs, "bus", "")
         vb  = get(v_base, bus, 1.0)
@@ -148,6 +149,27 @@ function _pu_scale_sources!(net, bases)
             vs["v_magnitude"] = Float64.(vs["v_magnitude"]) ./ vb
         end
         # v_angle is in radians — unchanged
+
+        # Optional flow bounds: W/var → PU (divide by s_base)
+        for f in ("p_min", "p_max", "q_min", "q_max")
+            haskey(vs, f) && (vs[f] = Float64.(vs[f]) ./ sb)
+        end
+        # Cost: $/W in SI → $/PU-W in PU (multiply by s_base; c2 by s_base²)
+        if haskey(vs, "cost")
+            c = vs["cost"]
+            if c isa AbstractVector
+                if length(c) == 1
+                    vs["cost"] = [Float64(c[1]) * sb]
+                else
+                    vs["cost"] = [i == 1 ? Float64(ci) * sb^2 :
+                                  i == 2 ? Float64(ci) * sb   :
+                                           Float64(ci)
+                                  for (i, ci) in enumerate(c)]
+                end
+            else
+                vs["cost"] = Float64(c) * sb
+            end
+        end
     end
 end
 
@@ -372,6 +394,23 @@ function _from_per_unit(result_pu::Dict{String,Any}, bases, net::Dict{String,Any
             end
             for f in ("pg", "qg")
                 haskey(gvals, f) && (gvals[f] = gvals[f] * sb)
+            end
+        end
+    end
+
+    # Voltage-source slack currents and powers
+    sources = get(net, "voltage_source", Dict())
+    for (sid, ph_dict) in get(result, "voltage_source", Dict())
+        vs  = get(sources, sid, Dict())
+        bus = get(vs, "bus", "")
+        ib  = get(bases.i_base, bus, 1.0)
+        for (_, svals) in ph_dict
+            svals isa Dict || continue
+            for f in ("cr", "ci", "cm")
+                haskey(svals, f) && (svals[f] = svals[f] * ib)
+            end
+            for f in ("ps", "qs")
+                haskey(svals, f) && (svals[f] = svals[f] * sb)
             end
         end
     end

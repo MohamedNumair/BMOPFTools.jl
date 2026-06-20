@@ -78,6 +78,11 @@ Base.@kwdef struct AugmentationRecipe
     # ── Slack generator ──────────────────────────────────────────────────────
     slack_cost :: Float64 = 1.0
 
+    # ── Inverter dispatch defaults ────────────────────────────────────────────
+    # Default reactive-capability power factor for inverters that have no
+    # power_factor control profile.  EN 50549-1:2019: cos φ ≥ 0.90 for LV DERs.
+    inverter_default_pf :: Float64 = 0.90
+
     # ── Pass enable flags ────────────────────────────────────────────────────
     apply_v_bounds        :: Bool = true
     apply_vpn_bounds      :: Bool = true
@@ -86,6 +91,7 @@ Base.@kwdef struct AugmentationRecipe
     apply_thermal         :: Bool = true
     apply_q_bounds        :: Bool = true
     apply_slack_generator :: Bool = true
+    apply_inverter        :: Bool = true
 end
 
 """

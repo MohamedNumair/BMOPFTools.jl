@@ -642,92 +642,7 @@ const IEEE13_FIXTURE = """
         @test_throws ArgumentError to_pmd(net)
     end
 
-    @testset "Transformer impedance unit conversion" begin
-        # PMD rw/xsc (p.u.) → BMOPF r_series/x_series (Ω) → PMD must round-trip
-        eng = Dict{String,Any}(
-            "settings" => Dict{String,Any}(
-                "voltage_scale_factor" => 1000.0,   # PMD kV convention
-                "power_scale_factor"   => 1000.0),  # PMD kVA convention
-            "bus" => Dict{String,Any}(
-                "a" => Dict{String,Any}("terminals" => [1,2,3]),
-                "b" => Dict{String,Any}("terminals" => [1,2,3])),
-            "voltage_source" => Dict{String,Any}(
-                "src" => Dict{String,Any}(
-                    "bus" => "a", "connections" => [1,2,3],
-                    "vm" => [2.4, 2.4, 2.4], "va" => [0.0, -120.0, 120.0])),
-            "transformer" => Dict{String,Any}(
-                "tx1" => Dict{String,Any}(
-                    "bus" => ["a", "b"],
-                    "configuration" => ["WYE", "WYE"],
-                    "connections" => [[1,2,3],[1,2,3]],
-                    "vm_nom" => [4.16, 0.48],
-                    "sm_nom" => [500.0, 500.0],   # 500 kVA in PMD scale
-                    "rw" => [0.01, 0.01],
-                    "xsc" => [0.06])))
-
-        net = from_pmd(eng)
-        tx  = net["transformer"]["single_phase"]["tx1"]
-        # s_rating must be in VA
-        @test tx["s_rating"] ≈ 500_000.0
-        # r_series_from = rw * V² / S = 0.01 * 4160² / 500e3 ≈ 0.346 Ω
-        @test tx["r_series_from"] ≈ 0.01 * 4160.0^2 / 500_000.0
-        @test tx["r_series_to"]   ≈ 0.01 * 480.0^2  / 500_000.0
-        # PMD convention: total pair leakage xsc[1] all on winding-1 (from side), zero on to side
-        @test tx["x_series_from"] ≈ 0.06 * 4160.0^2 / 500_000.0
-        @test tx["x_series_to"]   ≈ 0.0
-
-        # reverse direction recovers p.u. values
-        eng2 = to_pmd(net)
-        @test eng2["transformer"]["tx1"]["rw"]  ≈ [0.01, 0.01]
-        @test eng2["transformer"]["tx1"]["xsc"] ≈ [0.06]
-    end
-
-    @testset "Delta-wye transformer — per-winding T impedance" begin
-        # Per-winding T convention: each winding has its own series branch.
-        # from_pmd puts xsc[1] all on winding-1 (from/delta side), zero on winding-2.
-        # rw maps per-winding to their respective voltage bases.
-        eng = Dict{String,Any}(
-            "settings" => Dict{String,Any}(
-                "voltage_scale_factor" => 1000.0,
-                "power_scale_factor"   => 1000.0),
-            "bus" => Dict{String,Any}(
-                "mv" => Dict{String,Any}("terminals" => [1,2,3]),
-                "lv" => Dict{String,Any}("terminals" => [1,2,3,4])),
-            "voltage_source" => Dict{String,Any}(
-                "src" => Dict{String,Any}(
-                    "bus" => "mv", "connections" => [1,2,3],
-                    "vm" => [6.35, 6.35, 6.35], "va" => [0.0, -120.0, 120.0])),
-            "transformer" => Dict{String,Any}(
-                "txdw" => Dict{String,Any}(
-                    "bus" => ["mv", "lv"],
-                    "configuration" => ["DELTA", "WYE"],
-                    "connections" => [[1,2,3],[1,2,3,4]],
-                    "vm_nom" => [11.0, 0.433],
-                    "sm_nom" => [100.0, 100.0],
-                    "rw" => [0.004, 0.006],
-                    "xsc" => [0.04])))
-
-        net = from_pmd(eng; add_slack_generator=false)
-        tx  = net["transformer"]["delta_wye"]["txdw"]
-        # v_ref_from = vm_nom[1]*vscale = 11_000 V (delta winding, line voltage)
-        # v_ref_to   = vm_nom[2]*vscale = 433 V (wye winding, line voltage)
-        z_from = 11_000.0^2 / 100_000.0
-        z_to   = 433.0^2   / 100_000.0
-        # from side = delta winding (winding 1); to side = wye winding (winding 2)
-        @test tx["r_series_from"] ≈ 0.004 * z_from
-        @test tx["r_series_to"]   ≈ 0.006 * z_to
-        # xsc[1] (total pair leakage) all on winding-1 (from) side, zero on to
-        @test tx["x_series_from"] ≈ 0.04 * z_from
-        @test tx["x_series_to"]   ≈ 0.0
-        @test !haskey(tx, "r_series") && !haskey(tx, "x_series")
-
-        # reverse: recover per-winding rw and total xsc
-        eng2 = to_pmd(net)
-        @test eng2["transformer"]["txdw"]["rw"]  ≈ [0.004, 0.006]
-        @test eng2["transformer"]["txdw"]["xsc"] ≈ [0.04]
-    end
-
-    @testset "from_pmd — explicit slack generator" begin
+    @testset "from_pmd — slack cost priced on the voltage source" begin
         eng = Dict{String,Any}(
             "settings" => Dict{String,Any}("voltage_scale_factor" => 1000.0),
             "bus" => Dict{String,Any}(
@@ -739,18 +654,15 @@ const IEEE13_FIXTURE = """
                     "va" => [0.0, -120.0, 120.0, 0.0])))
 
         net = from_pmd(eng; slack_cost=0.25)
-        @test haskey(net["generator"], "slack_source")
-        g = net["generator"]["slack_source"]
-        @test g["bus"] == "src"
-        @test g["configuration"] == "WYE"
-        @test g["terminal_map"] == ["1","2","3"]
-        @test g["cost"] ≈ [0.25, 0.25, 0.25]
-        @test get(g, "_slack", false) == true
-        @test !haskey(g, "p_min") && !haskey(g, "p_max")
+        @test !haskey(net, "generator")
+        vs = net["voltage_source"]["source"]
+        @test vs["bus"] == "src"
+        @test vs["cost"] ≈ [0.25, 0.25, 0.25]   # one per phase (neutral excluded)
+        @test !haskey(vs, "p_min") && !haskey(vs, "p_max")
 
         # opt-out
         net2 = from_pmd(eng; add_slack_generator=false)
-        @test !haskey(net2, "generator")
+        @test !haskey(net2["voltage_source"]["source"], "cost")
     end
 
     @testset "Spec conformance checks" begin
@@ -785,6 +697,148 @@ const IEEE13_FIXTURE = """
         findings3 = Finding[]
         spec_conformance_check(net3, findings3)
         @test any(f -> f.code == "W.SPEC.N_SOURCES", findings3)
+    end
+
+    @testset "Inverter element" begin
+        # Self-contained network with a clean FOUR_LEG PV inverter that
+        # references a Volt-VAr control profile.
+        INV_FIXTURE = """
+        {
+          "name": "inv_mini",
+          "bus": {
+            "src": {"terminal_names":["1","2","3","n"],
+                    "perfectly_grounded_terminals":["n"],
+                    "v_min":220.0,"v_max":260.0},
+            "b1":  {"terminal_names":["1","2","3","n"],
+                    "v_min":220.0,"v_max":260.0}
+          },
+          "voltage_source": {
+            "vs": {"bus":"src","terminal_map":["1","2","3"],
+                   "v_magnitude":[230.0,230.0,230.0],
+                   "v_angle":[0.0,-2.094,2.094]}
+          },
+          "linecode": {"lc":{"R_series_1_1":0.1,"X_series_1_1":0.1}},
+          "line": {
+            "l1": {"bus_from":"src","bus_to":"b1",
+                   "terminal_map_from":["1","2","3"],
+                   "terminal_map_to":["1","2","3"],
+                   "linecode":"lc","length":100.0}
+          },
+          "inverter": {
+            "pv1": {"bus":"b1","terminal_map":["1","2","3","n"],
+                    "topology":"FOUR_LEG","prime_mover":"PV",
+                    "s_max":[5000.0,5000.0,5000.0],"p_avail":4000.0,
+                    "q_min":-3000.0,"q_max":3000.0,
+                    "control_profile":"vv1"}
+          },
+          "control_profile": {
+            "vv1": {"volt_var": {"voltage_reference":"PN_PER_PHASE",
+                                 "breakpoints":[218.0,225.0,235.0,242.0],
+                                 "q_limits":[-3000.0,3000.0],
+                                 "q_unit":"VAR","q_ref":"VAR_MAX"}}
+          }
+        }
+        """
+
+        @testset "parse + schema" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            @test haskey(net, "inverter")
+            @test haskey(net, "control_profile")
+            @test net["inverter"]["pv1"]["topology"] == "FOUR_LEG"
+
+            f = Finding[]
+            schema_check(net, f)
+            @test !any(startswith(fi.code, "E.SCHEMA") for fi in f)
+        end
+
+        @testset "inventory" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            f = Finding[]
+            res = inventory_analysis(net, f)
+            @test res["inverter"]["total"] == 1
+            @test res["inverter"]["by_topology"]["FOUR_LEG"] == 1
+            @test res["inverter"]["total_s_max_va"] == 15000.0
+            @test res["control_profile"]["total"] == 1
+        end
+
+        @testset "clean network: no inverter findings" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            f = Finding[]
+            spec_conformance_check(net, f)
+            integrity_check(net, f)
+            domain_rules_check(net, f)
+            completeness_check(net, f)
+            @test !any(occursin("INV", fi.code) ||
+                       fi.code == "E.INT.UNKNOWN_CONTROL_PROFILE"
+                       for fi in f if fi.component_type == :inverter)
+        end
+
+        @testset "missing required field" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            delete!(net["inverter"]["pv1"], "s_max")
+            f = Finding[]
+            completeness_check(net, f)
+            @test any(f_ -> f_.code == "E.COMP.MISSING_REQUIRED" &&
+                            f_.component_id == "pv1", f)
+        end
+
+        @testset "bad topology + arity" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            net["inverter"]["bad"] = Dict{String,Any}(
+                "bus" => "b1", "terminal_map" => ["1","2","3","n"],
+                "topology" => "FIVE_LEG", "prime_mover" => "PV", "s_max" => [1.0, 1.0, 1.0])
+            net["inverter"]["pv1"]["topology"] = "THREE_LEG"  # needs 3, has 4
+            f = Finding[]
+            spec_conformance_check(net, f)
+            @test any(f_ -> f_.code == "W.SPEC.INV_TOPOLOGY" &&
+                            f_.component_id == "bad", f)
+            @test any(f_ -> f_.code == "W.SPEC.INV_TMAP_ARITY" &&
+                            f_.component_id == "pv1", f)
+        end
+
+        @testset "unknown control_profile reference" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            net["inverter"]["pv1"]["control_profile"] = "nope"
+            f = Finding[]
+            integrity_check(net, f)
+            @test any(f_ -> f_.code == "E.INT.UNKNOWN_CONTROL_PROFILE" &&
+                            f_.component_id == "pv1", f)
+        end
+
+        @testset "filter dimension mismatch" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            net["inverter"]["pv1"]["r_filter"] = [0.01, 0.01]  # needs 3
+            f = Finding[]
+            integrity_check(net, f)
+            @test any(f_ -> f_.code == "W.INT.DIM_MISMATCH" &&
+                            f_.component_id == "pv1", f)
+        end
+
+        @testset "capability checks" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            net["inverter"]["pv1"]["p_min"] = 100.0
+            net["inverter"]["pv1"]["p_max"] = -100.0   # empty range
+            net["inverter"]["pv1"]["q_max"] = 20000.0   # exceeds sum(s_max) = 15000
+            f = Finding[]
+            domain_rules_check(net, f)
+            @test any(f_ -> f_.code == "E.DOM.INV_P_BOUNDS", f)
+            @test any(f_ -> f_.code == "W.DOM.INV_BOUND_EXCEEDS_SMAX", f)
+
+            # PV that absorbs active power
+            net2 = parse_bmopf(INV_FIXTURE; from_string=true)
+            net2["inverter"]["pv1"]["p_min"] = -1000.0
+            f2 = Finding[]
+            domain_rules_check(net2, f2)
+            @test any(f_ -> f_.code == "W.DOM.INV_PV_ABSORBS", f2)
+        end
+
+        @testset "full analyze pipeline" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            report = analyze(net)
+            @test report isa SummaryReport
+            buf = IOBuffer(); render(report, buf; color=false)
+            @test occursin("inverter", String(take!(buf)))
+        end
     end
 
     @testset "Terminal map convention checks" begin
@@ -1037,6 +1091,33 @@ const IEEE13_FIXTURE = """
                        x.component_id == "632", f8)
         @test any(x -> x.code == "E.PRE.QBOUND_CONFLICT" &&
                        x.component_id == "gen_634", f8)
+
+        # preflight: generators co-located with the voltage source
+        net9 = parse_bmopf("""
+        {"bus":{"src":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+                "b1":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[230.0],"v_angle":[0.0]}},
+         "generator":{
+             "g_unb":{"bus":"src","terminal_map":["1","n"],"configuration":"WYE","cost":[1.0]},
+             "g_bnd":{"bus":"src","terminal_map":["1","n"],"configuration":"WYE",
+                      "p_max":[1.0e4],"q_max":[1.0e3],"cost":[1.0]},
+             "g_far":{"bus":"b1","terminal_map":["1","n"],"configuration":"WYE",
+                      "p_max":[1.0e4],"q_max":[1.0e3],"cost":[1.0]}}}
+        """; from_string=true)
+        f9 = Finding[]
+        r9 = infeasibility_preflight(net9, f9)
+        # unbounded generator at source bus → WARNING (degenerate double slack)
+        @test any(x -> x.code == "W.PRE.SOURCE_BUS_GENERATOR" &&
+                       x.component_id == "g_unb", f9)
+        # bounded generator at source bus → INFO (advisory)
+        @test any(x -> x.code == "I.PRE.SOURCE_BUS_GENERATOR" &&
+                       x.component_id == "g_bnd", f9)
+        # generator at a non-source bus → not flagged
+        @test !any(x -> occursin("SOURCE_BUS_GENERATOR", x.code) &&
+                        x.component_id == "g_far", f9)
+        @test r9["source_bus_generators"]["n_unbounded_source_bus_generators"] == 1
+        @test r9["source_bus_generators"]["n_bounded_source_bus_generators"]   == 1
     end
 
     @testset "Integrity checks" begin
@@ -2040,15 +2121,12 @@ const IEEE13_FIXTURE = """
                 @test length(tx["terminal_map_to"])   == 4
                 @test "n" in tx["terminal_map_to"]
 
-                # explicit slack generator at the source bus
-                gens = get(net, "generator", Dict())
-                slack = [g for (_, g) in gens if get(g, "_slack", false)]
-                @test length(slack) == 1
-                @test slack[1]["bus"] == first(values(net["voltage_source"]))["bus"]
-                @test slack[1]["configuration"] == "WYE"
-                @test length(slack[1]["terminal_map"]) == 3
-                @test haskey(slack[1], "cost")
-                @test !haskey(slack[1], "p_max")     # unbounded slack
+                # slack cost priced on the voltage source (no phantom generator)
+                @test !any(get(g, "_slack", false) for g in values(get(net, "generator", Dict())))
+                vs = first(values(net["voltage_source"]))
+                @test haskey(vs, "cost")
+                @test length(vs["cost"]) == 3        # one per phase (neutral excluded)
+                @test !haskey(vs, "p_max")           # unbounded slack
 
                 # 2-terminal loads are SINGLE_PHASE per spec
                 @test all(l["configuration"] == "SINGLE_PHASE"
@@ -2262,8 +2340,8 @@ const IEEE13_FIXTURE = """
     end
 
     @testset "Power-flow comparison vs OpenDSS" begin
-        if !_HAS_JUMP_IPOPT || !_HAS_PMD || !_HAS_ODS
-            @test_skip "Requires JuMP, Ipopt, PowerModelsDistribution, and OpenDSSDirect"
+        if !_HAS_JUMP_IPOPT || !_HAS_ODS
+            @test_skip "Requires JuMP, Ipopt, and OpenDSSDirect"
         else
             include("powerflow_comparison_tests.jl")
         end

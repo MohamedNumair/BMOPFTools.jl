@@ -34,8 +34,6 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     working = BMOPFTools.is_timeseries(net) ?
               BMOPFTools.get_snapshot(net, t_index) : deepcopy(net)
 
-    _ensure_source_generator!(working)
-
     bases = nothing
     if per_unit
         working, bases = _to_per_unit(working, s_base)
@@ -58,12 +56,13 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     # unconstrained NLP has a degenerate high-voltage local minimum; correct
     # initialisation ensures Ipopt finds the physical solution instead.
     _set_level_aware_start_values!(vars, working, bus_terminals, grounded)
+    _set_yd_dy_start_values!(vars, working, grounded)
 
     # Voltage bounds are NOT enforced as hard constraints — they are evaluated
     # post-solve by diagnose_infeasibility, which reports violations.
 
     kcl_r, kcl_i = _init_kcl(bus_terminals, grounded)
-    _add_source_constraints!(working, vars)
+    _add_source_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_line_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_switch_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_transformer_constraints!(model, working, vars, kcl_r, kcl_i)
@@ -73,8 +72,8 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
 
     # ── Slack current injections ──────────────────────────────────────────────
     # One (cs_r, cs_i) pair per KCL node. Grounded terminals are excluded
-    # (vr=vi=0 already fixed). Source-bus phase terminals are covered by the
-    # _auto_slack generator so their elastic slack will naturally be zero.
+    # (vr=vi=0 already fixed). Source-bus phase terminals carry the voltage
+    # source's own slack current in KCL, so their elastic slack is naturally zero.
 
     cs_r = Dict{Tuple{String,String}, JuMP.VariableRef}()
     cs_i = Dict{Tuple{String,String}, JuMP.VariableRef}()
@@ -94,10 +93,35 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     _add_kcl_constraints!(model, kcl_r, kcl_i)
 
     # ── Objective: minimise L2² of all slack injections ───────────────────────
+    # A small linear term on Yd/Dy wye winding currents (1e-6 × cr_xf_wye) breaks
+    # the sign degeneracy that arises because both I_wye>0 and I_wye<0 give zero
+    # slack for passive transformers with resistive loads.  The penalty is tiny
+    # relative to slack magnitudes (|cs| order 1-100 A when KCL fails) so it does
+    # not bias the physical solution; it merely selects the physical branch when
+    # both are equally feasible.
     slack_obj = JuMP.QuadExpr()
     for key in keys(cs_r)
         JuMP.add_to_expression!(slack_obj, 1.0, cs_r[key], cs_r[key])
         JuMP.add_to_expression!(slack_obj, 1.0, cs_i[key], cs_i[key])
+    end
+    xfmr_dict = get(working, "transformer", Dict())
+    cr_xf = vars[:cr_xf]
+    for subtype in ("wye_delta", "delta_wye")
+        wye_is_from = (subtype == "wye_delta")
+        # The unobservable state is the delta circulation current — a uniform loop
+        # current that adds equally to all delta arm currents without affecting
+        # terminal voltages or wye-side KCL.  Penalise the delta-side phase currents
+        # to break this degeneracy.  For Yd the delta is the to-side; for Dy it is
+        # the from-side.
+        side_del = wye_is_from ? "to" : "fr"
+        for (tid, xfmr) in get(xfmr_dict, subtype, Dict())
+            tm_del = Vector{String}(wye_is_from ?
+                get(xfmr, "terminal_map_to",   String[]) :
+                get(xfmr, "terminal_map_from", String[]))
+            for k in 1:length(tm_del)
+                JuMP.add_to_expression!(slack_obj, -1.0, cr_xf[(tid, side_del, k)])
+            end
+        end
     end
     @objective(model, Min, slack_obj)
 

@@ -70,6 +70,9 @@ function augment_case(net::Dict{String,Any};
     # ── Pass 3: generation ────────────────────────────────────────────────────
     _apply_generation!(net′, entries, recipe)
 
+    # ── Pass 4: inverter dispatch bounds ─────────────────────────────────────
+    recipe.apply_inverter && _apply_inverter_augmentation!(net′, entries, recipe)
+
     # ── Snapshot findings_after ───────────────────────────────────────────────
     fa = Finding[]
     benchmark_readiness_check(net′, fa)

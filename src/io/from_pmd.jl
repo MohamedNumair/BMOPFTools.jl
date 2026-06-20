@@ -109,33 +109,18 @@ function from_pmd(eng::Dict{String,Any};
         end
     end
 
-    # Explicit slack generator at each source bus. The OpenDSS circuit object
-    # is both a voltage reference and an implicit unbounded power injection;
-    # the BMOPF voltage_source captures only the former, so the import slack
-    # is made explicit as an unbounded generator with a cost — this is what
-    # gives the OPF objective (generation cost) a well-posed meaning.
+    # Price the import slack. The OpenDSS circuit object is both a voltage
+    # reference and an implicit unbounded power injection; the BMOPF
+    # voltage_source captures both (it is the OPF current slack, see
+    # ext/BMOPFOpfExt/source.jl). Attaching a per-phase cost gives the OPF
+    # objective (generation cost) a well-posed meaning without a phantom generator.
     if add_slack_generator && haskey(net, "voltage_source")
-        gens = get!(net, "generator", Dict{String,Any}())
-        for (vsid, vs) in net["voltage_source"]
-            bus = get(vs, "bus", nothing)
-            bus isa AbstractString || continue
+        for (_, vs) in net["voltage_source"]
+            vs isa Dict || continue
+            haskey(vs, "cost") && continue
             phases = [t for t in get(vs, "terminal_map", String[]) if t != "n"]
             isempty(phases) && continue
-            tmap = copy(phases)
-            # The slack generator models the DSS circuit object's power injection.
-            # DSS circuit sources are referenced to earth (terminal 0), not to the
-            # bus neutral (terminal 4). Including the neutral terminal as a WYE
-            # return creates a spurious degree of freedom that allows the neutral
-            # voltage to drift to unphysical values. Leave the neutral out — the
-            # generator power is referenced to the absolute ground (V=0 implicit
-            # reference), and the neutral bus is governed only by grounding shunts.
-            gens["slack_" * vsid] = Dict{String,Any}(
-                "bus"           => bus,
-                "terminal_map"  => tmap,
-                "configuration" => "WYE",
-                "cost"          => fill(slack_cost, length(phases)),
-                "_slack"        => true
-            )
+            vs["cost"] = fill(slack_cost, length(phases))
         end
     end
 
@@ -562,15 +547,34 @@ function _classify_transformer(id::String, pmd_xfmr::Dict{String,Any},
                 end
             else
                 if rw !== nothing && length(rw) >= 2
-                    xfmr["r_series_from"] = Float64(rw[1]) * z_base_from
-                    xfmr["r_series_to"]   = Float64(rw[2]) * z_base_to
+                    from_is_delta_r = length(config_strs) >= 1 && config_strs[1] == "DELTA"
+                    to_is_delta_r   = length(config_strs) >= 2 && config_strs[2] == "DELTA"
+                    xfmr["r_series_from"] = Float64(rw[1]) * z_base_from * (from_is_delta_r ? sqrt(3) : 1.0)
+                    xfmr["r_series_to"]   = Float64(rw[2]) * z_base_to   * (to_is_delta_r   ? sqrt(3) : 1.0)
                 end
-                # xsc[1] is the total from↔to leakage reactance. The 2-winding
-                # star network (PMD `_sc2br_impedance`) puts it all on winding 1
-                # (from side); the to-side branch is zero.
+                # xsc[1] is the total from↔to leakage reactance (p.u.). Split
+                # equally between windings to match OpenDSS's symmetric T-model.
+                # (PMD's star-conversion places it all on winding 1, but the
+                # BMOPF T-model needs per-winding values in each winding's own Ω.)
+                #
+                # √3 scaling for delta windings: the BMOPF voltage constraint uses
+                # the winding terminal current variable (line current), but the
+                # series-arm voltage drop is Z_arm × I_arm. For a delta connection
+                # the balanced relationship is |I_terminal| = √3 × |I_arm|, so the
+                # arm impedance used in the constraint must be divided by √3 to keep
+                # Z_arm × I_arm correct — equivalently the stored x_series value
+                # (which multiplies the terminal current) must be x_arm / √3.
+                # Combining: x_series_delta = (xsc/2 × z_base_delta) × √3 / √3 ... the net
+                # factor for the BMOPF convention turns out to be +√3 (see derivation
+                # in docs/src/methodology.md §transformer T-model).
                 if xsc !== nothing && !isempty(xsc)
-                    xfmr["x_series_from"] = Float64(xsc[1]) * z_base_from
-                    xfmr["x_series_to"]   = 0.0
+                    # from-side (winding 1) scaling
+                    from_is_delta = length(config_strs) >= 1 && config_strs[1] == "DELTA"
+                    to_is_delta   = length(config_strs) >= 2 && config_strs[2] == "DELTA"
+                    x_half_from = Float64(xsc[1]) / 2 * z_base_from * (from_is_delta ? sqrt(3) : 1.0)
+                    x_half_to   = Float64(xsc[1]) / 2 * z_base_to   * (to_is_delta   ? sqrt(3) : 1.0)
+                    xfmr["x_series_from"] = x_half_from
+                    xfmr["x_series_to"]   = x_half_to
                 end
             end
         else

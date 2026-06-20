@@ -120,7 +120,16 @@ function _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
     tmfr       = Vector{String}(get(xfmr, "terminal_map_from", String[]))
     tmto       = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
     N          = _xfmr_turns_ratio(xfmr)
-    n_c        = min(length(tmfr), length(tmto))
+    # Only phase conductors get independent winding constraints.
+    # The neutral is the return path: its voltage is determined by KCL, not by
+    # an additional winding equation. Use _phase_positions to exclude it.
+    ph_fr      = _phase_positions(tmfr)
+    ph_to      = _phase_positions(tmto)
+    n_pos_fr   = _neutral_pos(tmfr)
+    n_pos_to   = _neutral_pos(tmto)
+    t_n_fr     = n_pos_fr !== nothing ? tmfr[n_pos_fr] : nothing
+    t_n_to     = n_pos_to !== nothing ? tmto[n_pos_to] : nothing
+    n_c        = min(length(ph_fr), length(ph_to))
     i_max_fr   = Float64.(get(xfmr, "i_max_from", Float64[]))
     i_max_to_v = Float64.(get(xfmr, "i_max_to",   Float64[]))
 
@@ -143,40 +152,61 @@ function _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
     has_shunt  = (G != 0.0 || B != 0.0)
 
     for k in 1:n_c
-        t_fr = tmfr[k]; t_to = tmto[k]
+        # Index into the phase-only position lists; k is the k-th phase conductor.
+        pos_fr = ph_fr[k]
+        pos_to = ph_to[k]
+        t_fr   = tmfr[pos_fr]
+        t_to   = tmto[pos_to]
 
-        # Voltage: V_fr − N·V_to = Z·I_series  (ideal when R=X=0)
+        # Voltage: (V_ph_fr − V_n_fr) − N·(V_ph_to − V_n_to) = Z·I_series
+        # When no neutral exists on a side, the neutral voltage is implicitly 0.
         if has_series
+            vr_fr_pn = t_n_fr !== nothing ?
+                @expression(model, vr[(b_fr, t_fr)] - vr[(b_fr, t_n_fr)]) : vr[(b_fr, t_fr)]
+            vi_fr_pn = t_n_fr !== nothing ?
+                @expression(model, vi[(b_fr, t_fr)] - vi[(b_fr, t_n_fr)]) : vi[(b_fr, t_fr)]
+            vr_to_pn = t_n_to !== nothing ?
+                @expression(model, vr[(b_to, t_to)] - vr[(b_to, t_n_to)]) : vr[(b_to, t_to)]
+            vi_to_pn = t_n_to !== nothing ?
+                @expression(model, vi[(b_to, t_to)] - vi[(b_to, t_n_to)]) : vi[(b_to, t_to)]
             @constraint(model,
-                vr[(b_fr, t_fr)] - N * vr[(b_to, t_to)] ==
+                vr_fr_pn - N * vr_to_pn ==
                 R * cr_xf[(tid,"fr",k)] - X * ci_xf[(tid,"fr",k)])
             @constraint(model,
-                vi[(b_fr, t_fr)] - N * vi[(b_to, t_to)] ==
+                vi_fr_pn - N * vi_to_pn ==
                 R * ci_xf[(tid,"fr",k)] + X * cr_xf[(tid,"fr",k)])
         else
-            @constraint(model, vr[(b_fr, t_fr)] == N * vr[(b_to, t_to)])
-            @constraint(model, vi[(b_fr, t_fr)] == N * vi[(b_to, t_to)])
+            vr_fr_pn = t_n_fr !== nothing ?
+                @expression(model, vr[(b_fr, t_fr)] - vr[(b_fr, t_n_fr)]) : vr[(b_fr, t_fr)]
+            vi_fr_pn = t_n_fr !== nothing ?
+                @expression(model, vi[(b_fr, t_fr)] - vi[(b_fr, t_n_fr)]) : vi[(b_fr, t_fr)]
+            vr_to_pn = t_n_to !== nothing ?
+                @expression(model, vr[(b_to, t_to)] - vr[(b_to, t_n_to)]) : vr[(b_to, t_to)]
+            vi_to_pn = t_n_to !== nothing ?
+                @expression(model, vi[(b_to, t_to)] - vi[(b_to, t_n_to)]) : vi[(b_to, t_to)]
+            @constraint(model, vr_fr_pn == N * vr_to_pn)
+            @constraint(model, vi_fr_pn == N * vi_to_pn)
         end
 
         # Ideal-core current coupling: N·I_series_fr + I_to = 0
         @constraint(model, N * cr_xf[(tid,"fr",k)] + cr_xf[(tid,"to",k)] == 0)
         @constraint(model, N * ci_xf[(tid,"fr",k)] + ci_xf[(tid,"to",k)] == 0)
 
-        # From-side terminal current = series + magnetising shunt (AffExpr)
+        # From-side phase terminal current = series + magnetising shunt.
+        # The no-load shunt is wye-connected (phase-to-neutral), so the shunt
+        # voltage is V_ph − V_n.  When no neutral exists, use V_ph (earth return).
         if has_shunt
-            # I_mag = (G·vr_fr − B·vi_fr) + j(G·vi_fr + B·vr_fr)
-            icr_term = JuMP.AffExpr(0.0)
-            ici_term = JuMP.AffExpr(0.0)
-            JuMP.add_to_expression!(icr_term,  1.0, cr_xf[(tid,"fr",k)])
-            JuMP.add_to_expression!(ici_term,  1.0, ci_xf[(tid,"fr",k)])
-            JuMP.add_to_expression!(icr_term,  G,   vr[(b_fr, t_fr)])
-            JuMP.add_to_expression!(icr_term, -B,   vi[(b_fr, t_fr)])
-            JuMP.add_to_expression!(ici_term,  G,   vi[(b_fr, t_fr)])
-            JuMP.add_to_expression!(ici_term,  B,   vr[(b_fr, t_fr)])
+            vr_ph_n = t_n_fr !== nothing ?
+                @expression(model, vr[(b_fr, t_fr)] - vr[(b_fr, t_n_fr)]) : vr[(b_fr, t_fr)]
+            vi_ph_n = t_n_fr !== nothing ?
+                @expression(model, vi[(b_fr, t_fr)] - vi[(b_fr, t_n_fr)]) : vi[(b_fr, t_fr)]
+            icr_mag = @expression(model,  G * vr_ph_n - B * vi_ph_n)
+            ici_mag = @expression(model,  G * vi_ph_n + B * vr_ph_n)
+
+            icr_term = @expression(model, cr_xf[(tid,"fr",k)] + icr_mag)
+            ici_term = @expression(model, ci_xf[(tid,"fr",k)] + ici_mag)
 
             _kcl_add!(kcl_r, kcl_i, b_fr, t_fr, -icr_term, -ici_term)
-
-            # i_max_from limits terminal current (series + shunt)
             if length(i_max_fr) >= k
                 @constraint(model, icr_term^2 + ici_term^2 <= i_max_fr[k]^2)
             end
@@ -188,7 +218,26 @@ function _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
             end
         end
 
-        # To-side KCL and limit (to-side current = ideal coupling only, no shunt)
+        # From-side neutral KCL: series return current + no-load shunt return.
+        # Accumulate after the last phase so the neutral KCL fires exactly once.
+        if t_n_fr !== nothing && k == n_c
+            icr_n = @expression(model, sum(cr_xf[(tid,"fr",kk)] for kk in 1:n_c))
+            ici_n = @expression(model, sum(ci_xf[(tid,"fr",kk)] for kk in 1:n_c))
+            if has_shunt
+                # No-load shunt return current (sum over all phase conductors)
+                vr_ph_n_sum = @expression(model,
+                    sum(vr[(b_fr, tmfr[ph_fr[kk]])] - vr[(b_fr, t_n_fr)] for kk in 1:n_c))
+                vi_ph_n_sum = @expression(model,
+                    sum(vi[(b_fr, tmfr[ph_fr[kk]])] - vi[(b_fr, t_n_fr)] for kk in 1:n_c))
+                icr_n = @expression(model, icr_n + G * vr_ph_n_sum - B * vi_ph_n_sum)
+                ici_n = @expression(model, ici_n + G * vi_ph_n_sum + B * vr_ph_n_sum)
+            end
+            _kcl_add!(kcl_r, kcl_i, b_fr, t_n_fr, icr_n, ici_n)
+        end
+
+        # To-side phase terminal KCL: transformer injects current at the LV phase.
+        # The LV neutral is the load's return path; the transformer model does not
+        # directly connect to it, so no neutral KCL contribution on the to-side.
         _kcl_add!(kcl_r, kcl_i, b_to, t_to, -cr_xf[(tid,"to",k)], -ci_xf[(tid,"to",k)])
         if length(i_max_to_v) >= k
             @constraint(model,
@@ -547,13 +596,13 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
             @constraint(model,
                 vr[(b_del, t_del_k)] - vr[(b_del, t_del_other)] ==
                 n_eff * vr_wye_pn
-                - (Rw * Iwr - Xw * Iwi)
-                - n_eff * (Rd * Idr - Xd * Idi))
+                - n_eff * (Rw * Iwr - Xw * Iwi)
+                - (Rd * Idr - Xd * Idi))
             @constraint(model,
                 vi[(b_del, t_del_k)] - vi[(b_del, t_del_other)] ==
                 n_eff * vi_wye_pn
-                - (Rw * Iwi + Xw * Iwr)
-                - n_eff * (Rd * Idi + Xd * Idr))
+                - n_eff * (Rw * Iwi + Xw * Iwr)
+                - (Rd * Idi + Xd * Idr))
         else
             @constraint(model,
                 vr[(b_del, t_del_k)] - vr[(b_del, t_del_other)] == n_eff * vr_wye_pn)

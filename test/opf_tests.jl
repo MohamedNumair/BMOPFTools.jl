@@ -210,12 +210,12 @@
         res = solve_opf(net)
         @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
 
-        # Source real power via the auto-injected slack generator at sourcebus.
-        # P_src = (vr_src - vr_n)·crg + (vi_src - vi_n)·cig
+        # Source real power via the voltage-source slack current at sourcebus.
+        # P_src = (vr_src - vr_n)·cr + (vi_src - vi_n)·ci
         # With grounded neutral: vr_n = vi_n = 0, vi_src = 0 (angle=0).
-        # So P_src = vr_src · crg = V_s · crg.
-        crg_src = res["generator"]["_auto_slack"]["1"]["pg"] / V_s   # pg = V_s · crg
-        P_src   = res["generator"]["_auto_slack"]["1"]["pg"]
+        # So P_src = vr_src · cr = V_s · cr.
+        crg_src = res["voltage_source"]["vs"]["1"]["ps"] / V_s   # ps = V_s · cr
+        P_src   = res["voltage_source"]["vs"]["1"]["ps"]
 
         # Line loss: P_loss = R · |I|² (no reactive component here)
         cr_fr  = res["line"]["l1"]["1"]["cr_fr"]
@@ -468,7 +468,7 @@
     # Shared fixture for T11–T13: T1 geometry with a profit-seeking DER at bus1
     # (negative cost) so the optimizer always dispatches at p_max, giving a
     # deterministic nonzero pg far from zero — avoids rtol failures on near-zero values.
-    # The grid connection is covered by the auto-injected _auto_slack at sourcebus.
+    # The grid connection is covered by the voltage-source slack at sourcebus.
     # g1 injects 200 kW; load is 100 kW → net 100 kW exported to sourcebus.
     # V_bus1 rises above V_s (reverse current direction).
     # Analytical: V² − V_s·V − R·P_net = 0 → V = (V_s + √(V_s²+4·R·P_net))/2 ≈ 1047.7 V
@@ -615,11 +615,10 @@
 
         # ── top-level keys ────────────────────────────────────────────────────
         for k in ("termination_status","objective","solve_time",
-                  "bus","line","switch","load","generator","transformer")
+                  "bus","line","switch","load","generator","transformer",
+                  "voltage_source")
             @test haskey(res, k)
         end
-        # voltage_source does not appear — it fixes voltages only, no current result
-        @test !haskey(res, "voltage_source")
 
         # ── bus: terminal-keyed, four fields per terminal ─────────────────────
         for (bus_id, expected_terminals) in (
@@ -698,8 +697,17 @@
         @test res["transformer"] isa Dict
         @test isempty(res["transformer"])
 
-        # ── voltage_source: not in result (fixes voltages only, no current) ────
-        @test !haskey(res, "voltage_source")
+        # ── voltage_source: phase-terminal keys, slack current + power ─────────
+        @test haskey(res["voltage_source"], "vs")
+        @test haskey(res["voltage_source"]["vs"], "1")   # phase terminal only
+        @test !haskey(res["voltage_source"]["vs"], "n")  # neutral carries return current, no var
+        sd = res["voltage_source"]["vs"]["1"]
+        for f in ("cr","ci","cm","ps","qs")
+            @test haskey(sd, f)
+            @test sd[f] isa Float64
+        end
+        @test sd["cm"] >= 0.0
+        @test sd["cm"] ≈ sqrt(sd["cr"]^2 + sd["ci"]^2)  atol=1e-9
     end
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -958,6 +966,167 @@
             "alpha_z":[0.0],"alpha_i":[0.0],"alpha_p":[1.0],
             "beta_z":[0.0],"beta_i":[0.0],"beta_p":[1.0]"""))
         @test res["bus"]["bus1"]["1"]["vm"] ≈ V_cp   atol=0.01
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # T-INV1: Single-phase FOUR_LEG inverter — unconstrained Q (box bounds)
+    #
+    # A PV inverter sits at bus1 alongside a load. The inverter has p_max on
+    # each phase so the augmentation pass fills in q_min/q_max at cos φ = 0.90.
+    # The OPF minimises slack cost so it maximises the (cheaper) inverter
+    # dispatch. All three phases are symmetric → each phase decouples.
+    #
+    # With p_max = 3000 W/phase, p_nom_load = 2000 W/phase and the inverter
+    # cost < slack cost, the OPF should dispatch the inverter at p_avail and
+    # let it offset the load.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T-INV1: FOUR_LEG inverter, box Q bounds via augmentation" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "src": {"terminal_names":["1","2","3","n"],
+                    "perfectly_grounded_terminals":["n"],
+                    "v_min":200.0,"v_max":260.0},
+            "b1":  {"terminal_names":["1","2","3","n"],
+                    "perfectly_grounded_terminals":["n"],
+                    "v_min":200.0,"v_max":260.0}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[230.0,230.0,230.0],
+             "v_angle":[0.0,-2.0944,2.0944],"cost":[1.0,1.0,1.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.01,"R_series_2_2":0.01,"R_series_3_3":0.01}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1","2","3"],"terminal_map_to":["1","2","3"],
+             "linecode":"lc","length":10.0}},
+         "load":{"ld":{"bus":"b1","terminal_map":["1","2","3","n"],
+             "configuration":"WYE",
+             "p_nom":[2000.0,2000.0,2000.0],"q_nom":[0.0,0.0,0.0]}},
+         "inverter":{"pv1":{"bus":"b1","terminal_map":["1","2","3","n"],
+             "topology":"FOUR_LEG","prime_mover":"PV",
+             "s_max":[3000.0,3000.0,3000.0],
+             "p_max":[3000.0,3000.0,3000.0],"p_min":[0.0,0.0,0.0],
+             "cost":[0.1,0.1,0.1]}}}
+        """; from_string=true)
+
+        net′, _ = augment_case(net; recipe=AugmentationRecipe(
+            apply_v_bounds=false, apply_vpn_bounds=false,
+            apply_vpp_bounds=false, apply_vneg_bounds=false,
+            apply_thermal=false, apply_q_bounds=false,
+            apply_slack_generator=false))
+
+        # Augmentation should have added q_min/q_max to the inverter
+        inv = net′["inverter"]["pv1"]
+        @test haskey(inv, "q_max")
+        @test inv["q_max"][1] ≈ 3000.0 * tan(acos(0.90))   rtol=1e-6
+
+        res = solve_opf(net′)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test haskey(res, "inverter")
+        @test haskey(res["inverter"], "pv1")
+        # Inverter should dispatch close to p_max on each phase (cheaper than slack)
+        for t in ("1","2","3")
+            @test res["inverter"]["pv1"][t]["pg"] ≈ 3000.0   atol=1.0
+        end
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # T-INV2: Constant power-factor equality constraint
+    #
+    # A FOUR_LEG PV inverter with a power_factor control profile (pf = 0.9,
+    # lagging). The OPF must satisfy Q_k = -tan(arccos(0.9)) * P_k exactly.
+    # We verify the Q/P ratio at the solved dispatch point.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T-INV2: constant power-factor equality enforced" begin
+        pf_target = 0.9
+        tan_phi   = tan(acos(pf_target))
+
+        net = parse_bmopf("""
+        {"bus":{
+            "src": {"terminal_names":["1","2","3","n"],
+                    "perfectly_grounded_terminals":["n"],
+                    "v_min":200.0,"v_max":260.0},
+            "b1":  {"terminal_names":["1","2","3","n"],
+                    "perfectly_grounded_terminals":["n"],
+                    "v_min":200.0,"v_max":260.0}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[230.0,230.0,230.0],
+             "v_angle":[0.0,-2.0944,2.0944],"cost":[1.0,1.0,1.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.01,"R_series_2_2":0.01,"R_series_3_3":0.01}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1","2","3"],"terminal_map_to":["1","2","3"],
+             "linecode":"lc","length":10.0}},
+         "load":{"ld":{"bus":"b1","terminal_map":["1","2","3","n"],
+             "configuration":"WYE",
+             "p_nom":[2000.0,2000.0,2000.0],"q_nom":[0.0,0.0,0.0]}},
+         "control_profile":{"pf09":{"power_factor":{"pf":0.9}}},
+         "inverter":{"pv1":{"bus":"b1","terminal_map":["1","2","3","n"],
+             "topology":"FOUR_LEG","prime_mover":"PV",
+             "s_max":[3000.0,3000.0,3000.0],
+             "p_max":[2700.0,2700.0,2700.0],"p_min":[0.0,0.0,0.0],
+             "control_profile":"pf09","cost":[0.1,0.1,0.1]}}}
+        """; from_string=true)
+
+        # Augmentation must NOT add q_min/q_max (PF profile present)
+        net′, _ = augment_case(net; recipe=AugmentationRecipe(
+            apply_v_bounds=false, apply_vpn_bounds=false,
+            apply_vpp_bounds=false, apply_vneg_bounds=false,
+            apply_thermal=false, apply_q_bounds=false,
+            apply_slack_generator=false))
+        @test !haskey(net′["inverter"]["pv1"], "q_min")
+
+        res = solve_opf(net′)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+
+        for t in ("1","2","3")
+            pg = res["inverter"]["pv1"][t]["pg"]
+            qg = res["inverter"]["pv1"][t]["qg"]
+            # PF equality: Q = -tan_phi * P  (pf > 0 → lagging → absorbing VAr)
+            @test qg ≈ -tan_phi * pg   atol=0.1
+        end
+
+        # solution_check must not flag PF deviation
+        f = Finding[]
+        solution_check(net′, res, f)
+        @test !any(f_ -> f_.code == "W.SOL.INV_PF_DEVIATION", f)
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # T-INV3: s_max circle is binding
+    #
+    # Inverter with p_max = s_max * pf (exactly on the circle boundary).
+    # With the constant-PF coupling the apparent power must equal s_max.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T-INV3: s_max apparent-power circle respected" begin
+        pf      = 0.9
+        s_max_k = 3000.0
+        p_max_k = s_max_k * pf   # 2700 W — on the circle
+
+        net = parse_bmopf("""
+        {"bus":{
+            "src": {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
+                    "v_min":200.0,"v_max":260.0},
+            "b1":  {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
+                    "v_min":200.0,"v_max":260.0}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[230.0],"v_angle":[0.0],"cost":[1.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.001}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld":{"bus":"b1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_nom":[2000.0],"q_nom":[0.0]}},
+         "control_profile":{"pf09":{"power_factor":{"pf":0.9}}},
+         "inverter":{"pv1":{"bus":"b1","terminal_map":["1","n"],
+             "topology":"SINGLE_PHASE","prime_mover":"PV",
+             "s_max":[3000.0],"p_max":[2700.0],"p_min":[0.0],
+             "control_profile":"pf09","cost":[0.1]}}}
+        """; from_string=true)
+
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        pg = res["inverter"]["pv1"]["1"]["pg"]
+        qg = res["inverter"]["pv1"]["1"]["qg"]
+        sm = sqrt(pg^2 + qg^2)
+        @test sm <= s_max_k * 1.001   # within 0.1 % of nameplate
+        @test pg <= p_max_k * 1.001
     end
 
 end  # @testset "OPF — solve_opf extension"

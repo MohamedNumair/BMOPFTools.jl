@@ -178,7 +178,7 @@ function _check_mergeable_lines(net, findings)
         end
     end
 
-    for comp_type in ("load", "generator", "shunt", "voltage_source")
+    for comp_type in ("load", "generator", "shunt", "voltage_source", "inverter")
         for (_, c) in get(net, comp_type, Dict())
             b = get(c, "bus", nothing)
             b isa AbstractString && haskey(bus_elements, b) && (bus_elements[b] += 1)
