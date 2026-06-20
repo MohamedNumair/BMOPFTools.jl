@@ -100,17 +100,17 @@ FAQ: a "wye" in the BMOPF sense always has the neutral return — a
 
 Generators additionally carry per-phase `cost` (\$/kWh; scalar shorthand
 accepted) and optional `p_min/p_max/q_min/q_max`. A generator without
-bounds is an unbounded (slack-style) unit. The converter marks the slack it
-synthesises with `_slack: true`.
+bounds is an unbounded (slack-style) unit.
 
-**Auto-injected source generator.** `solve_opf` and `solve_feasibility_opf`
-require at least one generator with a **neutral terminal** at the source bus to
-satisfy neutral KCL (the voltage source fixes voltages but does not inject
-current).  If none is present, the solver automatically adds a generator named
-`_auto_slack` with empty bounds (unconstrained) and zero cost.  A warning is
-emitted; the generator appears in the result dict.  For proper OPF benchmarks
-replace this with an explicit grid-connection generator that has physically
-meaningful bounds and cost — see [Source bus generator injection](opf.md#source-gen-injection).
+**Voltage source as slack.** The `voltage_source` fixes its terminal voltages
+**and** acts as the network's current slack — it injects the current that closes
+KCL at the source bus, so no auxiliary slack generator is needed. Beyond
+`v_magnitude`/`v_angle`, it accepts an optional `configuration`, per-phase flow
+bounds `p_min/p_max/q_min/q_max`, and a per-phase `cost`. `from_pmd` and the
+augmentation pass set `cost` on the source by default. See
+[Voltage source as current slack](opf.md#source-slack). Placing an *unbounded*
+generator at the source bus duplicates the slack and is flagged by the pre-flight
+check (`W.PRE.SOURCE_BUS_GENERATOR`).
 
 ## Transformer subtypes
 

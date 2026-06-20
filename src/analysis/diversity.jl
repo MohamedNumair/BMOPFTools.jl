@@ -41,6 +41,7 @@ function _load_diversity(net::Dict{String,Any},
     pf_vals = Float64[]
     pq_tuples = Tuple{Vector{Float64},Vector{Float64}}[]
     configs = String[]
+    models  = String[]
 
     for (_, l) in loads
         p = Float64.(get(l, "p_nom", Float64[]))
@@ -57,6 +58,7 @@ function _load_diversity(net::Dict{String,Any},
         end
 
         push!(configs, string(get(l, "configuration", "UNKNOWN")))
+        push!(models,  string(get(l, "model", "constant_power")))
     end
 
     r["p_nom"] = _scalar_stats(p_vals)
@@ -112,12 +114,38 @@ function _load_diversity(net::Dict{String,Any},
     end
     isempty(imbalances) || (r["phase_imbalance"] = _scalar_stats(imbalances))
 
-    # config breakdown
+    # config + model breakdown
     cfg_counts = Dict{String,Int}()
     for c in configs
         cfg_counts[c] = get(cfg_counts, c, 0) + 1
     end
-    r["configurations"] = cfg_counts
+    model_counts = Dict{String,Int}()
+    for m in models
+        model_counts[m] = get(model_counts, m, 0) + 1
+    end
+    r["configurations"]            = cfg_counts
+    r["models"]                    = model_counts
+    r["n_distinct_configurations"] = length(cfg_counts)
+    r["n_distinct_models"]         = length(model_counts)
+
+    # Uniformity (coverage signal, not a defect): all loads share one model /
+    # configuration. Strictly uniform only, on ≥3 loads.
+    if n_total >= 3 && length(model_counts) == 1
+        only_model = first(keys(model_counts))
+        msg = only_model == "constant_power" ?
+            "All $n_total loads use the constant_power model — no load exercises " *
+            "voltage dependence (ZIP/exponential); the case does not test " *
+            "voltage-dependent load behaviour." :
+            "All $n_total loads use the '$only_model' load model — no model diversity."
+        push!(findings, Finding(INFO, "I.DIV.LOAD_UNIFORM_MODEL", :diversity, :load, nothing,
+            msg, Dict{String,Any}("model" => only_model, "n_total" => n_total)))
+    end
+    if n_total >= 3 && length(cfg_counts) == 1
+        only_cfg = first(keys(cfg_counts))
+        push!(findings, Finding(INFO, "I.DIV.LOAD_UNIFORM_CONFIG", :diversity, :load, nothing,
+            "All $n_total loads share the '$only_cfg' configuration — no connection diversity.",
+            Dict{String,Any}("configuration" => only_cfg, "n_total" => n_total)))
+    end
 
     # Per-galvanic-zone phase balance: sum p_nom by phase terminal label.
     # Flag zones where the phase totals are within 2% of each other — the

@@ -164,12 +164,13 @@ rating is required.
 
 ### Pass 3 — Generation
 
-**Slack generator.**  If no generator with `"_slack" => true` exists at a
-source bus, an unconstrained slack generator is injected.  It covers all phase
-terminals of the voltage source, uses WYE configuration, and carries a
-non-zero cost (default 1.0 \$/kWh, matching the [`from_pmd`](@ref) convention).
-No `p_min`/`p_max`/`q_min`/`q_max` are set — the slack is unconstrained so
-the OPF can always find a feasible point.
+**Slack cost.**  The voltage source is itself the network's current slack, so no
+slack *generator* is created. If a source has no `cost`, a per-phase cost is
+written onto the `voltage_source` (default 1.0 \$/kWh, matching the
+[`from_pmd`](@ref) convention) so imported power is priced in the objective. No
+flow bounds are added, so the slack stays unconstrained and the OPF can always
+find a feasible point. Controlled by the recipe's `apply_slack_generator` /
+`slack_cost` fields (names kept for backwards compatibility).
 
 **Reactive bounds.**  For each generator that has `p_max` defined but lacks
 `q_min`/`q_max`, symmetric reactive bounds are derived from the recipe

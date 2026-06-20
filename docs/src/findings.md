@@ -52,6 +52,8 @@ Symmetries in data create symmetric optima and degrade NLP convergence
 | `I.DIV.LOAD_PF_DSS_DEFAULT` | I | Load power factor mean is within 1 % of 0.88 with CV < 0.05 — strongly suggests reactive power was never explicitly set and the OpenDSS default PF was inherited throughout. Compare with `I.PROV.DSS_DEFAULT_PF`, which detects the exact 0.88 value per load; this finding detects the statistical signature across all loads. |
 | `I.DIV.LOAD_IMBALANCE` | I | A multi-phase load with >20 % spread between its phase setpoints — noteworthy unbalance (often intended; this is context, not criticism). |
 | `I.DIV.LOAD_PHASE_BALANCED` | I | Aggregate load across all phase terminals in a galvanic zone is balanced within 2 % (max − min spread relative to max). The network is effectively balanced and a single-phase equivalent model would suffice; the unbalanced OPF formulation adds no value here. |
+| `I.DIV.LOAD_UNIFORM_MODEL` | I | Across ≥3 loads, every load uses the *same* load model. When that model is `constant_power` (the default), no load exercises voltage dependence (ZIP/exponential) — the case does not test voltage-dependent load behaviour. Observational coverage signal, not a defect. |
+| `I.DIV.LOAD_UNIFORM_CONFIG` | I | Across ≥3 loads, every load shares the *same* `configuration` (e.g. all WYE) — no connection diversity. Observational; uniform connection is common and often legitimate. |
 | `I.DIV.LINE_SYMMETRIC` | I | ≥80 % of the lines sharing a linecode have lengths within ±10 % of the median — electrically near-identical sections. |
 | `I.DIV.BUS_UNIFORM_VMIN` | I | Every bus that has `v_min` has the *same* value — no spatial differentiation of the lower voltage envelope. |
 | `I.DIV.BUS_UNIFORM_VMAX` | I | Same for `v_max`. |
@@ -75,6 +77,8 @@ Symmetries in data create symmetric optima and degrade NLP convergence
 | `I.PRE.NO_VOLT_BOUNDS` | I | Buses with no voltage bounds at all — voltages are unconstrained there (spec semantics for absent optional bounds). |
 | `I.PRE.SINGLE_SOURCE` | I | Exactly one voltage source. The spec *requires* this in the current version; operationally it is still a single point of failure worth knowing about. |
 | `W.PRE.SOURCE_VOLTAGE_OOB` | W | A voltage source setpoint (`v_magnitude`) falls outside the bus's declared `v_min`/`v_max`. The source pins that voltage as a hard equality in the OPF, so the bound is trivially violated before the solver starts — a guaranteed infeasibility. Common cause: `v_magnitude` set in kV while bounds are in V, or an augmented bound tighter than the actual supply voltage. |
+| `W.PRE.SOURCE_BUS_GENERATOR` | W | A generator without `p_max`/`q_max` sits at a voltage-source bus. The voltage source is itself the network's current slack, so two unbounded current injections share one fixed-voltage bus — the dispatch split is degenerate (non-unique). Remove the generator and express its role as flow bounds/cost on the voltage source instead. |
+| `I.PRE.SOURCE_BUS_GENERATOR` | I | A *bounded* generator sits at a voltage-source bus. Well-posed (the generator is bounded, the source takes the remainder), but if its bounds/cost are meant to limit or price grid import, set them on the voltage source (`p_min`/`p_max`/`q_min`/`q_max`/`cost`) instead. |
 
 ## DOM — domain plausibility
 

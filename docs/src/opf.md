@@ -68,10 +68,12 @@ All variables are real-valued and in SI units (V and A).
 | $\tilde{c}^r_{\ell,k},\; \tilde{c}^i_{\ell,k}$ | line $\ell$, conductor $k$ | Series current, to-side |
 | $c^{r,d}_{d,k},\; c^{i,d}_{d,k}$ | load $d$, phase $k$ | Load current |
 | $c^{r,g}_{g,k},\; c^{i,g}_{g,k}$ | generator $g$, phase $k$ | Generator current |
+| $c^{r,s}_{v,k},\; c^{i,s}_{v,k}$ | voltage source $v$, phase $k$ | Source slack current |
 | $c^{r,x}_{x,\sigma,k},\; c^{i,x}_{x,\sigma,k}$ | transformer $x$, side $\sigma$, conductor $k$ | Transformer winding current |
 
-Load and generator current variables cover **phase conductors only**; neutral
-return current is implicit in KCL.
+Load, generator, and source current variables cover **phase conductors only**;
+neutral return current is implicit in KCL. (Inverters add an analogous current
+variable per phase — see the inverter section.)
 
 ---
 
@@ -98,17 +100,20 @@ v^r_{b,t} = 0, \quad v^i_{b,t} = 0 \qquad \forall\,(b,t) \in \mathcal{G}_\text{n
 
 #### Voltage sources
 
-Each source terminal $t_k$ is fixed to the specified rectangular value.
-The voltage source provides the **voltage reference only** — it does not inject
-current into KCL:
+Each source terminal $t_k$ is fixed to the specified rectangular value:
 
 ```math
 v^r_{b,t_k} = V^s_{v,k} \cos\theta^s_{v,k}, \qquad
 v^i_{b,t_k} = V^s_{v,k} \sin\theta^s_{v,k}
 ```
 
-Power balance at the source bus is satisfied by an explicit generator (see
-[Source bus generator injection](@ref source-gen-injection) below).
+The voltage source is also the network's **current slack**: it injects a free
+current $(c^{r,s}_{v,k},\, c^{i,s}_{v,k})$ into KCL at each phase terminal (with
+the summed return at the neutral), so power balance at the source bus is met by
+the source itself — no auxiliary generator is required. The slack current is
+unbounded by default; optional per-phase bounds make it a bounded grid
+connection, and an optional `cost` prices imported power (see
+[Voltage source as current slack](@ref source-slack) below).
 
 The source-bus **neutral** is additionally fixed to zero
 ($v^r_{b,n} = v^i_{b,n} = 0$) without being added to $\mathcal{G}_\text{nd}$,
@@ -439,46 +444,50 @@ Sign conventions:
 | Load DELTA | negative terminal | $+c^{r,d}$ |
 | Generator WYE | phase terminal | $+c^{r,g}$ (injects) |
 | Generator WYE | neutral terminal | $-c^{r,g}$ (return) |
+| Voltage source | phase terminal | $+c^{r,s}$ (slack injects) |
+| Voltage source | neutral terminal | $-c^{r,s}$ (return) |
 | Transformer | each terminal | $-c^{r,x}$ (winding current leaves) |
 
 ---
 
-## [Source bus generator injection](@id source-gen-injection)
+## [Voltage source as current slack](@id source-slack)
 
-Because the voltage source only fixes voltages and does not inject current,
-**every ungrounded terminal at the source bus must have its KCL satisfied by
-an explicit generator**.  Before building the JuMP model, `solve_opf` and
-`solve_feasibility_opf` call `_ensure_source_generator!`, which checks whether
-any generator with a neutral terminal already exists at the source bus.  If not,
-it automatically injects an unbounded zero-cost generator named `_auto_slack`
-and emits a warning:
+The voltage source fixes its terminal voltages **and** closes KCL at the source
+bus through its own slack current $(c^{r,s}_{v,k},\, c^{i,s}_{v,k})$ — there is no
+separate slack generator and no `_auto_slack` injection. This mirrors the
+OpenDSS/PMD `Vsource`, which is both a voltage reference and an (implicit)
+unbounded power injection.
 
+Because the terminal voltages are fixed, the per-phase power is **linear** in the
+slack current:
+
+```math
+P^s_{v,k} = \Delta v^r_k \, c^{r,s}_{v,k} + \Delta v^i_k \, c^{i,s}_{v,k}, \qquad
+Q^s_{v,k} = \Delta v^i_k \, c^{r,s}_{v,k} - \Delta v^r_k \, c^{i,s}_{v,k}
 ```
-┌ Warning: solve_opf: no generator found at source bus 'sourcebus' —
-│ automatically injecting an unbounded zero-cost generator '_auto_slack'
-│ to satisfy KCL. For a proper OPF benchmark add an explicit grid generator
-│ with bounds and cost at the source bus.
-```
 
-The `_auto_slack` generator covers **all phase terminals plus the neutral** of the
-source bus, so both phase and neutral KCL are satisfied.  It appears in the
-result dict under `result["generator"]["_auto_slack"]` so its active and reactive
-power output is visible.
+where $\Delta v$ is the phase-to-neutral voltage at the source bus. Optional
+fields on the `voltage_source` object shape the slack:
 
-**When auto-injection fires:**
+- **`p_min`/`p_max`/`q_min`/`q_max`** — per-phase box bounds. Absent ⇒ unbounded
+  (pure power-flow slack); present ⇒ a bounded grid connection.
+- **`cost`** — per-phase active-power price added to the objective (scalar `c1`
+  or `[c2, c1, c0]`; the linear term is exact since the source voltage is fixed).
 
-- Pure power-flow networks (no generators defined).
-- OPF networks where the modeller omitted a grid-connection generator at the
-  slack bus.
-- Networks converted from PowerModelsDistribution via `from_pmd`: the
-  synthesised `slack_source` generator has only phase terminals (no neutral),
-  so `_auto_slack` is injected alongside it to cover the neutral.
+The source-bus **neutral** is fixed to zero and carries the summed slack return
+current, so neutral KCL is satisfied without a neutral voltage reference.
 
-**For production OPF benchmarks** the warning should be resolved by adding an
-explicit `generator` at the source bus with physically meaningful `p_min`,
-`p_max` bounds and a `cost` that reflects grid import/export pricing.  The
-`_auto_slack` fallback exists for ergonomics and power-flow compatibility, not
-as a substitute for a properly specified grid connection.
+This makes the source play three roles with one object: unbounded power-flow
+slack (no bounds, no cost), bounded grid connection (bounds), and priced
+import/export (cost). `from_pmd` and the augmentation pass set `cost` on the
+source by default (see [Conversion](conversion.md) / [Augmentation](augmentation.md)).
+
+!!! note "Independent generators at the source bus"
+    The voltage source is already the slack, so an *unbounded* generator
+    co-located at the source bus creates a second free current injection at a
+    fixed-voltage bus — a degenerate dispatch split. The pre-flight check flags
+    this (`W.PRE.SOURCE_BUS_GENERATOR` for unbounded, `I.PRE.SOURCE_BUS_GENERATOR`
+    for bounded); model such limits/cost on the voltage source instead.
 
 ---
 
@@ -500,8 +509,12 @@ The cost objective is replaced by the $\ell_2^2$ norm of all slack injections:
                        + \bigl(c^{i,\varepsilon}_{b,t}\bigr)^2\Bigr]
 ```
 
-Voltage bounds are **not** hard constraints in this variant; they are evaluated
-post-solve by `diagnose_infeasibility`.
+All device models — load, generator, **inverter**, shunt, transformer, switch,
+and the voltage-source slack — are built identically to `solve_opf`. The only
+differences are the deliberate ones: operational **network** bounds (voltage
+magnitude/sequence, line thermal-angle, bus limits) are **not** hard constraints
+here, and the objective is the slack norm rather than cost. Voltage bounds are
+evaluated post-solve by `diagnose_infeasibility`.
 
 A zero-slack solution certifies physical feasibility.  Non-zero slacks at
 $(b, t)$ reveal where the network cannot balance KCL without external

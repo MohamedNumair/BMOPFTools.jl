@@ -1995,6 +1995,39 @@ const IEEE13_FIXTURE = """
         @test !any(f -> f.code == "I.DIV.LOAD_PF_DSS_DEFAULT", findings)
     end
 
+    @testset "Diversity — I.DIV.LOAD_UNIFORM_MODEL when all constant_power" begin
+        net = parse_bmopf(IEEE13_FIXTURE; from_string=true)
+        for (_, l) in net["load"]; delete!(l, "model"); end   # all default constant_power
+        findings = Finding[]
+        diversity_analysis(net, findings)
+        @test any(f -> f.code == "I.DIV.LOAD_UNIFORM_MODEL", findings)
+    end
+
+    @testset "Diversity — no I.DIV.LOAD_UNIFORM_MODEL when models vary" begin
+        net = parse_bmopf(IEEE13_FIXTURE; from_string=true)
+        first(values(net["load"]))["model"] = "zip"   # introduce model diversity
+        findings = Finding[]
+        diversity_analysis(net, findings)
+        @test !any(f -> f.code == "I.DIV.LOAD_UNIFORM_MODEL", findings)
+    end
+
+    @testset "Diversity — I.DIV.LOAD_UNIFORM_CONFIG when all same configuration" begin
+        net = parse_bmopf(IEEE13_FIXTURE; from_string=true)
+        for (_, l) in net["load"]; l["configuration"] = "WYE"; end
+        findings = Finding[]
+        diversity_analysis(net, findings)
+        @test any(f -> f.code == "I.DIV.LOAD_UNIFORM_CONFIG", findings)
+    end
+
+    @testset "Diversity — no I.DIV.LOAD_UNIFORM_CONFIG when configs vary" begin
+        net = parse_bmopf(IEEE13_FIXTURE; from_string=true)
+        for (_, l) in net["load"]; l["configuration"] = "WYE"; end
+        first(values(net["load"]))["configuration"] = "DELTA"
+        findings = Finding[]
+        diversity_analysis(net, findings)
+        @test !any(f -> f.code == "I.DIV.LOAD_UNIFORM_CONFIG", findings)
+    end
+
     @testset "Spec — E.SPEC.DUPLICATE_TERMINAL in load" begin
         # WYE needs 4 terminals; supply 4 but with a duplicate phase so
         # arity is satisfied and the duplicate check fires
