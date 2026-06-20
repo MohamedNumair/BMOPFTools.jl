@@ -1,0 +1,33 @@
+! Three-phase PVSystem (wye) on a four-wire branch — power-flow comparison case.
+!
+! Topology: src ──[4-wire line, 0.5 km]── lb,  3φ wye PVSystem at lb.
+!   The PV exports real power (and vars at PF=0.95), so current flows back
+!   toward the source and lb rises above the source voltage.
+!
+! PVSystem is configured for a clean, predictable operating point so it acts as
+! a fixed P/Q injection that the BMOPF inverter can be pinned to:
+!   irradiance=1, %Pmpp=100, Pmpp=30 kW, kVA=50 (non-binding), pf=0.95,
+!   %cutin/%cutout=0 (always on), VarFollowInverter=yes.
+! The test reads back the PVSystem's actual injected P/Q and pins / PF-matches
+! the BMOPF FOUR_LEG inverter to it. NOTE: OpenDSS pf=+0.95 injects vars, whereas
+! BMOPF's pf>0 absorbs — so the matching BMOPF profile uses pf = -0.95.
+
+Clear
+
+New Circuit.pf_pv_4leg basekv=0.415 pu=1.0 angle=0 phases=3 bus1=src.1.2.3 model=ideal
+
+New Reactor.grnd bus1=src.4 bus2=src.0 R=0.001 X=0
+
+New Linecode.4w nphases=4
+~ Rmatrix=[0.500|0.020 0.500|0.020 0.020 0.500|0.020 0.020 0.020 0.500]
+~ Xmatrix=[0.200|0.050 0.200|0.050 0.050 0.200|0.050 0.050 0.050 0.200]
+~ Cmatrix=[0|0 0|0 0 0|0 0 0 0]
+~ units=km
+
+New Line.l1 bus1=src.1.2.3.4 bus2=lb.1.2.3.4 linecode=4w length=500 units=m
+
+New PVSystem.pv phases=3 conn=wye bus1=lb.1.2.3.4 kv=0.415 kVA=50 Pmpp=30 irradiance=1.0 pf=0.95 %cutin=0 %cutout=0 VarFollowInverter=yes
+
+Set VoltageBases=[0.415]
+CalcVoltageBases
+Solve

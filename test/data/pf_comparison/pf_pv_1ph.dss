@@ -1,0 +1,26 @@
+! Single-phase PVSystem on a 2-wire (earth-return) branch — comparison case.
+!
+! Topology: src ──[1-ph line, 0.5 km, earth return]── lb,  1φ PVSystem at lb.
+!   Mirrors the proven pf_1ph_line earth-return convention: a single phase
+!   conductor with the return through earth (OpenDSS implicit ground). The PV
+!   exports power, raising lb above the source voltage.
+!
+! On the BMOPF side the SINGLE_PHASE inverter references a grounded neutral
+! terminal at lb (perfectly_grounded_terminals=["n"]), which is the V=0 ground
+! reference equivalent to OpenDSS's earth return.
+!
+! PVSystem operating point is pinned clean (irradiance=1, %Pmpp=100, Pmpp=8 kW,
+! kVA=20 non-binding, pf=0.95). The test reads back the actual P/Q. As above,
+! the matching BMOPF power_factor profile uses pf = -0.95 (opposite sign).
+
+Clear
+
+New Circuit.pf_pv_1ph basekv=0.240 pu=1.0 angle=0 phases=1 bus1=src.1 model=ideal
+
+New Line.l1 bus1=src.1 bus2=lb.1 phases=1 length=0.5 units=km r1=0.5 x1=0.2
+
+New PVSystem.pv phases=1 conn=wye bus1=lb.1 kv=0.240 kVA=20 Pmpp=8 irradiance=1.0 pf=0.95 %cutin=0 %cutout=0 VarFollowInverter=yes
+
+Set VoltageBases=[0.240]
+CalcVoltageBases
+Solve
