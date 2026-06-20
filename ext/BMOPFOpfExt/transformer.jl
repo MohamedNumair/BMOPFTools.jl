@@ -547,13 +547,13 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
             @constraint(model,
                 vr[(b_del, t_del_k)] - vr[(b_del, t_del_other)] ==
                 n_eff * vr_wye_pn
-                - (Rw * Iwr - Xw * Iwi)
-                - n_eff * (Rd * Idr - Xd * Idi))
+                - n_eff * (Rw * Iwr - Xw * Iwi)
+                - (Rd * Idr - Xd * Idi))
             @constraint(model,
                 vi[(b_del, t_del_k)] - vi[(b_del, t_del_other)] ==
                 n_eff * vi_wye_pn
-                - (Rw * Iwi + Xw * Iwr)
-                - n_eff * (Rd * Idi + Xd * Idr))
+                - n_eff * (Rw * Iwi + Xw * Iwr)
+                - (Rd * Idi + Xd * Idr))
         else
             @constraint(model,
                 vr[(b_del, t_del_k)] - vr[(b_del, t_del_other)] == n_eff * vr_wye_pn)

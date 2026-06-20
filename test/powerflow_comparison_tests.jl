@@ -53,9 +53,8 @@ Load and solve the DSS file; return total circuit losses in watts.
 function _ods_losses_W(dss_path::String)::Float64
     OpenDSSDirect.dss("Clear")
     OpenDSSDirect.dss("Redirect \"$(normpath(dss_path))\"")
-    # Circuit.Losses() returns (total_P_W, total_Q_var) as a pair
-    p_w, _ = Circuit.Losses()
-    return p_w
+    # Circuit.Losses() returns a ComplexF64 (W + j·var) in this version of OpenDSSDirect.
+    return real(Circuit.Losses())
 end
 
 """
