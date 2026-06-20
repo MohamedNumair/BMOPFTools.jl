@@ -76,23 +76,40 @@ function _bmopf_volts(net::Dict{String,Any})
 end
 
 """
-    _bmopf_losses_W(res) -> Float64
+    _bmopf_losses_W(res, net) -> Float64
 
-Compute total network losses (W) from a BMOPF feasibility-OPF result dict as:
-  P_loss = Σ P_gen − Σ P_load
+Compute total transformer losses (W) as the sum of complex power flowing into
+every transformer winding terminal on both sides: P_loss = Σ Re(V_t · conj(I_t)).
+This is sign-convention-agnostic and avoids the generator current direction ambiguity.
 """
-function _bmopf_losses_W(res::Dict)::Float64
-    p_gen  = sum(
-        get(t, "pg", 0.0)
-        for gd in values(get(res, "generator", Dict()))
-        for t  in values(gd);
-        init = 0.0)
-    p_load = sum(
-        get(t, "pd", 0.0)
-        for ld in values(get(res, "load", Dict()))
-        for t  in values(ld);
-        init = 0.0)
-    return p_gen - p_load
+function _bmopf_losses_W(res::Dict, net::Dict)::Float64
+    bus_v = res["bus"]
+    xfmr_res = get(res, "transformer", Dict())
+    p_loss = 0.0
+    for (_, subtypedict) in get(net, "transformer", Dict())
+        for (tid, xfmr) in subtypedict
+            xr = get(xfmr_res, tid, nothing)
+            xr === nothing && continue
+            b_fr = xfmr["bus_from"]; b_to = xfmr["bus_to"]
+            tmfr = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+            tmto = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+            for (k, t) in enumerate(tmfr)
+                cd = get(get(xr, "fr", Dict()), string(k), nothing)
+                cd === nothing && continue
+                tv = get(get(bus_v, b_fr, Dict()), t, nothing)
+                tv === nothing && continue
+                p_loss += tv["vr"] * cd["cr"] + tv["vi"] * cd["ci"]
+            end
+            for (k, t) in enumerate(tmto)
+                cd = get(get(xr, "to", Dict()), string(k), nothing)
+                cd === nothing && continue
+                tv = get(get(bus_v, b_to, Dict()), t, nothing)
+                tv === nothing && continue
+                p_loss += tv["vr"] * cd["cr"] + tv["vi"] * cd["ci"]
+            end
+        end
+    end
+    return p_loss
 end
 
 """
@@ -344,15 +361,25 @@ function _net_yd_xfmr()
     # loads: unbalanced (3:1:2) delta loads to expose per-phase errors
     #
     # Impedance conversion (wye_delta subtype):
-    #   v_ref_from = 11 000 V (wye, line voltage used as base per OpenDSS)
+    #   v_ref_from = 11 000 V (wye, line voltage)
     #   v_ref_to   =    415 V (delta, line voltage)
     #   s_rating   = 500 000 VA
-    #   z_base_from = 11000² / 500000 = 242 Ω
-    #   z_base_to   =   415² / 500000 = 0.34445 Ω
-    #   r_series_from = 0.01 × 242 = 2.42 Ω  (wye winding, no √3 factor)
-    #   r_series_to   = 0.01 × 0.34445 × √3 = 5.966e-3 Ω  (delta winding)
-    #   x_series_from = 0.04/2 × 242 = 4.84 Ω  (half xsc on from side)
-    #   x_series_to   = 0.04/2 × 0.34445 × √3 = 1.193e-2 Ω  (half xsc on to side)
+    #   zbf = 11000² / 500000 = 242 Ω
+    #   zbt =   415² / 500000 = 0.34445 Ω
+    #
+    #   _add_yd_transformer! variables: Iw = wye line current, Id = delta arm current.
+    #   Current constraint: n_eff·Id = Iw_k - Iw_{k-1}, so at rated load |Id|=|Iw|/√3.
+    #   Power loss matching to OpenDSS (%r per winding on winding kVA base):
+    #     Rw × |Iw|² = %r × (S/3)  →  Rw = %r × zbf       (no √3)
+    #     Rd × |Id|² = %r × (S/3)  →  Rd = %r × zbt × 3   (|Id|=rated_LV_arm_current)
+    #   Wait — for the delta winding (to-side here), |Id| at rated = (S/3)/vt (arm current).
+    #   So Rd × ((S/3)/vt)² = %r × S/3  →  Rd = %r × vt²/S = %r × zbt.
+    #   Result: r_series = %r × z_base, no √3 on either side.
+    #   xhl split 50/50 between windings (a valid T-model choice summing to xhl):
+    #   r_series_from = 0.01 × 242 = 2.42 Ω    (wye winding)
+    #   r_series_to   = 0.01 × 0.34445 = 3.4445e-3 Ω  (delta winding)
+    #   x_series_from = 0.04/2 × 242 = 4.84 Ω  (half xhl on wye side)
+    #   x_series_to   = 0.04/2 × 0.34445 = 6.889e-3 Ω  (half xhl on delta side)
     s   = 500_000.0
     vf  = 11_000.0
     vt  =    415.0
@@ -400,9 +427,9 @@ function _net_yd_xfmr()
                     "v_ref_to"         => vt,
                     "s_rating"         => s,
                     "r_series_from"    => 0.01 * zbf,
-                    "r_series_to"      => 0.01 * zbt * sqrt(3),
+                    "r_series_to"      => 0.01 * zbt,
                     "x_series_from"    => 0.04 / 2 * zbf,
-                    "x_series_to"      => 0.04 / 2 * zbt * sqrt(3),
+                    "x_series_to"      => 0.04 / 2 * zbt,
                     "g_no_load"        => G_nl,
                     "b_no_load"        => B_nl))),
         "load" => Dict{String,Any}(
@@ -436,12 +463,20 @@ function _net_dy_xfmr()
     #   v_ref_from = 11 000 V (delta, line voltage)
     #   v_ref_to   =    415 V (wye, line voltage)
     #   s_rating   = 500 000 VA
-    #   z_base_from = 11000² / 500000 = 242 Ω
-    #   z_base_to   =   415² / 500000 = 0.34445 Ω
-    #   r_series_from = 0.01 × 242 × √3 = 4.193 Ω  (delta winding)
-    #   r_series_to   = 0.01 × 0.34445 = 3.4445e-3 Ω  (wye winding)
-    #   x_series_from = 0.04/2 × 242 × √3 = 8.386 Ω  (half xsc on from/delta side)
-    #   x_series_to   = 0.04/2 × 0.34445 = 6.889e-3 Ω  (half xsc on to/wye side)
+    #   zbf = 11000² / 500000 = 242 Ω
+    #   zbt =   415² / 500000 = 0.34445 Ω
+    #
+    #   _add_yd_transformer! variables: Id = delta arm current (from-side), Iw = wye line current.
+    #   Current constraint: n_eff·Id = Iw_k - Iw_{k+1}, so |Id| = |Iw|/√3 balanced.
+    #   Power loss matching to OpenDSS (%r per winding on winding kVA base):
+    #     Rd × |Id|² = %r × (S/3)  →  Rd = %r × zbf       (no √3: |Id|_rated = (S/3)/(vf/√3·√3))
+    #     Rw × |Iw|² = %r × (S/3)  →  Rw = %r × zbt       (no √3)
+    #   Result: r_series = %r × z_base, no √3 on either side.
+    #   xhl split 50/50 between windings:
+    #   r_series_from = 0.01 × 242 = 2.42 Ω         (delta winding, from-side)
+    #   r_series_to   = 0.01 × 0.34445 = 3.4445e-3 Ω (wye winding, to-side)
+    #   x_series_from = 0.04/2 × 242 = 4.84 Ω       (half xhl on delta side)
+    #   x_series_to   = 0.04/2 × 0.34445 = 6.889e-3 Ω (half xhl on wye side)
     s   = 500_000.0
     vf  = 11_000.0
     vt  =    415.0
@@ -483,9 +518,9 @@ function _net_dy_xfmr()
                     "v_ref_from"       => vf,
                     "v_ref_to"         => vt,
                     "s_rating"         => s,
-                    "r_series_from"    => 0.01 * zbf * sqrt(3),
+                    "r_series_from"    => 0.01 * zbf,
                     "r_series_to"      => 0.01 * zbt,
-                    "x_series_from"    => 0.04 / 2 * zbf * sqrt(3),
+                    "x_series_from"    => 0.04 / 2 * zbf,
                     "x_series_to"      => 0.04 / 2 * zbt,
                     "g_no_load"        => G_nl,
                     "b_no_load"        => B_nl))),
@@ -560,7 +595,7 @@ end
     _cmp_volts(V_ods, V_bm; label="Yd-xfmr: ", atol=0.1)
 
     P_ods = _ods_losses_W(path)
-    P_bm  = _bmopf_losses_W(res)
+    P_bm  = _bmopf_losses_W(res, net)
     @test isapprox(P_bm, P_ods; rtol=0.05)
 end
 
@@ -580,6 +615,6 @@ end
     _cmp_volts(V_ods, V_bm; label="Dy-xfmr: ", atol=0.1)
 
     P_ods = _ods_losses_W(path)
-    P_bm  = _bmopf_losses_W(res)
+    P_bm  = _bmopf_losses_W(res, net)
     @test isapprox(P_bm, P_ods; rtol=0.05)
 end
