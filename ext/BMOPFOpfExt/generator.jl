@@ -149,14 +149,17 @@ function _ensure_source_generator!(working::Dict{String,Any})::Bool
 
     gens = get(working, "generator", Dict())
 
-    # Only skip injection if a generator with a neutral terminal already exists
-    # at the source bus.  A generator without a neutral (e.g. from_pmd's
-    # slack_source which has terminal_map:["1"]) cannot satisfy neutral KCL.
-    has_neutral_gen = any(values(gens)) do g
-        get(g, "bus", "") == src_bus &&
-        any(t -> lowercase(string(t)) == "n", get(g, "terminal_map", String[]))
+    # Only skip injection if an adequate generator already exists at the source bus.
+    # A generator without a neutral cannot satisfy neutral KCL on a bus that has one,
+    # so for neutral-bearing buses we require a generator that also has the neutral.
+    src_bus_dict_check = get(get(working, "bus", Dict()), src_bus, Dict())
+    bus_has_neutral = BMOPFTools._neutral_terminal(src_bus_dict_check) !== nothing
+    adequate_gen = any(values(gens)) do g
+        get(g, "bus", "") != src_bus && return false
+        tm = get(g, "terminal_map", String[])
+        bus_has_neutral ? any(t -> lowercase(string(t)) == "n", tm) : true
     end
-    has_neutral_gen && return false
+    adequate_gen && return false
 
     # Determine phase terminals from the voltage source terminal_map (excludes neutral)
     phase_tm = [t for t in Vector{String}(get(vs, "terminal_map", String[]))
@@ -168,9 +171,13 @@ function _ensure_source_generator!(working::Dict{String,Any})::Bool
           "to satisfy KCL. For a proper OPF benchmark add an explicit grid " *
           "generator with bounds and cost at the source bus."
 
+    src_bus_dict = get(get(working, "bus", Dict()), src_bus, Dict())
+    has_neutral = BMOPFTools._neutral_terminal(src_bus_dict) !== nothing
+    auto_tm = has_neutral ? vcat(phase_tm, ["n"]) : phase_tm
+
     get!(working, "generator", Dict{String,Any}())["_auto_slack"] = Dict{String,Any}(
         "bus"           => src_bus,
-        "terminal_map"  => vcat(phase_tm, ["n"]),
+        "terminal_map"  => auto_tm,
         "configuration" => "WYE",
         "p_min"         => Float64[],   # no bound constraints
         "p_max"         => Float64[],
