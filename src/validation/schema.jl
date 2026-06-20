@@ -134,7 +134,17 @@ const _KNOWN_FIELDS = Dict{String,Set{String}}(
                         "i_max", "s_max"]),
     "linecode" => Set(["i_max", "s_max"]),
     "switch" => Set(["bus_from", "bus_to", "terminal_map_from",
-                     "terminal_map_to", "open_switch", "i_max"])
+                     "terminal_map_to", "open_switch", "i_max"]),
+    "inverter" => Set(["bus", "terminal_map", "topology", "prime_mover",
+                       "s_max", "p_avail", "p_min", "p_max", "q_min", "q_max",
+                       "r_filter", "x_filter", "b_filter_shunt",
+                       "grid_forming", "v_ref_internal", "cost",
+                       "control_profile"]),
+    # control_profile components are keyed by control-law name; list all nine
+    # so future laws beyond the currently-wired three are not flagged as unknown
+    "control_profile" => Set(["volt_var", "volt_watt", "watt_var", "watt_pf",
+                              "power_factor", "power_sharing",
+                              "sequence_current_limits", "droop", "gfm_voltage"])
 )
 
 const _KNOWN_TRANSFORMER_FIELDS = Dict{String,Set{String}}(
@@ -221,6 +231,7 @@ function _catalogue_unknown_fields(net::Dict{String,Any},
 
     known_top = Set(["name", "meta", "bus", "line", "linecode", "voltage_source",
                      "load", "generator", "shunt", "switch", "transformer",
+                     "inverter", "control_profile",
                      "time_series", "_meta"])
     unknown_top = [k for k in keys(net) if !(k in known_top) && !startswith(k, "_")]
     isempty(unknown_top) ||

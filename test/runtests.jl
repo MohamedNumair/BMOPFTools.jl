@@ -787,6 +787,148 @@ const IEEE13_FIXTURE = """
         @test any(f -> f.code == "W.SPEC.N_SOURCES", findings3)
     end
 
+    @testset "Inverter element" begin
+        # Self-contained network with a clean FOUR_LEG PV inverter that
+        # references a Volt-VAr control profile.
+        INV_FIXTURE = """
+        {
+          "name": "inv_mini",
+          "bus": {
+            "src": {"terminal_names":["1","2","3","n"],
+                    "perfectly_grounded_terminals":["n"],
+                    "v_min":220.0,"v_max":260.0},
+            "b1":  {"terminal_names":["1","2","3","n"],
+                    "v_min":220.0,"v_max":260.0}
+          },
+          "voltage_source": {
+            "vs": {"bus":"src","terminal_map":["1","2","3"],
+                   "v_magnitude":[230.0,230.0,230.0],
+                   "v_angle":[0.0,-2.094,2.094]}
+          },
+          "linecode": {"lc":{"R_series_1_1":0.1,"X_series_1_1":0.1}},
+          "line": {
+            "l1": {"bus_from":"src","bus_to":"b1",
+                   "terminal_map_from":["1","2","3"],
+                   "terminal_map_to":["1","2","3"],
+                   "linecode":"lc","length":100.0}
+          },
+          "inverter": {
+            "pv1": {"bus":"b1","terminal_map":["1","2","3","n"],
+                    "topology":"FOUR_LEG","prime_mover":"PV",
+                    "s_max":[5000.0,5000.0,5000.0],"p_avail":4000.0,
+                    "q_min":-3000.0,"q_max":3000.0,
+                    "control_profile":"vv1"}
+          },
+          "control_profile": {
+            "vv1": {"volt_var": {"voltage_reference":"PN_PER_PHASE",
+                                 "breakpoints":[218.0,225.0,235.0,242.0],
+                                 "q_limits":[-3000.0,3000.0],
+                                 "q_unit":"VAR","q_ref":"VAR_MAX"}}
+          }
+        }
+        """
+
+        @testset "parse + schema" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            @test haskey(net, "inverter")
+            @test haskey(net, "control_profile")
+            @test net["inverter"]["pv1"]["topology"] == "FOUR_LEG"
+
+            f = Finding[]
+            schema_check(net, f)
+            @test !any(startswith(fi.code, "E.SCHEMA") for fi in f)
+        end
+
+        @testset "inventory" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            f = Finding[]
+            res = inventory_analysis(net, f)
+            @test res["inverter"]["total"] == 1
+            @test res["inverter"]["by_topology"]["FOUR_LEG"] == 1
+            @test res["inverter"]["total_s_max_va"] == 15000.0
+            @test res["control_profile"]["total"] == 1
+        end
+
+        @testset "clean network: no inverter findings" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            f = Finding[]
+            spec_conformance_check(net, f)
+            integrity_check(net, f)
+            domain_rules_check(net, f)
+            completeness_check(net, f)
+            @test !any(occursin("INV", fi.code) ||
+                       fi.code == "E.INT.UNKNOWN_CONTROL_PROFILE"
+                       for fi in f if fi.component_type == :inverter)
+        end
+
+        @testset "missing required field" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            delete!(net["inverter"]["pv1"], "s_max")
+            f = Finding[]
+            completeness_check(net, f)
+            @test any(f_ -> f_.code == "E.COMP.MISSING_REQUIRED" &&
+                            f_.component_id == "pv1", f)
+        end
+
+        @testset "bad topology + arity" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            net["inverter"]["bad"] = Dict{String,Any}(
+                "bus" => "b1", "terminal_map" => ["1","2","3","n"],
+                "topology" => "FIVE_LEG", "prime_mover" => "PV", "s_max" => [1.0, 1.0, 1.0])
+            net["inverter"]["pv1"]["topology"] = "THREE_LEG"  # needs 3, has 4
+            f = Finding[]
+            spec_conformance_check(net, f)
+            @test any(f_ -> f_.code == "W.SPEC.INV_TOPOLOGY" &&
+                            f_.component_id == "bad", f)
+            @test any(f_ -> f_.code == "W.SPEC.INV_TMAP_ARITY" &&
+                            f_.component_id == "pv1", f)
+        end
+
+        @testset "unknown control_profile reference" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            net["inverter"]["pv1"]["control_profile"] = "nope"
+            f = Finding[]
+            integrity_check(net, f)
+            @test any(f_ -> f_.code == "E.INT.UNKNOWN_CONTROL_PROFILE" &&
+                            f_.component_id == "pv1", f)
+        end
+
+        @testset "filter dimension mismatch" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            net["inverter"]["pv1"]["r_filter"] = [0.01, 0.01]  # needs 3
+            f = Finding[]
+            integrity_check(net, f)
+            @test any(f_ -> f_.code == "W.INT.DIM_MISMATCH" &&
+                            f_.component_id == "pv1", f)
+        end
+
+        @testset "capability checks" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            net["inverter"]["pv1"]["p_min"] = 100.0
+            net["inverter"]["pv1"]["p_max"] = -100.0   # empty range
+            net["inverter"]["pv1"]["q_max"] = 20000.0   # exceeds sum(s_max) = 15000
+            f = Finding[]
+            domain_rules_check(net, f)
+            @test any(f_ -> f_.code == "E.DOM.INV_P_BOUNDS", f)
+            @test any(f_ -> f_.code == "W.DOM.INV_BOUND_EXCEEDS_SMAX", f)
+
+            # PV that absorbs active power
+            net2 = parse_bmopf(INV_FIXTURE; from_string=true)
+            net2["inverter"]["pv1"]["p_min"] = -1000.0
+            f2 = Finding[]
+            domain_rules_check(net2, f2)
+            @test any(f_ -> f_.code == "W.DOM.INV_PV_ABSORBS", f2)
+        end
+
+        @testset "full analyze pipeline" begin
+            net = parse_bmopf(INV_FIXTURE; from_string=true)
+            report = analyze(net)
+            @test report isa SummaryReport
+            buf = IOBuffer(); render(report, buf; color=false)
+            @test occursin("inverter", String(take!(buf)))
+        end
+    end
+
     @testset "Terminal map convention checks" begin
         # Minimal 3-phase bus used across sub-tests
         _tmap_net(extra_components="") = parse_bmopf("""

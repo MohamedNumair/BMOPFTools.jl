@@ -93,12 +93,26 @@ function integrity_check(net::Dict{String,Any},
     end
 
     # --- referential integrity: nodal elements ---
-    for comp_type in ("load", "generator", "shunt", "voltage_source")
+    for comp_type in ("load", "generator", "shunt", "voltage_source", "inverter")
         for (id, c) in get(net, comp_type, Dict())
             c isa Dict || continue
             b = get(c, "bus", nothing)
             b isa AbstractString && check_bus_ref(comp_type, id, b) &&
                 check_tmap(comp_type, id, b, get(c, "terminal_map", String[]))
+        end
+    end
+
+    # --- inverter → control_profile references ---
+    profiles = get(net, "control_profile", Dict())
+    for (id, inv) in get(net, "inverter", Dict())
+        inv isa Dict || continue
+        cp = get(inv, "control_profile", nothing)
+        if cp isa AbstractString && !haskey(profiles, cp)
+            n_ref_issues += 1
+            push!(findings, Finding(ERROR, "E.INT.UNKNOWN_CONTROL_PROFILE", :integrity,
+                :inverter, id,
+                "inverter '$id' references unknown control_profile '$cp'.",
+                Dict{String,Any}("control_profile" => cp)))
         end
     end
 
@@ -112,6 +126,25 @@ function integrity_check(net::Dict{String,Any},
     end
 
     n_dim_issues = 0
+
+    # inverter per-phase filter/cost vectors must match phase count = |terminal_map| - 1
+    for (id, inv) in get(net, "inverter", Dict())
+        inv isa Dict || continue
+        n_phase = length(get(inv, "terminal_map", String[])) - 1
+        n_phase < 1 && continue
+        for field in ("r_filter", "x_filter", "cost", "s_max")
+            v = get(inv, field, nothing)
+            if v isa AbstractVector && length(v) != n_phase
+                n_dim_issues += 1
+                push!(findings, Finding(WARNING, "W.INT.DIM_MISMATCH", :integrity,
+                    :inverter, id,
+                    "inverter '$id': $field has $(length(v)) entries but the " *
+                    "terminal map implies $n_phase phase(s).",
+                    Dict{String,Any}("field" => field, "n_phase" => n_phase)))
+            end
+        end
+    end
+
     z_tot = Dict{String,Float64}()   # per-line total series impedance proxy
     for (id, l) in get(net, "line", Dict())
         l isa Dict || continue
@@ -332,7 +365,7 @@ function integrity_check(net::Dict{String,Any},
     end
 
     n_floating = 0
-    for comp_type in ("load", "generator")
+    for comp_type in ("load", "generator", "inverter")
         for (id, c) in get(net, comp_type, Dict())
             c isa Dict || continue
             b = get(c, "bus", nothing)
@@ -371,7 +404,7 @@ function integrity_check(net::Dict{String,Any},
             union!(get!(all_used_terminals, b, Set{String}()), ts)
         end
     end
-    for comp_type in ("load", "generator", "shunt", "voltage_source")
+    for comp_type in ("load", "generator", "shunt", "voltage_source", "inverter")
         for (_, c) in get(net, comp_type, Dict())
             c isa Dict || continue
             b  = get(c, "bus", nothing)
