@@ -67,6 +67,7 @@ include("branch.jl")
 include("transformer.jl")
 include("load.jl")
 include("generator.jl")
+include("inverter.jl")
 include("objective.jl")
 include("results.jl")
 include("per_unit.jl")
@@ -137,9 +138,10 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
     # Shunt admittances (standalone shunt objects)
     _add_shunt_constraints!(working, vars, kcl_r, kcl_i)
 
-    # Load and generator power equations and KCL contributions
+    # Load, generator, and inverter power equations and KCL contributions
     _add_load_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_generator_constraints!(model, working, vars, kcl_r, kcl_i)
+    _add_inverter_constraints!(model, working, vars, kcl_r, kcl_i)
 
     # Enforce KCL
     _add_kcl_constraints!(model, kcl_r, kcl_i)
