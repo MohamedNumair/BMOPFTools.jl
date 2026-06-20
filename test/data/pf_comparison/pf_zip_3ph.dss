@@ -1,0 +1,34 @@
+! Three-phase unbalanced ZIP loads on a four-wire branch — comparison case.
+!
+! Topology: src ──[4-wire line, 0.5 km]── lb
+!   Unbalanced wye-to-neutral ZIP loads (15/10/20 kW, 5/3/7 kVAr) — same mixed
+!   ZIP coefficients on every phase, unbalance via the nominal powers.
+!
+!   P = P0·(0.45·v² + 0.25·v + 0.30)
+!   Q = Q0·(0.40·v² + 0.30·v + 0.30)   with v = |V_pn|/Vnom
+!
+! The imbalance plus voltage-dependent Q drives a measurable neutral
+! displacement at lb.4 — a combined check of the 4-wire coupling and the
+! per-phase ZIP evaluation (phase-to-neutral controlling voltage).
+
+Clear
+
+New Circuit.pf_zip_3ph basekv=0.415 pu=1.0 angle=0 phases=3 bus1=src.1.2.3 model=ideal
+
+New Reactor.grnd bus1=src.4 bus2=src.0 R=0.001 X=0
+
+New Linecode.4w nphases=4
+~ Rmatrix=[0.500|0.020 0.500|0.020 0.020 0.500|0.020 0.020 0.020 0.500]
+~ Xmatrix=[0.200|0.050 0.200|0.050 0.050 0.200|0.050 0.050 0.050 0.200]
+~ Cmatrix=[0|0 0|0 0 0|0 0 0 0]
+~ units=km
+
+New Line.l1 bus1=src.1.2.3.4 bus2=lb.1.2.3.4 linecode=4w length=500 units=m
+
+New Load.ld1 bus1=lb.1.4 phases=1 kv=0.240 kw=15 kvar=5 model=8 ZIPV=(0.45 0.25 0.30 0.40 0.30 0.30 0.0) Vminpu=0 Vmaxpu=2
+New Load.ld2 bus1=lb.2.4 phases=1 kv=0.240 kw=10 kvar=3 model=8 ZIPV=(0.45 0.25 0.30 0.40 0.30 0.30 0.0) Vminpu=0 Vmaxpu=2
+New Load.ld3 bus1=lb.3.4 phases=1 kv=0.240 kw=20 kvar=7 model=8 ZIPV=(0.45 0.25 0.30 0.40 0.30 0.30 0.0) Vminpu=0 Vmaxpu=2
+
+Set VoltageBases=[0.415]
+CalcVoltageBases
+Solve

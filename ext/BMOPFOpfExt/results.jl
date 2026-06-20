@@ -117,8 +117,10 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
         bus = get(load, "bus", "")
         tm  = Vector{String}(get(load, "terminal_map", String[]))
         cfg = get(load, "configuration", "WYE")
-        ph_pos    = cfg == "DELTA" ? collect(eachindex(tm)) : _phase_positions(tm)
-        n_pos_idx = cfg == "DELTA" ? nothing : _neutral_pos(tm)
+        is_delta  = cfg == "DELTA"
+        n_c       = length(tm)
+        ph_pos    = is_delta ? collect(eachindex(tm)) : _phase_positions(tm)
+        n_pos_idx = is_delta ? nothing : _neutral_pos(tm)
         t_n       = n_pos_idx !== nothing ? tm[n_pos_idx] : nothing
 
         ph_results = Dict{String,Any}()
@@ -127,8 +129,15 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
             cr = val(crd_v[(lid, idx)]); ci = val(cid_v[(lid, idx)])
             vr_t = feasible ? val(vr_v[(bus, t_ph)]) : NaN
             vi_t = feasible ? val(vi_v[(bus, t_ph)]) : NaN
-            vr_n = (t_n !== nothing && feasible) ? val(vr_v[(bus, t_n)]) : 0.0
-            vi_n = (t_n !== nothing && feasible) ? val(vi_v[(bus, t_n)]) : 0.0
+            # Reference: line-to-line (next phase) for DELTA, neutral for WYE.
+            if is_delta
+                t_ref = tm[(ph % n_c) + 1]
+                vr_n  = feasible ? val(vr_v[(bus, t_ref)]) : NaN
+                vi_n  = feasible ? val(vi_v[(bus, t_ref)]) : NaN
+            else
+                vr_n = (t_n !== nothing && feasible) ? val(vr_v[(bus, t_n)]) : 0.0
+                vi_n = (t_n !== nothing && feasible) ? val(vi_v[(bus, t_n)]) : 0.0
+            end
             dvr = vr_t - vr_n; dvi = vi_t - vi_n
             pd  =  dvr*cr + dvi*ci
             qd  =  dvi*cr - dvr*ci
@@ -144,8 +153,10 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
         bus  = get(gen, "bus", "")
         tm   = Vector{String}(get(gen, "terminal_map", String[]))
         cfg  = get(gen, "configuration", "WYE")
-        ph_pos    = cfg == "DELTA" ? collect(eachindex(tm)) : _phase_positions(tm)
-        n_pos_idx = cfg == "DELTA" ? nothing : _neutral_pos(tm)
+        is_delta  = cfg == "DELTA"
+        n_c       = length(tm)
+        ph_pos    = is_delta ? collect(eachindex(tm)) : _phase_positions(tm)
+        n_pos_idx = is_delta ? nothing : _neutral_pos(tm)
         t_n       = n_pos_idx !== nothing ? tm[n_pos_idx] : nothing
 
         ph_results = Dict{String,Any}()
@@ -154,8 +165,15 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
             cr = val(crg_v[(gid, idx)]); ci = val(cig_v[(gid, idx)])
             vr_t = feasible ? val(vr_v[(bus, t_ph)]) : NaN
             vi_t = feasible ? val(vi_v[(bus, t_ph)]) : NaN
-            vr_n = (t_n !== nothing && feasible) ? val(vr_v[(bus, t_n)]) : 0.0
-            vi_n = (t_n !== nothing && feasible) ? val(vi_v[(bus, t_n)]) : 0.0
+            # Reference: line-to-line (next phase) for DELTA, neutral for WYE.
+            if is_delta
+                t_ref = tm[(ph % n_c) + 1]
+                vr_n  = feasible ? val(vr_v[(bus, t_ref)]) : NaN
+                vi_n  = feasible ? val(vi_v[(bus, t_ref)]) : NaN
+            else
+                vr_n = (t_n !== nothing && feasible) ? val(vr_v[(bus, t_n)]) : 0.0
+                vi_n = (t_n !== nothing && feasible) ? val(vi_v[(bus, t_n)]) : 0.0
+            end
             dvr = vr_t - vr_n; dvi = vi_t - vi_n
             pg  = dvr*cr + dvi*ci
             qg  = dvi*cr - dvr*ci
