@@ -1,6 +1,6 @@
 # Finding-code reference
 
-The complete catalogue of the 146 finding codes, grouped by family. Codes are
+The complete catalogue of finding codes, grouped by family. Codes are
 **stable identifiers** — filter on `f.code`, never on message text. Severity
 prefix: `E.` error, `W.` warning, `I.` info (see
 [Analysis & reports](analysis.md) for the severity semantics).
@@ -16,6 +16,12 @@ prefix: `E.` error, `W.` warning, `I.` info (see
 | Code | Sev | Trigger & rationale |
 |---|---|---|
 | `I.SCHEMA.UNKNOWN_FIELDS` | I | Fields present that the data model does not define (underscore-prefixed extension keys are exempt). Catalogued rather than rejected: they are either converter passthrough or schema-evolution candidates — but a spec-conformant consumer will ignore them, so nothing essential should live there. |
+| `E.SCHEMA.REQUIRED` | E | JSON Schema validation: a required field is missing at the reported path. |
+| `E.SCHEMA.TYPE` | E | JSON Schema validation: a field has the wrong JSON type (e.g. string where a number is expected) at the reported path. |
+| `E.SCHEMA.ENUM` | E | JSON Schema validation: a value is not among the allowed enumerated values. |
+| `E.SCHEMA.RANGE` | E | JSON Schema validation: a numeric value violates a minimum/maximum (or exclusive-bound) range constraint. |
+| `I.SCHEMA.OTHER` | I | JSON Schema validation: a schema violation not covered by the specific codes above (catch-all, carrying the raw reason and path). |
+| `I.SCHEMA.VERSION_UNKNOWN` | I | The declared spec version has no bundled JSON Schema document, so structural schema validation was skipped for this case. |
 | `W.SCHEMA.META_SCHEMA_URI` | W | `meta.$schema` is present but does not look like an `https://` URI. The field is intended to point to the versioned BMOPF JSON Schema document. |
 | `W.SCHEMA.META_DATE_FORMAT` | W | `meta.created` or `meta.modified` is not a recognisable ISO 8601 datetime string (expected `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM:SSZ`). |
 | `I.SCHEMA.META_LICENSE_URI` | I | `meta.license` is a long string that does not look like a URI. Short SPDX identifiers (e.g. `CC-BY-4.0`) are fine; longer values should be a `https://` URI pointing to the licence text. |
@@ -100,6 +106,11 @@ Symmetries in data create symmetric optima and degrade NLP convergence
 | `W.DOM.LINE_LOW_IMPEDANCE` | W | A line whose absolute series impedance ‖Z‖_F = ‖(R+jX)‖_F × length is below 10⁻⁴ Ω. Near-zero impedance makes the KVL constraint nearly rank-deficient; model the section as a switch instead. |
 | `W.DOM.LINE_IMPEDANCE_SPREAD` | W | The worst adjacent-line ‖Z‖_F ratio (two lines sharing an interior bus, excluding voltage-source, transformer, and switch buses) exceeds 10⁵. At this contrast the NLP Jacobian loses roughly 5 decimal digits of precision; consider per-unit scaling or network reformulation. |
 | `I.DOM.LINE_IMPEDANCE_SPREAD` | I | Same as above but ratio is between 10³ and 10⁵ — common at MV/LV boundaries and usually benign, but worth reviewing if solvers struggle to converge. The result dict key `max_adjacent_impedance_ratio` always carries the worst observed value. |
+| `E.DOM.INV_P_BOUNDS` | E | Inverter `p_min > p_max` — the active-power box is empty; infeasible by construction. |
+| `E.DOM.INV_Q_BOUNDS` | E | Inverter `q_min > q_max` — the reactive-power box is empty. |
+| `E.DOM.INV_SMAX_NONPOSITIVE` | E | Inverter `s_max` has a non-positive entry — the apparent-power circle is empty, so no operating point exists. |
+| `W.DOM.INV_BOUND_EXCEEDS_SMAX` | W | An inverter P or Q box-bound magnitude exceeds `s_max` — that box bound can never bind because the apparent-power circle dominates; usually a units or sizing mistake. |
+| `W.DOM.INV_PV_ABSORBS` | W | A `prime_mover=PV` inverter has `p_min < 0`, i.e. it is allowed to absorb real power — physically implausible for PV; usually a sign error. |
 
 ## LOAD — load model validation & analysis
 
@@ -166,6 +177,19 @@ The largest family; full derivations in the
 |---|---|---|
 | `I.PROV.SEQ_DERIVED` | I | Exactly balanced impedance matrices (equal self, equal mutual): constructed from sequence parameters (`r1,x1,r0,x0`) or a transposition assumption — not from conductor geometry. The implied Z₁/Z₀ are recovered and reported. |
 | `I.PROV.DECOUPLED_PHASES` | I | Diagonal impedance matrices — positive-sequence-only data; the phases decouple into independent single-phase networks (maximal redundancy/symmetry). |
+| `I.PROV.LINE_SWITCH_LIKE` | I | A line has near-zero series impedance and may be better represented by the spec's lossless `switch` object. |
+
+### Bound & limit completeness
+
+| Code | Sev | Trigger & rationale |
+|---|---|---|
+| `E.PROV.INCONSISTENT_BOUNDS` | E | A bus has a voltage-bound pair with min > max — the feasible set is empty (the provenance-pass counterpart of the pre-flight `E.PRE.VBOUND_CONFLICT`). |
+| `I.PROV.OVERLAPPING_VOLTAGE_BOUNDS` | I | A bus has several voltage-bound *types* active at once (e.g. both `v` and `vpn`) — overlapping envelopes; confirm they are meant to co-apply. |
+| `W.PROV.REDUNDANT_VOLTAGE_BOUNDS` | W | A bus declares both phase-to-ground (`v_min`/`v_max`) and phase-to-neutral (`vpn_*`) bounds that encode the same limit — redundant duplication. |
+| `W.PROV.INAPPLICABLE_VOLTAGE_BOUNDS` | W | A bus carries voltage bounds that cannot be enforced for its terminal structure and will be ignored by the OPF (e.g. a phase-to-neutral bound on a bus with no neutral). |
+| `W.PROV.I_MAX_INCOMPLETE` | W | One or more lines have fewer `i_max` entries than conductors — the thermal limit is only partially specified; the unspecified conductors are left unconstrained. |
+| `W.PROV.I_MAX_INCOMPLETE_SWITCH` | W | Same as above for switches. |
+| `W.PROV.I_MAX_INCOMPLETE_XFMR` | W | Same for transformers (`i_max_from`/`i_max_to` shorter than the winding conductor count). |
 
 ### Grounding & reduction conventions
 
@@ -222,6 +246,7 @@ Motivated by the benchmark-pitfall catalogue of ([ref. 2](methodology.md#refs)).
 | `E.INT.UNKNOWN_BUS` | E | A component references a bus id that does not exist. |
 | `E.INT.UNKNOWN_LINECODE` | E | A line references a linecode that does not exist (distinct from *unused* linecodes). |
 | `E.INT.UNKNOWN_TERMINAL` | E | A terminal-map entry is not a terminal of the referenced bus — typos, or attempts to connect nodal elements directly to ground (forbidden by spec Table 10). |
+| `E.INT.UNKNOWN_CONTROL_PROFILE` | E | An inverter references a `control_profile` id that does not exist in the network's `control_profile` table. |
 | `W.INT.DIM_MISMATCH` | W | Terminal-map arity vs linecode matrix size, `i_max` length vs conductor count, setpoint length vs configuration, source `vm`/`va` vs map length. |
 | `W.INT.PADDED_MATRIX` | W | All-zero row/column pairs in linecode impedances — padded conductors demonstrably wreck NLP performance (22 → 590 Ipopt iterations in ([ref. 2](methodology.md#refs)) Table 3); shrink the matrix and use terminal maps. |
 | `E.INT.NO_VOLTAGE_REFERENCE` | E | A galvanic island (transformer windings are separations) with no source, perfect grounding, or grounding shunt — voltages there are defined only up to a shift (the IEEE-123 "bus 610" rank deficiency ([ref. 2](methodology.md#refs))). A shunt counts only if its admittance has nonzero row sums, so a pure delta capacitor bank correctly does not anchor an island. |
@@ -230,6 +255,16 @@ Motivated by the benchmark-pitfall catalogue of ([ref. 2](methodology.md#refs)).
 | `W.INT.UNUSED_BUS_TERMINAL` | W | A bus declares a terminal in `terminal_names` that is not referenced by any component at that bus (no branch end, load, generator, shunt, or voltage source uses it). The terminal adds a free voltage variable with no KCL constraint — pure numeric overhead. Almost always a conversion artifact or a missing connection. Voltage-source buses are excluded (the source pins every declared terminal regardless). |
 | `W.INT.LOW_IMPEDANCE_LINE` | W | Lines whose total series impedance is below 10⁻³× the network median — they degrade conditioning; the spec's lossless switch object is the intended model ([ref. 2](methodology.md#refs)). |
 | `I.INT.UNIFORM_GEN_COST` | I | Groups of generators with identical cost vectors — any dispatch split among them is optimal (degeneracy); diversify costs for benchmark use. |
+
+## TMAP — terminal-map conventions
+
+Checks on how component `terminal_map`s reference bus terminals.
+
+| Code | Sev | Trigger & rationale |
+|---|---|---|
+| `E.TMAP.PHASE_TO_NEUTRAL` | E | A component's `terminal_map` contains no phase terminal (e.g. `["n"]`) — it connects only to neutral, leaving no phase to inject into or draw from. |
+| `I.TMAP.CROSS_PHASE_LINE` | I | A line or switch has different from/to terminal maps — the conductors are cross-connected between phases across the branch. Valid (e.g. an intentional phase swap) but flagged as context. |
+| `I.TMAP.PERMUTED_ORDER` | I | A component's `terminal_map` is a permutation of the bus's nodal terminal order — non-canonical ordering; verify the swap is deliberate rather than a data-entry slip. |
 
 ## SPEC — TF-spec conformance
 
@@ -248,6 +283,9 @@ Rules the JSON Schema cannot express.
 | `E.SPEC.DELTA_HAS_NEUTRAL` | E | A `DELTA` load/generator includes the bus neutral in its terminal map — delta elements must be phase-to-phase only. |
 | `E.SPEC.DELTA_DUPLICATE_PHASE` | E | A `DELTA` load/generator has duplicate phase terminals. |
 | `W.SPEC.XFMR_TMAP_ARITY` | W | Transformer terminal-map lengths off the per-subtype spec values — also the deliberate tripwire for unconverted wye-wye units. |
+| `W.SPEC.INV_TOPOLOGY` | W | An inverter `topology` outside the spec-allowed set (`FOUR_LEG`/`THREE_LEG`/`SINGLE_PHASE`). |
+| `W.SPEC.INV_TMAP_ARITY` | W | An inverter's `terminal_map` length does not match the arity its `topology` requires. |
+| `W.SPEC.INV_PRIME_MOVER` | W | An inverter `prime_mover` is outside the spec-allowed set. |
 | `W.SPEC.TERMINAL_TYPES` | W | The source file used non-string terminal identifiers; they were coerced at parse (aliases or verbatim — the finding says which). |
 | `I.SPEC.MATRIX_TRIANGULAR` | I | Impedance matrices stored upper-triangular; the spec defines full row-first storage. Read fine; normalise before publishing. |
 
@@ -266,6 +304,9 @@ its network. See [`SolutionReport`](@ref) and [`render_solution`](@ref).
 | `W.SOL.THERMAL_ACTIVE` | W | Current magnitude is within 1 % of `i_max` — the thermal limit is near-active. |
 | `E.SOL.GEN_VIOLATION` | E | A generator's active or reactive dispatch (`pg`/`qg` per terminal) falls outside its declared `p_min`/`p_max`/`q_min`/`q_max` bounds. |
 | `W.SOL.GEN_ACTIVE` | W | Generator dispatch is within 1 % of a bound — the bound is near-active. |
+| `E.SOL.INV_VIOLATION` | E | An inverter's solved `pg`/`qg` (per phase) falls outside its declared `p_min`/`p_max`/`q_min`/`q_max` bounds. |
+| `W.SOL.INV_ACTIVE` | W | An inverter dispatch is within 1 % of a P bound — the bound is near-active. |
+| `W.SOL.INV_PF_DEVIATION` | W | A constant-power-factor inverter's solved operating point deviates from its commanded PF beyond tolerance — the PF-coupling constraint residual is non-trivial. |
 | `W.SOL.LOAD_RESIDUAL` | W | For a `constant_power` load, solved `pd`/`qd` differs from `p_nom`/`q_nom` by more than 1 W / 1 var — the bilinear constant-power constraint has a non-trivial residual; the solver may not have converged tightly. Not emitted for voltage-dependent models (where `pd ≠ p_nom` is expected). |
 | `W.SOL.LOAD_MODEL_RESIDUAL` | W | For a voltage-dependent load, the realised `pd`/`qd` is inconsistent with what the load model predicts at the solved terminal voltage by more than 1 W / 1 var. Indicates the load model constraint was not satisfied — a solver convergence or result extraction issue. |
 | `I.SOL.LOAD_VD_SUMMARY` | I | Aggregate realised vs nominal P/Q across all voltage-dependent sub-loads. Quantifies the total demand shift due to voltage sensitivity at the solved operating point. |
