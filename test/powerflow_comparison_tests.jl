@@ -113,6 +113,42 @@ function _bmopf_losses_W(res::Dict, net::Dict)::Float64
 end
 
 """
+    _ods_pv(dss_path) -> (volts::Dict{String,ComplexF64}, powers::Vector{ComplexF64})
+
+Solve the DSS file and return node voltages plus the PVSystem element's complex
+power per conductor (kVA, sign convention: power flowing *into* the element from
+the bus). The injected power is therefore `-powers[k]`.
+"""
+function _ods_pv(dss_path::String)
+    OpenDSSDirect.dss("Clear")
+    OpenDSSDirect.dss("Redirect \"$(normpath(dss_path))\"")
+    volts = Dict(n => v for (n, v) in
+                 zip(OpenDSSDirect.Circuit.AllNodeNames(), OpenDSSDirect.Circuit.AllBusVolts()))
+    OpenDSSDirect.Circuit.SetActiveElement("PVSystem.pv")
+    powers = OpenDSSDirect.CktElement.Powers()
+    return volts, powers
+end
+
+"""
+    _bmopf_volts_opf(net) -> (volts::Dict{String,ComplexF64}, result::Dict)
+
+Like `_bmopf_volts` but via `solve_opf` rather than `solve_feasibility_opf`,
+because the inverter constraints are only built by `solve_opf`. Buses carry no
+voltage bounds, so this is a pure power flow with the voltage source as slack.
+"""
+function _bmopf_volts_opf(net::Dict{String,Any})
+    res = solve_opf(net; optimizer=Ipopt.Optimizer)
+    volts = Dict{String,ComplexF64}()
+    for (bid, t_dict) in res["bus"]
+        for (t, tv) in t_dict
+            node = t == "n" ? "4" : t
+            volts[bid * "." * node] = tv["vr"] + im * tv["vi"]
+        end
+    end
+    return volts, res
+end
+
+"""
     _cmp_volts(V_ods, V_bm; label="", atol=1.0, rtol=1e-3)
 
 Assert that every node present in both dicts agrees within tolerance.
@@ -634,6 +670,49 @@ function _net_zip_delta()
     return net
 end
 
+function _net_pv_4leg(p_ph::Float64, q_ph, pf)
+    # pf_pv_4leg.dss: 3φ wye PVSystem on the 4-wire branch, pinned to (p_ph,q_ph)
+    # per phase, or P-pinned with a power_factor profile when `pf` is given.
+    net = _net_3ph_line()
+    delete!(net, "load")
+    inv = Dict{String,Any}(
+        "bus" => "lb", "terminal_map" => ["1", "2", "3", "n"],
+        "topology" => "FOUR_LEG", "prime_mover" => "PV",
+        "s_max" => fill(1.0e6, 3),
+        "p_min" => fill(p_ph, 3), "p_max" => fill(p_ph, 3))
+    if pf === nothing
+        inv["q_min"] = fill(q_ph, 3); inv["q_max"] = fill(q_ph, 3)
+    else
+        inv["control_profile"] = "cpf"
+        net["control_profile"] = Dict{String,Any}(
+            "cpf" => Dict{String,Any}("power_factor" => Dict{String,Any}("pf" => pf)))
+    end
+    net["inverter"] = Dict{String,Any}("pv" => inv)
+    return net
+end
+
+function _net_pv_1ph(p::Float64, q, pf)
+    # pf_pv_1ph.dss: single-phase earth-return PVSystem. The SINGLE_PHASE inverter
+    # references a grounded neutral terminal at lb (= V=0 ground reference).
+    net = _net_1ph_line()
+    delete!(net, "load")
+    net["bus"]["lb"]["terminal_names"] = ["1", "n"]
+    net["bus"]["lb"]["perfectly_grounded_terminals"] = ["n"]
+    inv = Dict{String,Any}(
+        "bus" => "lb", "terminal_map" => ["1", "n"],
+        "topology" => "SINGLE_PHASE", "prime_mover" => "PV",
+        "s_max" => [1.0e6], "p_min" => [p], "p_max" => [p])
+    if pf === nothing
+        inv["q_min"] = [q]; inv["q_max"] = [q]
+    else
+        inv["control_profile"] = "cpf"
+        net["control_profile"] = Dict{String,Any}(
+            "cpf" => Dict{String,Any}("power_factor" => Dict{String,Any}("pf" => pf)))
+    end
+    net["inverter"] = Dict{String,Any}("pv" => inv)
+    return net
+end
+
 # ── Test cases ────────────────────────────────────────────────────────────────
 
 @testset "PF comparison — single-phase 2-wire line" begin
@@ -761,6 +840,71 @@ end
         @test res["load"]["dl"][key]["pd"] ≈ p0*(0.45vll^2 + 0.25vll + 0.30)  rtol=1e-3
         @test res["load"]["dl"][key]["qd"] ≈ q0*(0.40vll^2 + 0.30vll + 0.30)  rtol=1e-3
     end
+end
+
+@testset "PF comparison — PVSystem inverter, FOUR_LEG (pinned & PF profile)" begin
+    path = joinpath(_PF_CMP_DIR, "pf_pv_4leg.dss")
+    V_ods, pw = _ods_pv(path)
+    # Injected per-phase P/Q (balanced); element power is into the element, so negate.
+    P = -real(pw[1]) * 1e3
+    Q = -imag(pw[1]) * 1e3
+    @test P ≈ 10_000.0 atol=50.0    # Pmpp 30 kW / 3 phases — clean operating point
+    @test Q > 0                     # pf=0.95 in OpenDSS injects vars
+
+    # (a) pinned to the read-back P and Q
+    Vp, rp = _bmopf_volts_opf(_net_pv_4leg(P, Q, nothing))
+    @test rp["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+    _cmp_volts(V_ods, Vp; label="pv-4leg-pin: ")
+    @test rp["inverter"]["pv"]["1"]["pg"] ≈ P  atol=1.0
+    @test rp["inverter"]["pv"]["1"]["qg"] ≈ Q  atol=1.0
+
+    # (b) P-pinned, Q from a power_factor profile. OpenDSS pf=+0.95 injects vars,
+    # so the equivalent BMOPF profile is pf = -0.95.
+    Vf, rf = _bmopf_volts_opf(_net_pv_4leg(P, nothing, -0.95))
+    @test rf["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+    _cmp_volts(V_ods, Vf; label="pv-4leg-pf: ")
+    @test rf["inverter"]["pv"]["1"]["qg"] ≈ Q  atol=1.0   # PF path reproduces OpenDSS Q
+end
+
+@testset "PF comparison — PVSystem inverter, SINGLE_PHASE (pinned & PF profile)" begin
+    path = joinpath(_PF_CMP_DIR, "pf_pv_1ph.dss")
+    V_ods, pw = _ods_pv(path)
+    P = -real(pw[1]) * 1e3
+    Q = -imag(pw[1]) * 1e3
+    @test P ≈ 8_000.0 atol=50.0
+    @test Q > 0
+
+    Vp, rp = _bmopf_volts_opf(_net_pv_1ph(P, Q, nothing))
+    @test rp["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+    _cmp_volts(V_ods, Vp; label="pv-1ph-pin: ")
+    @test rp["inverter"]["pv"]["1"]["pg"] ≈ P  atol=1.0
+    @test rp["inverter"]["pv"]["1"]["qg"] ≈ Q  atol=1.0
+
+    Vf, rf = _bmopf_volts_opf(_net_pv_1ph(P, nothing, -0.95))
+    @test rf["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+    _cmp_volts(V_ods, Vf; label="pv-1ph-pf: ")
+    @test rf["inverter"]["pv"]["1"]["qg"] ≈ Q  atol=1.0
+end
+
+@testset "feasibility OPF honours inverters (regression)" begin
+    # Before the fix, solve_feasibility_opf never called _add_inverter_constraints!,
+    # so the inverter was ignored and its ~30 kW was absorbed by the elastic KCL
+    # slack. With the fix the inverter balances KCL and the slack is ~0.
+    path = joinpath(_PF_CMP_DIR, "pf_pv_4leg.dss")
+    V_ods, pw = _ods_pv(path)
+    P = -real(pw[1]) * 1e3
+    Q = -imag(pw[1]) * 1e3
+
+    res = solve_feasibility_opf(_net_pv_4leg(P, Q, nothing); optimizer=Ipopt.Optimizer)
+    @test res["total_slack_magnitude_A"] < 1e-3       # inverter (not slack) closes KCL
+    @test res["inverter"]["pv"]["1"]["pg"] ≈ P  atol=1.0
+    @test res["inverter"]["pv"]["1"]["qg"] ≈ Q  atol=1.0
+
+    V_bm = Dict{String,ComplexF64}()
+    for (bid, td) in res["bus"], (t, tv) in td
+        V_bm[bid * "." * (t == "n" ? "4" : t)] = tv["vr"] + im * tv["vi"]
+    end
+    _cmp_volts(V_ods, V_bm; label="pv-4leg-feas: ")
 end
 
 @testset "PF comparison — single-phase transformer (single_phase YY)" begin
