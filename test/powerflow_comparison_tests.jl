@@ -886,6 +886,27 @@ end
     @test rf["inverter"]["pv"]["1"]["qg"] ≈ Q  atol=1.0
 end
 
+@testset "feasibility OPF honours inverters (regression)" begin
+    # Before the fix, solve_feasibility_opf never called _add_inverter_constraints!,
+    # so the inverter was ignored and its ~30 kW was absorbed by the elastic KCL
+    # slack. With the fix the inverter balances KCL and the slack is ~0.
+    path = joinpath(_PF_CMP_DIR, "pf_pv_4leg.dss")
+    V_ods, pw = _ods_pv(path)
+    P = -real(pw[1]) * 1e3
+    Q = -imag(pw[1]) * 1e3
+
+    res = solve_feasibility_opf(_net_pv_4leg(P, Q, nothing); optimizer=Ipopt.Optimizer)
+    @test res["total_slack_magnitude_A"] < 1e-3       # inverter (not slack) closes KCL
+    @test res["inverter"]["pv"]["1"]["pg"] ≈ P  atol=1.0
+    @test res["inverter"]["pv"]["1"]["qg"] ≈ Q  atol=1.0
+
+    V_bm = Dict{String,ComplexF64}()
+    for (bid, td) in res["bus"], (t, tv) in td
+        V_bm[bid * "." * (t == "n" ? "4" : t)] = tv["vr"] + im * tv["vi"]
+    end
+    _cmp_volts(V_ods, V_bm; label="pv-4leg-feas: ")
+end
+
 @testset "PF comparison — single-phase transformer (single_phase YY)" begin
     path = joinpath(_PF_CMP_DIR, "pf_1ph_xfmr.dss")
     net            = _net_1ph_xfmr()
