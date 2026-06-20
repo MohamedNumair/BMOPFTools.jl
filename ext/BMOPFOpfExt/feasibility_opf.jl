@@ -34,8 +34,6 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     working = BMOPFTools.is_timeseries(net) ?
               BMOPFTools.get_snapshot(net, t_index) : deepcopy(net)
 
-    _ensure_source_generator!(working)
-
     bases = nothing
     if per_unit
         working, bases = _to_per_unit(working, s_base)
@@ -64,7 +62,7 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     # post-solve by diagnose_infeasibility, which reports violations.
 
     kcl_r, kcl_i = _init_kcl(bus_terminals, grounded)
-    _add_source_constraints!(working, vars)
+    _add_source_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_line_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_switch_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_transformer_constraints!(model, working, vars, kcl_r, kcl_i)
@@ -74,8 +72,8 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
 
     # ── Slack current injections ──────────────────────────────────────────────
     # One (cs_r, cs_i) pair per KCL node. Grounded terminals are excluded
-    # (vr=vi=0 already fixed). Source-bus phase terminals are covered by the
-    # _auto_slack generator so their elastic slack will naturally be zero.
+    # (vr=vi=0 already fixed). Source-bus phase terminals carry the voltage
+    # source's own slack current in KCL, so their elastic slack is naturally zero.
 
     cs_r = Dict{Tuple{String,String}, JuMP.VariableRef}()
     cs_i = Dict{Tuple{String,String}, JuMP.VariableRef}()

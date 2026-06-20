@@ -1,7 +1,7 @@
-# Generator constraints and voltage source constraints.
+# Generator constraints.
 #
 # Generators: P/Q bounds expressed via bilinear power equations.
-# Voltage sources: fix bus voltages and inject slack current (unconstrained).
+# (Voltage-source constraints live in source.jl.)
 #
 # ── Generator (WYE / SINGLE_PHASE) ────────────────────────────────────────
 # For phase conductor k (1-based in the phase subset of terminal_map):
@@ -10,10 +10,6 @@
 #   p_min[k] <= P_k <= p_max[k]
 #   q_min[k] <= Q_k <= q_max[k]
 # KCL: phase terminal += crg[k], neutral terminal -= crg[k].
-#
-# ── Voltage source ─────────────────────────────────────────────────────────
-# Fix vr[bus, t] = v_mag[k]*cos(v_ang[k]), vi = v_mag[k]*sin(v_ang[k]).
-# cr_src / ci_src are free variables that appear in KCL (slack injection).
 
 """
     _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
@@ -124,111 +120,4 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
     end
 end
 
-"""
-    _ensure_source_generator!(working) -> Bool
-
-Check whether any generator already exists at the voltage-source bus.  If not,
-inject an unbounded zero-cost generator `"_auto_slack"` at that bus so that KCL
-at the source-bus phase terminals can be satisfied without free slack currents.
-
-Returns `true` if a generator was injected, `false` if one was already present.
-
-This covers the pure power-flow case (no generators in the network) and any OPF
-where the modeller forgot to add a grid connection at the slack bus.  The injected
-generator has empty `p_min`/`p_max` (no bound constraints added to the model) and
-`cost = [0.0]` so it does not distort the objective.
-"""
-function _ensure_source_generator!(working::Dict{String,Any})::Bool
-    vs_dict = get(working, "voltage_source", Dict())
-    isempty(vs_dict) && return false
-
-    # Take the first (and normally only) voltage source
-    _, vs = first(vs_dict)
-    src_bus = get(vs, "bus", "")
-    isempty(src_bus) && return false
-
-    gens = get(working, "generator", Dict())
-
-    # Only skip injection if an adequate generator already exists at the source bus.
-    # A generator without a neutral cannot satisfy neutral KCL on a bus that has one,
-    # so for neutral-bearing buses we require a generator that also has the neutral.
-    src_bus_dict_check = get(get(working, "bus", Dict()), src_bus, Dict())
-    bus_has_neutral = BMOPFTools._neutral_terminal(src_bus_dict_check) !== nothing
-    adequate_gen = any(values(gens)) do g
-        get(g, "bus", "") != src_bus && return false
-        tm = get(g, "terminal_map", String[])
-        bus_has_neutral ? any(t -> lowercase(string(t)) == "n", tm) : true
-    end
-    adequate_gen && return false
-
-    # Determine phase terminals from the voltage source terminal_map (excludes neutral)
-    phase_tm = [t for t in Vector{String}(get(vs, "terminal_map", String[]))
-                if lowercase(t) != "n"]
-    isempty(phase_tm) && return false
-
-    @warn "solve_opf: no generator found at source bus '$src_bus' — " *
-          "automatically injecting an unbounded zero-cost generator '_auto_slack' " *
-          "to satisfy KCL. For a proper OPF benchmark add an explicit grid " *
-          "generator with bounds and cost at the source bus."
-
-    src_bus_dict = get(get(working, "bus", Dict()), src_bus, Dict())
-    has_neutral = BMOPFTools._neutral_terminal(src_bus_dict) !== nothing
-    auto_tm = has_neutral ? vcat(phase_tm, ["n"]) : phase_tm
-
-    get!(working, "generator", Dict{String,Any}())["_auto_slack"] = Dict{String,Any}(
-        "bus"           => src_bus,
-        "terminal_map"  => auto_tm,
-        "configuration" => "WYE",
-        "p_min"         => Float64[],   # no bound constraints
-        "p_max"         => Float64[],
-        "q_min"         => Float64[],
-        "q_max"         => Float64[],
-        "cost"          => [0.0],
-    )
-    return true
-end
-
-"""
-    _add_source_constraints!(net, vars)
-
-Fix bus voltages at voltage-source terminals to their specified magnitude and angle.
-
-Each terminal is fixed to the rectangular value `v_mag·cos(v_ang)`, `v_mag·sin(v_ang)`.
-The voltage source provides the angle and magnitude reference only; power balance at
-the source bus is satisfied by explicit generator injections (crg/cig), not by free
-slack currents.
-"""
-function _add_source_constraints!(net, vars)
-    vr = vars[:vr]; vi = vars[:vi]
-
-    for (_, vs) in get(net, "voltage_source", Dict())
-        bus   = get(vs, "bus", "")
-        tm    = Vector{String}(get(vs, "terminal_map", String[]))
-        v_mag = Float64.(get(vs, "v_magnitude", Float64[]))
-        v_ang = Float64.(get(vs, "v_angle",     Float64[]))
-
-        for (k, t) in enumerate(tm)
-            if length(v_mag) >= k && length(v_ang) >= k
-                fix(vr[(bus, t)], v_mag[k] * cos(v_ang[k]); force=true)
-                fix(vi[(bus, t)], v_mag[k] * sin(v_ang[k]); force=true)
-            end
-            # Power balance at the source bus is satisfied by explicit generator
-            # injections (crg/cig).  The voltage source fixes the voltage
-            # reference only and does not inject current into KCL.
-        end
-
-        # Fix the neutral voltage at the source bus to 0 (system ground).
-        # The voltage source's terminal_map lists only phase terminals; lines
-        # and generators connected to the source bus also bring a neutral
-        # terminal there, which would otherwise be a free variable with no
-        # voltage reference — creating a null space in the KKT system.
-        # We fix vr/vi to 0 without adding to the grounded set, so that KCL
-        # is still enforced at the neutral (the grid generator's neutral
-        # current satisfies it).
-        for (b, t) in keys(vr)
-            b == bus && lowercase(t) == "n" || continue
-            JuMP.is_fixed(vr[(bus, t)]) || fix(vr[(bus, t)], 0.0; force=true)
-            JuMP.is_fixed(vi[(bus, t)]) || fix(vi[(bus, t)], 0.0; force=true)
-        end
-    end
-end
+# Voltage-source slack and voltage-fixing constraints live in `source.jl`.

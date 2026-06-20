@@ -277,36 +277,29 @@ end
 
 # ── T3: Generation ───────────────────────────────────────────────────────────
 
-@testset "T3: Generation — slack injected when absent" begin
+@testset "T3: Generation — slack cost priced on the voltage source when absent" begin
     net  = _lv_net()
     net′, mf = augment_case(net)
 
-    gens = get(net′, "generator", Dict())
-    slack_ids = [id for (id, g) in gens if get(g, "_slack", false)]
-    @test length(slack_ids) == 1
+    # No phantom slack generator is created; the cost is priced on the source.
+    @test !any(get(g, "_slack", false) for g in values(get(net′, "generator", Dict())))
+    vs = net′["voltage_source"]["vs"]
+    @test vs["cost"] == [1.0, 1.0, 1.0]
+    @test !haskey(vs, "p_min")
+    @test !haskey(vs, "p_max")
 
-    g = gens[first(slack_ids)]
-    @test g["bus"] == "src"
-    @test g["cost"] == [1.0, 1.0, 1.0]
-    @test !haskey(g, "p_min")
-    @test !haskey(g, "p_max")
-
-    e = only(filter(x -> x.component_type == :generator && x.field == "(new)", mf.entries))
+    e = only(filter(x -> x.component_type == :voltage_source && x.field == "cost", mf.entries))
     @test contains(e.rule, "TFspec")
 end
 
-@testset "T3: Generation — slack not duplicated when already present" begin
+@testset "T3: Generation — existing source cost not overwritten" begin
     net = _lv_net()
-    net["generator"] = Dict{String,Any}(
-        "slack_vs" => Dict{String,Any}(
-            "bus" => "src", "terminal_map" => ["1","2","3","n"],
-            "configuration" => "WYE", "cost" => [1.0,1.0,1.0], "_slack" => true))
+    net["voltage_source"]["vs"]["cost"] = [2.0, 2.0, 2.0]
 
     net′, mf = augment_case(net)
 
-    slack_ids = [id for (id, g) in net′["generator"] if get(g, "_slack", false)]
-    @test length(slack_ids) == 1   # still exactly one
-    @test !any(e -> e.component_type == :generator && e.field == "(new)", mf.entries)
+    @test net′["voltage_source"]["vs"]["cost"] == [2.0, 2.0, 2.0]   # unchanged
+    @test !any(e -> e.component_type == :voltage_source && e.field == "cost", mf.entries)
 end
 
 @testset "T3: Generation — q bounds added from p_max" begin
@@ -396,7 +389,7 @@ end
     net′, mf = augment_case(net; recipe)
 
     @test !haskey(net′["bus"]["b1"], "v_min")
-    @test !haskey(get(net′, "generator", Dict()), "_aug_slack_vs")
+    @test !haskey(net′["voltage_source"]["vs"], "cost")
     @test isempty([e for e in mf.entries if e.new_value !== nothing])
 end
 

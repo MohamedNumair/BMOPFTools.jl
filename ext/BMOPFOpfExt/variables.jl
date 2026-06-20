@@ -110,14 +110,17 @@ function _add_generator_variables!(model, net)
     crg, cig
 end
 
-"Declare `cr_src`/`ci_src` voltage-source slack current variables (one per terminal)."
+"Declare `cr_src`/`ci_src` voltage-source slack current variables (one per phase
+conductor; neutral excluded — the neutral carries the summed return current)."
 function _add_source_variables!(model, net)
     cr_src = Dict{Tuple{String,Int}, JuMP.VariableRef}()
     ci_src = Dict{Tuple{String,Int}, JuMP.VariableRef}()
 
     for (sid, vs) in get(net, "voltage_source", Dict())
-        n_c = length(get(vs, "terminal_map", String[]))
-        for k in 1:n_c
+        tm   = Vector{String}(get(vs, "terminal_map", String[]))
+        cfg  = get(vs, "configuration", "WYE")
+        n_ph = cfg == "DELTA" ? length(tm) : length(_phase_positions(tm))
+        for k in 1:n_ph
             cr_src[(sid,k)] = @variable(model, base_name = "cr_src_$(sid)_$(k)")
             ci_src[(sid,k)] = @variable(model, base_name = "ci_src_$(sid)_$(k)")
         end

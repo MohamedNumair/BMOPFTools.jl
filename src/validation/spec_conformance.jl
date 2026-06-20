@@ -523,18 +523,28 @@ function benchmark_readiness_check(net::Dict{String,Any},
     suggestions = String[]
 
     # --- objective well-posedness ---
+    # The voltage source is the network's priced current slack; a generator with
+    # a cost is dispatchable generation. The objective is well-posed if either
+    # carries a cost. (Legacy `_slack` generators are still recognised.)
     gens = get(net, "generator", Dict())
     with_cost = [id for (id, g) in gens if g isa Dict && haskey(g, "cost")]
     non_slack = [id for id in with_cost if !get(gens[id], "_slack", false)]
+    srcs = get(net, "voltage_source", Dict())
+    src_with_cost = [id for (id, vs) in srcs if vs isa Dict && haskey(vs, "cost")]
+    has_slack_cost = !isempty(src_with_cost) ||
+                     any(id -> get(gens[id], "_slack", false), with_cost)
     result["n_generators"]        = length(gens)
     result["n_with_cost"]         = length(with_cost)
-    result["objective_wellposed"] = !isempty(with_cost)
-    result["only_slack_generation"] = !isempty(with_cost) && isempty(non_slack)
+    result["objective_wellposed"] = !isempty(with_cost) || !isempty(src_with_cost)
+    # "Only slack generation" = the objective is well-posed but the only priced
+    # element is the slack source — dispatch is trivial (loss minimisation).
+    result["only_slack_generation"] =
+        result["objective_wellposed"] && isempty(non_slack) && has_slack_cost
 
-    if isempty(with_cost)
+    if !result["objective_wellposed"]
         push!(suggestions,
-            "no generator with a cost — the generation-cost objective is " *
-            "degenerate; add an explicit slack generator at the source bus " *
+            "no priced slack or generator — the generation-cost objective is " *
+            "degenerate; add a cost to the voltage source at the source bus " *
             "(from_pmd does this by default) or dispatchable DERs")
     elseif isempty(non_slack)
         push!(suggestions,
