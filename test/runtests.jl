@@ -2404,8 +2404,8 @@ const IEEE13_FIXTURE = """
     end
 
     @testset "Power-flow comparison vs OpenDSS" begin
-        if !_HAS_JUMP_IPOPT || !_HAS_PMD || !_HAS_ODS
-            @test_skip "Requires JuMP, Ipopt, PowerModelsDistribution, and OpenDSSDirect"
+        if !_HAS_JUMP_IPOPT || !_HAS_ODS
+            @test_skip "Requires JuMP, Ipopt, and OpenDSSDirect"
         else
             include("powerflow_comparison_tests.jl")
         end

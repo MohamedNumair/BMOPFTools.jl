@@ -1,34 +1,28 @@
 ! Single-phase 2-wire (phase + neutral) power-flow comparison case.
 !
-! Topology: src ──[2-wire line, 0.5 km]── lb
-!   src.1  = phase conductor (voltage source reference, 240 V / 0°)
-!   src.4  = neutral, earthed via near-zero reactor → shunt in BMOPF
+! Topology: src ──[1-ph line, 0.5 km, self-impedance only]── lb
+!   src.1  = phase conductor (240 V / 0° relative to earth)
 !   lb.1   = load phase terminal
-!   lb.4   = load neutral; voltage non-zero due to neutral impedance
 !
-! The neutral conductor carries return current, so lb.4 is measurably
-! non-zero — a meaningful check that BMOPF correctly propagates the
-! neutral voltage.
+! The return current flows through earth (OpenDSS implicit neutral).
+! Series self-impedance only: R = 0.5 Ω/km × 0.5 km = 0.25 Ω,
+!   X = 0.2 Ω/km × 0.5 km = 0.1 Ω.
+! At 10 kW / 3 kVAr the line drop is ≈ 10.6 V (≈ 4.4%).
+!
+! BMOPF network: single-conductor bus (terminal "1" only), no neutral.
+! Grounding shunt omitted — earth return is implicit in ODS single-phase.
 
 Clear
 
-New Circuit.pf_1ph_line basekv=0.240 pu=1.0 angle=0 phases=1 bus1=src.1.0
+New Circuit.pf_1ph_line basekv=0.240 pu=1.0 angle=0 phases=1 bus1=src.1.0 model=ideal
 
-! Earth the explicit neutral (node 4) at the source end.
-! PMD converts this self-loop reactor to a BMOPF shunt (G = R/(R²+X²)).
-New Reactor.grnd bus1=src.4 bus2=src.0 R=0.001 X=0
+! Single-phase line: self-impedance only (no explicit neutral conductor).
+New Line.l1 bus1=src.1 bus2=lb.1 phases=1 length=0.5 units=km r1=0.5 x1=0.2
 
-! 2-wire linecode: [phase, neutral], lower-triangular Rmatrix/Xmatrix in Ω/km.
-! Mutual impedance 0.02 Ω/km represents earth-return coupling.
-New Linecode.sp2w nphases=2 Rmatrix=[0.500|0.020 0.500] Xmatrix=[0.200|0.050 0.200] units=km
-
-New Line.l1 bus1=src.1.4 bus2=lb.1.4 linecode=sp2w length=0.5
-
-! Constant-power load (model=1) between phase and neutral.
-! P=10 kW, Q=3 kVAr → I ≈ 43 A → |ΔV| ≈ 11 V (≈ 4.5%).
+! Constant-power load (model=1) phase-to-earth.
 ! Vminpu=0 Vmaxpu=2: disable ODS voltage-dependent load switching so model=1
 ! behaves as strict constant P+Q at all voltages, matching BMOPF.
-New Load.ld1 bus1=lb.1.4 kv=0.240 kw=10 kvar=3 phases=1 model=1 Vminpu=0 Vmaxpu=2
+New Load.ld1 bus1=lb.1 kv=0.240 kw=10 kvar=3 phases=1 model=1 Vminpu=0 Vmaxpu=2
 
 Set VoltageBases=[0.240]
 CalcVoltageBases
