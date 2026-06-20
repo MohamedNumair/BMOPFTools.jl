@@ -16,7 +16,7 @@
 
 Clear
 
-New Circuit.pf_1ph_xfmr basekv=11.0 pu=1.0 angle=0 phases=1 bus1=hv.1.0
+New Circuit.pf_1ph_xfmr basekv=11.0 pu=1.0 angle=0 phases=1 bus1=hv.1.0 model=ideal
 
 ! HV neutral earthed at source.
 New Reactor.grnd_hv bus1=hv.4 bus2=hv.0 R=0.001 X=0 phases=1

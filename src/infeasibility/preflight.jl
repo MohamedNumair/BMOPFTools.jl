@@ -18,6 +18,7 @@ function infeasibility_preflight(net::Dict{String,Any},
     result["voltage_bound_tightness"] = _check_voltage_bounds(net, findings)
     result["constraint_conflicts"]    = _check_constraint_conflicts(net, findings)
     result["source_setpoints"]        = _check_source_setpoints(net, findings)
+    result["source_bus_generators"]   = _check_source_bus_generators(net, findings)
     result["topological_risk"]        = _check_topological_risk(net, findings)
     result["tpia_status"]           = "not_run"   # stub for future TPIA module
 
@@ -178,6 +179,72 @@ function _check_source_setpoints(net::Dict{String,Any},
     end
 
     Dict{String,Any}("n_source_oob" => n_oob, "violations" => violations)
+end
+
+function _check_source_bus_generators(net::Dict{String,Any},
+                                       findings::Vector{Finding})::Dict{String,Any}
+    # The voltage source is the network's current slack (see ext/BMOPFOpfExt/source.jl):
+    # it fixes the bus voltage and injects a free slack current. An independent
+    # generator placed at the same bus therefore sits on a fixed-voltage node and
+    # competes with the source's slack injection:
+    #   • unbounded (no p_max/q_max) → two free current sources at one fixed-voltage
+    #     bus → degenerate split (primal non-uniqueness). Its role should instead be
+    #     expressed as bounds/cost on the voltage source.
+    #   • bounded → well-posed, but the generator's limits/cost may be intended as
+    #     the source's import limits/price; advise modelling them on the source.
+    source_buses = Set{String}()
+    for (_, vs) in get(net, "voltage_source", Dict())
+        vs isa Dict || continue
+        b = get(vs, "bus", nothing)
+        b isa AbstractString && push!(source_buses, b)
+    end
+
+    n_unbounded = 0
+    n_bounded   = 0
+    flagged     = Dict{String,Any}[]
+
+    for (gid, g) in get(net, "generator", Dict())
+        g isa Dict || continue
+        bus = get(g, "bus", nothing)
+        (bus isa AbstractString && bus in source_buses) || continue
+
+        has_p_max = !isempty(Float64.(get(g, "p_max", Float64[])))
+        has_q_max = !isempty(Float64.(get(g, "q_max", Float64[])))
+        unbounded = !(has_p_max && has_q_max)
+
+        push!(flagged, Dict{String,Any}("generator"=>gid, "bus"=>bus,
+                                        "unbounded"=>unbounded))
+
+        if unbounded
+            n_unbounded += 1
+            push!(findings, Finding(WARNING, "W.PRE.SOURCE_BUS_GENERATOR",
+                :preflight, :generator, gid,
+                "Generator '$gid' is at voltage-source bus '$bus' and lacks " *
+                "p_max/q_max bounds. The voltage source is the network's current " *
+                "slack, so two unbounded current injections share one fixed-voltage " *
+                "bus — the dispatch split is degenerate (non-unique). Remove this " *
+                "generator and express its role as flow bounds/cost on the voltage " *
+                "source instead.",
+                Dict{String,Any}("generator"=>gid, "bus"=>bus)))
+        else
+            n_bounded += 1
+            push!(findings, Finding(INFO, "I.PRE.SOURCE_BUS_GENERATOR",
+                :preflight, :generator, gid,
+                "Generator '$gid' is at voltage-source bus '$bus'. This is " *
+                "well-posed (the generator is bounded, the source takes the " *
+                "remainder), but if its bounds/cost are meant to limit or price " *
+                "grid import, set them on the voltage source (p_min/p_max/q_min/" *
+                "q_max/cost) instead.",
+                Dict{String,Any}("generator"=>gid, "bus"=>bus)))
+        end
+    end
+
+    Dict{String,Any}(
+        "n_source_bus_generators"           => n_unbounded + n_bounded,
+        "n_unbounded_source_bus_generators" => n_unbounded,
+        "n_bounded_source_bus_generators"   => n_bounded,
+        "generators"                        => flagged,
+    )
 end
 
 function _check_topological_risk(net::Dict{String,Any},

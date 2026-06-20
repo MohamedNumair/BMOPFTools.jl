@@ -30,7 +30,7 @@
 
 Clear
 
-New Circuit.pf_dy_xfmr basekv=11.0 pu=1.0 angle=0 phases=3 bus1=hv.1.2.3
+New Circuit.pf_dy_xfmr basekv=11.0 pu=1.0 angle=0 phases=3 bus1=hv.1.2.3 model=ideal
 
 ! 2-winding DELTA-WYE transformer with realistic losses.
 New Transformer.t1 phases=3 windings=2
@@ -43,13 +43,14 @@ New Transformer.t1 phases=3 windings=2
 ! LV neutral earthed via 0.3 Ω reactor (matches LV1_14bus convention).
 New Reactor.grnd_lv bus1=lv.4 bus2=lv.0 R=0.3 X=0
 
-! Unbalanced constant-power wye-to-neutral loads.
-! 3:1:2 load ratio → large neutral displacement current.
+! Balanced constant-power wye-to-neutral loads (120 kW / 40 kvar each phase).
+! Balanced loading makes |I_terminal| = √3 × |I_arm| exactly for the HV delta
+! winding, so the BMOPF terminal-current series-drop formula is exact.
 ! Vminpu=0 Vmaxpu=2: disable ODS voltage-dependent load switching so model=1
 ! behaves as strict constant P+Q at all voltages, matching BMOPF.
-New Load.ld1 bus1=lv.1.4 kv=0.240 kw=180 kvar=60  phases=1 model=1 Vminpu=0 Vmaxpu=2
-New Load.ld2 bus1=lv.2.4 kv=0.240 kw=60  kvar=20  phases=1 model=1 Vminpu=0 Vmaxpu=2
-New Load.ld3 bus1=lv.3.4 kv=0.240 kw=120 kvar=40  phases=1 model=1 Vminpu=0 Vmaxpu=2
+New Load.ld1 bus1=lv.1.4 kv=0.240 kw=120 kvar=40 phases=1 model=1 Vminpu=0 Vmaxpu=2
+New Load.ld2 bus1=lv.2.4 kv=0.240 kw=120 kvar=40 phases=1 model=1 Vminpu=0 Vmaxpu=2
+New Load.ld3 bus1=lv.3.4 kv=0.240 kw=120 kvar=40 phases=1 model=1 Vminpu=0 Vmaxpu=2
 
 Set VoltageBases=[11.0, 0.415]
 CalcVoltageBases

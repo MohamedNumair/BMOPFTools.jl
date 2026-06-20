@@ -3,7 +3,7 @@
 !
 ! Topology: hv ──[Yd xfmr, 11 kV wye / 0.415 kV delta]── lv
 !   hv.1/2/3/4  = HV wye phases and neutral
-!   lv.1/2/3    = LV delta terminals (no neutral on delta bus)
+!   lv.1/2/3    = LV delta terminals
 !
 ! Design intent for high-confidence cross-validation:
 !
@@ -21,11 +21,16 @@
 !       LV voltage spread of several volts.  A wrong sign on any one phase
 !       in the Yd voltage loop would shift that phase by >1 V (detectable).
 !
-! Total load ≈ 375 kW + 120 kvar (≈ 75 % of rated at 0.95 pf).
+!   (d) LV delta bus anchored by a near-solid ground (R=0.001 Ω, G≈1000 S)
+!       at lv.1 so that phase-to-earth voltages are deterministic in both
+!       ODS and BMOPF.  R=0.001 is negligible relative to load impedance
+!       (≈0.96 mΩ) so power flow is not materially affected.
+!
+! Total load ≈ 360 kW + 120 kvar.
 
 Clear
 
-New Circuit.pf_yd_xfmr basekv=11.0 pu=1.0 angle=0 phases=3 bus1=hv.1.2.3
+New Circuit.pf_yd_xfmr basekv=11.0 pu=1.0 angle=0 phases=3 bus1=hv.1.2.3 model=ideal
 
 ! HV wye neutral earthed via near-zero reactor.
 New Reactor.grnd_hv bus1=hv.4 bus2=hv.0 R=0.001 X=0
@@ -38,8 +43,11 @@ New Transformer.t1 phases=3 windings=2
 ~ %noloadloss=0.3
 ~ %imag=1.5
 
-! Unbalanced constant-power phase-to-phase loads on the LV delta bus.
-! 3:1:2 load ratio to produce measurable inter-phase voltage spread.
+! Near-solid grounding on lv.1 to anchor the delta common mode.
+! R=0.001 Ω → G≈1000 S (mirrored in BMOPF as grnd_lv shunt G=1000 S).
+New Reactor.grnd_lv bus1=lv.1 bus2=lv.0 R=0.001 X=0
+
+! Unbalanced delta loads (3:1:2 ratio) to make per-phase voltages distinct.
 ! Vminpu=0 Vmaxpu=2: disable ODS voltage-dependent load switching so model=1
 ! behaves as strict constant P+Q at all voltages, matching BMOPF.
 New Load.ld1 bus1=lv.1.2 kv=0.415 kw=180 kvar=60 phases=1 model=1 Vminpu=0 Vmaxpu=2

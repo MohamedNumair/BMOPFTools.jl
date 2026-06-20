@@ -1,11 +1,11 @@
-# Generation pass: slack generator injection and reactive capability bounds.
+# Generation pass: slack cost assignment and reactive capability bounds.
 #
-# Slack generator
-# ───────────────
-# If a source bus has no generator with "_slack => true", a new unconstrained
-# slack generator is injected (no p_min/p_max/q_min/q_max, non-zero cost).
-# This mirrors the from_pmd convention so augmented cases behave consistently
-# with PMD-imported cases.
+# Slack cost
+# ──────────
+# The voltage source IS the network's current slack (see ext/BMOPFOpfExt/source.jl).
+# If a source has no cost yet, a non-zero per-phase cost is written onto the
+# voltage_source so imported slack power is priced in the OPF objective. No phantom
+# slack generator is created. This mirrors the from_pmd convention.
 #
 # Reactive bounds
 # ───────────────
@@ -25,45 +25,25 @@ function _apply_generation!(net′::Dict{String,Any},
                               r::AugmentationRecipe)
     gens = get!(net′, "generator", Dict{String,Any}())
 
-    # ── Slack generator ───────────────────────────────────────────────────────
+    # ── Slack cost on the voltage source ────────────────────────────────────────
     if r.apply_slack_generator
-        # Identify source buses
         for (vsid, vs) in get(net′, "voltage_source", Dict())
             vs isa Dict || continue
             src_bus = get(vs, "bus", nothing)
             src_bus isa String || continue
 
-            # Check if a slack generator already exists at this source bus
-            has_slack = any(values(gens)) do g
-                g isa Dict &&
-                get(g, "bus", nothing) == src_bus &&
-                get(g, "_slack", false)
-            end
-            has_slack && continue
+            # Don't overwrite an existing cost
+            haskey(vs, "cost") && continue
 
             tm = string.(get(vs, "terminal_map", String[]))
             isempty(tm) && continue
-
-            gen_id = "_aug_slack_$(vsid)"
-            # terminal_map for the generator: same phases as the voltage source,
-            # plus the neutral if the source bus has one.
-            bus_dict = get(get(net′, "bus", Dict()), src_bus, Dict())
-            nt = _neutral_terminal(bus_dict)
-            gen_tm = nt !== nothing ? vcat(tm, [nt]) : tm
             n_phases = length(tm)
 
-            new_gen = Dict{String,Any}(
-                "bus"          => src_bus,
-                "terminal_map" => gen_tm,
-                "configuration" => "WYE",
-                "cost"         => fill(r.slack_cost, n_phases),
-                "_slack"       => true,
-            )
-            gens[gen_id] = new_gen
+            vs["cost"] = fill(r.slack_cost, n_phases)
             push!(entries, TransformEntry(
-                :generator, gen_id, "(new)", nothing, gen_id,
+                :voltage_source, vsid, "cost", nothing, vs["cost"],
                 "TFspec_Eq135_slack_generation", :standard,
-                "unconstrained slack at source bus '$(src_bus)'; " *
+                "priced slack at source bus '$(src_bus)'; " *
                 "cost=$(r.slack_cost) \$/kWh on $(n_phases) phase(s)"))
         end
     end
