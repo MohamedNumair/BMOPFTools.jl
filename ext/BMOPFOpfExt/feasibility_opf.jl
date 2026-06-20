@@ -58,6 +58,7 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     # unconstrained NLP has a degenerate high-voltage local minimum; correct
     # initialisation ensures Ipopt finds the physical solution instead.
     _set_level_aware_start_values!(vars, working, bus_terminals, grounded)
+    _set_yd_dy_start_values!(vars, working, grounded)
 
     # Voltage bounds are NOT enforced as hard constraints — they are evaluated
     # post-solve by diagnose_infeasibility, which reports violations.
@@ -94,10 +95,35 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     _add_kcl_constraints!(model, kcl_r, kcl_i)
 
     # ── Objective: minimise L2² of all slack injections ───────────────────────
+    # A small linear term on Yd/Dy wye winding currents (1e-6 × cr_xf_wye) breaks
+    # the sign degeneracy that arises because both I_wye>0 and I_wye<0 give zero
+    # slack for passive transformers with resistive loads.  The penalty is tiny
+    # relative to slack magnitudes (|cs| order 1-100 A when KCL fails) so it does
+    # not bias the physical solution; it merely selects the physical branch when
+    # both are equally feasible.
     slack_obj = JuMP.QuadExpr()
     for key in keys(cs_r)
         JuMP.add_to_expression!(slack_obj, 1.0, cs_r[key], cs_r[key])
         JuMP.add_to_expression!(slack_obj, 1.0, cs_i[key], cs_i[key])
+    end
+    xfmr_dict = get(working, "transformer", Dict())
+    cr_xf = vars[:cr_xf]
+    for subtype in ("wye_delta", "delta_wye")
+        wye_is_from = (subtype == "wye_delta")
+        # The unobservable state is the delta circulation current — a uniform loop
+        # current that adds equally to all delta arm currents without affecting
+        # terminal voltages or wye-side KCL.  Penalise the delta-side phase currents
+        # to break this degeneracy.  For Yd the delta is the to-side; for Dy it is
+        # the from-side.
+        side_del = wye_is_from ? "to" : "fr"
+        for (tid, xfmr) in get(xfmr_dict, subtype, Dict())
+            tm_del = Vector{String}(wye_is_from ?
+                get(xfmr, "terminal_map_to",   String[]) :
+                get(xfmr, "terminal_map_from", String[]))
+            for k in 1:length(tm_del)
+                JuMP.add_to_expression!(slack_obj, -1.0, cr_xf[(tid, side_del, k)])
+            end
+        end
     end
     @objective(model, Min, slack_obj)
 
