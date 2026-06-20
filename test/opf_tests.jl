@@ -210,12 +210,12 @@
         res = solve_opf(net)
         @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
 
-        # Source real power via the auto-injected slack generator at sourcebus.
-        # P_src = (vr_src - vr_n)·crg + (vi_src - vi_n)·cig
+        # Source real power via the voltage-source slack current at sourcebus.
+        # P_src = (vr_src - vr_n)·cr + (vi_src - vi_n)·ci
         # With grounded neutral: vr_n = vi_n = 0, vi_src = 0 (angle=0).
-        # So P_src = vr_src · crg = V_s · crg.
-        crg_src = res["generator"]["_auto_slack"]["1"]["pg"] / V_s   # pg = V_s · crg
-        P_src   = res["generator"]["_auto_slack"]["1"]["pg"]
+        # So P_src = vr_src · cr = V_s · cr.
+        crg_src = res["voltage_source"]["vs"]["1"]["ps"] / V_s   # ps = V_s · cr
+        P_src   = res["voltage_source"]["vs"]["1"]["ps"]
 
         # Line loss: P_loss = R · |I|² (no reactive component here)
         cr_fr  = res["line"]["l1"]["1"]["cr_fr"]
@@ -468,7 +468,7 @@
     # Shared fixture for T11–T13: T1 geometry with a profit-seeking DER at bus1
     # (negative cost) so the optimizer always dispatches at p_max, giving a
     # deterministic nonzero pg far from zero — avoids rtol failures on near-zero values.
-    # The grid connection is covered by the auto-injected _auto_slack at sourcebus.
+    # The grid connection is covered by the voltage-source slack at sourcebus.
     # g1 injects 200 kW; load is 100 kW → net 100 kW exported to sourcebus.
     # V_bus1 rises above V_s (reverse current direction).
     # Analytical: V² − V_s·V − R·P_net = 0 → V = (V_s + √(V_s²+4·R·P_net))/2 ≈ 1047.7 V
@@ -615,11 +615,10 @@
 
         # ── top-level keys ────────────────────────────────────────────────────
         for k in ("termination_status","objective","solve_time",
-                  "bus","line","switch","load","generator","transformer")
+                  "bus","line","switch","load","generator","transformer",
+                  "voltage_source")
             @test haskey(res, k)
         end
-        # voltage_source does not appear — it fixes voltages only, no current result
-        @test !haskey(res, "voltage_source")
 
         # ── bus: terminal-keyed, four fields per terminal ─────────────────────
         for (bus_id, expected_terminals) in (
@@ -698,8 +697,17 @@
         @test res["transformer"] isa Dict
         @test isempty(res["transformer"])
 
-        # ── voltage_source: not in result (fixes voltages only, no current) ────
-        @test !haskey(res, "voltage_source")
+        # ── voltage_source: phase-terminal keys, slack current + power ─────────
+        @test haskey(res["voltage_source"], "vs")
+        @test haskey(res["voltage_source"]["vs"], "1")   # phase terminal only
+        @test !haskey(res["voltage_source"]["vs"], "n")  # neutral carries return current, no var
+        sd = res["voltage_source"]["vs"]["1"]
+        for f in ("cr","ci","cm","ps","qs")
+            @test haskey(sd, f)
+            @test sd[f] isa Float64
+        end
+        @test sd["cm"] >= 0.0
+        @test sd["cm"] ≈ sqrt(sd["cr"]^2 + sd["ci"]^2)  atol=1e-9
     end
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -983,7 +991,7 @@
                     "v_min":200.0,"v_max":260.0}},
          "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
              "v_magnitude":[230.0,230.0,230.0],
-             "v_angle":[0.0,-2.0944,2.0944]}},
+             "v_angle":[0.0,-2.0944,2.0944],"cost":[1.0,1.0,1.0]}},
          "linecode":{"lc":{"R_series_1_1":0.01,"R_series_2_2":0.01,"R_series_3_3":0.01}},
          "line":{"l1":{"bus_from":"src","bus_to":"b1",
              "terminal_map_from":["1","2","3"],"terminal_map_to":["1","2","3"],
@@ -991,8 +999,6 @@
          "load":{"ld":{"bus":"b1","terminal_map":["1","2","3","n"],
              "configuration":"WYE",
              "p_nom":[2000.0,2000.0,2000.0],"q_nom":[0.0,0.0,0.0]}},
-         "generator":{"slack":{"bus":"src","terminal_map":["1","2","3","n"],
-             "configuration":"WYE","cost":[1.0,1.0,1.0],"_slack":true}},
          "inverter":{"pv1":{"bus":"b1","terminal_map":["1","2","3","n"],
              "topology":"FOUR_LEG","prime_mover":"PV",
              "s_max":[3000.0,3000.0,3000.0],
@@ -1042,7 +1048,7 @@
                     "v_min":200.0,"v_max":260.0}},
          "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
              "v_magnitude":[230.0,230.0,230.0],
-             "v_angle":[0.0,-2.0944,2.0944]}},
+             "v_angle":[0.0,-2.0944,2.0944],"cost":[1.0,1.0,1.0]}},
          "linecode":{"lc":{"R_series_1_1":0.01,"R_series_2_2":0.01,"R_series_3_3":0.01}},
          "line":{"l1":{"bus_from":"src","bus_to":"b1",
              "terminal_map_from":["1","2","3"],"terminal_map_to":["1","2","3"],
@@ -1050,8 +1056,6 @@
          "load":{"ld":{"bus":"b1","terminal_map":["1","2","3","n"],
              "configuration":"WYE",
              "p_nom":[2000.0,2000.0,2000.0],"q_nom":[0.0,0.0,0.0]}},
-         "generator":{"slack":{"bus":"src","terminal_map":["1","2","3","n"],
-             "configuration":"WYE","cost":[1.0,1.0,1.0],"_slack":true}},
          "control_profile":{"pf09":{"power_factor":{"pf":0.9}}},
          "inverter":{"pv1":{"bus":"b1","terminal_map":["1","2","3","n"],
              "topology":"FOUR_LEG","prime_mover":"PV",
@@ -1102,15 +1106,13 @@
             "b1":  {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
                     "v_min":200.0,"v_max":260.0}},
          "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
-             "v_magnitude":[230.0],"v_angle":[0.0]}},
+             "v_magnitude":[230.0],"v_angle":[0.0],"cost":[1.0]}},
          "linecode":{"lc":{"R_series_1_1":0.001}},
          "line":{"l1":{"bus_from":"src","bus_to":"b1",
              "terminal_map_from":["1"],"terminal_map_to":["1"],
              "linecode":"lc","length":1.0}},
          "load":{"ld":{"bus":"b1","terminal_map":["1","n"],
              "configuration":"SINGLE_PHASE","p_nom":[2000.0],"q_nom":[0.0]}},
-         "generator":{"slack":{"bus":"src","terminal_map":["1","n"],
-             "configuration":"WYE","cost":[1.0],"_slack":true}},
          "control_profile":{"pf09":{"power_factor":{"pf":0.9}}},
          "inverter":{"pv1":{"bus":"b1","terminal_map":["1","n"],
              "topology":"SINGLE_PHASE","prime_mover":"PV",

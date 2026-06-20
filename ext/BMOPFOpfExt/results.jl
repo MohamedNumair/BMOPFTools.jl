@@ -280,12 +280,43 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
         end
     end
 
-    # Note: cr_src/ci_src are declared as JuMP variables but are never added to
-    # the KCL accumulators and carry no constraints.  The voltage source only
-    # fixes voltages; all current injection at the source bus comes from the
-    # explicit generator there (or the auto-injected _auto_slack generator).
-    # Exposing these unconstrained variables in the result would be misleading,
-    # so voltage_source does not appear as a result section.
+    # ── Voltage-source slack currents and imported power ──────────────────────
+    # The source injects cr_src/ci_src into KCL; with fixed terminal voltages the
+    # per-phase power is exact. Positive ps/qs = power imported into the network.
+    cr_src_v = vars[:cr_src]; ci_src_v = vars[:ci_src]
+    src_res = Dict{String,Any}()
+    for (sid, vs) in get(net, "voltage_source", Dict())
+        vs isa Dict || continue
+        bus  = get(vs, "bus", "")
+        tm   = Vector{String}(get(vs, "terminal_map", String[]))
+        cfg  = get(vs, "configuration", "WYE")
+        cfg in ("WYE", "SINGLE_PHASE") || continue
+        ph_pos    = _phase_positions(tm)
+        n_pos_idx = _neutral_pos(tm)
+        t_n = if n_pos_idx !== nothing
+            tm[n_pos_idx]
+        else
+            bt = get(get(net, "bus", Dict()), bus, Dict())
+            BMOPFTools._neutral_terminal(bt)
+        end
+
+        ph_results = Dict{String,Any}()
+        for (idx, ph) in enumerate(ph_pos)
+            t_ph = tm[ph]
+            cr = val(cr_src_v[(sid, idx)]); ci = val(ci_src_v[(sid, idx)])
+            vr_t = feasible ? val(vr_v[(bus, t_ph)]) : NaN
+            vi_t = feasible ? val(vi_v[(bus, t_ph)]) : NaN
+            vr_n = (t_n !== nothing && feasible) ? val(vr_v[(bus, t_n)]) : 0.0
+            vi_n = (t_n !== nothing && feasible) ? val(vi_v[(bus, t_n)]) : 0.0
+            dvr = vr_t - vr_n; dvi = vi_t - vi_n
+            ps  = dvr*cr + dvi*ci
+            qs  = dvi*cr - dvr*ci
+            ph_results[t_ph] = Dict{String,Any}(
+                "cr" => cr, "ci" => ci, "cm" => sqrt(cr^2 + ci^2),
+                "ps" => ps, "qs" => qs)
+        end
+        src_res[sid] = ph_results
+    end
 
     # ── Initialisation start values ──────────────────────────────────────────
     # Capture the start values set by _set_voltage_start_values! /
@@ -327,6 +358,7 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
         "generator"          => gen_res,
         "inverter"           => inv_res,
         "transformer"        => xfmr_res,
+        "voltage_source"     => src_res,
         "initialisation"     => init_res,
     )
 end

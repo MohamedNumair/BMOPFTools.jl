@@ -78,6 +78,48 @@ function _add_objective!(model, net, vars)
         end
     end
 
+    # ── Voltage-source dispatch cost ─────────────────────────────────────────
+    # The source's terminal voltages are fixed, so P_k is linear in cr_src/ci_src
+    # (dvr/dvi are constants) and the linear cost term is exact.
+    cr_src = vars[:cr_src]; ci_src = vars[:ci_src]
+    for (sid, vs) in get(net, "voltage_source", Dict())
+        vs isa Dict || continue
+        bus  = get(vs, "bus", "")
+        tm   = Vector{String}(get(vs, "terminal_map", String[]))
+        cfg  = get(vs, "configuration", "WYE")
+        cost = get(vs, "cost", nothing)
+        cost === nothing && continue
+
+        c2, c1 = if cost isa AbstractVector
+            length(cost) >= 3 ? (Float64(cost[1]), Float64(cost[2])) :
+            length(cost) >= 1 ? (0.0, Float64(cost[1])) : (0.0, 0.0)
+        else
+            (0.0, Float64(cost))
+        end
+        c2 != 0.0 && @warn "Voltage source '$sid': quadratic cost (c2=$c2) not " *
+                           "added to the objective; using linear term only."
+
+        cfg in ("WYE", "SINGLE_PHASE") || continue
+        ph_pos    = _phase_positions(tm)
+        n_pos_idx = _neutral_pos(tm)
+        t_n = if n_pos_idx !== nothing
+            tm[n_pos_idx]
+        else
+            bt = get(get(net, "bus", Dict()), bus, Dict())
+            BMOPFTools._neutral_terminal(bt)
+        end
+
+        for (idx, ph) in enumerate(ph_pos)
+            t_ph = tm[ph]
+            dvr = t_n !== nothing ?
+                  @expression(model, vr[(bus,t_ph)] - vr[(bus,t_n)]) : vr[(bus,t_ph)]
+            dvi = t_n !== nothing ?
+                  @expression(model, vi[(bus,t_ph)] - vi[(bus,t_n)]) : vi[(bus,t_ph)]
+            JuMP.add_to_expression!(obj, c1,
+                @expression(model, dvr*cr_src[(sid,idx)] + dvi*ci_src[(sid,idx)]))
+        end
+    end
+
     # ── Inverter dispatch cost (same structure as generator) ─────────────────
     for (inv_id, inv) in get(net, "inverter", Dict())
         inv isa Dict || continue

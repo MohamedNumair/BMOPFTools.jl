@@ -642,7 +642,7 @@ const IEEE13_FIXTURE = """
         @test_throws ArgumentError to_pmd(net)
     end
 
-    @testset "from_pmd — explicit slack generator" begin
+    @testset "from_pmd — slack cost priced on the voltage source" begin
         eng = Dict{String,Any}(
             "settings" => Dict{String,Any}("voltage_scale_factor" => 1000.0),
             "bus" => Dict{String,Any}(
@@ -654,18 +654,15 @@ const IEEE13_FIXTURE = """
                     "va" => [0.0, -120.0, 120.0, 0.0])))
 
         net = from_pmd(eng; slack_cost=0.25)
-        @test haskey(net["generator"], "slack_source")
-        g = net["generator"]["slack_source"]
-        @test g["bus"] == "src"
-        @test g["configuration"] == "WYE"
-        @test g["terminal_map"] == ["1","2","3"]
-        @test g["cost"] ≈ [0.25, 0.25, 0.25]
-        @test get(g, "_slack", false) == true
-        @test !haskey(g, "p_min") && !haskey(g, "p_max")
+        @test !haskey(net, "generator")
+        vs = net["voltage_source"]["source"]
+        @test vs["bus"] == "src"
+        @test vs["cost"] ≈ [0.25, 0.25, 0.25]   # one per phase (neutral excluded)
+        @test !haskey(vs, "p_min") && !haskey(vs, "p_max")
 
         # opt-out
         net2 = from_pmd(eng; add_slack_generator=false)
-        @test !haskey(net2, "generator")
+        @test !haskey(net2["voltage_source"]["source"], "cost")
     end
 
     @testset "Spec conformance checks" begin
@@ -1094,6 +1091,33 @@ const IEEE13_FIXTURE = """
                        x.component_id == "632", f8)
         @test any(x -> x.code == "E.PRE.QBOUND_CONFLICT" &&
                        x.component_id == "gen_634", f8)
+
+        # preflight: generators co-located with the voltage source
+        net9 = parse_bmopf("""
+        {"bus":{"src":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+                "b1":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[230.0],"v_angle":[0.0]}},
+         "generator":{
+             "g_unb":{"bus":"src","terminal_map":["1","n"],"configuration":"WYE","cost":[1.0]},
+             "g_bnd":{"bus":"src","terminal_map":["1","n"],"configuration":"WYE",
+                      "p_max":[1.0e4],"q_max":[1.0e3],"cost":[1.0]},
+             "g_far":{"bus":"b1","terminal_map":["1","n"],"configuration":"WYE",
+                      "p_max":[1.0e4],"q_max":[1.0e3],"cost":[1.0]}}}
+        """; from_string=true)
+        f9 = Finding[]
+        r9 = infeasibility_preflight(net9, f9)
+        # unbounded generator at source bus → WARNING (degenerate double slack)
+        @test any(x -> x.code == "W.PRE.SOURCE_BUS_GENERATOR" &&
+                       x.component_id == "g_unb", f9)
+        # bounded generator at source bus → INFO (advisory)
+        @test any(x -> x.code == "I.PRE.SOURCE_BUS_GENERATOR" &&
+                       x.component_id == "g_bnd", f9)
+        # generator at a non-source bus → not flagged
+        @test !any(x -> occursin("SOURCE_BUS_GENERATOR", x.code) &&
+                        x.component_id == "g_far", f9)
+        @test r9["source_bus_generators"]["n_unbounded_source_bus_generators"] == 1
+        @test r9["source_bus_generators"]["n_bounded_source_bus_generators"]   == 1
     end
 
     @testset "Integrity checks" begin
@@ -2097,15 +2121,12 @@ const IEEE13_FIXTURE = """
                 @test length(tx["terminal_map_to"])   == 4
                 @test "n" in tx["terminal_map_to"]
 
-                # explicit slack generator at the source bus
-                gens = get(net, "generator", Dict())
-                slack = [g for (_, g) in gens if get(g, "_slack", false)]
-                @test length(slack) == 1
-                @test slack[1]["bus"] == first(values(net["voltage_source"]))["bus"]
-                @test slack[1]["configuration"] == "WYE"
-                @test length(slack[1]["terminal_map"]) == 3
-                @test haskey(slack[1], "cost")
-                @test !haskey(slack[1], "p_max")     # unbounded slack
+                # slack cost priced on the voltage source (no phantom generator)
+                @test !any(get(g, "_slack", false) for g in values(get(net, "generator", Dict())))
+                vs = first(values(net["voltage_source"]))
+                @test haskey(vs, "cost")
+                @test length(vs["cost"]) == 3        # one per phase (neutral excluded)
+                @test !haskey(vs, "p_max")           # unbounded slack
 
                 # 2-terminal loads are SINGLE_PHASE per spec
                 @test all(l["configuration"] == "SINGLE_PHASE"

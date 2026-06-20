@@ -109,33 +109,18 @@ function from_pmd(eng::Dict{String,Any};
         end
     end
 
-    # Explicit slack generator at each source bus. The OpenDSS circuit object
-    # is both a voltage reference and an implicit unbounded power injection;
-    # the BMOPF voltage_source captures only the former, so the import slack
-    # is made explicit as an unbounded generator with a cost — this is what
-    # gives the OPF objective (generation cost) a well-posed meaning.
+    # Price the import slack. The OpenDSS circuit object is both a voltage
+    # reference and an implicit unbounded power injection; the BMOPF
+    # voltage_source captures both (it is the OPF current slack, see
+    # ext/BMOPFOpfExt/source.jl). Attaching a per-phase cost gives the OPF
+    # objective (generation cost) a well-posed meaning without a phantom generator.
     if add_slack_generator && haskey(net, "voltage_source")
-        gens = get!(net, "generator", Dict{String,Any}())
-        for (vsid, vs) in net["voltage_source"]
-            bus = get(vs, "bus", nothing)
-            bus isa AbstractString || continue
+        for (_, vs) in net["voltage_source"]
+            vs isa Dict || continue
+            haskey(vs, "cost") && continue
             phases = [t for t in get(vs, "terminal_map", String[]) if t != "n"]
             isempty(phases) && continue
-            tmap = copy(phases)
-            # The slack generator models the DSS circuit object's power injection.
-            # DSS circuit sources are referenced to earth (terminal 0), not to the
-            # bus neutral (terminal 4). Including the neutral terminal as a WYE
-            # return creates a spurious degree of freedom that allows the neutral
-            # voltage to drift to unphysical values. Leave the neutral out — the
-            # generator power is referenced to the absolute ground (V=0 implicit
-            # reference), and the neutral bus is governed only by grounding shunts.
-            gens["slack_" * vsid] = Dict{String,Any}(
-                "bus"           => bus,
-                "terminal_map"  => tmap,
-                "configuration" => "WYE",
-                "cost"          => fill(slack_cost, length(phases)),
-                "_slack"        => true
-            )
+            vs["cost"] = fill(slack_cost, length(phases))
         end
     end
 

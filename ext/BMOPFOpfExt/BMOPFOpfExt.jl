@@ -12,7 +12,7 @@ Variables (all rectangular, SI units — V and A):
 - `cr_fr / ci_fr` — series current in each line, from-terminal direction (independent variable)
 - `crd / cid`     — load current (one per phase conductor)
 - `crg / cig`     — generator current (one per phase conductor)
-- `cr_src/ci_src` — slack-bus injection current (unconstrained)
+- `cr_src/ci_src` — voltage-source slack current (per phase; in KCL, optionally bounded)
 - `cr_xf / ci_xf` — transformer branch current (from- and to-side)
 - `cr_sw / ci_sw` — switch current (zeroed when open)
 
@@ -31,7 +31,7 @@ function adds its contribution to the KCL accumulator dicts `(kcl_r, kcl_i)`;
 2. `_build_vars`                             — declare all JuMP variables
 3. `_set_voltage_start_values!`              — warm-start Ipopt
 4. `_add_voltage_bounds!`                    — operational V limits (solve_opf only)
-5. `_add_source_constraints!`                — fix slack-bus voltages (voltage reference only)
+5. `_add_source_constraints!`                — fix slack-bus voltages + inject slack current (KCL)
 6. `_add_line/switch/transformer_constraints!` — KVL + KCL contributions
 7. `_add_load/generator_constraints!`        — constant-power equations + KCL
 8. `_add_kcl_constraints!`                   — enforce KCL == 0 at every node
@@ -48,7 +48,8 @@ function adds its contribution to the KCL accumulator dicts `(kcl_r, kcl_i)`;
 | `branch.jl`         | Line KVL/current-balance; switch voltage-coupling |
 | `transformer.jl`    | YY, Dy, Yd transformer voltage + current coupling |
 | `load.jl`           | Constant-power load constraints (WYE / DELTA)     |
-| `generator.jl`      | Generator P/Q bounds; voltage-source fixing       |
+| `generator.jl`      | Generator P/Q bounds                              |
+| `source.jl`         | Voltage-source voltage fixing + slack current/bounds |
 | `objective.jl`      | Generation-cost objective (linear + quadratic)    |
 | `results.jl`        | Solution extraction to `Dict{String,Any}`         |
 | `feasibility_opf.jl`| Elastic KCL-slack formulation (always feasible)   |
@@ -67,6 +68,7 @@ include("branch.jl")
 include("transformer.jl")
 include("load.jl")
 include("generator.jl")
+include("source.jl")
 include("inverter.jl")
 include("objective.jl")
 include("results.jl")
@@ -100,8 +102,6 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
     working = BMOPFTools.is_timeseries(net) ?
               BMOPFTools.get_snapshot(net, t_index) : deepcopy(net)
 
-    _ensure_source_generator!(working)
-
     bases = nothing
     if per_unit
         working, bases = _to_per_unit(working, s_base)
@@ -125,9 +125,9 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
     _add_voltage_bounds!(model, working, bus_terminals, grounded, vars)
     _add_bus_limit_constraints!(model, working, bus_terminals, grounded, vars)
 
-    # Voltage source: fix reference voltages only (no slack current injection)
+    # Voltage source: fix reference voltages and inject slack current into KCL
     kcl_r, kcl_i = _init_kcl(bus_terminals, grounded)
-    _add_source_constraints!(working, vars)
+    _add_source_constraints!(model, working, vars, kcl_r, kcl_i)
 
     # Branch constraints and KCL contributions
     _add_line_constraints!(model, working, vars, kcl_r, kcl_i)
