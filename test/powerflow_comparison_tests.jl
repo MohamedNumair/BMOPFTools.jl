@@ -339,8 +339,9 @@ function _net_yd_xfmr()
     # pf_yd_xfmr.dss: hv ──[Yd xfmr, 11 kV wye / 0.415 kV delta, 500 kVA]── lv
     # %r=1.0 per winding, xhl=4.0%, %noloadloss=0.3, %imag=1.5
     # HV neutral earthed via R=0.001 Ω reactor → shunt G=1000 S at hv.n
-    # LV delta: high-Z earth (1 MΩ) on lv.1 → shunt G=1e-6 S
-    # loads: 3 balanced phase-to-phase loads 120 kW + 40 kVAr each on delta
+    # LV delta: near-solid ground (R=0.001 Ω, G≈1000 S) at lv.1 to anchor
+    #   common mode deterministically — mirrors ODS Reactor.grnd_lv.
+    # loads: unbalanced (3:1:2) delta loads to expose per-phase errors
     #
     # Impedance conversion (wye_delta subtype):
     #   v_ref_from = 11 000 V (wye, line voltage used as base per OpenDSS)
@@ -386,7 +387,7 @@ function _net_yd_xfmr()
             "grnd_lv" => Dict{String,Any}(
                 "bus"          => "lv",
                 "terminal_map" => ["1"],
-                "G_1_1"        => 1e-6,
+                "G_1_1"        => 1000.0,
                 "B_1_1"        => 0.0)),
         "transformer" => Dict{String,Any}(
             "wye_delta" => Dict{String,Any}(
@@ -409,14 +410,14 @@ function _net_yd_xfmr()
                 "bus"           => "lv",
                 "terminal_map"  => ["1", "2"],
                 "configuration" => "DELTA",
-                "p_nom"         => [120_000.0],
-                "q_nom"         => [40_000.0]),
+                "p_nom"         => [180_000.0],
+                "q_nom"         => [60_000.0]),
             "ld2" => Dict{String,Any}(
                 "bus"           => "lv",
                 "terminal_map"  => ["2", "3"],
                 "configuration" => "DELTA",
-                "p_nom"         => [120_000.0],
-                "q_nom"         => [40_000.0]),
+                "p_nom"         => [60_000.0],
+                "q_nom"         => [20_000.0]),
             "ld3" => Dict{String,Any}(
                 "bus"           => "lv",
                 "terminal_map"  => ["3", "1"],

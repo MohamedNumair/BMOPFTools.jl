@@ -3,7 +3,7 @@
 !
 ! Topology: hv ──[Yd xfmr, 11 kV wye / 0.415 kV delta]── lv
 !   hv.1/2/3/4  = HV wye phases and neutral
-!   lv.1/2/3    = LV delta terminals (no neutral on delta bus)
+!   lv.1/2/3    = LV delta terminals
 !
 ! Design intent for high-confidence cross-validation:
 !
@@ -21,7 +21,12 @@
 !       LV voltage spread of several volts.  A wrong sign on any one phase
 !       in the Yd voltage loop would shift that phase by >1 V (detectable).
 !
-! Total load ≈ 375 kW + 120 kvar (≈ 75 % of rated at 0.95 pf).
+!   (d) LV delta bus anchored by a near-solid ground (R=0.001 Ω, G≈1000 S)
+!       at lv.1 so that phase-to-earth voltages are deterministic in both
+!       ODS and BMOPF.  R=0.001 is negligible relative to load impedance
+!       (≈0.96 mΩ) so power flow is not materially affected.
+!
+! Total load ≈ 360 kW + 120 kvar.
 
 Clear
 
@@ -38,17 +43,15 @@ New Transformer.t1 phases=3 windings=2
 ~ %noloadloss=0.3
 ~ %imag=1.5
 
-! High-impedance grounding on one LV delta terminal to anchor the floating
-! common mode without materially affecting the power flow (1 MΩ → ~0.23 mA).
-New Reactor.grnd_lv bus1=lv.1 bus2=lv.0 R=1e6 X=0
+! Near-solid grounding on lv.1 to anchor the delta common mode.
+! R=0.001 Ω → G≈1000 S (mirrored in BMOPF as grnd_lv shunt G=1000 S).
+New Reactor.grnd_lv bus1=lv.1 bus2=lv.0 R=0.001 X=0
 
-! Balanced constant-power phase-to-phase loads on the LV delta bus.
-! Equal loads on each delta arm: symmetry forces the LV common mode to zero
-! in both ODS and BMOPF, making phase-to-earth comparison valid.
+! Unbalanced delta loads (3:1:2 ratio) to make per-phase voltages distinct.
 ! Vminpu=0 Vmaxpu=2: disable ODS voltage-dependent load switching so model=1
 ! behaves as strict constant P+Q at all voltages, matching BMOPF.
-New Load.ld1 bus1=lv.1.2 kv=0.415 kw=120 kvar=40 phases=1 model=1 Vminpu=0 Vmaxpu=2
-New Load.ld2 bus1=lv.2.3 kv=0.415 kw=120 kvar=40 phases=1 model=1 Vminpu=0 Vmaxpu=2
+New Load.ld1 bus1=lv.1.2 kv=0.415 kw=180 kvar=60 phases=1 model=1 Vminpu=0 Vmaxpu=2
+New Load.ld2 bus1=lv.2.3 kv=0.415 kw=60  kvar=20 phases=1 model=1 Vminpu=0 Vmaxpu=2
 New Load.ld3 bus1=lv.3.1 kv=0.415 kw=120 kvar=40 phases=1 model=1 Vminpu=0 Vmaxpu=2
 
 Set VoltageBases=[11.0, 0.415]
