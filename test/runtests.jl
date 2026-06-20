@@ -378,6 +378,115 @@ const IEEE13_FIXTURE = """
         @test ld["analysed"] == true
     end
 
+    @testset "Analysis — zone topology (split-phase & SWER)" begin
+        codes(fs) = Set(f.code for f in fs)
+
+        # (A) center_tap → split-phase secondary zone
+        net_ct = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "mv" => Dict{String,Any}("terminal_names" => ["1","n"]),
+                "lv" => Dict{String,Any}("terminal_names" => ["1","2","n"])),
+            "voltage_source" => Dict{String,Any}("src" => Dict{String,Any}(
+                "bus" => "mv", "terminal_map" => ["1"],
+                "v_magnitude" => [2400.0], "v_angle" => [0.0])),
+            "transformer" => Dict{String,Any}("center_tap" => Dict{String,Any}(
+                "ct" => Dict{String,Any}("bus_from" => "mv", "bus_to" => "lv",
+                    "terminal_map_from" => ["1","n"], "terminal_map_to" => ["1","n","2"],
+                    "v_ref_from" => 2400.0, "v_ref_to" => 120.0))),
+            "load" => Dict{String,Any}("l1" => Dict{String,Any}("bus" => "lv",
+                "terminal_map" => ["1","n"], "configuration" => "SINGLE_PHASE",
+                "p_nom" => [1000.0], "q_nom" => [0.0])))
+        f = Finding[]
+        r = connectivity_analysis(net_ct, f)
+        @test r["n_split_phase_zones"] == 1
+        @test r["n_swer_zones"] == 0
+        @test "I.PROV.SPLIT_PHASE_ZONE" in codes(f)
+
+        # (B) single-wire transformer-isolated zone → SWER
+        net_swer = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "mv" => Dict{String,Any}("terminal_names" => ["1","2","3","n"]),
+                "sw" => Dict{String,Any}("terminal_names" => ["1","n"])),
+            "voltage_source" => Dict{String,Any}("src" => Dict{String,Any}(
+                "bus" => "mv", "terminal_map" => ["1","2","3"],
+                "v_magnitude" => [6350.0,6350.0,6350.0], "v_angle" => [0.0,-2.094,2.094])),
+            "transformer" => Dict{String,Any}("single_phase" => Dict{String,Any}(
+                "iso" => Dict{String,Any}("bus_from" => "mv", "bus_to" => "sw",
+                    "terminal_map_from" => ["1","n"], "terminal_map_to" => ["1","n"],
+                    "v_ref_from" => 6350.0, "v_ref_to" => 6350.0))),
+            "load" => Dict{String,Any}("l1" => Dict{String,Any}("bus" => "sw",
+                "terminal_map" => ["1","n"], "configuration" => "SINGLE_PHASE",
+                "p_nom" => [1000.0], "q_nom" => [0.0])))
+        f = Finding[]
+        r = connectivity_analysis(net_swer, f)
+        @test r["n_swer_zones"] == 1
+        @test r["n_split_phase_zones"] == 0
+        @test "I.PROV.SWER_ZONE" in codes(f)
+
+        # (C) AU pattern: SWER MV section feeding a center_tap split-phase LV section
+        net_au = deepcopy(net_swer)
+        net_au["bus"]["lv"] = Dict{String,Any}("terminal_names" => ["1","2","n"])
+        net_au["transformer"]["center_tap"] = Dict{String,Any}("ct" => Dict{String,Any}(
+            "bus_from" => "sw", "bus_to" => "lv",
+            "terminal_map_from" => ["1","n"], "terminal_map_to" => ["1","n","2"],
+            "v_ref_from" => 6350.0, "v_ref_to" => 230.0))
+        f = Finding[]
+        r = connectivity_analysis(net_au, f)
+        @test r["n_swer_zones"] == 1          # the single-wire MV section
+        @test r["n_split_phase_zones"] == 1   # the center-tap LV section
+        @test "I.PROV.SWER_ZONE" in codes(f)
+        @test "I.PROV.SPLIT_PHASE_ZONE" in codes(f)
+
+        # (D) plain 3-phase → neither tag
+        f = Finding[]
+        r = connectivity_analysis(parse_bmopf(IEEE13_FIXTURE; from_string=true), f)
+        @test r["n_split_phase_zones"] == 0
+        @test r["n_swer_zones"] == 0
+        @test !("I.PROV.SWER_ZONE" in codes(f))
+
+        # (E) single-phase lateral off a 3-phase feeder is NOT SWER (same zone)
+        net_lat = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "src" => Dict{String,Any}("terminal_names" => ["1","2","3","n"]),
+                "b3"  => Dict{String,Any}("terminal_names" => ["1","2","3","n"]),
+                "b1"  => Dict{String,Any}("terminal_names" => ["1","n"])),
+            "voltage_source" => Dict{String,Any}("src" => Dict{String,Any}(
+                "bus" => "src", "terminal_map" => ["1","2","3"],
+                "v_magnitude" => [240.0,240.0,240.0], "v_angle" => [0.0,-2.094,2.094])),
+            "line" => Dict{String,Any}(
+                "l1" => Dict{String,Any}("bus_from" => "src", "bus_to" => "b3",
+                    "terminal_map_from" => ["1","2","3","n"], "terminal_map_to" => ["1","2","3","n"]),
+                "l2" => Dict{String,Any}("bus_from" => "b3", "bus_to" => "b1",
+                    "terminal_map_from" => ["1","n"], "terminal_map_to" => ["1","n"])))
+        f = Finding[]
+        r = connectivity_analysis(net_lat, f)
+        @test r["n_swer_zones"] == 0          # b1 shares the 3-phase feeder's zone
+    end
+
+    @testset "Diversity — split-phase zone not flagged phase-balanced" begin
+        # Balanced legs in a center-tap (split-phase) zone must NOT trigger the
+        # "balanced ⇒ single-phase equivalent" finding (it's false for split-phase).
+        net = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "mv" => Dict{String,Any}("terminal_names" => ["1","n"]),
+                "lv" => Dict{String,Any}("terminal_names" => ["1","2","n"])),
+            "voltage_source" => Dict{String,Any}("src" => Dict{String,Any}(
+                "bus" => "mv", "terminal_map" => ["1"],
+                "v_magnitude" => [2400.0], "v_angle" => [0.0])),
+            "transformer" => Dict{String,Any}("center_tap" => Dict{String,Any}(
+                "ct" => Dict{String,Any}("bus_from" => "mv", "bus_to" => "lv",
+                    "terminal_map_from" => ["1","n"], "terminal_map_to" => ["1","n","2"],
+                    "v_ref_from" => 2400.0, "v_ref_to" => 120.0))),
+            "load" => Dict{String,Any}(
+                "l1" => Dict{String,Any}("bus" => "lv", "terminal_map" => ["1","n"],
+                    "configuration" => "SINGLE_PHASE", "p_nom" => [2000.0], "q_nom" => [0.0]),
+                "l2" => Dict{String,Any}("bus" => "lv", "terminal_map" => ["2","n"],
+                    "configuration" => "SINGLE_PHASE", "p_nom" => [2000.0], "q_nom" => [0.0])))
+        f = Finding[]
+        diversity_analysis(net, f)
+        @test !any(x -> x.code == "I.DIV.LOAD_PHASE_BALANCED", f)
+    end
+
     @testset "Validation — redundancy" begin
         net      = parse_bmopf(IEEE13_FIXTURE; from_string=true)
         findings = Finding[]

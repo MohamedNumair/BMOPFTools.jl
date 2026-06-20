@@ -181,6 +181,38 @@ function connectivity_analysis(net::Dict{String,Any},
             Dict{String,Any}("buses" => dangling)))
     end
 
+    # Galvanic-zone phase topology: tag split-phase (center-tap-fed) and SWER
+    # (single-wire, transformer-isolated) zones.
+    zone_class = _classify_zones(net)
+    result["zones"] = [Dict{String,Any}(
+            "label"    => z.label,
+            "topology" => string(z.topology),
+            "phases"   => sort(collect(z.phases)),
+            "n_buses"  => length(z.buses)) for z in zone_class]
+    result["n_split_phase_zones"] = count(z -> z.topology == :split_phase, zone_class)
+    result["n_swer_zones"]        = count(z -> z.topology == :swer, zone_class)
+
+    for z in zone_class
+        if z.topology == :split_phase
+            ct = something(findfirst(f -> f[1] == "center_tap", z.feed), nothing)
+            ct_id = ct === nothing ? "?" : z.feed[ct][2]
+            push!(findings, Finding(INFO, "I.PROV.SPLIT_PHASE_ZONE", :connectivity,
+                :network, nothing,
+                "Galvanic zone anchored at bus '$(z.label)' is split-phase " *
+                "(fed by center_tap transformer '$(ct_id)'): legs $(sort(collect(z.phases))) " *
+                "are anti-phase about the centre-tap neutral.",
+                Dict{String,Any}("zone_anchor" => z.label, "center_tap" => ct_id,
+                                 "phases" => sort(collect(z.phases)))))
+        elseif z.topology == :swer
+            push!(findings, Finding(INFO, "I.PROV.SWER_ZONE", :connectivity,
+                :network, nothing,
+                "Galvanic zone anchored at bus '$(z.label)' is single-wire and " *
+                "transformer-isolated — a SWER (single-wire earth-return) section.",
+                Dict{String,Any}("zone_anchor" => z.label,
+                                 "phases" => sort(collect(z.phases)))))
+        end
+    end
+
     result
 end
 
@@ -258,4 +290,74 @@ function _galvanic_zones(net::Dict{String,Any})::Vector{Set{String}}
         push!(zones, zone)
     end
     zones
+end
+
+"""
+    _classify_zones(net) -> Vector{NamedTuple}
+
+Classify each galvanic zone (see [`_galvanic_zones`](@ref)) by phase topology.
+Returns one entry per zone: `(buses, label, phases, topology, feed)` where
+`topology` is one of:
+
+- `:split_phase` — a `center_tap` transformer's `bus_to` lies in the zone
+  (the modelled cause of split-phase service; NA 120-0-120, AU 230-0-230);
+- `:swer` — the zone is single-wire (one distinct phase conductor across all its
+  buses) **and** transformer-isolated (contains no voltage-source bus), the
+  Single-Wire-Earth-Return signature;
+- `:single_phase` / `:three_phase` / `:other` — by phase count otherwise.
+
+`feed` lists `(subtype, transformer_id)` for transformers whose `bus_to` ∈ zone.
+"""
+function _classify_zones(net::Dict{String,Any})
+    buses = get(net, "bus", Dict())
+
+    vsrc_buses = Set(string(get(vs, "bus", ""))
+                     for (_, vs) in get(net, "voltage_source", Dict()) if vs isa Dict)
+
+    # Map each transformer's to-bus → [(subtype, id)]
+    feed_by_bus = Dict{String,Vector{Tuple{String,String}}}()
+    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+        sub = get(get(net, "transformer", Dict()), subtype, nothing)
+        sub isa Dict || continue
+        for (id, t) in sub
+            bt = get(t, "bus_to", nothing)
+            bt isa AbstractString || continue
+            push!(get!(feed_by_bus, bt, Tuple{String,String}[]), (subtype, string(id)))
+        end
+    end
+
+    out = NamedTuple[]
+    for zone in _galvanic_zones(net)
+        phases = Set{String}()
+        for bid in zone
+            b  = get(buses, bid, Dict())
+            nt = _neutral_terminal(b)
+            for t in get(b, "terminal_names", String[])
+                string(t) != nt && push!(phases, string(t))
+            end
+        end
+
+        feed = Tuple{String,String}[]
+        for bid in zone
+            append!(feed, get(feed_by_bus, bid, Tuple{String,String}[]))
+        end
+
+        has_source = any(bid -> bid in vsrc_buses, zone)
+        is_ct_fed  = any(f -> f[1] == "center_tap", feed)
+
+        topology =
+            is_ct_fed                            ? :split_phase  :
+            (length(phases) == 1 && !has_source) ? :swer         :
+            length(phases) == 1                  ? :single_phase :
+            length(phases) >= 3                  ? :three_phase  :
+                                                   :other
+
+        label = let src = intersect(zone, vsrc_buses)
+            isempty(src) ? minimum(zone) : first(src)
+        end
+
+        push!(out, (buses = zone, label = label, phases = phases,
+                    topology = topology, feed = feed))
+    end
+    out
 end

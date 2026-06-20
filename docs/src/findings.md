@@ -191,6 +191,15 @@ The largest family; full derivations in the
 | `W.PROV.I_MAX_INCOMPLETE_SWITCH` | W | Same as above for switches. |
 | `W.PROV.I_MAX_INCOMPLETE_XFMR` | W | Same for transformers (`i_max_from`/`i_max_to` shorter than the winding conductor count). |
 
+### Zone phase topology
+
+Emitted by the `:connectivity` pass after classifying each galvanic zone. Informational tags, not defects.
+
+| Code | Sev | Trigger & rationale |
+|---|---|---|
+| `I.PROV.SPLIT_PHASE_ZONE` | I | A galvanic zone is fed by a `center_tap` transformer — a split-phase section (NA 120-0-120, AU 230-0-230 downstream of SWER). The two legs are anti-phase about the centre-tap neutral; the OPF warm-start initialises them 180° apart accordingly. |
+| `I.PROV.SWER_ZONE` | I | A galvanic zone is single-wire (one phase conductor across all its buses) and transformer-isolated — a Single-Wire-Earth-Return section. Distinguished from a single-phase lateral, which shares its three-phase feeder's zone. |
+
 ### Grounding & reduction conventions
 
 | Code | Sev | Trigger & rationale |
