@@ -82,7 +82,7 @@ in the active environment — it is *not* a dependency of BMOPFTools):
 using BMOPFTools, PowerModelsDistribution
 
 eng = parse_file("Master.dss"; kron_reduce=false)   # keep 4-wire detail
-net = from_pmd(eng)        # adds an explicit slack generator by default
+net = from_pmd(eng)        # prices the slack on the voltage source by default
 write_bmopf(net, "case.json")
 analyze(net) |> r -> render(r, "case_report.md")
 ```

@@ -36,7 +36,9 @@ The `termination_status` and `solve_time` fields are always valid.
 | `switch` | Dict | Per-switch, per-conductor current results |
 | `load` | Dict | Per-load, per-phase current and absorbed power |
 | `generator` | Dict | Per-generator, per-phase current and produced power |
+| `inverter` | Dict | Per-inverter, per-phase current and produced power |
 | `transformer` | Dict | Per-transformer, per-winding-side currents |
+| `voltage_source` | Dict | Per-source, per-phase slack current and imported power |
 | `initialisation` | Dict | Per-bus, per-terminal Ipopt start values (see below) |
 
 ## `bus` — voltages
@@ -152,10 +154,6 @@ Same terminal indexing as `load` — phase terminals only, neutral absent.
 | `pg`  | W | Active power produced: `Δvr·crg + Δvi·cig` |
 | `qg`  | var | Reactive power produced: `Δvi·crg − Δvr·cig` |
 
-The auto-injected source-bus generator `_auto_slack` (see
-[Source bus generator injection](opf.md#source-gen-injection)) appears under
-`result["generator"]["_auto_slack"]` with the same structure.
-
 ## `transformer` — winding currents
 
 ```
@@ -182,20 +180,31 @@ For ideal transformers the apparent power `S = V·I*` is conserved across
 windings (up to the ideal turns ratio). Series winding impedances
 (`r_series_from`, `x_series_from`, etc.) cause a small difference.
 
-## Voltage source and grid injection
+## `voltage_source` — slack current and grid injection
 
-The voltage source object fixes terminal voltages only — it does not inject
-current and has no entry in the result dict. All current injection at the source
-bus is handled by the generator there: either an explicit user-defined generator
-or the auto-injected `_auto_slack` generator (see
-[Source bus generator injection](opf.md#source-gen-injection)).
+```
+result["voltage_source"][source_id][phase_terminal] => Dict
+```
 
-To obtain the total active power drawn from the grid, sum `pg` over all
-terminals of the source-bus generator:
+The voltage source is the network's current slack: it fixes terminal voltages
+**and** injects the slack current that closes KCL at the source bus (see
+[Voltage source as current slack](opf.md#source-slack)). Results are keyed by
+phase terminal (neutral excluded — it carries the summed return current).
+
+| Field | Unit | Description |
+|---|---|---|
+| `cr` | A | Real part of slack current injected at the phase terminal |
+| `ci` | A | Imaginary part of slack current |
+| `cm` | A | Current magnitude: `√(cr² + ci²)` |
+| `ps` | W | Active power imported into the network: `Δvr·cr + Δvi·ci` |
+| `qs` | var | Reactive power imported: `Δvi·cr − Δvr·ci` |
+
+Positive `ps`/`qs` is power flowing **into** the network from the source. To
+obtain the total active power drawn from the grid, sum `ps` over all phases:
 
 ```julia
-slack = result["generator"]["_auto_slack"]   # or your explicit generator id
-p_grid = sum(v["pg"] for v in values(slack))
+src    = result["voltage_source"]["source"]   # your source id
+p_grid = sum(v["ps"] for v in values(src))
 ```
 
 ## `initialisation` — Ipopt start values
