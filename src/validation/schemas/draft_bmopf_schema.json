@@ -382,6 +382,178 @@
                 ]
             }
         },
+        "inverter": {
+            "type": "object",
+            "description": "Inverter/converter elements interfacing PV arrays or battery storage with the AC network",
+            "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "bus": {
+                        "$ref": "#/$defs/bus_type"
+                    },
+                    "terminal_map": {
+                        "$ref": "#/$defs/terminal_map_type"
+                    },
+                    "topology": {
+                        "$ref": "#/$defs/inverter_topology_type"
+                    },
+                    "prime_mover": {
+                        "$ref": "#/$defs/prime_mover_type"
+                    },
+                    "s_max": {
+                        "type": "array",
+                        "description": "Per-phase apparent-power nameplate ratings [VA]; length must match terminal_map minus 1",
+                        "items": {
+                            "$ref": "#/$defs/nonnegative_number"
+                        }
+                    },
+                    "p_avail": {
+                        "$ref": "#/$defs/nonnegative_number",
+                        "description": "Available active power [W]; upper bound on dispatch for PV prime movers"
+                    },
+                    "p_min": {
+                        "type": "number",
+                        "description": "Minimum active power [W]; negative indicates absorption (battery charging)"
+                    },
+                    "p_max": {
+                        "type": "number",
+                        "description": "Maximum active power [W]"
+                    },
+                    "q_min": {
+                        "type": "number",
+                        "description": "Minimum reactive power [var]; negative indicates absorption (default -s_max)"
+                    },
+                    "q_max": {
+                        "type": "number",
+                        "description": "Maximum reactive power [var] (default s_max)"
+                    },
+                    "r_filter": {
+                        "type": "array",
+                        "description": "Per-phase filter resistance Re(Z_filter) [Ohm]; length matches terminal_map minus 1",
+                        "items": {
+                            "$ref": "#/$defs/nonnegative_number"
+                        }
+                    },
+                    "x_filter": {
+                        "type": "array",
+                        "description": "Per-phase filter reactance Im(Z_filter) [Ohm]; length matches terminal_map minus 1",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "b_filter_shunt": {
+                        "type": "number",
+                        "description": "Filter shunt susceptance Im(Y_shunt) [S]"
+                    },
+                    "grid_forming": {
+                        "type": "boolean",
+                        "description": "True for grid-forming (GFM) operation; false (default) for grid-following (GFL)"
+                    },
+                    "v_ref_internal": {
+                        "$ref": "#/$defs/nonnegative_number",
+                        "description": "Internal voltage magnitude setpoint [V]; grid-forming only"
+                    },
+                    "cost": {
+                        "type": "array",
+                        "description": "Per-phase linear dispatch cost [$/kWh]; length matches terminal_map minus 1",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "control_profile": {
+                        "type": "string",
+                        "description": "Reference to a control_profile id encoding smart-inverter control laws"
+                    },
+                    "time_series": {
+                        "type": "object",
+                        "description": "Map from parameter name to time_series id for time-varying scaling"
+                    }
+                },
+                "required": [
+                    "bus",
+                    "terminal_map",
+                    "topology",
+                    "prime_mover",
+                    "s_max"
+                ]
+            }
+        },
+        "control_profile": {
+            "type": "object",
+            "description": "Reusable smart-inverter control-law profiles, referenced by inverters (linecode-style sharing). Each sub-object is optional; its presence activates the corresponding control law.",
+            "additionalProperties": {
+                "type": "object",
+                "description": "A named control profile. Additional control-law sub-objects beyond those defined here are tolerated for forward-compatibility.",
+                "additionalProperties": {
+                    "type": "object"
+                },
+                "properties": {
+                    "volt_var": {
+                        "type": "object",
+                        "description": "Volt-VAr droop: reactive power as a piecewise-linear function of a monitored voltage magnitude",
+                        "additionalProperties": false,
+                        "properties": {
+                            "voltage_reference": { "$ref": "#/$defs/voltage_reference_type" },
+                            "breakpoints": {
+                                "type": "array",
+                                "description": "Voltage breakpoints [U1,U2,U3,U4] [V], non-decreasing",
+                                "items": { "$ref": "#/$defs/nonnegative_number" }
+                            },
+                            "q_limits": {
+                                "type": "array",
+                                "description": "[q_absorb (<=0), q_inject (>=0)] in var or fraction of s_max per q_unit",
+                                "items": { "type": "number" }
+                            },
+                            "q_unit": { "$ref": "#/$defs/q_unit_type" },
+                            "q_ref": { "$ref": "#/$defs/q_ref_type" },
+                            "p_min_for_q": {
+                                "type": "number",
+                                "description": "Active power below which reactive output is zero (OpenDSS %PminNoVars)"
+                            },
+                            "p_min_for_q_max": {
+                                "type": "number",
+                                "description": "Active power below which reactive capability is derated (OpenDSS %PminkvarMax)"
+                            }
+                        }
+                    },
+                    "volt_watt": {
+                        "type": "object",
+                        "description": "Volt-Watt droop: active power limit as a piecewise-linear function of a monitored voltage magnitude",
+                        "additionalProperties": false,
+                        "properties": {
+                            "voltage_reference": { "$ref": "#/$defs/voltage_reference_type" },
+                            "breakpoints": {
+                                "type": "array",
+                                "description": "Voltage breakpoints [U5,U6] [V], non-decreasing",
+                                "items": { "$ref": "#/$defs/nonnegative_number" }
+                            },
+                            "p_limits": {
+                                "type": "array",
+                                "description": "[p_low, p_high] in W or fraction of s_max per p_unit",
+                                "items": { "$ref": "#/$defs/nonnegative_number" }
+                            },
+                            "p_unit": { "$ref": "#/$defs/p_unit_type" },
+                            "p_ref": { "$ref": "#/$defs/p_ref_type" }
+                        }
+                    },
+                    "power_factor": {
+                        "type": "object",
+                        "description": "Constant power factor operation",
+                        "additionalProperties": false,
+                        "properties": {
+                            "pf": {
+                                "type": "number",
+                                "minimum": -1,
+                                "maximum": 1,
+                                "description": "Power factor; positive = lagging (Q absorption), negative = leading (Q injection)"
+                            }
+                        },
+                        "required": ["pf"]
+                    }
+                }
+            }
+        },
         "linecode": {
             "type": "object",
             "description": "Linecodes",
@@ -510,6 +682,41 @@
             "type": "string",
             "description": "Voltage dependence of the load: constant_power (default), constant_current (P∝|V|), constant_impedance (P∝|V|²), zip (polynomial in |V|), or exponential (power law in |V|)",
             "enum": ["constant_power", "constant_current", "constant_impedance", "zip", "exponential"]
+        },
+        "inverter_topology_type": {
+            "type": "string",
+            "description": "Inverter topology: SINGLE_PHASE (2 terminals), THREE_LEG (3 terminals, no neutral current), FOUR_LEG (4 terminals, neutral current available)",
+            "enum": ["SINGLE_PHASE", "THREE_LEG", "FOUR_LEG"]
+        },
+        "prime_mover_type": {
+            "type": "string",
+            "description": "Energy source behind the inverter: PV (non-negative, resource-limited active power), BATTERY (bidirectional), or GENERIC",
+            "enum": ["PV", "BATTERY", "GENERIC"]
+        },
+        "voltage_reference_type": {
+            "type": "string",
+            "description": "Voltage quantity monitored by a control law",
+            "enum": ["PN_PER_PHASE", "PP_PER_PHASE", "PP_AVERAGED", "PG_AVERAGED", "PN_AVERAGED", "PG_PER_PHASE"]
+        },
+        "q_ref_type": {
+            "type": "string",
+            "description": "Reactive-power limit reference: VAR_MAX (fixed Q limits) or VAR_AVAILABLE (limits scale with sqrt(s_max^2 - P^2))",
+            "enum": ["VAR_MAX", "VAR_AVAILABLE"]
+        },
+        "p_ref_type": {
+            "type": "string",
+            "description": "Active-power normalisation base for Volt-Watt: P_AVAILABLE, P_MAX, or S_MAX",
+            "enum": ["P_AVAILABLE", "P_MAX", "S_MAX"]
+        },
+        "q_unit_type": {
+            "type": "string",
+            "description": "Unit for reactive-power limit values: VA_FRACTION (fraction of s_max) or VAR (absolute)",
+            "enum": ["VA_FRACTION", "VAR"]
+        },
+        "p_unit_type": {
+            "type": "string",
+            "description": "Unit for active-power limit values: VA_FRACTION (fraction of s_max) or W (absolute)",
+            "enum": ["VA_FRACTION", "W"]
         },
         "terminal_map_type":{
             "type": "array",

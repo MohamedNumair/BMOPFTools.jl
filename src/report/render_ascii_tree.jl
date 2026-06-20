@@ -89,17 +89,22 @@ function render_ascii_tree(net::Dict{String,Any}, io::IO;
 
     bus_loads = Dict{String,Vector{String}}()
     bus_gens  = Dict{String,Vector{String}}()
+    bus_invs  = Dict{String,Vector{String}}()
     for (lid, l) in loads
         push!(get!(bus_loads, get(l,"bus",""), String[]), lid)
     end
     for (gid, g) in gens
         push!(get!(bus_gens, get(g,"bus",""), String[]), gid)
     end
+    for (vid, v) in get(net, "inverter", Dict())
+        push!(get!(bus_invs, get(v,"bus",""), String[]), vid)
+    end
 
     function is_annotated(bid)
         bid in source_buses ||
         !isempty(get(bus_loads, bid, String[])) ||
-        !isempty(get(bus_gens,  bid, String[]))
+        !isempty(get(bus_gens,  bid, String[])) ||
+        !isempty(get(bus_invs,  bid, String[]))
     end
 
     # ── 3. Identify level-crossing transformers ───────────────────────────────
