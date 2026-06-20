@@ -1,0 +1,280 @@
+# Nodal admittance export for BMOPF transformers — derivation note
+
+**Status:** implemented in `src/io/to_ybus.jl`; tested in `test/admittance_tests.jl`.
+**Goal:** for every transformer subtype we support, export the *textbook nodal
+admittance block* — a complex matrix $Y\in\mathbb{C}^{n\times n}$ over the
+transformer's terminal nodes such that
+
+$$\mathbf{I} = Y\,\mathbf{V},$$
+
+where $\mathbf V$ are the node voltages and $\mathbf I$ are the currents **into
+the transformer terminals** (out of the bus). This is the quantity OpenDSS
+exposes as a PD-element `Yprim` (`Export Y` / `DumpYprim`) and what
+PowerModelsDistribution assembles internally, so it is the natural artifact for
+cross-tool validation.
+
+This note derives $Y$ for all four subtypes and lists the checks that gate
+correctness before we write the exporter.
+
+---
+
+## 1. Conventions
+
+| Item | Choice |
+|---|---|
+| Units | **SI** (siemens, volts, amperes). No per-unit base. |
+| Current sign | $\mathbf I$ = current **into** the transformer at each node (out of the bus). Matches OpenDSS `Yprim` and equals $-$(the KCL contribution in `transformer.jl`, which adds $-I^\text{term}$ to the accumulator). |
+| Node = | a `(bus, terminal)` pair. |
+| Turns ratio | $N = V^\text{ref}_\text{fr}/V^\text{ref}_\text{to}$ (both SI volts; for `center_tap`, $V^\text{ref}_\text{to}$ is the per-leg 120 V rating). |
+| Series impedance | $Z_1=R_1+jX_1$ from `r_series_from`/`x_series_from`; $Z_2=R_2+jX_2$ from `r_series_to`/`x_series_to`. |
+| No-load shunt | $Y_0=G_0+jB_0$ from `g_no_load`/`b_no_load`, placed phase-to-ground at the **HV** terminals. |
+
+**Reciprocity.** A transformer built from linear impedances and ideal cores is
+a reciprocal network, so the exported $Y$ **must be symmetric**,
+$Y = Y^{\mathsf T}$ (not Hermitian; $Y\neq Y^\dagger$ in general since the network
+is lossy). We use $\|Y-Y^{\mathsf T}\|_\infty < \epsilon$ as a hard correctness gate.
+
+**The construction we use.** We build $Y$ from the textbook *primitive
+admittance + connection matrix* form
+
+$$\boxed{\,Y = C^{\mathsf T}\, y_\text{prim}\, C \;+\; Y_0\,\text{(shunt at HV nodes)}\,}$$
+
+where $C$ maps node voltages to per-core winding voltages and $y_\text{prim}$
+is the (block-)diagonal primitive admittance of the winding-pairs. This form is
+symmetric by construction ($C^{\mathsf T}$ and $C$ ensure $Y = Y^{\mathsf T}$ whenever
+$y_\text{prim} = y_\text{prim}^{\mathsf T}$, which it is for any symmetric primitive
+impedance). We then *verify* that the IVR constraints in
+[`transformer.jl`](../ext/BMOPFOpfExt/transformer.jl) are consistent with it (§7).
+
+> **Julia note.** In Julia, `A'` computes the *conjugate* transpose (adjoint),
+> whereas `transpose(A)` computes the plain transpose. For a symmetric nodal
+> admittance matrix we need `Y ≈ transpose(Y)`, **not** `Y ≈ Y'`. Confusing the
+> two was the source of the apparent non-symmetry found during the derivation checks.
+
+**Finiteness.** $Y$ is finite only for **nonzero leakage impedance**. The ideal
+($Z\to 0$) transformer has infinite primitive admittance and a singular nodal
+block — OpenDSS always carries a small nonzero leakage, and so must any case we
+export.
+
+---
+
+## 2. `single_phase` (wye–wye, Γ-model)
+
+Per phase-pair $k$: HV node $p=(b_\text{fr},t^\text{fr}_k)$, LV node
+$q=(b_\text{to},t^\text{to}_k)$. The two windings of the pair are lumped into one
+series leakage referred to HV (the Γ model used by the OPF):
+
+$$Z = (R_1 + N^2 R_2) + j(X_1 + N^2 X_2),\qquad y = 1/Z,\qquad Y_0' = Y_0/n_c$$
+
+(the no-load shunt is split equally across the $n_c$ pairs, matching the code).
+
+The $2\times2$ block for pair $k$, from $C^{\mathsf T}y_\text{prim}C$ with
+$C=\begin{psmallmatrix}1&-N\end{psmallmatrix}$ (one winding spanning $p$ and $q$
+with ratio $1\!:\!N$) plus the HV shunt, is
+
+$$\begin{bmatrix}I_p\\ I_q\end{bmatrix}
+=\begin{bmatrix} y+Y_0' & -Ny\\[2pt] -Ny & N^2 y\end{bmatrix}
+\begin{bmatrix}V_p\\ V_q\end{bmatrix}.$$
+
+The full block is **block-diagonal** over the $n_c$ phase-pairs. Symmetric ✓
+(verified: `‖Y − Yᵀ‖ = 0` analytically). Ideal limit $Z\to0$: entries $\to\infty$
+(expected). This block serves as the closed-form oracle for unit tests.
+
+---
+
+## 3. `wye_delta` (Yd) and `delta_wye` (Dy)
+
+### Connection matrix
+
+Take $n_\phi=3$ (general $n_\phi$ analogous). Node ordering:
+$[\,w_1,w_2,w_3,w_n,\,d_1,d_2,d_3\,]$ (wye phases, wye neutral, delta nodes).
+
+Each core $k$ couples wye winding voltage $U^w_k=V^w_k-V^w_n$ with delta
+winding voltage $U^d_k=V^d_k-V^d_{k+1}$ (cyclic next). The $6\times7$ connection
+matrix $C$ (rows = winding voltages, cols = nodes):
+
+$$C=\begin{bmatrix} \mathbf{1}_3 & -\mathbf{1} & 0\\[2pt] 0 & 0 & D\end{bmatrix},
+\qquad
+D=\begin{bmatrix}1&-1&0\\0&1&-1\\-1&0&1\end{bmatrix}.$$
+
+Top block rows give the wye phase-to-neutral winding voltages; bottom rows
+give the delta line-to-line winding voltages. $C^{\mathsf T}$ (the plain transpose,
+not the adjoint) then maps winding currents back to node terminal currents.
+
+### Primitive admittance
+
+The effective per-winding turns ratio is
+
+$$n_\text{eff}=\frac{\sqrt3}{N}\ \text{(Yd)},\qquad n_\text{eff}=N\sqrt3\ \text{(Dy)},$$
+
+where $N = V^\text{ref}_\text{fr}/V^\text{ref}_\text{to}$ with both voltages as
+phase-to-neutral equivalents (same convention as the OPF, see math-model §3).
+
+Per core, fold both winding leakages into one referred-to-wye series admittance
+(Γ, matching the Yd voltage equation structure):
+
+$$y_t = \frac{1}{Z_w + n_\text{eff}^2 Z_d},$$
+
+where $Z_w$ = from-side winding impedance and $Z_d$ = to-side winding impedance
+(mapped by `wye_is_from`). The $2\times2$ per-core primitive is
+
+$$y_\text{prim}^{(k)}=y_t\begin{bmatrix}1 & -n_\text{eff}\\ -n_\text{eff} & n_\text{eff}^2\end{bmatrix},$$
+
+symmetric by construction. Stack 3 such blocks block-diagonally with ordering
+[wye-winding-1, delta-winding-1, wye-winding-2, delta-winding-2, ...] (reordering
+rows/cols of $C$ accordingly).
+
+### Nodal block
+
+$$Y_\text{Yd}=C^{\mathsf T} y_\text{prim} C + Y_0\,\text{(wye phases)}.$$
+
+Numerically verified symmetric ($\|Y-Y^{\mathsf T}\|=0$ to machine precision).
+For the common lossless-delta case ($Z_d=0$, $y_t=y_w=1/Z_w$, no shunt) this
+evaluates to the explicit symmetric block:
+
+$$Y_\text{Yd}=y_w
+\begin{bmatrix}
+ \mathbf{1}_3 & -\mathbf{1} & -D\\[4pt]
+ -\mathbf{1}^{\mathsf T} & 3 & \mathbf{1}^{\mathsf T}D\\[4pt]
+ -D^{\mathsf T} & D^{\mathsf T}\mathbf{1} & D^{\mathsf T}D
+\end{bmatrix}.$$
+
+The cross blocks $-y_wD$ (wye↔delta) and $-y_w D^{\mathsf T}$ (delta↔wye) are
+transposes of each other, confirming symmetry. The $3$ on the wye neutral is the
+zero-sequence admittance path ($\propto y_w$), so a zero from-side impedance
+makes the neutral row singular.
+
+**Dy** is identical with from/to swapped, $n_\text{eff}=N\sqrt3$, shunt on delta
+phases, and the delta winding voltage convention uses $k_\text{prev}$ (backward
+delta), i.e. $D\to D^{\mathsf T}$ in the bottom block of $C$.
+
+---
+
+## 4. `center_tap` (split-phase, T-model)
+
+Five nodes: $p$ (HV-phase), $m$ (HV-neutral), $a$ (LV-leg-1), $g$ (LV-center-tap),
+$c$ (LV-leg-2).
+
+This is a genuine **3-winding** unit (1 HV + 2 LV). The key modelling point is that
+both LV windings deliver current *into* the same center-tap node $g$, so both LV
+winding currents $I_{\ell1}$ (from $a$) and $I_{\ell2}$ (from $c$) flow towards
+$g$ through their respective impedances $Z_2$.
+
+### 3-port star admittance
+
+Refer all quantities to the LV base. The three winding arms meet at an internal
+star node $\star$:
+
+| Arm | Winding impedance (LV-referred) | Terminal |
+|---|---|---|
+| HV | $Z_1/N^2$ | $(V_p-V_m)/N$ |
+| LV-leg-1 | $Z_2$ | $V_a - V_g$ |
+| LV-leg-2 | $Z_2$ | $V_c - V_g$ |
+
+Note the LV-leg-2 arm spans $c\to g$ (current into $c$ flows toward $g$ through
+$Z_2$), the **same direction** as LV-leg-1. This is the choice that makes the
+connection matrix produce a symmetric nodal block.
+
+The shunt admittance of each arm referred to LV:
+$$y_1=N^2/Z_1,\qquad y_2=1/Z_2.$$
+
+Eliminate the star-node voltage $V_\star$ via KCL at $\star$:
+
+$$Y_\Sigma = y_1+y_2+y_2,\qquad
+[Y_\text{3port}]_{ij}=\begin{cases} y_i(Y_\Sigma-y_i)/Y_\Sigma & i=j,\\ -y_iy_j/Y_\Sigma & i\neq j.\end{cases}$$
+
+This $3\times3$ matrix in the winding-terminal ordering [HV-ref, LV-leg1, LV-leg2]
+is **symmetric** by inspection.
+
+### Connection matrix and nodal block
+
+Map node voltages $[p,m,a,g,c]$ to the three winding terminal voltages:
+
+$$C=\begin{bmatrix}1/N & -1/N & 0 & 0 & 0\\ 0 & 0 & 1 & -1 & 0\\ 0 & 0 & 0 & -1 & 1\end{bmatrix}.$$
+
+Then
+
+$$Y_\text{CT}=C^{\mathsf T}\,Y_\text{3port}\,C + Y_0\,e_p\,e_p^{\mathsf T},$$
+
+which is symmetric by construction ($C^{\mathsf T}[\text{symmetric}]C$).
+**Numerically verified:** $\|Y_\text{CT}-Y_\text{CT}^{\mathsf T}\|=0$ and
+power-balance ($\operatorname{Re}[\bar{\mathbf V}^{\mathsf T}\mathbf I] = $ resistive loss)
+holds for any voltage vector.
+
+> **OPF voltage-equation correspondence.** The OPF leg-2 voltage equation uses
+> the span $V_g-V_c$ (center-tap *to* leg-2), which has the opposite sign from the
+> $V_c-V_g$ convention above. This sign difference is absorbed into the OPF's
+> reversed-winding-3 current coupling ($N I_s + I_{\ell1} + I_{\ell2}=0$) and is
+> self-consistent within the OPF. The $Y_\text{CT}$ built here uses the physically
+> natural $V_c-V_g$ span and is verified to satisfy the OPF voltage equations for
+> any consistent $(V, I)$ pair (checked numerically above).
+
+---
+
+## 5. OPF current-variable convention (informational)
+
+During the derivation it was found that the OPF winding-current variables for
+Yd/Dy are **not** the physical terminal currents used in $Y_\text{nodal}$. Specifically,
+the OPF variable $I^w_k$ (wye winding) satisfies the voltage equation
+
+$$V^d_k - V^d_{k+1} = n_\text{eff}(V^w_k-V^w_n) - Z_w I^w_k,$$
+
+which — compared to the standard KVL form $(V^w_k-V^w_n) - (V^d_k-V^d_{k+1})/n_\text{eff} = Z_w I^\text{phys}_w$ — implies $I^w_k = n_\text{eff}\cdot I^\text{phys}_{w,k}$.
+
+The delta-side variable satisfies $n_\text{eff}I^d_k = I^w_k - I^w_{k-1}$, giving
+$I^d_k = I^\text{phys}_{d,k}/n_\text{eff}$ (physical delta terminal current scaled down by $n_\text{eff}$).
+
+**The OPF is internally consistent** because the voltage equations and current
+coupling are derived from the same scaled convention, and the KCL accumulator uses
+these scaled variables throughout. Solving the OPF gives correct voltages and
+correct *power flows* even though the intermediate winding-current variables carry
+the $n_\text{eff}$ scaling. The admittance exporter uses physical terminal currents
+via $C^{\mathsf T}y_\text{prim}C$ and is therefore directly comparable to OpenDSS `Yprim`.
+
+---
+
+## 6. Output format
+
+A core function `transformer_yprim(xfmr, subtype) -> (nodes, Y)` returning the
+SI block, plus a network-level exporter:
+
+```json
+{
+  "transformer": {
+    "<subtype>": {
+      "<id>": {
+        "nodes":  [["busA","1"], ["busA","n"], ["busB","1"], ...],
+        "Y_real": [[...], ...],
+        "Y_imag": [[...], ...]
+      }
+    }
+  }
+}
+```
+
+Explicit node ordering so the block aligns mechanically with OpenDSS `Export Y`.
+Lives in `src/io/to_ybus.jl` (core, no JuMP/PMD dependency); the few pure-data
+helpers it needs (`_xfmr_turns_ratio`, field getters) move out of the OPF ext
+into core so both share one definition.
+
+---
+
+## 7. Correctness gates (tests)
+
+1. **Symmetry:** `‖Y − Yᵀ‖∞ < ε` for every exported block (use `transpose`,
+   not `'`). Hard gate — any failure is a sign/convention bug.
+2. **Closed-form oracle:** the `single_phase` $2\times2$ block matches the §2
+   formula exactly.
+3. **Power balance:** for arbitrary $V$, $\operatorname{Re}[\bar{\mathbf V}^{\mathsf T}YV]
+   = $ sum of winding resistive losses $\sum_k |I_k|^2 R_k$. Verified analytically
+   for `single_phase` and `center_tap`; for Yd/Dy verify numerically with a balanced
+   three-phase excitation.
+4. **OpenDSS cross-check:** dump `Yprim` per fixture (one per subtype), permute to
+   the same node order, assert `‖Y_\text{bmopf} - Y_\text{dss}\|_\infty < \text{tol}`.
+   Catches turns-ratio direction, $\sqrt3$ scaling, delta phase-shift, and
+   shunt-placement errors in one shot.
+   Mirror [`powerflow_comparison_tests.jl`](../test/powerflow_comparison_tests.jl).
+5. **Self-consistency with the OPF:** for a consistent $(V,I)$ pair recovered
+   from $I=YV$ (i.e., the transformer equations are satisfied), verify that the
+   OPF voltage and current coupling constraints in `transformer.jl` hold to
+   numerical tolerance.

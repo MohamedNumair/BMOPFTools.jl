@@ -208,6 +208,18 @@ function _phase_positions(terminal_map::AbstractVector)::Vector{Int}
     [k for k in eachindex(terminal_map) if k != np]
 end
 
+"""
+    _xfmr_turns_ratio(xfmr) -> Float64
+
+Return N = v_ref_from / v_ref_to, defaulting to 1.0 if either field is missing
+or v_ref_to is zero.
+"""
+function _xfmr_turns_ratio(xfmr::Dict{String,Any})::Float64
+    vf = Float64(get(xfmr, "v_ref_from", 1.0))
+    vt = Float64(get(xfmr, "v_ref_to",   1.0))
+    iszero(vt) ? 1.0 : vf / vt
+end
+
 # ---------------------------------------------------------------------------
 # Submodule includes — order matters; IO first, then analysis, then report
 # ---------------------------------------------------------------------------
@@ -219,6 +231,7 @@ include("io/from_pmd.jl")
 include("io/to_pmd.jl")
 include("io/from_dss.jl")
 include("io/sideload_coordinates.jl")
+include("io/to_ybus.jl")
 
 include("analysis/inventory.jl")
 include("analysis/voltage_levels.jl")
@@ -470,5 +483,6 @@ export diagnose_infeasibility
 export merge_series_lines, remove_dangling_lines
 export remove_open_switches, collapse_closed_switches
 export simplify_network
+export transformer_yprim, export_yprim, write_yprim
 
 end # module BMOPFTools
