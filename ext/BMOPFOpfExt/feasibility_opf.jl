@@ -69,6 +69,7 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     _add_shunt_constraints!(working, vars, kcl_r, kcl_i)
     _add_load_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_generator_constraints!(model, working, vars, kcl_r, kcl_i)
+    _add_inverter_constraints!(model, working, vars, kcl_r, kcl_i)
 
     # ── Slack current injections ──────────────────────────────────────────────
     # One (cs_r, cs_i) pair per KCL node. Grounded terminals are excluded
