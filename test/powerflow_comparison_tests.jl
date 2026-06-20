@@ -545,6 +545,95 @@ function _net_dy_xfmr()
                 "q_nom"         => [40_000.0])))
 end
 
+function _net_delta_load()
+    # pf_delta_load.dss: src ──[4-wire line, 0.5 km]── lb
+    # Same source, grounding, and 4-wire linecode as _net_3ph_line, but the load
+    # is a single UNBALANCED three-phase delta bank (line-to-line, no neutral):
+    #   arm 1 (1-2) = 15 kW + 5 kVAr   ↔ ODS Load.d12
+    #   arm 2 (2-3) = 10 kW + 3 kVAr   ↔ ODS Load.d23
+    #   arm 3 (3-1) = 20 kW + 7 kVAr   ↔ ODS Load.d31
+    # The BMOPF DELTA arm convention is tm[k] → tm[(k mod n)+1], i.e. 1-2, 2-3,
+    # 3-1, matching the OpenDSS bus-pair ordering above.
+    net = _net_3ph_line()
+    net["load"] = Dict{String,Any}(
+        "dl" => Dict{String,Any}(
+            "bus"           => "lb",
+            "terminal_map"  => ["1", "2", "3"],
+            "configuration" => "DELTA",
+            "p_nom"         => [15_000.0, 10_000.0, 20_000.0],
+            "q_nom"         => [ 5_000.0,  3_000.0,  7_000.0]))
+    return net
+end
+
+function _net_zip_1ph()
+    # pf_zip_1ph.dss: single-phase ZIP load, distinct P and Q coefficients.
+    net = _net_1ph_line()
+    net["load"] = Dict{String,Any}(
+        "ld1" => Dict{String,Any}(
+            "bus"           => "lb",
+            "terminal_map"  => ["1"],
+            "configuration" => "SINGLE_PHASE",
+            "p_nom"         => [15_000.0],
+            "q_nom"         => [ 5_000.0],
+            "model"         => "zip",
+            "v_nom"         => [240.0],
+            "alpha_z" => [0.5], "alpha_i" => [0.2], "alpha_p" => [0.3],
+            "beta_z"  => [0.4], "beta_i"  => [0.3], "beta_p"  => [0.3]))
+    return net
+end
+
+function _net_exp_1ph()
+    # pf_exp_1ph.dss: single-phase exponential load, gamma_p=1.4, gamma_q=2.0.
+    net = _net_1ph_line()
+    net["load"] = Dict{String,Any}(
+        "ld1" => Dict{String,Any}(
+            "bus"           => "lb",
+            "terminal_map"  => ["1"],
+            "configuration" => "SINGLE_PHASE",
+            "p_nom"         => [15_000.0],
+            "q_nom"         => [ 5_000.0],
+            "model"         => "exponential",
+            "v_nom"         => [240.0],
+            "gamma_p"       => [1.4],
+            "gamma_q"       => [2.0]))
+    return net
+end
+
+function _net_zip_3ph()
+    # pf_zip_3ph.dss: unbalanced wye ZIP loads on the 4-wire branch.
+    net = _net_3ph_line()
+    zf() = Dict{String,Any}(
+        "model" => "zip", "v_nom" => [240.0],
+        "alpha_z" => [0.45], "alpha_i" => [0.25], "alpha_p" => [0.30],
+        "beta_z"  => [0.40], "beta_i"  => [0.30], "beta_p"  => [0.30])
+    net["load"] = Dict{String,Any}(
+        "ld1" => merge(Dict{String,Any}("bus"=>"lb","terminal_map"=>["1","n"],
+            "configuration"=>"WYE","p_nom"=>[15_000.0],"q_nom"=>[5_000.0]), zf()),
+        "ld2" => merge(Dict{String,Any}("bus"=>"lb","terminal_map"=>["2","n"],
+            "configuration"=>"WYE","p_nom"=>[10_000.0],"q_nom"=>[3_000.0]), zf()),
+        "ld3" => merge(Dict{String,Any}("bus"=>"lb","terminal_map"=>["3","n"],
+            "configuration"=>"WYE","p_nom"=>[20_000.0],"q_nom"=>[7_000.0]), zf()))
+    return net
+end
+
+function _net_zip_delta()
+    # pf_zip_delta.dss: unbalanced delta ZIP bank (line-to-line, Vnom=415).
+    net = _net_3ph_line()
+    net["load"] = Dict{String,Any}(
+        "dl" => Dict{String,Any}(
+            "bus"           => "lb",
+            "terminal_map"  => ["1", "2", "3"],
+            "configuration" => "DELTA",
+            "p_nom"         => [15_000.0, 10_000.0, 20_000.0],
+            "q_nom"         => [ 5_000.0,  3_000.0,  7_000.0],
+            "model"         => "zip",
+            "v_nom"         => [415.0, 415.0, 415.0],
+            "alpha_z" => [0.45, 0.45, 0.45], "alpha_i" => [0.25, 0.25, 0.25],
+            "alpha_p" => [0.30, 0.30, 0.30], "beta_z"  => [0.40, 0.40, 0.40],
+            "beta_i"  => [0.30, 0.30, 0.30], "beta_p"  => [0.30, 0.30, 0.30]))
+    return net
+end
+
 # ── Test cases ────────────────────────────────────────────────────────────────
 
 @testset "PF comparison — single-phase 2-wire line" begin
@@ -565,6 +654,113 @@ end
     @test slack_A < 1e-3
 
     _cmp_volts(V_ods, V_bm; label="3ph-line: ")
+end
+
+@testset "PF comparison — three-phase delta load on a 4-wire branch" begin
+    path = joinpath(_PF_CMP_DIR, "pf_delta_load.dss")
+    net            = _net_delta_load()
+    V_ods          = _ods_volts(path)
+    res            = solve_feasibility_opf(net; optimizer=Ipopt.Optimizer)
+    V_bm, slack_A  = _bmopf_volts(net)
+
+    @test slack_A < 1e-3
+
+    # Node voltages must match OpenDSS (phase terminals + neutral).
+    _cmp_volts(V_ods, V_bm; label="delta-load: ")
+
+    # Physics: a pure delta load draws no zero-sequence current, so the line
+    # neutral stays at earth potential despite the phase imbalance.
+    @test abs(V_bm["lb.4"]) < 1.0
+
+    # Per-arm power must match the requested constant-power setpoints. This is the
+    # direct check that the result extractor reports DELTA power line-to-line
+    # (arm voltage), not phase-to-ground.
+    ld = res["load"]["dl"]
+    @test ld["1"]["pd"] ≈ 15_000.0  atol=1.0
+    @test ld["1"]["qd"] ≈  5_000.0  atol=1.0
+    @test ld["2"]["pd"] ≈ 10_000.0  atol=1.0
+    @test ld["2"]["qd"] ≈  3_000.0  atol=1.0
+    @test ld["3"]["pd"] ≈ 20_000.0  atol=1.0
+    @test ld["3"]["qd"] ≈  7_000.0  atol=1.0
+end
+
+@testset "PF comparison — single-phase ZIP load (mixed Z/I/P, P and Q)" begin
+    path = joinpath(_PF_CMP_DIR, "pf_zip_1ph.dss")
+    net           = _net_zip_1ph()
+    V_ods         = _ods_volts(path)
+    res           = solve_feasibility_opf(net; optimizer=Ipopt.Optimizer)
+    V_bm, slack_A = _bmopf_volts(net)
+
+    @test slack_A < 1e-3
+    _cmp_volts(V_ods, V_bm; label="zip-1ph: ")
+
+    # Lock the ZIP evaluation (incl. the reactive beta path) against the solved V.
+    v   = abs(V_bm["lb.1"]) / 240.0
+    pd  = res["load"]["ld1"]["1"]["pd"]
+    qd  = res["load"]["ld1"]["1"]["qd"]
+    @test pd ≈ 15_000.0 * (0.5v^2 + 0.2v + 0.3)   rtol=1e-4
+    @test qd ≈  5_000.0 * (0.4v^2 + 0.3v + 0.3)   rtol=1e-4
+    @test !isapprox(qd, 5_000.0; rtol=1e-3)   # Q genuinely voltage-dependent
+end
+
+@testset "PF comparison — single-phase exponential load (gamma_p≠gamma_q)" begin
+    path          = joinpath(_PF_CMP_DIR, "pf_exp_1ph.dss")
+    net           = _net_exp_1ph()
+    V_ods         = _ods_volts(path)
+    res           = solve_feasibility_opf(net; optimizer=Ipopt.Optimizer)
+    V_bm, slack_A = _bmopf_volts(net)
+
+    @test slack_A < 1e-3
+    _cmp_volts(V_ods, V_bm; label="exp-1ph: ")
+
+    v  = abs(V_bm["lb.1"]) / 240.0
+    pd = res["load"]["ld1"]["1"]["pd"]
+    qd = res["load"]["ld1"]["1"]["qd"]
+    @test pd ≈ 15_000.0 * v^1.4   rtol=1e-4
+    @test qd ≈  5_000.0 * v^2.0   rtol=1e-4
+    @test !isapprox(qd, 5_000.0; rtol=1e-3)
+end
+
+@testset "PF comparison — three-phase unbalanced ZIP loads (4-wire)" begin
+    path          = joinpath(_PF_CMP_DIR, "pf_zip_3ph.dss")
+    net           = _net_zip_3ph()
+    V_ods         = _ods_volts(path)
+    res           = solve_feasibility_opf(net; optimizer=Ipopt.Optimizer)
+    V_bm, slack_A = _bmopf_volts(net)
+
+    @test slack_A < 1e-3
+    _cmp_volts(V_ods, V_bm; label="zip-3ph: ")
+
+    # Per-phase ZIP evaluation (phase-to-neutral controlling voltage).
+    for (lid, t, p0, q0) in (("ld1","1",15_000.0,5_000.0),
+                             ("ld2","2",10_000.0,3_000.0),
+                             ("ld3","3",20_000.0,7_000.0))
+        vpn = abs(V_bm["lb.$t"] - V_bm["lb.4"]) / 240.0
+        @test res["load"][lid][t]["pd"] ≈ p0*(0.45vpn^2 + 0.25vpn + 0.30)  rtol=1e-3
+        @test res["load"][lid][t]["qd"] ≈ q0*(0.40vpn^2 + 0.30vpn + 0.30)  rtol=1e-3
+    end
+end
+
+@testset "PF comparison — three-phase delta ZIP load (4-wire)" begin
+    path          = joinpath(_PF_CMP_DIR, "pf_zip_delta.dss")
+    net           = _net_zip_delta()
+    V_ods         = _ods_volts(path)
+    res           = solve_feasibility_opf(net; optimizer=Ipopt.Optimizer)
+    V_bm, slack_A = _bmopf_volts(net)
+
+    @test slack_A < 1e-3
+    _cmp_volts(V_ods, V_bm; label="zip-delta: ")
+    @test abs(V_bm["lb.4"]) < 1.0   # pure delta → no neutral current
+
+    # Per-arm ZIP evaluation with line-to-line controlling voltage (arms 1-2/2-3/3-1).
+    arms = (("1", "1", "2", 15_000.0, 5_000.0),
+            ("2", "2", "3", 10_000.0, 3_000.0),
+            ("3", "3", "1", 20_000.0, 7_000.0))
+    for (key, a, b, p0, q0) in arms
+        vll = abs(V_bm["lb.$a"] - V_bm["lb.$b"]) / 415.0
+        @test res["load"]["dl"][key]["pd"] ≈ p0*(0.45vll^2 + 0.25vll + 0.30)  rtol=1e-3
+        @test res["load"]["dl"][key]["qd"] ≈ q0*(0.40vll^2 + 0.30vll + 0.30)  rtol=1e-3
+    end
 end
 
 @testset "PF comparison — single-phase transformer (single_phase YY)" begin
