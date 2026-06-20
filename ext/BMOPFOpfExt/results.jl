@@ -165,6 +165,85 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
         gen_res[gid] = ph_results
     end
 
+    # ── Inverter currents and produced power ─────────────────────────────────
+    inv_res = Dict{String,Any}()
+    cri_v = vars[:cri]; cii_v = vars[:cii]
+    profiles_net = get(net, "control_profile", Dict())
+
+    for (inv_id, inv) in get(net, "inverter", Dict())
+        inv isa Dict || continue
+        bus  = get(inv, "bus", "")
+        tm   = Vector{String}(get(inv, "terminal_map", String[]))
+        topo = get(inv, "topology", "FOUR_LEG")
+
+        # Resolve PF for reporting
+        pf_val = nothing
+        cp_id  = get(inv, "control_profile", nothing)
+        if cp_id isa String
+            cp = get(profiles_net, cp_id, nothing)
+            if cp isa Dict
+                pf_obj = get(cp, "power_factor", nothing)
+                if pf_obj isa Dict
+                    raw = get(pf_obj, "pf", nothing)
+                    raw isa Number && (pf_val = Float64(raw))
+                end
+            end
+        end
+
+        ph_results = Dict{String,Any}()
+
+        if topo == "SINGLE_PHASE" && length(tm) >= 2
+            t_ph  = tm[1]; t_ref = tm[2]
+            cr = val(cri_v[(inv_id,1)]); ci = val(cii_v[(inv_id,1)])
+            vr_t  = feasible ? val(vr_v[(bus, t_ph)])  : NaN
+            vi_t  = feasible ? val(vi_v[(bus, t_ph)])  : NaN
+            vr_r  = feasible ? val(vr_v[(bus, t_ref)]) : NaN
+            vi_r  = feasible ? val(vi_v[(bus, t_ref)]) : NaN
+            dvr = vr_t - vr_r; dvi = vi_t - vi_r
+            pg = dvr*cr + dvi*ci
+            qg = dvi*cr - dvr*ci
+            ph_results[t_ph] = Dict{String,Any}(
+                "cri" => cr, "cii" => ci, "pg" => pg, "qg" => qg)
+
+        elseif topo == "FOUR_LEG"
+            ph_pos    = _phase_positions(tm)
+            n_pos_idx = _neutral_pos(tm)
+            t_n       = n_pos_idx !== nothing ? tm[n_pos_idx] : nothing
+
+            for (idx, ph) in enumerate(ph_pos)
+                t_ph = tm[ph]
+                cr = val(cri_v[(inv_id,idx)]); ci = val(cii_v[(inv_id,idx)])
+                vr_t = feasible ? val(vr_v[(bus, t_ph)]) : NaN
+                vi_t = feasible ? val(vi_v[(bus, t_ph)]) : NaN
+                vr_n = (t_n !== nothing && feasible) ? val(vr_v[(bus, t_n)]) : 0.0
+                vi_n = (t_n !== nothing && feasible) ? val(vi_v[(bus, t_n)]) : 0.0
+                dvr = vr_t - vr_n; dvi = vi_t - vi_n
+                pg = dvr*cr + dvi*ci
+                qg = dvi*cr - dvr*ci
+                ph_results[t_ph] = Dict{String,Any}(
+                    "cri" => cr, "cii" => ci, "pg" => pg, "qg" => qg)
+            end
+
+        elseif topo == "THREE_LEG"
+            n_c = length(tm)
+            for k in 1:n_c
+                t_pos = tm[k]; t_neg = tm[(k % n_c) + 1]
+                cr = val(cri_v[(inv_id,k)]); ci = val(cii_v[(inv_id,k)])
+                vr_p = feasible ? val(vr_v[(bus, t_pos)]) : NaN
+                vi_p = feasible ? val(vi_v[(bus, t_pos)]) : NaN
+                vr_n = feasible ? val(vr_v[(bus, t_neg)]) : NaN
+                vi_n = feasible ? val(vi_v[(bus, t_neg)]) : NaN
+                dvr = vr_p - vr_n; dvi = vi_p - vi_n
+                pg = dvr*cr + dvi*ci
+                qg = dvi*cr - dvr*ci
+                ph_results[t_pos] = Dict{String,Any}(
+                    "cri" => cr, "cii" => ci, "pg" => pg, "qg" => qg)
+            end
+        end
+
+        inv_res[inv_id] = ph_results
+    end
+
     # ── Transformer currents (positional: "fr"/"to" => "1","2",...) ──────────
     # Terminal maps on the two winding sides may differ in length and in naming,
     # so these are indexed by position string rather than terminal name.
@@ -239,6 +318,7 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
         "switch"             => switch_res,
         "load"               => load_res,
         "generator"          => gen_res,
+        "inverter"           => inv_res,
         "transformer"        => xfmr_res,
         "initialisation"     => init_res,
     )

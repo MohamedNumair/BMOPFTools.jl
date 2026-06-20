@@ -1,0 +1,103 @@
+# Inverter augmentation pass.
+#
+# Derives missing P and Q bounds for inverter objects before the OPF is run.
+#
+# P bounds
+# ────────
+# If p_max is absent, it is derived per phase from p_avail (split equally) or
+# from the per-phase s_max ratings.  For PV prime movers p_min = 0 is also
+# injected when absent (no active-power absorption).
+#
+# Q bounds
+# ────────
+# If an inverter references a control_profile with a "power_factor" sub-object,
+# q_min/q_max are left absent — the OPF engine enforces the exact PF coupling
+# as a bilinear equality constraint (Q = f(P)).
+#
+# For all other inverters that lack explicit q_min/q_max, symmetric bounds are
+# derived from p_max using the recipe's inverter_default_pf (EN 50549-1 default
+# cos φ = 0.90 for LV-connected DERs).
+
+function _apply_inverter_augmentation!(net′::Dict{String,Any},
+                                        entries::Vector{TransformEntry},
+                                        r::AugmentationRecipe)
+    inverters = get(net′, "inverter", Dict())
+    isempty(inverters) && return
+    profiles  = get(net′, "control_profile", Dict())
+
+    pf      = r.inverter_default_pf
+    rule    = "EN50549-1:2019_cos_phi_$(round(pf, digits=3))_inverter_default"
+    tan_phi = tan(acos(pf))
+
+    for (inv_id, inv) in inverters
+        inv isa Dict || continue
+        tm      = Vector{String}(get(inv, "terminal_map", String[]))
+        n_phase = length(tm) - 1
+        n_phase >= 1 || continue
+
+        smax_arr = let s = get(inv, "s_max", nothing)
+            s isa AbstractVector ? Float64.(s) : Float64[]
+        end
+
+        # ── P bounds ─────────────────────────────────────────────────────────
+        if !haskey(inv, "p_max")
+            p_avail = get(inv, "p_avail", nothing)
+            p_max_vec = if p_avail isa Number
+                fill(Float64(p_avail) / n_phase, n_phase)
+            elseif length(smax_arr) >= n_phase
+                smax_arr[1:n_phase]
+            else
+                nothing
+            end
+            if p_max_vec !== nothing
+                inv["p_max"] = p_max_vec
+                src = p_avail !== nothing ? "p_avail ÷ $(n_phase) phase(s)" :
+                                            "s_max per phase"
+                push!(entries, TransformEntry(
+                    :inverter, inv_id, "p_max", nothing, p_max_vec,
+                    "inverter_p_bound", :standard,
+                    "p_max derived from $src"))
+            end
+        end
+
+        if !haskey(inv, "p_min") && get(inv, "prime_mover", nothing) == "PV"
+            pmin = fill(0.0, n_phase)
+            inv["p_min"] = pmin
+            push!(entries, TransformEntry(
+                :inverter, inv_id, "p_min", nothing, pmin,
+                "PV_prime_mover_unidirectional", :standard,
+                "PV cannot absorb active power; p_min = 0 per phase"))
+        end
+
+        # ── Q bounds (only when no PF control profile) ───────────────────────
+        has_pf_profile = let cp_id = get(inv, "control_profile", nothing)
+            if cp_id isa String
+                cp = get(profiles, cp_id, nothing)
+                cp isa Dict && haskey(cp, "power_factor")
+            else
+                false
+            end
+        end
+
+        if !has_pf_profile && !haskey(inv, "q_min") && !haskey(inv, "q_max")
+            p_max = get(inv, "p_max", nothing)
+            p_max isa AbstractVector || continue
+            isempty(p_max) && continue
+
+            q_max_vec = Float64.(p_max) .* tan_phi
+            q_min_vec = -q_max_vec
+
+            inv["q_min"] = q_min_vec
+            inv["q_max"] = q_max_vec
+
+            push!(entries, TransformEntry(
+                :inverter, inv_id, "q_min", nothing, q_min_vec,
+                rule, :standard,
+                "Q_min = -P_max × tan(arccos($(pf)))"))
+            push!(entries, TransformEntry(
+                :inverter, inv_id, "q_max", nothing, q_max_vec,
+                rule, :standard,
+                "Q_max = P_max × tan(arccos($(pf))) ≈ $(round(tan_phi, digits=3)) × P_max"))
+        end
+    end
+end

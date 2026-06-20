@@ -26,6 +26,7 @@ a warning and is *not* added to the objective.
 function _add_objective!(model, net, vars)
     vr = vars[:vr]; vi = vars[:vi]
     crg = vars[:crg]; cig = vars[:cig]
+    cri = vars[:cri]; cii = vars[:cii]
 
     obj = JuMP.QuadExpr()
 
@@ -73,6 +74,56 @@ function _add_objective!(model, net, vars)
                 @warn "Generator '$gid': quadratic cost (c2=$c2) not fully " *
                       "representable as a polynomial in current variables; " *
                       "using linear approximation only."
+            end
+        end
+    end
+
+    # ── Inverter dispatch cost (same structure as generator) ─────────────────
+    for (inv_id, inv) in get(net, "inverter", Dict())
+        inv isa Dict || continue
+        bus  = get(inv, "bus", "")
+        tm   = Vector{String}(get(inv, "terminal_map", String[]))
+        topo = get(inv, "topology", "FOUR_LEG")
+        cost = get(inv, "cost", nothing)
+        cost === nothing && continue
+
+        c2, c1 = if cost isa AbstractVector
+            length(cost) >= 3 ? (Float64(cost[1]), Float64(cost[2])) :
+            length(cost) >= 1 ? (0.0, Float64(cost[1])) : (0.0, 0.0)
+        else
+            (0.0, Float64(cost))
+        end
+        c2 != 0.0 && @warn "Inverter '$inv_id': quadratic cost not supported; using linear term only."
+
+        if topo == "SINGLE_PHASE" && length(tm) >= 2
+            t_ph = tm[1]; t_ref = tm[2]
+            dvr = @expression(model, vr[(bus,t_ph)] - vr[(bus,t_ref)])
+            dvi = @expression(model, vi[(bus,t_ph)] - vi[(bus,t_ref)])
+            JuMP.add_to_expression!(obj, c1,
+                @expression(model, dvr*cri[(inv_id,1)] + dvi*cii[(inv_id,1)]))
+
+        elseif topo == "FOUR_LEG"
+            ph_pos    = _phase_positions(tm)
+            n_pos_idx = _neutral_pos(tm)
+            t_n       = n_pos_idx !== nothing ? tm[n_pos_idx] : nothing
+            for (idx, ph) in enumerate(ph_pos)
+                t_ph = tm[ph]
+                dvr = t_n !== nothing ?
+                      @expression(model, vr[(bus,t_ph)] - vr[(bus,t_n)]) : vr[(bus,t_ph)]
+                dvi = t_n !== nothing ?
+                      @expression(model, vi[(bus,t_ph)] - vi[(bus,t_n)]) : vi[(bus,t_ph)]
+                JuMP.add_to_expression!(obj, c1,
+                    @expression(model, dvr*cri[(inv_id,idx)] + dvi*cii[(inv_id,idx)]))
+            end
+
+        elseif topo == "THREE_LEG"
+            n_c = length(tm)
+            for k in 1:n_c
+                t_pos = tm[k]; t_neg = tm[(k % n_c) + 1]
+                dvr = @expression(model, vr[(bus,t_pos)] - vr[(bus,t_neg)])
+                dvi = @expression(model, vi[(bus,t_pos)] - vi[(bus,t_neg)])
+                JuMP.add_to_expression!(obj, c1,
+                    @expression(model, dvr*cri[(inv_id,k)] + dvi*cii[(inv_id,k)]))
             end
         end
     end

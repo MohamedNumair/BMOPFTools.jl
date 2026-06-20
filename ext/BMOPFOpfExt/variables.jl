@@ -255,6 +255,7 @@ function _build_vars(model, net, bus_terminals, grounded)
     crg,   cig   = _add_generator_variables!(model, net)
     cr_src,ci_src= _add_source_variables!(model, net)
     cr_xf, ci_xf = _add_transformer_variables!(model, net)
+    cri,   cii   = _add_inverter_variables!(model, net)
 
     Dict{Symbol,Any}(
         :vr => vr, :vi => vi,
@@ -265,5 +266,6 @@ function _build_vars(model, net, bus_terminals, grounded)
         :crg   => crg,   :cig   => cig,
         :cr_src=> cr_src,:ci_src=> ci_src,
         :cr_xf => cr_xf, :ci_xf => ci_xf,
+        :cri   => cri,   :cii   => cii,
     )
 end

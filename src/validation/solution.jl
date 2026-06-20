@@ -510,6 +510,110 @@ function solution_check(net::Dict{String,Any},
     out["n_gen_violations"] = n_gen_viol
     out["n_gen_active"]     = n_gen_active
 
+    # ── Inverter dispatch bounds and constant-PF residual ────────────────────
+    n_inv_viol   = 0
+    n_inv_active = 0
+    pf_resid_tol = 1e-3   # relative tolerance on |sign(pf)·Q + tan_phi·P| / s_max
+
+    profiles_net = get(net, "control_profile", Dict())
+
+    for (inv_id, inv) in get(net, "inverter", Dict())
+        inv isa Dict || continue
+        p_min_arr = Float64.(get(inv, "p_min", Float64[]))
+        p_max_arr = Float64.(get(inv, "p_max", Float64[]))
+        smax_arr  = Float64.(get(inv, "s_max", Float64[]))
+
+        # Resolve PF for residual check
+        pf_val = nothing
+        cp_id  = get(inv, "control_profile", nothing)
+        if cp_id isa String
+            cp = get(profiles_net, cp_id, nothing)
+            if cp isa Dict
+                pf_obj = get(cp, "power_factor", nothing)
+                if pf_obj isa Dict
+                    raw = get(pf_obj, "pf", nothing)
+                    if raw isa Number && abs(Float64(raw)) > 1e-9
+                        pf_val = Float64(raw)
+                    end
+                end
+            end
+        end
+        tan_phi = pf_val !== nothing ? tan(acos(abs(pf_val))) : nothing
+        pf_sign = pf_val !== nothing ? sign(pf_val) : 0.0
+
+        ph_res = get(get(result, "inverter", Dict()), inv_id, nothing)
+        ph_res isa Dict || continue
+
+        tm   = Vector{String}(get(inv, "terminal_map", String[]))
+        topo = get(inv, "topology", "FOUR_LEG")
+
+        phase_keys = if topo == "SINGLE_PHASE"
+            length(tm) >= 1 ? [(1, tm[1])] : Tuple{Int,String}[]
+        elseif topo == "FOUR_LEG"
+            [(idx, tm[ph]) for (idx, ph) in enumerate(_phase_positions(tm))]
+        else  # THREE_LEG
+            [(k, tm[k]) for k in eachindex(tm)]
+        end
+
+        for (idx, t_ph) in phase_keys
+            tvals = get(ph_res, t_ph, nothing)
+            tvals isa Dict || continue
+            pg = get(tvals, "pg", NaN); qg = get(tvals, "qg", NaN)
+            isfinite(pg) && isfinite(qg) || continue
+
+            # P bounds
+            lo = idx <= length(p_min_arr) ? p_min_arr[idx] : nothing
+            hi = idx <= length(p_max_arr) ? p_max_arr[idx] : nothing
+            if lo !== nothing || hi !== nothing
+                viol, act = _bound_status(pg, lo, hi)
+                if viol
+                    n_inv_viol += 1
+                    push!(findings, Finding(ERROR, "E.SOL.INV_VIOLATION", :solution, :inverter, inv_id,
+                        "Inverter '$inv_id' phase '$t_ph': pg=$(_fmt_mw(pg)) violates " *
+                        "[$(lo === nothing ? "−∞" : _fmt_mw(lo)), " *
+                        "$(hi === nothing ? "+∞" : _fmt_mw(hi))].",
+                        Dict{String,Any}("inverter"=>inv_id,"terminal"=>t_ph,
+                                         "field"=>"pg","value"=>pg,"lo"=>lo,"hi"=>hi)))
+                elseif act
+                    n_inv_active += 1
+                    push!(findings, Finding(WARNING, "W.SOL.INV_ACTIVE", :solution, :inverter, inv_id,
+                        "Inverter '$inv_id' phase '$t_ph': pg=$(_fmt_mw(pg)) is within 1 % of its P bound.",
+                        Dict{String,Any}("inverter"=>inv_id,"terminal"=>t_ph,"pg"=>pg,"lo"=>lo,"hi"=>hi)))
+                end
+            end
+
+            # s_max circle
+            if idx <= length(smax_arr)
+                sm = smax_arr[idx]
+                apparent = sqrt(pg^2 + qg^2)
+                if apparent > sm * (1 + 1e-6)
+                    n_inv_viol += 1
+                    push!(findings, Finding(ERROR, "E.SOL.INV_VIOLATION", :solution, :inverter, inv_id,
+                        "Inverter '$inv_id' phase '$t_ph': |S|=$(_fmt_mw(apparent)) " *
+                        "exceeds s_max=$(_fmt_mw(sm)) (apparent-power circle violated).",
+                        Dict{String,Any}("inverter"=>inv_id,"terminal"=>t_ph,
+                                         "pg"=>pg,"qg"=>qg,"sm"=>apparent,"s_max"=>sm)))
+                end
+            end
+
+            # Constant-PF residual: sign(pf)*Q + tan_phi*P should be ~0
+            if tan_phi !== nothing
+                s_ref = idx <= length(smax_arr) ? smax_arr[idx] : max(abs(pg), abs(qg), 1.0)
+                resid = abs(pf_sign * qg + tan_phi * pg) / s_ref
+                if resid > pf_resid_tol
+                    push!(findings, Finding(WARNING, "W.SOL.INV_PF_DEVIATION", :solution, :inverter, inv_id,
+                        "Inverter '$inv_id' phase '$t_ph': constant-PF residual " *
+                        "$(round(resid*100; digits=3)) % of s_max — solver may not have " *
+                        "enforced the PF coupling tightly (pf=$(round(pf_val; digits=4))).",
+                        Dict{String,Any}("inverter"=>inv_id,"terminal"=>t_ph,
+                                         "pg"=>pg,"qg"=>qg,"pf"=>pf_val,"residual"=>resid)))
+                end
+            end
+        end
+    end
+    out["n_inv_violations"] = n_inv_viol
+    out["n_inv_active"]     = n_inv_active
+
     # ── Load constraint residuals ─────────────────────────────────────────────
     resid_tol = 1.0   # 1 W / 1 var absolute tolerance
     n_load_resid       = 0
