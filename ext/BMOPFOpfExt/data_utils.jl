@@ -57,9 +57,10 @@ function _line_z_matrix(line::Dict{String,Any}, linecodes::Dict{String,Any})
     (R_pm .* len, X_pm .* len, n)
 end
 
-# _neutral_pos and _phase_positions live in BMOPFTools core; alias locally.
-const _neutral_pos    = BMOPFTools._neutral_pos
-const _phase_positions = BMOPFTools._phase_positions
+# These helpers live in BMOPFTools core; alias locally for convenience.
+const _neutral_pos      = BMOPFTools._neutral_pos
+const _phase_positions  = BMOPFTools._phase_positions
+const _xfmr_turns_ratio = BMOPFTools._xfmr_turns_ratio
 
 """
     _source_fixed_terminals(net) -> Set{Tuple{String,String}}
@@ -78,16 +79,6 @@ function _source_fixed_terminals(net::Dict{String,Any})
     fixed
 end
 
-"""
-    _xfmr_turns_ratio(xfmr) -> Float64
-
-Return N = v_ref_from / v_ref_to, defaulting to 1.0 if either is missing or zero.
-"""
-function _xfmr_turns_ratio(xfmr::Dict{String,Any})
-    vf = Float64(get(xfmr, "v_ref_from", 1.0))
-    vt = Float64(get(xfmr, "v_ref_to",   1.0))
-    (vt == 0.0) ? 1.0 : vf / vt
-end
 
 """
     _line_pi_shunt(line, linecodes) -> (G_fr, B_fr, G_to, B_to)

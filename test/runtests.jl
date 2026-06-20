@@ -2269,4 +2269,6 @@ const IEEE13_FIXTURE = """
         end
     end
 
+    include("admittance_tests.jl")
+
 end  # @testset "BMOPFTools"
