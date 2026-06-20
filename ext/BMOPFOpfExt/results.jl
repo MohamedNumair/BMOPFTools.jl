@@ -253,8 +253,15 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
         sub = get(xfmr_dict, subtype, nothing)
         sub isa Dict || continue
         for (tid, xfmr) in sub
-            n_fr = length(get(xfmr, "terminal_map_from", String[]))
-            n_to = length(get(xfmr, "terminal_map_to",   String[]))
+            tmfr_r = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+            tmto_r = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+            if subtype == "single_phase"
+                n_fr = length(BMOPFTools._phase_positions(tmfr_r))
+                n_to = length(BMOPFTools._phase_positions(tmto_r))
+            else
+                n_fr = length(tmfr_r)
+                n_to = length(tmto_r)
+            end
             fr_dict = Dict{String,Any}()
             to_dict = Dict{String,Any}()
             for k in 1:n_fr

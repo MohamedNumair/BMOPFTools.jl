@@ -133,8 +133,17 @@ function _add_transformer_variables!(model, net)
     xfmr_dict = get(net, "transformer", Dict())
     for subtype in ("single_phase", "wye_delta", "delta_wye", "center_tap")
         for (tid, xfmr) in get(xfmr_dict, subtype, Dict())
-            n_fr = length(get(xfmr, "terminal_map_from", String[]))
-            n_to = length(get(xfmr, "terminal_map_to",   String[]))
+            tmfr = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+            tmto = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+            if subtype in ("single_phase",)
+                # YY transformer: one current variable per phase conductor only.
+                # Neutral is the return path, not an independent winding conductor.
+                n_fr = length(BMOPFTools._phase_positions(tmfr))
+                n_to = length(BMOPFTools._phase_positions(tmto))
+            else
+                n_fr = length(tmfr)
+                n_to = length(tmto)
+            end
             for k in 1:n_fr
                 cr_xf[(tid,"fr",k)] = @variable(model, base_name = "cr_xf_$(tid)_fr_$(k)")
                 ci_xf[(tid,"fr",k)] = @variable(model, base_name = "ci_xf_$(tid)_fr_$(k)")
