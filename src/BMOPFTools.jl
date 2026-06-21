@@ -445,6 +445,30 @@ Additional result keys beyond `solve_opf`:
 function solve_feasibility_opf end
 export solve_feasibility_opf
 
+"""
+    solve_pf(net::Dict{String,Any}; optimizer=Ipopt.Optimizer, t_index::Int=1,
+             per_unit::Bool=false, s_base::Float64=1e6) -> Dict{String,Any}
+
+Determined four-wire rectangular current-voltage (IVR-EN) power flow on a BMOPF
+network dict. Same device models as [`solve_opf`](@ref) but with **no operational
+bounds and no objective**: fixed source voltages, constant-power injections, and
+exact KCL fully determine the nodal state.
+
+Device current/thermal limits and voltage bounds are intentionally ignored — the
+power flow reports whatever results from the physics; use `solve_opf` or a
+post-solve validation pass when limits must hold.
+
+Generators must be **fixed setpoints** (`p_min == p_max` and `q_min == q_max`); a
+non-degenerate range is rejected, since a power flow has no objective to choose a
+dispatch within the range. Inverters under a `control_profile` are voltage-
+dependent and remain determined.
+
+Requires JuMP and Ipopt (same as `solve_opf`). The result dict matches
+`solve_opf`'s structure plus `"is_power_flow" => true`.
+"""
+function solve_pf end
+export solve_pf
+
 # ---------------------------------------------------------------------------
 # Exports
 # ---------------------------------------------------------------------------
