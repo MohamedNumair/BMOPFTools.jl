@@ -1216,4 +1216,30 @@
         @test res["objective"] ≈ 14_000.0   atol=1.0
     end
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # T-AUGBND: end-to-end regression — augment_case must produce voltage bounds
+    # that a plain 4-wire LV feeder can actually satisfy. Before the fix the
+    # injected vpn (≈120-146 V) and vpp (≈207-253 V) bounds were physically
+    # impossible for a 230 V (L-N) / 398 V (L-L) feeder → LOCALLY_INFEASIBLE.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T-AUGBND: augment_case bounds solve on 4-wire LV feeder" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
+            "b1": {"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[230.0,230.0,230.0],"v_angle":[0.0,-2.0944,2.0944]}},
+         "linecode":{"lc":{"R_series_1_1":3.96e-4,"R_series_2_2":3.96e-4,
+                           "R_series_3_3":3.96e-4,"R_series_4_4":3.96e-4}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1","2","3","n"],"terminal_map_to":["1","2","3","n"],
+             "linecode":"lc","length":100.0}},
+         "load":{"ld":{"bus":"b1","terminal_map":["1","2","3","n"],"configuration":"WYE",
+             "p_nom":[1000.0,1000.0,1000.0],"q_nom":[0.0,0.0,0.0]}}}
+        """; from_string=true)
+        net′, _ = augment_case(net)
+        res = solve_opf(net′)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+    end
+
 end  # @testset "OPF — solve_opf extension"
