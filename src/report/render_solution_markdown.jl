@@ -26,6 +26,7 @@ function render_solution_markdown(report::SolutionReport, io::IO; verbose::Bool=
     println(io, "---\n")
 
     _sol_md_summary(report, io)
+    _sol_md_voltage_zones(report, io; verbose)
     _sol_md_voltage(report, io)
     _sol_md_thermal(report, io)
     _sol_md_generator(report, io)
@@ -83,7 +84,88 @@ function _sol_md_summary(r::SolutionReport, io::IO)
     end
 end
 
-# ── 2. Voltage bound findings ─────────────────────────────────────────────────
+# ── 2. Voltage zone band ──────────────────────────────────────────────────────
+
+function _sol_md_voltage_zones(r::SolutionReport, io::IO; verbose::Bool=true)
+    vz = get(r.results, :voltage_zones, nothing)
+    vz isa Dict || return
+    zones = get(vz, "zones", nothing)
+    (zones isa AbstractVector && !isempty(zones)) || return
+
+    println(io, "## 2. Voltage by Galvanic Zone\n")
+    println(io, "Per-unit magnitudes are relative to each zone's own voltage base; ",
+                "volts are not comparable across transformer boundaries.\n")
+    println(io, "| St | Zone | V base | Buses | Vm min (pu) | Vm max (pu) | Max imbalance | Max neutral shift |")
+    println(io, "|:--:|------|-------:|------:|------------:|------------:|--------------:|------------------:|")
+    for z in zones
+        st     = get(z, "status", "ok")
+        flag   = st == "violation" ? "❌" : st == "active" ? "⚠" : "✅"
+        label  = get(z, "label", "?")
+        vbase  = get(z, "v_base", NaN)
+        nbus   = get(z, "n_buses", 0)
+        vmin   = get(z, "vm_min_pu", NaN)
+        vmax   = get(z, "vm_max_pu", NaN)
+        vminb  = get(z, "vm_min_bus", "")
+        vmaxb  = get(z, "vm_max_bus", "")
+        imb    = get(z, "max_imbalance_pct", NaN)
+        imbb   = get(z, "max_imbalance_bus", "")
+        nsh    = get(z, "max_neutral_shift_v", 0.0)
+        nshb   = get(z, "max_neutral_shift_bus", "")
+
+        vb_s  = (vbase isa Real && isfinite(vbase) && vbase > 0) ? _fmt_kv(vbase) : "?"
+        vmn_s = _fmt_pu_bus(vmin, vminb)
+        vmx_s = _fmt_pu_bus(vmax, vmaxb)
+        imb_s = (imb isa Real && isfinite(imb)) ?
+                "$(round(imb; digits=1)) %$(_bus_tag(imbb))" : "—"
+        nsh_s = (nsh isa Real && isfinite(nsh) && nsh > 0) ?
+                "$(round(nsh; digits=2)) V$(_bus_tag(nshb))" : "—"
+
+        println(io, "| $flag | `$label` | $vb_s | $nbus | $vmn_s | $vmx_s | $imb_s | $nsh_s |")
+    end
+    println(io)
+
+    verbose && _sol_md_voltage_zone_buses(zones, io)
+end
+
+# Per-bus drill-down, one table per zone, worst-deviation-first. Verbose only.
+function _sol_md_voltage_zone_buses(zones, io::IO)
+    any(z -> !isempty(get(z, "bus_rows", [])), zones) || return
+    println(io, "### Per-bus detail\n")
+    for z in zones
+        rows = get(z, "bus_rows", nothing)
+        (rows isa AbstractVector && !isempty(rows)) || continue
+        label = get(z, "label", "?")
+        vbase = get(z, "v_base", NaN)
+        vb_s  = (vbase isa Real && isfinite(vbase) && vbase > 0) ? _fmt_kv(vbase) : "?"
+        println(io, "**Zone `$label`** (base $vb_s):\n")
+        println(io, "| St | Bus | Vm min (V) | Vm max (V) | Vm min (pu) | Vm max (pu) | Imbalance | Neutral |")
+        println(io, "|:--:|-----|-----------:|-----------:|------------:|------------:|----------:|--------:|")
+        for r in rows
+            st   = get(r, "status", "ok")
+            flag = st == "violation" ? "❌" : st == "active" ? "⚠" : "✅"
+            bus  = get(r, "bus", "?")
+            lov  = get(r, "vm_min_v", NaN);  hiv = get(r, "vm_max_v", NaN)
+            lop  = get(r, "vm_min_pu", NaN); hip = get(r, "vm_max_pu", NaN)
+            imb  = get(r, "imbalance_pct", NaN)
+            nsh  = get(r, "neutral_shift_v", 0.0)
+            lov_s = (lov isa Real && isfinite(lov)) ? "$(round(lov; digits=1))" : "?"
+            hiv_s = (hiv isa Real && isfinite(hiv)) ? "$(round(hiv; digits=1))" : "?"
+            lop_s = (lop isa Real && isfinite(lop)) ? "$(round(lop; digits=3))" : "?"
+            hip_s = (hip isa Real && isfinite(hip)) ? "$(round(hip; digits=3))" : "?"
+            imb_s = (imb isa Real && isfinite(imb)) ? "$(round(imb; digits=1)) %" : "—"
+            nsh_s = (nsh isa Real && isfinite(nsh) && nsh > 0) ? "$(round(nsh; digits=2)) V" : "—"
+            println(io, "| $flag | `$bus` | $lov_s | $hiv_s | $lop_s | $hip_s | $imb_s | $nsh_s |")
+        end
+        println(io)
+    end
+end
+
+_fmt_pu_bus(pu, bus) =
+    (pu isa Real && isfinite(pu)) ? "$(round(pu; digits=3))$(_bus_tag(bus))" : "?"
+
+_bus_tag(bus) = (bus isa AbstractString && !isempty(bus)) ? " (`$bus`)" : ""
+
+# ── 2b. Voltage bound findings ────────────────────────────────────────────────
 
 function _sol_md_voltage(r::SolutionReport, io::IO)
     volt_findings = filter(f -> f.code in ("E.SOL.VOLT_VIOLATION", "W.SOL.VOLT_ACTIVE"),
