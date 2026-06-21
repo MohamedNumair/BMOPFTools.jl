@@ -25,7 +25,7 @@ uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 version = "1.11.0"
 
 [[deps.BMOPFTools]]
-deps = ["Dates", "Graphs", "JSON3", "LinearAlgebra", "Logging", "PowerModelsDistribution", "Statistics"]
+deps = ["Dates", "Graphs", "JSON3", "JSONSchema", "LinearAlgebra", "Logging", "PowerModelsDistribution", "Statistics"]
 path = "/Users/uqfgeth/Documents/GitHub/BMOPFTools.jl"
 uuid = "5f9a3b62-8f63-4a39-b67b-af9b51e6a7c3"
 version = "0.1.0"
@@ -268,6 +268,16 @@ version = "1.14.3"
 
     [deps.JSON3.weakdeps]
     ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
+
+[[deps.JSONSchema]]
+deps = ["Downloads", "JSON", "URIs"]
+git-tree-sha1 = "d13f79c4242969874da7d00bda17d59bc7699aa7"
+uuid = "7d188eb4-7ad8-530c-ae41-71a32a6d4692"
+version = "1.5.0"
+weakdeps = ["JSON3"]
+
+    [deps.JSONSchema.extensions]
+    JSONSchemaJSON3Ext = "JSON3"
 
 [[deps.JuMP]]
 deps = ["LinearAlgebra", "MacroTools", "MathOptInterface", "MutableArithmetics", "OrderedCollections", "PrecompileTools", "Printf", "SparseArrays"]
@@ -636,6 +646,11 @@ version = "1.11.0"
 git-tree-sha1 = "0c45878dcfdcfa8480052b6ab162cdd138781742"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
 version = "0.11.3"
+
+[[deps.URIs]]
+git-tree-sha1 = "bef26fb046d031353ef97a82e3fdb6afe7f21b1a"
+uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
+version = "1.6.1"
 
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
