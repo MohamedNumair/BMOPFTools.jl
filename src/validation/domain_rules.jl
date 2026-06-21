@@ -31,6 +31,7 @@ function domain_rules_check(net::Dict{String,Any},
     _check_inverter_capability(net, findings, n_checks)
     _check_cost_phase_uniformity(net, findings, n_checks)
     _check_source_voltage_margin(net, findings, thresholds, n_checks)
+    _check_shunt_on_grounded_terminal(net, findings, n_checks)
 
     result["n_checks_run"] = n_checks[]
     result
@@ -230,6 +231,55 @@ function _check_source_voltage_margin(net, findings, thresh, n_checks)
                     break
                 end
             end
+        end
+    end
+end
+
+"""
+    _check_shunt_on_grounded_terminal(net, findings, n_checks)
+
+Warn when a `shunt` connects to a terminal that is also perfectly grounded — i.e.
+a terminal whose voltage is pinned to 0 V, either by the bus's
+`perfectly_grounded_terminals` or by being the neutral of a voltage-source bus
+(the source pins its neutral to system ground). On such a terminal the shunt draws
+`I = G·V = 0` current, so it is completely inert: it has no effect on the solution
+and usually signals either a redundant element or that impedance grounding was
+intended where a hard V=0 ground was actually declared.
+"""
+function _check_shunt_on_grounded_terminal(net, findings, n_checks)
+    buses = get(net, "bus", Dict())
+
+    # Build the set of perfectly-grounded (bus, terminal) pairs.
+    grounded = Set{Tuple{String,String}}()
+    for (bid, bus) in buses
+        bus isa Dict || continue
+        for t in get(bus, "perfectly_grounded_terminals", String[])
+            push!(grounded, (bid, string(t)))
+        end
+    end
+    # Source-bus neutrals are pinned to 0 V by the voltage source.
+    for (_, vs) in get(net, "voltage_source", Dict())
+        vs isa Dict || continue
+        bus = get(vs, "bus", "")
+        b   = get(buses, bus, Dict())
+        nt  = b isa Dict ? _neutral_terminal(b) : nothing
+        nt === nothing || push!(grounded, (bus, string(nt)))
+    end
+    isempty(grounded) && return
+
+    for (id, sh) in get(net, "shunt", Dict())
+        sh isa Dict || continue
+        bus = get(sh, "bus", "")
+        for t in Vector{String}(get(sh, "terminal_map", String[]))
+            (bus, t) in grounded || continue
+            n_checks[] += 1
+            push!(findings, Finding(WARNING, "W.DOM.SHUNT_ON_GROUNDED", :domain_rules,
+                :shunt, id,
+                "Shunt '$id' is connected to terminal '$t' of bus '$bus', which is " *
+                "perfectly grounded (V = 0) — the shunt draws G·V = 0 current and " *
+                "is inert. Drop the redundant shunt, or remove the perfect ground " *
+                "if impedance grounding was intended.",
+                Dict{String,Any}("bus" => bus, "terminal" => t)))
         end
     end
 end
