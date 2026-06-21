@@ -100,6 +100,9 @@ OpenDSS .dss ──(PMD parse_file)──► ENGINEERING dict
                                         │  fix_case
                                         ▼
                                  net′ (repaired)
+                                        │  add_generators (optional DER placement)
+                                        ▼
+                                 net′ + DERs
                                         │  augment_case
                                         ▼
                                  net″ (benchmark-ready) ──► write_bmopf
@@ -134,6 +137,8 @@ normalisations) so the case's assumptions are explicit rather than implied.
   the OPF extension model.
 - [OPF result dictionary](results.md) — structure of the result dict returned
   by `solve_opf`, including the `"initialisation"` diagnostics block.
-- [Case augmentation](augmentation.md) — `fix_case` structural repairs and
-  `augment_case` standards-grounded gap-filling, with the manifest audit trail.
+- [Case augmentation](augmentation.md) — the `fix_case → add_generators →
+  augment_case` pipeline that turns a faithful import into a meaningful OPF
+  benchmark, why the sequence and the diverse DER strategies matter, and the
+  manifest audit trail.
 - [API reference](api.md).
