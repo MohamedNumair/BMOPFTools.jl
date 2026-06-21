@@ -1,7 +1,7 @@
 # BMOPF Network Summary: MV_LV_combined
 
-**Generated:** 2026-06-19 10:46:28  
-**Findings:** 0 errors · 14 warnings · 56 info  
+**Generated:** 2026-06-21 14:59:35  
+**Findings:** 0 errors · 13 warnings · 58 info  
 **Convention:** MV_6.4kV: mixed; LV_250V: 4-wire; 1289 grounding point(s)
 
 ---
@@ -15,10 +15,12 @@
 | linecode | 23 |  |
 | voltage_source | 1 |  |
 | load | 1255 | 12.55 MW, 6.28 Mvar |
-| generator | 1 | capacity: 0.0 W |
+| generator | 0 | capacity: 0.0 W |
 | shunt | 1288 |  |
 | switch | 0 |  |
 | transformer | 33 | Dyn1×33 |
+| inverter | 0 | capacity: 0.0 MVA |
+| control_profile | 0 |  |
 
 ## 2. Voltage Levels
 
@@ -26,7 +28,7 @@
 
 | Level | Nominal | Buses | Lines | Loads | Generators |
 |-------|---------|------:|------:|------:|-----------:|
-| MV_6.4kV | 6.35 kV | 147 | 146 | 0 | 1 |
+| MV_6.4kV | 6.35 kV | 147 | 146 | 0 | 0 |
 | LV_250V | 250.0 V | 2022 | 1989 | 1255 | 0 |
 
 **Transformer transitions:**
@@ -108,6 +110,8 @@
 
 > 🟡 **[W.DIV.LOAD_SYMMETRIC]** 1254 of 1255 loads share identical (p_nom, q_nom) — possible copy-paste symmetry.
 > 🔵 **[I.DIV.LOAD_CV_LOW]** Load p_nom has very low coefficient of variation (0.0) — all loads nearly identical.
+> 🔵 **[I.DIV.LOAD_UNIFORM_MODEL]** All 1255 loads use the constant_power model — no load exercises voltage dependence (ZIP/exponential); the case does not test voltage-dependent load behaviour.
+> 🔵 **[I.DIV.LOAD_UNIFORM_CONFIG]** All 1255 loads share the 'SINGLE_PHASE' configuration — no connection diversity.
 > 🔵 **[I.DIV.LOAD_PHASE_BALANCED]** Galvanic zone anchored at 'b1015' has balanced aggregate load across 3 phase(s) (max spread 0.0%) — the network is effectively balanced and a single-phase equivalent would suffice.
 > 🔵 **[I.DIV.LOAD_PHASE_BALANCED]** Galvanic zone anchored at 'b1011' has balanced aggregate load across 3 phase(s) (max spread 0.0%) — the network is effectively balanced and a single-phase equivalent would suffice.
 > 🔵 **[I.DIV.LOAD_PHASE_BALANCED]** Galvanic zone anchored at 'b1' has balanced aggregate load across 3 phase(s) (max spread 1.96%) — the network is effectively balanced and a single-phase equivalent would suffice.
@@ -299,7 +303,7 @@
 
 | Spec conformance | Value |
 |------------------|------:|
-| Conformance issues | 1 |
+| Conformance issues | 0 |
 | Voltage sources (spec requires 1) | 1 |
 
 | Structural integrity | Value |
@@ -328,13 +332,11 @@
 - no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground)
 - no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF
 
-> 🟡 **[W.SPEC.CONFIG_ARITY]** generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
-
 > 🔵 **[I.BENCH.AUGMENTATION]** Case needs augmentation to be a non-trivial OPF benchmark: only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF.
 
 ## 9. Data Quality Summary
 
-**Total findings:** 70 (0 errors, 14 warnings, 56 info)
+**Total findings:** 71 (0 errors, 13 warnings, 58 info)
 
 ### 🟡 Warnings
 
@@ -364,13 +366,15 @@
   Transformer 'tx2677' is at 210.2% utilisation at nominal load — little OPF headroom.
 - **[W.OPS.XFMR_OVERLOADED]** `tx2382`  
   Transformer 'tx2382' is at 270.6% utilisation at nominal load — little OPF headroom.
-- **[W.SPEC.CONFIG_ARITY]** `slack_source`  
-  generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
 
 ### 🔵 Info
 
 - **[I.DIV.LOAD_CV_LOW]** `load`  
   Load p_nom has very low coefficient of variation (0.0) — all loads nearly identical.
+- **[I.DIV.LOAD_UNIFORM_MODEL]** `load`  
+  All 1255 loads use the constant_power model — no load exercises voltage dependence (ZIP/exponential); the case does not test voltage-dependent load behaviour.
+- **[I.DIV.LOAD_UNIFORM_CONFIG]** `load`  
+  All 1255 loads share the 'SINGLE_PHASE' configuration — no connection diversity.
 - **[I.DIV.LOAD_PHASE_BALANCED]** `load`  
   Galvanic zone anchored at 'b1015' has balanced aggregate load across 3 phase(s) (max spread 0.0%) — the network is effectively balanced and a single-phase equivalent would suffice.
 - **[I.DIV.LOAD_PHASE_BALANCED]** `load`  
@@ -467,8 +471,8 @@
   2169 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
-- **[I.SCHEMA.UNKNOWN_FIELDS]** `[b1726]`  
-  Additional property not defined in schema at [bus][b1726].
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `[source]`  
+  Additional property not defined in schema at [voltage_source][source].
 - **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
   bus has field(s) not in the BMOPF schema: v_declared.
 - **[I.DOM.LINE_IMPEDANCE_SPREAD]** `line`  

@@ -1,6 +1,6 @@
 # Simplification log: LV24_246bus
 
-**Generated:** 2026-06-19 10:46:22  
+**Generated:** 2026-06-21 14:59:29  
 **Buses:** 246 → 191 (−55)  
 **Lines:** 235 → 189 (−46)  
 **Operations:** 61

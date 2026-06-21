@@ -133,6 +133,30 @@
       ],
       "linecode": "lc2"
     },
+    "line191": {
+      "length": 13.891884000000001,
+      "_merged_from": [
+        "line198",
+        "line228",
+        "line184",
+        "line234"
+      ],
+      "bus_from": "179",
+      "bus_to": "259",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "lc2"
+    },
     "line140": {
       "length": 287.60962,
       "_merged_from": [
@@ -157,30 +181,6 @@
         "n"
       ],
       "linecode": "lc8"
-    },
-    "line191": {
-      "length": 13.891884000000001,
-      "_merged_from": [
-        "line198",
-        "line228",
-        "line184",
-        "line234"
-      ],
-      "bus_from": "179",
-      "bus_to": "259",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "lc2"
     },
     "line448": {
       "length": 3.591222,
@@ -906,17 +906,6 @@
       "element_id": "line84"
     },
     {
-      "message": "Removed dangling line line308 and its leaf bus 309 (leaf has no active elements).",
-      "detail": {
-        "removed_bus": "309"
-      },
-      "severity": "info",
-      "operation": "remove_dangling_lines",
-      "code": "LINE_REMOVED",
-      "element_type": "line",
-      "element_id": "line308"
-    },
-    {
       "message": "Removed dangling line line104 and its leaf bus 105 (leaf has no active elements).",
       "detail": {
         "removed_bus": "105"
@@ -926,6 +915,17 @@
       "code": "LINE_REMOVED",
       "element_type": "line",
       "element_id": "line104"
+    },
+    {
+      "message": "Removed dangling line line308 and its leaf bus 309 (leaf has no active elements).",
+      "detail": {
+        "removed_bus": "309"
+      },
+      "severity": "info",
+      "operation": "remove_dangling_lines",
+      "code": "LINE_REMOVED",
+      "element_type": "line",
+      "element_id": "line308"
     },
     {
       "message": "Removed dangling line line80 and its leaf bus 81 (leaf has no active elements).",
@@ -4903,6 +4903,19 @@
       "element_id": "line21"
     },
     {
+      "message": "Merged line line3 (0.069065 m) into line2 at pass-through bus 3; new length 0.138188 m.",
+      "detail": {
+        "new_length": 0.138188,
+        "absorbed_line": "line3",
+        "removed_bus": "3"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line2"
+    },
+    {
       "message": "Merge blocked: intermediate bus 30 has non-line elements attached.",
       "detail": {
         "lines": [
@@ -4915,19 +4928,6 @@
       "code": "NON_LINE_ON_BUS",
       "element_type": "bus",
       "element_id": "30"
-    },
-    {
-      "message": "Merged line line3 (0.069065 m) into line2 at pass-through bus 3; new length 0.138188 m.",
-      "detail": {
-        "new_length": 0.138188,
-        "absorbed_line": "line3",
-        "removed_bus": "3"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line2"
     },
     {
       "message": "Lines line26 (linecode lc8) and line29 (linecode lc1) at bus 27 have different linecodes — not merged.",

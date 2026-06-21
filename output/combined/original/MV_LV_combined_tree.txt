@@ -1,6 +1,6 @@
 # MV backbone  (328 buses,  33 LV sections)
 
-b1726 (SRC G1)
+b1726 (SRC)
 └── b224
     ⋮  (7 buses)
     └── [SW]── b503
@@ -21,9 +21,6 @@ b1726 (SRC G1)
                 └── [SW]── b479
                     └── b380
                         └── [tx2059: Dyn1 11.0kV/433V]── → Section 1: tx2059  (245 buses, 121 loads)
-
-Generators (1 total):
-  G1 = slack_source     max    0.0 kW  terminals: 1,2,3
 
 ────────────────────────────────────────────────────────────
 # Section 1: tx2059  (tx2059: Dyn1 11.0kV/433V,  245 buses)

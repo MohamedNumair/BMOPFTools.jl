@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_10_Feeder_5
 
-**Generated:** 2026-06-18 09:27:22  
-**Findings:** 0 errors · 0 warnings · 10 info  
+**Generated:** 2026-06-21 15:01:19  
+**Findings:** 1 errors · 1 warnings · 12 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -19,6 +19,8 @@
 | shunt | 1 |  |
 | switch | 0 |  |
 | transformer | 0 |  |
+| inverter | 0 | capacity: 0.0 MVA |
+| control_profile | 0 |  |
 
 ## 2. Voltage Levels
 
@@ -69,6 +71,8 @@
 |-----------|-----|-----|----|---|
 | R_series_1_1 | 0.000259 | 0.00228 | 0.724 | 6 |
 
+> 🔵 **[I.DIV.LOAD_UNIFORM_MODEL]** All 11 loads use the constant_power model — no load exercises voltage dependence (ZIP/exponential); the case does not test voltage-dependent load behaviour.
+> 🔵 **[I.DIV.LOAD_UNIFORM_CONFIG]** All 11 loads share the 'SINGLE_PHASE' configuration — no connection diversity.
 > 🔵 **[I.DIV.LINE_SYMMETRIC]** 9 lines share linecode 'lc1' with similar length (±10%) — electrically near-identical.
 
 ## 5. Loading & Operational Summary
@@ -91,6 +95,7 @@
 | TPIA status | not_run |
 
 > 🔵 **[I.PRE.NO_VOLT_BOUNDS]** 17 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
+> 🟡 **[W.PRE.SOURCE_BUS_GENERATOR]** Generator 'grid' is at voltage-source bus 'sourcebus' and lacks p_max/q_max bounds. The voltage source is the network's current slack, so two unbounded current injections share one fixed-voltage bus — the dispatch split is degenerate (non-unique). Remove this generator and express its role as flow bounds/cost on the voltage source instead.
 > 🔵 **[I.PRE.SINGLE_SOURCE]** Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
 
 ## 7. Provenance & Model Conventions
@@ -164,10 +169,24 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 10 (0 errors, 0 warnings, 10 info)
+**Total findings:** 14 (1 errors, 1 warnings, 12 info)
+
+### 🔴 Errors
+
+- **[E.SCHEMA.TYPE]** `[266]`  
+  Type error at [bus][266][vpn_min]: got Float64, expected array.
+
+### 🟡 Warnings
+
+- **[W.PRE.SOURCE_BUS_GENERATOR]** `grid`  
+  Generator 'grid' is at voltage-source bus 'sourcebus' and lacks p_max/q_max bounds. The voltage source is the network's current slack, so two unbounded current injections share one fixed-voltage bus — the dispatch split is degenerate (non-unique). Remove this generator and express its role as flow bounds/cost on the voltage source instead.
 
 ### 🔵 Info
 
+- **[I.DIV.LOAD_UNIFORM_MODEL]** `load`  
+  All 11 loads use the constant_power model — no load exercises voltage dependence (ZIP/exponential); the case does not test voltage-dependent load behaviour.
+- **[I.DIV.LOAD_UNIFORM_CONFIG]** `load`  
+  All 11 loads share the 'SINGLE_PHASE' configuration — no connection diversity.
 - **[I.DIV.LINE_SYMMETRIC]** `line`  
   9 lines share linecode 'lc1' with similar length (±10%) — electrically near-identical.
 - **[I.PROV.NO_PI_SHUNT]** `linecode`  

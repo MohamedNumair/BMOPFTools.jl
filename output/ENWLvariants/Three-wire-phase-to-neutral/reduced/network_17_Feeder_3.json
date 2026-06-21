@@ -1,6 +1,11 @@
 {
   "voltage_source": {
     "source": {
+      "cost": [
+        1,
+        1,
+        1
+      ],
       "_pmd": {
         "rs": [
           0.0006420118386135532,
@@ -3013,7 +3018,7 @@
   },
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-19T00:45:19Z",
+    "created": "2026-06-21T04:58:29Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -4501,1734 +4506,6 @@
       ],
       "bus": "1027",
       "configuration": "SINGLE_PHASE"
-    }
-  },
-  "generator": {
-    "slack_source": {
-      "_slack": true,
-      "cost": [
-        1,
-        1,
-        1
-      ],
-      "terminal_map": [
-        "1",
-        "2",
-        "3"
-      ],
-      "bus": "sourcebus",
-      "configuration": "WYE"
-    }
-  },
-  "bus": {
-    "297": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "363": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "341": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "643": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1078": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "925": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "83": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1083": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "346": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "638": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "793": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "200": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "273": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "734": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "822": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "457": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "424": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "841": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "984": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "614": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "607": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "354": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "848": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "551": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "914": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "615": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "976": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "374": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "364": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "803": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "288": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "391": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "572": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "383": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "1037": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "36": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "353": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "792": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "101": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "1027": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "743": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "596": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "450": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "602": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "651": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "192": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "426": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "45": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "744": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1039": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1103": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1071": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "544": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "308": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1021": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "173": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "151": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "262": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "405": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1035": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "1122": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1064": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "936": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "784": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "78": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "52": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "1031": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "58": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "1057": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "267": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "626": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1094": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "977": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "1066": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "571": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "915": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "475": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1062": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "543": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "359": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "252": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "881": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "887": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "996": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "768": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "503": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "923": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "953": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "520": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "327": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "850": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "656": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "68": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "76": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "103": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "566": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "111": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "321": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "632": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "938": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "sourcebus": {
-      "v_declared": 240.17771198288432,
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "468": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "729": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "339": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "1097": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "279": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "1133": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "207": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1131": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1058": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "511": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1129": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "331": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "627": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "95": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "557": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "536": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "952": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "989": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "258": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "302": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "292": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "300": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "316": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "309": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "642": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "930": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "460": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "858": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "797": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "1099": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "995": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "445": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "873": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "646": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "345": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "748": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "478": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "639": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "644": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "512": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "466": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "753": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "565": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "1040": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "347": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "163": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "888": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "986": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "1009": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "352": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "756": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "198": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "563": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3"
-      ]
-    },
-    "655": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    }
-  },
-  "linecode": {
-    "lc8": {
-      "X_series_2_3": 8.256499999999999e-5,
-      "R_series_1_3": 0.00010665600000000003,
-      "R_series_1_2": 0.00010665600000000003,
-      "R_series_2_2": 0.00021331200000000006,
-      "G_to_1_3": 0,
-      "G_from_2_2": 0,
-      "B_from_3_3": 0,
-      "G_to_2_1": 0,
-      "B_from_2_2": 0,
-      "G_from_1_3": 0,
-      "B_from_3_2": 0,
-      "B_from_1_2": 0,
-      "B_from_3_1": 0,
-      "X_series_2_1": 8.256499999999999e-5,
-      "B_from_1_3": 0,
-      "B_from_1_1": 0,
-      "B_to_2_3": 0,
-      "R_series_2_1": 0.00010665600000000003,
-      "G_to_3_3": 0,
-      "R_series_3_1": 0.00010665600000000003,
-      "G_from_3_3": 0,
-      "X_series_3_3": 0.00012119600000000008,
-      "G_to_2_3": 0,
-      "B_to_1_2": 0,
-      "B_to_2_1": 0,
-      "B_to_2_2": 0,
-      "G_from_3_1": 0,
-      "B_from_2_1": 0,
-      "R_series_1_1": 0.00021331200000000006,
-      "G_to_3_1": 0,
-      "G_from_3_2": 0,
-      "B_to_1_1": 0,
-      "X_series_2_2": 0.00016512999999999999,
-      "G_to_2_2": 0,
-      "X_series_1_2": 8.256499999999999e-5,
-      "G_to_3_2": 0,
-      "R_series_3_2": 0.00010665600000000003,
-      "B_from_2_3": 0,
-      "G_from_1_1": 0,
-      "G_to_1_2": 0,
-      "X_series_1_3": 3.8631000000000085e-5,
-      "G_from_2_3": 0,
-      "R_series_3_3": 0.00021331200000000006,
-      "B_to_3_2": 0,
-      "X_series_3_2": 8.256499999999999e-5,
-      "B_to_1_3": 0,
-      "R_series_2_3": 0.00010665600000000003,
-      "G_from_1_2": 0,
-      "X_series_1_1": 0.00012119600000000008,
-      "G_to_1_1": 0,
-      "B_to_3_1": 0,
-      "B_to_3_3": 0,
-      "i_max": [
-        600,
-        600,
-        600
-      ],
-      "G_from_2_1": 0,
-      "X_series_3_1": 3.8631000000000085e-5
-    },
-    "lc3": {
-      "X_series_2_3": 9.384399999999992e-5,
-      "R_series_1_3": 0.000523967,
-      "R_series_1_2": 0.000525131,
-      "R_series_2_2": 0.001050262,
-      "G_to_1_3": 0,
-      "G_from_2_2": 0,
-      "B_from_3_3": 0,
-      "G_to_2_1": 0,
-      "B_from_2_2": 0,
-      "G_from_1_3": 0,
-      "B_from_3_2": 0,
-      "B_from_1_2": 0,
-      "B_from_3_1": 0,
-      "X_series_2_1": 9.383799999999987e-5,
-      "B_from_1_3": 0,
-      "B_from_1_1": 0,
-      "B_to_2_3": 0,
-      "R_series_2_1": 0.000525131,
-      "G_to_3_3": 0,
-      "R_series_3_1": 0.0005239669999999999,
-      "G_from_3_3": 0,
-      "X_series_3_3": 0.00013925699999999997,
-      "G_to_2_3": 0,
-      "B_to_1_2": 0,
-      "B_to_2_1": 0,
-      "B_to_2_2": 0,
-      "G_from_3_1": 0,
-      "B_from_2_1": 0,
-      "R_series_1_1": 0.001049097,
-      "G_to_3_1": 0,
-      "G_from_3_2": 0,
-      "B_to_1_1": 0,
-      "X_series_2_2": 0.00018767999999999986,
-      "G_to_2_2": 0,
-      "X_series_1_2": 9.383799999999987e-5,
-      "G_to_3_2": 0,
-      "R_series_3_2": 0.0005251309999999999,
-      "B_from_2_3": 0,
-      "G_from_1_1": 0,
-      "G_to_1_2": 0,
-      "X_series_1_3": 4.5408999999999924e-5,
-      "G_from_2_3": 0,
-      "R_series_3_3": 0.001049097,
-      "B_to_3_2": 0,
-      "X_series_3_2": 9.384399999999992e-5,
-      "B_to_1_3": 0,
-      "R_series_2_3": 0.000525131,
-      "G_from_1_2": 0,
-      "X_series_1_1": 0.00013924199999999987,
-      "G_to_1_1": 0,
-      "B_to_3_1": 0,
-      "B_to_3_3": 0,
-      "i_max": [
-        600,
-        600,
-        600
-      ],
-      "G_from_2_1": 0,
-      "X_series_3_1": 4.5408999999999924e-5
-    },
-    "lc6": {
-      "X_series_2_3": 0.000114448,
-      "R_series_1_3": 0.001151747,
-      "R_series_1_2": 0.0011534,
-      "R_series_2_2": 0.002306801,
-      "G_to_1_3": 0,
-      "G_from_2_2": 0,
-      "B_from_3_3": 0,
-      "G_to_2_1": 0,
-      "B_from_2_2": 0,
-      "G_from_1_3": 0,
-      "B_from_3_2": 0,
-      "B_from_1_2": 0,
-      "B_from_3_1": 0,
-      "X_series_2_1": 0.00011444699999999997,
-      "B_from_1_3": 0,
-      "B_from_1_1": 0,
-      "B_to_2_3": 0,
-      "R_series_2_1": 0.0011534,
-      "G_to_3_3": 0,
-      "R_series_3_1": 0.001151747,
-      "G_from_3_3": 0,
-      "X_series_3_3": 0.0001689449999999999,
-      "G_to_2_3": 0,
-      "B_to_1_2": 0,
-      "B_to_2_1": 0,
-      "B_to_2_2": 0,
-      "G_from_3_1": 0,
-      "B_from_2_1": 0,
-      "R_series_1_1": 0.002305147,
-      "G_to_3_1": 0,
-      "G_from_3_2": 0,
-      "B_to_1_1": 0,
-      "X_series_2_2": 0.00022889099999999995,
-      "G_to_2_2": 0,
-      "X_series_1_2": 0.00011444699999999997,
-      "G_to_3_2": 0,
-      "R_series_3_2": 0.0011534,
-      "B_from_2_3": 0,
-      "G_from_1_1": 0,
-      "G_to_1_2": 0,
-      "X_series_1_3": 5.449899999999985e-5,
-      "G_from_2_3": 0,
-      "R_series_3_3": 0.002305148,
-      "B_to_3_2": 0,
-      "X_series_3_2": 0.000114448,
-      "B_to_1_3": 0,
-      "R_series_2_3": 0.0011534,
-      "G_from_1_2": 0,
-      "X_series_1_1": 0.00016893999999999986,
-      "G_to_1_1": 0,
-      "B_to_3_1": 0,
-      "B_to_3_3": 0,
-      "i_max": [
-        600,
-        600,
-        600
-      ],
-      "G_from_2_1": 0,
-      "X_series_3_1": 5.449899999999985e-5
-    },
-    "lc2": {
-      "X_series_2_3": 9.674200000000011e-5,
-      "R_series_1_3": 0.0007272050000000001,
-      "R_series_1_2": 0.0007279920000000001,
-      "R_series_2_2": 0.0014559830000000003,
-      "G_to_1_3": 0,
-      "G_from_2_2": 0,
-      "B_from_3_3": 0,
-      "G_to_2_1": 0,
-      "B_from_2_2": 0,
-      "G_from_1_3": 0,
-      "B_from_3_2": 0,
-      "B_from_1_2": 0,
-      "B_from_3_1": 0,
-      "X_series_2_1": 9.674199999999999e-5,
-      "B_from_1_3": 0,
-      "B_from_1_1": 0,
-      "B_to_2_3": 0,
-      "R_series_2_1": 0.0007279920000000001,
-      "G_to_3_3": 0,
-      "R_series_3_1": 0.0007272050000000001,
-      "G_from_3_3": 0,
-      "X_series_3_3": 0.00014473400000000004,
-      "G_to_2_3": 0,
-      "B_to_1_2": 0,
-      "B_to_2_1": 0,
-      "B_to_2_2": 0,
-      "G_from_3_1": 0,
-      "B_from_2_1": 0,
-      "R_series_1_1": 0.001455197,
-      "G_to_3_1": 0,
-      "G_from_3_2": 0,
-      "B_to_1_1": 0,
-      "X_series_2_2": 0.00019347400000000004,
-      "G_to_2_2": 0,
-      "X_series_1_2": 9.674199999999999e-5,
-      "G_to_3_2": 0,
-      "R_series_3_2": 0.0007279910000000001,
-      "B_from_2_3": 0,
-      "G_from_1_1": 0,
-      "G_to_1_2": 0,
-      "X_series_1_3": 4.7987e-5,
-      "G_from_2_3": 0,
-      "R_series_3_3": 0.001455196,
-      "B_to_3_2": 0,
-      "X_series_3_2": 9.674200000000011e-5,
-      "B_to_1_3": 0,
-      "R_series_2_3": 0.0007279910000000001,
-      "G_from_1_2": 0,
-      "X_series_1_1": 0.00014471900000000005,
-      "G_to_1_1": 0,
-      "B_to_3_1": 0,
-      "B_to_3_3": 0,
-      "i_max": [
-        600,
-        600,
-        600
-      ],
-      "G_from_2_1": 0,
-      "X_series_3_1": 4.7987e-5
-    },
-    "lc4": {
-      "X_series_2_3": 9.144699996466887e-5,
-      "R_series_1_3": 0.00026870800000000004,
-      "R_series_1_2": 0.00027105900000000004,
-      "R_series_2_2": 0.0005421180000368696,
-      "G_to_1_3": 0,
-      "G_from_2_2": 0,
-      "B_from_3_3": 0,
-      "G_to_2_1": 0,
-      "B_from_2_2": 0,
-      "G_from_1_3": 0,
-      "B_from_3_2": 0,
-      "B_from_1_2": 0,
-      "B_from_3_1": 0,
-      "X_series_2_1": 9.144699999999994e-5,
-      "B_from_1_3": 0,
-      "B_from_1_1": 0,
-      "B_to_2_3": 0,
-      "R_series_2_1": 0.00027105900000000004,
-      "G_to_3_3": 0,
-      "R_series_3_1": 0.00026870800000000004,
-      "G_from_3_3": 0,
-      "X_series_3_3": 0.00013493799996466894,
-      "G_to_2_3": 0,
-      "B_to_1_2": 0,
-      "B_to_2_1": 0,
-      "B_to_2_2": 0,
-      "G_from_3_1": 0,
-      "B_from_2_1": 0,
-      "R_series_1_1": 0.0005397660000000001,
-      "G_to_3_1": 0,
-      "G_from_3_2": 0,
-      "B_to_1_1": 0,
-      "X_series_2_2": 0.0001828999999646689,
-      "G_to_2_2": 0,
-      "X_series_1_2": 9.144699999999994e-5,
-      "G_to_3_2": 0,
-      "R_series_3_2": 0.00027105900003686963,
-      "B_from_2_3": 0,
-      "G_from_1_1": 0,
-      "G_to_1_2": 0,
-      "X_series_1_3": 4.3484999999999994e-5,
-      "G_from_2_3": 0,
-      "R_series_3_3": 0.0005397670000368696,
-      "B_to_3_2": 0,
-      "X_series_3_2": 9.144699996466887e-5,
-      "B_to_1_3": 0,
-      "R_series_2_3": 0.00027105900003686963,
-      "G_from_1_2": 0,
-      "X_series_1_1": 0.000134922,
-      "G_to_1_1": 0,
-      "B_to_3_1": 0,
-      "B_to_3_3": 0,
-      "i_max": [
-        600,
-        600,
-        600
-      ],
-      "G_from_2_1": 0,
-      "X_series_3_1": 4.3484999999999994e-5
     }
   },
   "_simplification_log": [
@@ -18583,5 +16860,1716 @@
       "element_type": "line",
       "element_id": "line317"
     }
-  ]
+  ],
+  "bus": {
+    "297": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "363": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "341": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "643": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1078": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "925": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "83": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1083": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "346": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "638": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "793": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "200": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "273": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "734": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "822": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "457": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "424": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "841": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "984": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "614": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "607": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "354": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "848": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "551": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "914": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "615": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "976": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "374": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "364": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "803": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "288": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "391": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "572": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "383": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "1037": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "36": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "353": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "792": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "101": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "1027": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "743": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "596": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "450": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "602": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "651": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "192": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "426": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "45": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "744": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1039": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1103": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1071": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "544": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "308": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1021": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "173": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "151": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "262": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "405": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1035": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "1122": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1064": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "936": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "784": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "78": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "52": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "1031": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "58": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "1057": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "267": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "626": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1094": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "977": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "1066": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "571": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "915": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "475": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1062": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "543": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "359": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "252": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "881": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "887": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "996": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "768": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "503": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "923": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "953": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "520": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "327": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "850": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "656": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "68": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "76": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "103": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "566": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "111": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "321": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "632": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "938": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "sourcebus": {
+      "v_declared": 240.17771198288432,
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "468": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "729": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "339": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "1097": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "279": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "1133": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "207": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1131": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1058": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "511": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1129": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "331": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "627": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "95": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "557": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "536": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "952": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "989": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "258": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "302": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "292": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "300": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "316": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "309": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "642": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "930": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "460": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "858": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "797": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "1099": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "995": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "445": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "873": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "646": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "345": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "748": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "478": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "639": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "644": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "512": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "466": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "753": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "565": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "1040": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "347": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "163": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "888": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "986": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "1009": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "352": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "756": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "198": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "563": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "655": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    }
+  },
+  "linecode": {
+    "lc8": {
+      "X_series_2_3": 8.256499999999999e-5,
+      "R_series_1_3": 0.00010665600000000003,
+      "R_series_1_2": 0.00010665600000000003,
+      "R_series_2_2": 0.00021331200000000006,
+      "G_to_1_3": 0,
+      "G_from_2_2": 0,
+      "B_from_3_3": 0,
+      "G_to_2_1": 0,
+      "B_from_2_2": 0,
+      "G_from_1_3": 0,
+      "B_from_3_2": 0,
+      "B_from_1_2": 0,
+      "B_from_3_1": 0,
+      "X_series_2_1": 8.256499999999999e-5,
+      "B_from_1_3": 0,
+      "B_from_1_1": 0,
+      "B_to_2_3": 0,
+      "R_series_2_1": 0.00010665600000000003,
+      "G_to_3_3": 0,
+      "R_series_3_1": 0.00010665600000000003,
+      "G_from_3_3": 0,
+      "X_series_3_3": 0.00012119600000000008,
+      "G_to_2_3": 0,
+      "B_to_1_2": 0,
+      "B_to_2_1": 0,
+      "B_to_2_2": 0,
+      "G_from_3_1": 0,
+      "B_from_2_1": 0,
+      "R_series_1_1": 0.00021331200000000006,
+      "G_to_3_1": 0,
+      "G_from_3_2": 0,
+      "B_to_1_1": 0,
+      "X_series_2_2": 0.00016512999999999999,
+      "G_to_2_2": 0,
+      "X_series_1_2": 8.256499999999999e-5,
+      "G_to_3_2": 0,
+      "R_series_3_2": 0.00010665600000000003,
+      "B_from_2_3": 0,
+      "G_from_1_1": 0,
+      "G_to_1_2": 0,
+      "X_series_1_3": 3.8631000000000085e-5,
+      "G_from_2_3": 0,
+      "R_series_3_3": 0.00021331200000000006,
+      "B_to_3_2": 0,
+      "X_series_3_2": 8.256499999999999e-5,
+      "B_to_1_3": 0,
+      "R_series_2_3": 0.00010665600000000003,
+      "G_from_1_2": 0,
+      "X_series_1_1": 0.00012119600000000008,
+      "G_to_1_1": 0,
+      "B_to_3_1": 0,
+      "B_to_3_3": 0,
+      "i_max": [
+        600,
+        600,
+        600
+      ],
+      "G_from_2_1": 0,
+      "X_series_3_1": 3.8631000000000085e-5
+    },
+    "lc3": {
+      "X_series_2_3": 9.384399999999992e-5,
+      "R_series_1_3": 0.000523967,
+      "R_series_1_2": 0.000525131,
+      "R_series_2_2": 0.001050262,
+      "G_to_1_3": 0,
+      "G_from_2_2": 0,
+      "B_from_3_3": 0,
+      "G_to_2_1": 0,
+      "B_from_2_2": 0,
+      "G_from_1_3": 0,
+      "B_from_3_2": 0,
+      "B_from_1_2": 0,
+      "B_from_3_1": 0,
+      "X_series_2_1": 9.383799999999987e-5,
+      "B_from_1_3": 0,
+      "B_from_1_1": 0,
+      "B_to_2_3": 0,
+      "R_series_2_1": 0.000525131,
+      "G_to_3_3": 0,
+      "R_series_3_1": 0.0005239669999999999,
+      "G_from_3_3": 0,
+      "X_series_3_3": 0.00013925699999999997,
+      "G_to_2_3": 0,
+      "B_to_1_2": 0,
+      "B_to_2_1": 0,
+      "B_to_2_2": 0,
+      "G_from_3_1": 0,
+      "B_from_2_1": 0,
+      "R_series_1_1": 0.001049097,
+      "G_to_3_1": 0,
+      "G_from_3_2": 0,
+      "B_to_1_1": 0,
+      "X_series_2_2": 0.00018767999999999986,
+      "G_to_2_2": 0,
+      "X_series_1_2": 9.383799999999987e-5,
+      "G_to_3_2": 0,
+      "R_series_3_2": 0.0005251309999999999,
+      "B_from_2_3": 0,
+      "G_from_1_1": 0,
+      "G_to_1_2": 0,
+      "X_series_1_3": 4.5408999999999924e-5,
+      "G_from_2_3": 0,
+      "R_series_3_3": 0.001049097,
+      "B_to_3_2": 0,
+      "X_series_3_2": 9.384399999999992e-5,
+      "B_to_1_3": 0,
+      "R_series_2_3": 0.000525131,
+      "G_from_1_2": 0,
+      "X_series_1_1": 0.00013924199999999987,
+      "G_to_1_1": 0,
+      "B_to_3_1": 0,
+      "B_to_3_3": 0,
+      "i_max": [
+        600,
+        600,
+        600
+      ],
+      "G_from_2_1": 0,
+      "X_series_3_1": 4.5408999999999924e-5
+    },
+    "lc6": {
+      "X_series_2_3": 0.000114448,
+      "R_series_1_3": 0.001151747,
+      "R_series_1_2": 0.0011534,
+      "R_series_2_2": 0.002306801,
+      "G_to_1_3": 0,
+      "G_from_2_2": 0,
+      "B_from_3_3": 0,
+      "G_to_2_1": 0,
+      "B_from_2_2": 0,
+      "G_from_1_3": 0,
+      "B_from_3_2": 0,
+      "B_from_1_2": 0,
+      "B_from_3_1": 0,
+      "X_series_2_1": 0.00011444699999999997,
+      "B_from_1_3": 0,
+      "B_from_1_1": 0,
+      "B_to_2_3": 0,
+      "R_series_2_1": 0.0011534,
+      "G_to_3_3": 0,
+      "R_series_3_1": 0.001151747,
+      "G_from_3_3": 0,
+      "X_series_3_3": 0.0001689449999999999,
+      "G_to_2_3": 0,
+      "B_to_1_2": 0,
+      "B_to_2_1": 0,
+      "B_to_2_2": 0,
+      "G_from_3_1": 0,
+      "B_from_2_1": 0,
+      "R_series_1_1": 0.002305147,
+      "G_to_3_1": 0,
+      "G_from_3_2": 0,
+      "B_to_1_1": 0,
+      "X_series_2_2": 0.00022889099999999995,
+      "G_to_2_2": 0,
+      "X_series_1_2": 0.00011444699999999997,
+      "G_to_3_2": 0,
+      "R_series_3_2": 0.0011534,
+      "B_from_2_3": 0,
+      "G_from_1_1": 0,
+      "G_to_1_2": 0,
+      "X_series_1_3": 5.449899999999985e-5,
+      "G_from_2_3": 0,
+      "R_series_3_3": 0.002305148,
+      "B_to_3_2": 0,
+      "X_series_3_2": 0.000114448,
+      "B_to_1_3": 0,
+      "R_series_2_3": 0.0011534,
+      "G_from_1_2": 0,
+      "X_series_1_1": 0.00016893999999999986,
+      "G_to_1_1": 0,
+      "B_to_3_1": 0,
+      "B_to_3_3": 0,
+      "i_max": [
+        600,
+        600,
+        600
+      ],
+      "G_from_2_1": 0,
+      "X_series_3_1": 5.449899999999985e-5
+    },
+    "lc2": {
+      "X_series_2_3": 9.674200000000011e-5,
+      "R_series_1_3": 0.0007272050000000001,
+      "R_series_1_2": 0.0007279920000000001,
+      "R_series_2_2": 0.0014559830000000003,
+      "G_to_1_3": 0,
+      "G_from_2_2": 0,
+      "B_from_3_3": 0,
+      "G_to_2_1": 0,
+      "B_from_2_2": 0,
+      "G_from_1_3": 0,
+      "B_from_3_2": 0,
+      "B_from_1_2": 0,
+      "B_from_3_1": 0,
+      "X_series_2_1": 9.674199999999999e-5,
+      "B_from_1_3": 0,
+      "B_from_1_1": 0,
+      "B_to_2_3": 0,
+      "R_series_2_1": 0.0007279920000000001,
+      "G_to_3_3": 0,
+      "R_series_3_1": 0.0007272050000000001,
+      "G_from_3_3": 0,
+      "X_series_3_3": 0.00014473400000000004,
+      "G_to_2_3": 0,
+      "B_to_1_2": 0,
+      "B_to_2_1": 0,
+      "B_to_2_2": 0,
+      "G_from_3_1": 0,
+      "B_from_2_1": 0,
+      "R_series_1_1": 0.001455197,
+      "G_to_3_1": 0,
+      "G_from_3_2": 0,
+      "B_to_1_1": 0,
+      "X_series_2_2": 0.00019347400000000004,
+      "G_to_2_2": 0,
+      "X_series_1_2": 9.674199999999999e-5,
+      "G_to_3_2": 0,
+      "R_series_3_2": 0.0007279910000000001,
+      "B_from_2_3": 0,
+      "G_from_1_1": 0,
+      "G_to_1_2": 0,
+      "X_series_1_3": 4.7987e-5,
+      "G_from_2_3": 0,
+      "R_series_3_3": 0.001455196,
+      "B_to_3_2": 0,
+      "X_series_3_2": 9.674200000000011e-5,
+      "B_to_1_3": 0,
+      "R_series_2_3": 0.0007279910000000001,
+      "G_from_1_2": 0,
+      "X_series_1_1": 0.00014471900000000005,
+      "G_to_1_1": 0,
+      "B_to_3_1": 0,
+      "B_to_3_3": 0,
+      "i_max": [
+        600,
+        600,
+        600
+      ],
+      "G_from_2_1": 0,
+      "X_series_3_1": 4.7987e-5
+    },
+    "lc4": {
+      "X_series_2_3": 9.144699996466887e-5,
+      "R_series_1_3": 0.00026870800000000004,
+      "R_series_1_2": 0.00027105900000000004,
+      "R_series_2_2": 0.0005421180000368696,
+      "G_to_1_3": 0,
+      "G_from_2_2": 0,
+      "B_from_3_3": 0,
+      "G_to_2_1": 0,
+      "B_from_2_2": 0,
+      "G_from_1_3": 0,
+      "B_from_3_2": 0,
+      "B_from_1_2": 0,
+      "B_from_3_1": 0,
+      "X_series_2_1": 9.144699999999994e-5,
+      "B_from_1_3": 0,
+      "B_from_1_1": 0,
+      "B_to_2_3": 0,
+      "R_series_2_1": 0.00027105900000000004,
+      "G_to_3_3": 0,
+      "R_series_3_1": 0.00026870800000000004,
+      "G_from_3_3": 0,
+      "X_series_3_3": 0.00013493799996466894,
+      "G_to_2_3": 0,
+      "B_to_1_2": 0,
+      "B_to_2_1": 0,
+      "B_to_2_2": 0,
+      "G_from_3_1": 0,
+      "B_from_2_1": 0,
+      "R_series_1_1": 0.0005397660000000001,
+      "G_to_3_1": 0,
+      "G_from_3_2": 0,
+      "B_to_1_1": 0,
+      "X_series_2_2": 0.0001828999999646689,
+      "G_to_2_2": 0,
+      "X_series_1_2": 9.144699999999994e-5,
+      "G_to_3_2": 0,
+      "R_series_3_2": 0.00027105900003686963,
+      "B_from_2_3": 0,
+      "G_from_1_1": 0,
+      "G_to_1_2": 0,
+      "X_series_1_3": 4.3484999999999994e-5,
+      "G_from_2_3": 0,
+      "R_series_3_3": 0.0005397670000368696,
+      "B_to_3_2": 0,
+      "X_series_3_2": 9.144699996466887e-5,
+      "B_to_1_3": 0,
+      "R_series_2_3": 0.00027105900003686963,
+      "G_from_1_2": 0,
+      "X_series_1_1": 0.000134922,
+      "G_to_1_1": 0,
+      "B_to_3_1": 0,
+      "B_to_3_3": 0,
+      "i_max": [
+        600,
+        600,
+        600
+      ],
+      "G_from_2_1": 0,
+      "X_series_3_1": 4.3484999999999994e-5
+    }
+  }
 }

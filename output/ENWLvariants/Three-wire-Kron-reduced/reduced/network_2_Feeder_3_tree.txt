@@ -1,6 +1,6 @@
 # Network graph  (222 buses, compressed)
 
-sourcebus (SRC G1)
+sourcebus (SRC)
 └── 58
     ├── 124 (L36)
     ├── 62
@@ -102,6 +102,3 @@ Loads (112 total):
   L49 = load41             0.29 kW  SINGLE_PHASE  terminals: 1,n
   L50 = load42             0.15 kW  SINGLE_PHASE  terminals: 1,n
   … and 62 more (pass legend_limit= to show all)
-
-Generators (1 total):
-  G1 = slack_source     max    0.0 kW  terminals: 1,2,3

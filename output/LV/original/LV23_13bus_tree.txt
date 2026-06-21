@@ -1,6 +1,6 @@
 # Network graph  (14 buses)
 
-b325 (SRC G1)
+b325 (SRC)
 └── [tx2831: Dyn1 11.0kV/433V]── b1090
     ├── b1438
     │   └── [SW]── b2493
@@ -17,6 +17,3 @@ b325 (SRC G1)
 
 Loads (1 total):
   L1 = ld4032_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-
-Generators (1 total):
-  G1 = slack_source     max    0.0 kW  terminals: 1,2,3

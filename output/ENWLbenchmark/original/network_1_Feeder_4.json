@@ -23695,9 +23695,9 @@
       "bus": "783",
       "configuration": "SINGLE_PHASE"
     },
-    "der_591": {
+    "der_1212": {
       "cost": [
-        0.000176822585
+        0.00038451579
       ],
       "p_max": [
         4000
@@ -23706,10 +23706,10 @@
         0
       ],
       "terminal_map": [
-        "2",
+        "1",
         "n"
       ],
-      "bus": "591",
+      "bus": "1212",
       "configuration": "SINGLE_PHASE"
     },
     "der_645": {
@@ -23990,9 +23990,9 @@
       "bus": "854",
       "configuration": "SINGLE_PHASE"
     },
-    "der_1212": {
+    "der_591": {
       "cost": [
-        0.00038451579
+        0.000176822585
       ],
       "p_max": [
         4000
@@ -24001,10 +24001,10 @@
         0
       ],
       "terminal_map": [
-        "1",
+        "2",
         "n"
       ],
-      "bus": "1212",
+      "bus": "591",
       "configuration": "SINGLE_PHASE"
     }
   },

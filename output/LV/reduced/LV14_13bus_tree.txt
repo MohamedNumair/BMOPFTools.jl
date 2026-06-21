@@ -1,7 +1,4 @@
 # Network graph  (2 buses)
 
-b2262 (SRC G1)
+b2262 (SRC)
 └── [tx381: Dyn1 11.0kV/433V]── b1163
-
-Generators (1 total):
-  G1 = slack_source     max    0.0 kW  terminals: 1,2,3

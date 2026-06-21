@@ -1,6 +1,6 @@
 # MV backbone  (2 buses,  10 LV sections)
 
-sourcebus (SRC G1)
+sourcebus (SRC)
 └── sourcebusz
     ├── [dist_transformer_10432679_9016690: Dyn1 11.0kV/415V]── → Section 1: dist_transformer_10432679_9016690  (231 buses, 106 loads)
     ├── [dist_transformer_20240793_9024306: Dyn1 11.0kV/415V]── → Section 2: dist_transformer_20240793_9024306  (122 buses, 47 loads)
@@ -12,9 +12,6 @@ sourcebus (SRC G1)
     ├── [dist_transformer_10433349_9082814: Dyn1 11.0kV/415V]── → Section 8: dist_transformer_10433349_9082814  (145 buses, 65 loads)
     ├── [dist_transformer_10434231_9125129: Dyn1 11.0kV/415V]── → Section 9: dist_transformer_10434231_9125129  (279 buses, 95 loads)
     └── [dist_transformer_20096439_9125147: Dyn1 11.0kV/415V]── → Section 10: dist_transformer_20096439_9125147  (301 buses, 90 loads)
-
-Generators (1 total):
-  G1 = slack_source     max    0.0 kW  terminals: 1,2,3
 
 ────────────────────────────────────────────────────────────
 # Section 1: dist_transformer_10432679_9016690  (dist_transformer_10432679_9016690: Dyn1 11.0kV/415V,  231 buses)

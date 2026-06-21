@@ -1,6 +1,6 @@
 # Network graph  (63 buses)
 
-sourcebus (SRC G1)
+sourcebus (SRC)
 └── sourcebusz
     └── [dist_transformer_20277986_9112626: Dyn1 11.0kV/415V]── 9112626 (L54,L55,L56)
         └── 9586139
@@ -116,6 +116,3 @@ Loads (56 total):
   L49 = statcom_17582392_2    0.0 kW  SINGLE_PHASE  terminals: 2,n
   L50 = statcom_17582392_3    0.0 kW  SINGLE_PHASE  terminals: 3,n
   … and 6 more (pass legend_limit= to show all)
-
-Generators (1 total):
-  G1 = slack_source     max    0.0 kW  terminals: 1,2,3

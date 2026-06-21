@@ -1,6 +1,6 @@
 # Simplification log: network_5_Feeder_4
 
-**Generated:** 2026-06-18 09:28:37  
+**Generated:** 2026-06-21 15:02:36  
 **Buses:** 458 → 64 (−394)  
 **Lines:** 457 → 63 (−394)  
 **Operations:** 401
@@ -143,8 +143,8 @@
 | 125 | `remove_dangling_lines` | line `line202` | Removed dangling line line202 and its leaf bus 203 (leaf has no active elements). |
 | 126 | `remove_dangling_lines` | line `line187` | Removed dangling line line187 and its leaf bus 188 (leaf has no active elements). |
 | 127 | `remove_dangling_lines` | line `line152` | Removed dangling line line152 and its leaf bus 153 (leaf has no active elements). |
-| 128 | `merge_series_lines` | line `line305` | Merged line line306 (0.20224 m) into line305 at pass-through bus 306; new length 0.4739 m. |
-| 129 | `merge_series_lines` | line `line411` | Merged line line406 (2.4203 m) into line411 at pass-through bus 407; new length 6.4783 m. |
+| 128 | `merge_series_lines` | line `line411` | Merged line line406 (2.4203 m) into line411 at pass-through bus 407; new length 6.4783 m. |
+| 129 | `merge_series_lines` | line `line305` | Merged line line306 (0.20224 m) into line305 at pass-through bus 306; new length 0.4739 m. |
 | 130 | `merge_series_lines` | line `line0` | Merged line line1 (0.41565 m) into line0 at pass-through bus 1; new length 1.41565 m. |
 | 131 | `merge_series_lines` | line `line58` | Merged line line53 (0.060406 m) into line58 at pass-through bus 54; new length 0.13562000000000002 m. |
 | 132 | `merge_series_lines` | line `line108` | Merged line line100 (0.40003 m) into line108 at pass-through bus 101; new length 0.81016 m. |
@@ -162,8 +162,8 @@
 | 144 | `merge_series_lines` | line `line93` | Merged line line87 (3.059 m) into line93 at pass-through bus 88; new length 4.2094000000000005 m. |
 | 145 | `merge_series_lines` | line `line26` | Merged line line25 (0.057306 m) into line26 at pass-through bus 26; new length 0.129445 m. |
 | 146 | `merge_series_lines` | line `line291` | Merged line line288 (0.080625 m) into line291 at pass-through bus 289; new length 0.232935 m. |
-| 147 | `merge_series_lines` | line `line229` | Merged line line237 (0.66708 m) into line229 at pass-through bus 230; new length 1.25231 m. |
-| 148 | `merge_series_lines` | line `line81` | Merged line line76 (0.071119 m) into line81 at pass-through bus 77; new length 0.151175 m. |
+| 147 | `merge_series_lines` | line `line81` | Merged line line76 (0.071119 m) into line81 at pass-through bus 77; new length 0.151175 m. |
+| 148 | `merge_series_lines` | line `line229` | Merged line line237 (0.66708 m) into line229 at pass-through bus 230; new length 1.25231 m. |
 | 149 | `merge_series_lines` | line `line24` | Merged line line23 (0.10218 m) into line24 at pass-through bus 24; new length 0.17661300000000002 m. |
 | 150 | `merge_series_lines` | line `line260` | Merged line line257 (0.2832 m) into line260 at pass-through bus 258; new length 0.41922000000000004 m. |
 | 151 | `merge_series_lines` | line `line415` | Merged line line420 (6.7186 m) into line415 at pass-through bus 416; new length 11.1822 m. |
@@ -220,9 +220,9 @@
 | 202 | `merge_series_lines` | line `line385` | Merged line line393 (7.2862 m) into line385 at pass-through bus 386; new length 11.6109 m. |
 | 203 | `merge_series_lines` | line `line435` | Merged line line438 (0.13454 m) into line435 at pass-through bus 436; new length 0.20665 m. |
 | 204 | `merge_series_lines` | line `line418` | Merged line line412 (0.22136 m) into line418 at pass-through bus 413; new length 0.50154 m. |
-| 205 | `merge_series_lines` | line `line2` | Merged line line3 (0.044408 m) into line2 at pass-through bus 3; new length 0.075792 m. |
-| 206 | `merge_series_lines` | line `line308` | Merged line line309 (0.31623 m) into line308 at pass-through bus 309; new length 0.5533 m. |
-| 207 | `merge_series_lines` | line `line95` | Merged line line112 (0.086023 m) into line95 at pass-through bus 105; new length 0.400293 m. |
+| 205 | `merge_series_lines` | line `line95` | Merged line line112 (0.086023 m) into line95 at pass-through bus 105; new length 0.400293 m. |
+| 206 | `merge_series_lines` | line `line2` | Merged line line3 (0.044408 m) into line2 at pass-through bus 3; new length 0.075792 m. |
+| 207 | `merge_series_lines` | line `line308` | Merged line line309 (0.31623 m) into line308 at pass-through bus 309; new length 0.5533 m. |
 | 208 | `merge_series_lines` | line `line80` | Merged line line86 (6.3044 m) into line80 at pass-through bus 81; new length 6.40735 m. |
 | 209 | `merge_series_lines` | line `line295` | Merged line line297 (0.61057 m) into line295 at pass-through bus 296; new length 0.9078899999999999 m. |
 | 210 | `merge_series_lines` | line `line391` | Merged line line398 (6.3728 m) into line391 at pass-through bus 392; new length 10.4894 m. |

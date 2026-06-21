@@ -1366,27 +1366,15 @@
     }
   },
   "name": "LV11_216bus",
-  "generator": {
-    "slack_source": {
-      "_slack": true,
+  "switch": {
+  },
+  "voltage_source": {
+    "source": {
       "cost": [
         1,
         1,
         1
       ],
-      "terminal_map": [
-        "1",
-        "2",
-        "3"
-      ],
-      "bus": "b3125",
-      "configuration": "WYE"
-    }
-  },
-  "switch": {
-  },
-  "voltage_source": {
-    "source": {
       "_pmd": {
         "rs": [
           1.7333333333333332,
@@ -5130,7 +5118,7 @@
   ],
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-19T00:46:21Z",
+    "created": "2026-06-21T04:59:28Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -7583,24 +7571,7 @@
   "transformer": {
     "delta_wye": {
       "tx1941": {
-        "v_ref_to": 433,
-        "bus_from": "b3125",
-        "bus_to": "b1041",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
-        "terminal_map_to": [
-          "1",
-          "2",
-          "3",
-          "n"
-        ],
-        "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -7656,7 +7627,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -7668,9 +7638,27 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
+          ]
+        },
+        "s_rating": 500000,
+        "terminal_map_to": [
+          "1",
+          "2",
+          "3",
+          "n"
+        ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b3125",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
+        "v_ref_from": 11000,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b1041"
       }
     }
   },

@@ -1,6 +1,6 @@
 # Simplification log: LV17_279bus
 
-**Generated:** 2026-06-19 10:46:22  
+**Generated:** 2026-06-21 14:59:29  
 **Buses:** 280 → 214 (−66)  
 **Lines:** 269 → 212 (−57)  
 **Operations:** 71

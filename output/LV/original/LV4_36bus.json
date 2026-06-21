@@ -1,322 +1,742 @@
 {
-  "bus": {
-    "b721": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b130": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b239": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b715": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b1756": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b3044": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b1151": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b144": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b97": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b211": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b1688": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b1609": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b2598": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b3242": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b1198": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b439": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b1500": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b3133": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b770": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b1420": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b2517": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b3271": {
-      "v_declared": 6350.852961085883,
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
-    },
-    "b2116": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b139": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b657": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b460": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b1174": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b2387": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b3297": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b708": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b2993": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b756": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b263": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b73": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b418": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b1252": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    },
-    "b2922": {
-      "terminal_names": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ]
-    }
-  },
-  "name": "LV4_36bus",
-  "generator": {
-    "slack_source": {
-      "_slack": true,
+  "voltage_source": {
+    "source": {
       "cost": [
         1,
         1,
         1
       ],
+      "_pmd": {
+        "rs": [
+          1.7333333333333332,
+          0.08333333333333333,
+          0.08333333333333333,
+          0.08333333333333333,
+          0.08333333333333333,
+          1.7333333333333332,
+          0.08333333333333333,
+          0.08333333333333333,
+          0.08333333333333333,
+          0.08333333333333333,
+          1.7333333333333332,
+          0.08333333333333333,
+          0.08333333333333333,
+          0.08333333333333333,
+          0.08333333333333333,
+          1.7333333333333332
+        ],
+        "xs": [
+          6.3,
+          -0.2999999999999998,
+          -0.2999999999999998,
+          -0.2999999999999998,
+          -0.2999999999999998,
+          6.3,
+          -0.2999999999999998,
+          -0.2999999999999998,
+          -0.2999999999999998,
+          -0.2999999999999998,
+          6.3,
+          -0.2999999999999998,
+          -0.2999999999999998,
+          -0.2999999999999998,
+          -0.2999999999999998,
+          6.3
+        ],
+        "configuration": "WYE"
+      },
+      "v_magnitude": [
+        6350.852961085883,
+        6350.852961085883,
+        6350.852961085883,
+        0.0
+      ],
       "terminal_map": [
         "1",
         "2",
-        "3"
+        "3",
+        "n"
       ],
       "bus": "b3271",
-      "configuration": "WYE"
+      "v_angle": [
+        -0.5235987755982988,
+        -2.617993877991494,
+        1.5707963267948966,
+        0.0
+      ]
+    }
+  },
+  "name": "LV4_36bus",
+  "line": {
+    "l_2990": {
+      "length": 7.82775858453,
+      "bus_from": "b715",
+      "bus_to": "b3044",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_3365": {
+      "length": 9.1033639487,
+      "bus_from": "b657",
+      "bus_to": "b1500",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_1116": {
+      "length": 30.3106581682,
+      "bus_from": "b144",
+      "bus_to": "b73",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_439": {
+      "length": 22.8562111745,
+      "bus_from": "b2116",
+      "bus_to": "b1688",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_1838": {
+      "length": 30.6083706339,
+      "bus_from": "b657",
+      "bus_to": "b721",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_3639": {
+      "length": 22.7587898486,
+      "bus_from": "b211",
+      "bus_to": "b2387",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_4417": {
+      "length": 21.1409267145,
+      "bus_from": "b2116",
+      "bus_to": "b1174",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_2074": {
+      "length": 0.346782438634,
+      "bus_from": "b439",
+      "bus_to": "b130",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ughv_400al_triplex_ug_4w_bundled"
+    },
+    "l_1556": {
+      "length": 194.829192622,
+      "bus_from": "b239",
+      "bus_to": "b211",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "uglv_240al_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_3689": {
+      "length": 64.1674563209,
+      "bus_from": "b2387",
+      "bus_to": "b657",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_411": {
+      "length": 9.18348238504,
+      "bus_from": "b1174",
+      "bus_to": "b144",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_2469": {
+      "length": 8.26215640501,
+      "bus_from": "b1688",
+      "bus_to": "b2517",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_4081": {
+      "length": 0.255748683198,
+      "bus_from": "b1609",
+      "bus_to": "b1756",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ughv_400al_triplex_ug_4w_bundled"
+    },
+    "l_2977": {
+      "length": 8.965634677179999,
+      "bus_from": "b1420",
+      "bus_to": "b211",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_512": {
+      "length": 0.0669200664901,
+      "bus_from": "b770",
+      "bus_to": "b3297",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ughv_400al_triplex_ug_4w_bundled"
+    },
+    "l_3550": {
+      "length": 34.063240903200004,
+      "bus_from": "b1174",
+      "bus_to": "b2922",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_4366": {
+      "length": 39.7415099588,
+      "bus_from": "b721",
+      "bus_to": "b2116",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_1820": {
+      "length": 11.2532366095,
+      "bus_from": "b2387",
+      "bus_to": "b139",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_3475": {
+      "length": 33.4483315375,
+      "bus_from": "b2922",
+      "bus_to": "b1252",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_1612": {
+      "length": 8.38260686935,
+      "bus_from": "b2993",
+      "bus_to": "b721",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_2044": {
+      "length": 0.206301915236,
+      "bus_from": "b439",
+      "bus_to": "b1151",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ughv_400al_triplex_ug_4w_bundled"
+    },
+    "l_4058": {
+      "length": 0.5579112339569999,
+      "bus_from": "b439",
+      "bus_to": "b97",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ughv_400al_triplex_ug_4w_bundled"
+    },
+    "l_2999": {
+      "length": 32.656411683900004,
+      "bus_from": "b2116",
+      "bus_to": "b3044",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_2869": {
+      "length": 0.255748683551,
+      "bus_from": "b1198",
+      "bus_to": "b439",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ughv_400al_triplex_ug_4w_bundled"
+    },
+    "l_4614": {
+      "length": 14.3180388642,
+      "bus_from": "b708",
+      "bus_to": "b3133",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_3902": {
+      "length": 7.74830908465,
+      "bus_from": "b1252",
+      "bus_to": "b708",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_1886": {
+      "length": 7.71638697358,
+      "bus_from": "b756",
+      "bus_to": "b73",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    },
+    "l_2045": {
+      "length": 0.346782438634,
+      "bus_from": "b439",
+      "bus_to": "b2598",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ughv_400al_triplex_ug_4w_bundled"
+    },
+    "l_4121": {
+      "length": 7.7172235401,
+      "bus_from": "b263",
+      "bus_to": "b2922",
+      "terminal_map_from": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "terminal_map_to": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
+    }
+  },
+  "meta": {
+    "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
+    "created": "2026-06-21T04:59:31Z",
+    "generator": {
+      "version": "0.1.0",
+      "tool": "BMOPFTools.jl"
+    }
+  },
+  "shunt": {
+    "loadbusgrounding_b1420": {
+      "B_1_1": 0,
+      "_pmd": {
+        "b_fr": [
+          0
+        ],
+        "g_to": [
+          0
+        ],
+        "b_to": [
+          0
+        ],
+        "g_fr": [
+          0
+        ]
+      },
+      "terminal_map": [
+        "n"
+      ],
+      "bus": "b1420",
+      "G_1_1": 0.1
+    },
+    "tx_busgrounding_b1609": {
+      "B_1_1": 0,
+      "_pmd": {
+        "b_fr": [
+          0
+        ],
+        "g_to": [
+          0
+        ],
+        "b_to": [
+          0
+        ],
+        "g_fr": [
+          0
+        ]
+      },
+      "terminal_map": [
+        "n"
+      ],
+      "bus": "b1609",
+      "G_1_1": 3.3333333333333335
+    }
+  },
+  "transformer": {
+    "delta_wye": {
+      "tx377": {
+        "x_series_to": 7.34803811814902e-5,
+        "_pmd": {
+          "polarity": [
+            1,
+            1
+          ],
+          "name": "tx377",
+          "sm_ub": 750,
+          "tm_fix": [
+            [
+              true,
+              true,
+              true
+            ],
+            [
+              true,
+              true,
+              true
+            ]
+          ],
+          "tm_lb": [
+            [
+              0.9,
+              0.9,
+              0.9
+            ],
+            [
+              0.9,
+              0.9,
+              0.9
+            ]
+          ],
+          "tm_ub": [
+            [
+              1.1,
+              1.1,
+              1.1
+            ],
+            [
+              1.1,
+              1.1,
+              1.1
+            ]
+          ],
+          "tm_set": [
+            [
+              1,
+              1,
+              1
+            ],
+            [
+              1,
+              1,
+              1
+            ]
+          ],
+          "tm_step": [
+            [
+              0.03125,
+              0.03125,
+              0.03125
+            ],
+            [
+              0.03125,
+              0.03125,
+              0.03125
+            ]
+          ]
+        },
+        "s_rating": 500000,
+        "terminal_map_to": [
+          "1",
+          "2",
+          "3",
+          "n"
+        ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b3271",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
+        "v_ref_from": 11000,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b1609"
+      }
     }
   },
   "switch": {
@@ -1101,740 +1521,6 @@
       }
     }
   },
-  "voltage_source": {
-    "source": {
-      "_pmd": {
-        "rs": [
-          1.7333333333333332,
-          0.08333333333333333,
-          0.08333333333333333,
-          0.08333333333333333,
-          0.08333333333333333,
-          1.7333333333333332,
-          0.08333333333333333,
-          0.08333333333333333,
-          0.08333333333333333,
-          0.08333333333333333,
-          1.7333333333333332,
-          0.08333333333333333,
-          0.08333333333333333,
-          0.08333333333333333,
-          0.08333333333333333,
-          1.7333333333333332
-        ],
-        "xs": [
-          6.3,
-          -0.2999999999999998,
-          -0.2999999999999998,
-          -0.2999999999999998,
-          -0.2999999999999998,
-          6.3,
-          -0.2999999999999998,
-          -0.2999999999999998,
-          -0.2999999999999998,
-          -0.2999999999999998,
-          6.3,
-          -0.2999999999999998,
-          -0.2999999999999998,
-          -0.2999999999999998,
-          -0.2999999999999998,
-          6.3
-        ],
-        "configuration": "WYE"
-      },
-      "v_magnitude": [
-        6350.852961085883,
-        6350.852961085883,
-        6350.852961085883,
-        0.0
-      ],
-      "terminal_map": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "bus": "b3271",
-      "v_angle": [
-        -0.5235987755982988,
-        -2.617993877991494,
-        1.5707963267948966,
-        0.0
-      ]
-    }
-  },
-  "line": {
-    "l_2990": {
-      "length": 7.82775858453,
-      "bus_from": "b715",
-      "bus_to": "b3044",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_3365": {
-      "length": 9.1033639487,
-      "bus_from": "b657",
-      "bus_to": "b1500",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_1116": {
-      "length": 30.3106581682,
-      "bus_from": "b144",
-      "bus_to": "b73",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_439": {
-      "length": 22.8562111745,
-      "bus_from": "b2116",
-      "bus_to": "b1688",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_1838": {
-      "length": 30.6083706339,
-      "bus_from": "b657",
-      "bus_to": "b721",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_3639": {
-      "length": 22.7587898486,
-      "bus_from": "b211",
-      "bus_to": "b2387",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_4417": {
-      "length": 21.1409267145,
-      "bus_from": "b2116",
-      "bus_to": "b1174",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_2074": {
-      "length": 0.346782438634,
-      "bus_from": "b439",
-      "bus_to": "b130",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ughv_400al_triplex_ug_4w_bundled"
-    },
-    "l_1556": {
-      "length": 194.829192622,
-      "bus_from": "b239",
-      "bus_to": "b211",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "uglv_240al_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_3689": {
-      "length": 64.1674563209,
-      "bus_from": "b2387",
-      "bus_to": "b657",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_411": {
-      "length": 9.18348238504,
-      "bus_from": "b1174",
-      "bus_to": "b144",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_2469": {
-      "length": 8.26215640501,
-      "bus_from": "b1688",
-      "bus_to": "b2517",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_4081": {
-      "length": 0.255748683198,
-      "bus_from": "b1609",
-      "bus_to": "b1756",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ughv_400al_triplex_ug_4w_bundled"
-    },
-    "l_2977": {
-      "length": 8.965634677179999,
-      "bus_from": "b1420",
-      "bus_to": "b211",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_512": {
-      "length": 0.0669200664901,
-      "bus_from": "b770",
-      "bus_to": "b3297",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ughv_400al_triplex_ug_4w_bundled"
-    },
-    "l_3550": {
-      "length": 34.063240903200004,
-      "bus_from": "b1174",
-      "bus_to": "b2922",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_4366": {
-      "length": 39.7415099588,
-      "bus_from": "b721",
-      "bus_to": "b2116",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_1820": {
-      "length": 11.2532366095,
-      "bus_from": "b2387",
-      "bus_to": "b139",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_3475": {
-      "length": 33.4483315375,
-      "bus_from": "b2922",
-      "bus_to": "b1252",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_1612": {
-      "length": 8.38260686935,
-      "bus_from": "b2993",
-      "bus_to": "b721",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_2044": {
-      "length": 0.206301915236,
-      "bus_from": "b439",
-      "bus_to": "b1151",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ughv_400al_triplex_ug_4w_bundled"
-    },
-    "l_4058": {
-      "length": 0.5579112339569999,
-      "bus_from": "b439",
-      "bus_to": "b97",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ughv_400al_triplex_ug_4w_bundled"
-    },
-    "l_2999": {
-      "length": 32.656411683900004,
-      "bus_from": "b2116",
-      "bus_to": "b3044",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_2869": {
-      "length": 0.255748683551,
-      "bus_from": "b1198",
-      "bus_to": "b439",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ughv_400al_triplex_ug_4w_bundled"
-    },
-    "l_4614": {
-      "length": 14.3180388642,
-      "bus_from": "b708",
-      "bus_to": "b3133",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_3902": {
-      "length": 7.74830908465,
-      "bus_from": "b1252",
-      "bus_to": "b708",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_1886": {
-      "length": 7.71638697358,
-      "bus_from": "b756",
-      "bus_to": "b73",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    },
-    "l_2045": {
-      "length": 0.346782438634,
-      "bus_from": "b439",
-      "bus_to": "b2598",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ughv_400al_triplex_ug_4w_bundled"
-    },
-    "l_4121": {
-      "length": 7.7172235401,
-      "bus_from": "b263",
-      "bus_to": "b2922",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3",
-        "n"
-      ],
-      "linecode": "ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled"
-    }
-  },
-  "meta": {
-    "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-19T00:46:23Z",
-    "generator": {
-      "version": "0.1.0",
-      "tool": "BMOPFTools.jl"
-    }
-  },
-  "shunt": {
-    "loadbusgrounding_b1420": {
-      "B_1_1": 0,
-      "_pmd": {
-        "b_fr": [
-          0
-        ],
-        "g_to": [
-          0
-        ],
-        "b_to": [
-          0
-        ],
-        "g_fr": [
-          0
-        ]
-      },
-      "terminal_map": [
-        "n"
-      ],
-      "bus": "b1420",
-      "G_1_1": 0.1
-    },
-    "tx_busgrounding_b1609": {
-      "B_1_1": 0,
-      "_pmd": {
-        "b_fr": [
-          0
-        ],
-        "g_to": [
-          0
-        ],
-        "b_to": [
-          0
-        ],
-        "g_fr": [
-          0
-        ]
-      },
-      "terminal_map": [
-        "n"
-      ],
-      "bus": "b1609",
-      "G_1_1": 3.3333333333333335
-    }
-  },
-  "transformer": {
-    "delta_wye": {
-      "tx377": {
-        "v_ref_to": 433,
-        "bus_from": "b3271",
-        "bus_to": "b1609",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
-        "terminal_map_to": [
-          "1",
-          "2",
-          "3",
-          "n"
-        ],
-        "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
-        "_pmd": {
-          "polarity": [
-            1,
-            1
-          ],
-          "name": "tx377",
-          "sm_ub": 750,
-          "tm_fix": [
-            [
-              true,
-              true,
-              true
-            ],
-            [
-              true,
-              true,
-              true
-            ]
-          ],
-          "tm_lb": [
-            [
-              0.9,
-              0.9,
-              0.9
-            ],
-            [
-              0.9,
-              0.9,
-              0.9
-            ]
-          ],
-          "tm_ub": [
-            [
-              1.1,
-              1.1,
-              1.1
-            ],
-            [
-              1.1,
-              1.1,
-              1.1
-            ]
-          ],
-          "tm_set": [
-            [
-              1,
-              1,
-              1
-            ],
-            [
-              1,
-              1,
-              1
-            ]
-          ],
-          "noloadloss": 0,
-          "tm_step": [
-            [
-              0.03125,
-              0.03125,
-              0.03125
-            ],
-            [
-              0.03125,
-              0.03125,
-              0.03125
-            ]
-          ],
-          "cmag": 0
-        }
-      }
-    }
-  },
   "load": {
     "ld2827_load_a": {
       "p_nom": [
@@ -1854,6 +1540,308 @@
       ],
       "bus": "b1420",
       "configuration": "SINGLE_PHASE"
+    }
+  },
+  "bus": {
+    "b721": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b130": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b239": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b715": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b1756": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b3044": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b1151": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b144": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b97": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b211": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b1688": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b1609": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b2598": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b3242": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b1198": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b439": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b1500": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b3133": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b770": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b1420": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b2517": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b3271": {
+      "v_declared": 6350.852961085883,
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ],
+      "perfectly_grounded_terminals": [
+        "n"
+      ]
+    },
+    "b2116": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b139": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b657": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b460": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b1174": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b2387": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b3297": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b708": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b2993": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b756": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b263": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b73": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b418": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b1252": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
+    },
+    "b2922": {
+      "terminal_names": [
+        "1",
+        "2",
+        "3",
+        "n"
+      ]
     }
   },
   "linecode": {

@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV31_15bus
 
-**Generated:** 2026-06-19 10:46:23  
-**Findings:** 0 errors · 3 warnings · 20 info  
+**Generated:** 2026-06-21 14:59:30  
+**Findings:** 0 errors · 2 warnings · 22 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 5 grounding point(s)
 
 ---
@@ -15,10 +15,12 @@
 | linecode | 22 |  |
 | voltage_source | 1 |  |
 | load | 3 | 30.0 kW, 15.0 kvar |
-| generator | 1 | capacity: 0.0 W |
+| generator | 0 | capacity: 0.0 W |
 | shunt | 4 |  |
 | switch | 4 |  |
 | transformer | 1 | Dyn1×1 |
+| inverter | 0 | capacity: 0.0 MVA |
+| control_profile | 0 |  |
 
 ## 2. Voltage Levels
 
@@ -26,7 +28,7 @@
 
 | Level | Nominal | Buses | Lines | Loads | Generators |
 |-------|---------|------:|------:|------:|-----------:|
-| MV_6.4kV | 6.35 kV | 1 | 0 | 0 | 1 |
+| MV_6.4kV | 6.35 kV | 1 | 0 | 0 | 0 |
 | LV_250V | 250.0 V | 15 | 10 | 3 | 0 |
 
 **Transformer transitions:**
@@ -71,6 +73,8 @@
 | R_series_1_1 | 0.000146 | 0.00457 | 1.723 | 22 |
 
 > 🔵 **[I.DIV.LOAD_CV_LOW]** Load p_nom has very low coefficient of variation (0.0) — all loads nearly identical.
+> 🔵 **[I.DIV.LOAD_UNIFORM_MODEL]** All 3 loads use the constant_power model — no load exercises voltage dependence (ZIP/exponential); the case does not test voltage-dependent load behaviour.
+> 🔵 **[I.DIV.LOAD_UNIFORM_CONFIG]** All 3 loads share the 'SINGLE_PHASE' configuration — no connection diversity.
 > 🔵 **[I.DIV.LOAD_PHASE_BALANCED]** Galvanic zone anchored at 'b1210' has balanced aggregate load across 3 phase(s) (max spread 0.0%) — the network is effectively balanced and a single-phase equivalent would suffice.
 > 🔵 **[I.DIV.LINE_SYMMETRIC]** 6 lines share linecode 'ughv_400al_triplex_ug_4w_bundled' with similar length (±10%) — electrically near-identical.
 
@@ -153,7 +157,7 @@
 
 | Spec conformance | Value |
 |------------------|------:|
-| Conformance issues | 1 |
+| Conformance issues | 0 |
 | Voltage sources (spec requires 1) | 1 |
 
 | Structural integrity | Value |
@@ -182,13 +186,11 @@
 - no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground)
 - no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF
 
-> 🟡 **[W.SPEC.CONFIG_ARITY]** generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
-
 > 🔵 **[I.BENCH.AUGMENTATION]** Case needs augmentation to be a non-trivial OPF benchmark: only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF.
 
 ## 9. Data Quality Summary
 
-**Total findings:** 23 (0 errors, 3 warnings, 20 info)
+**Total findings:** 24 (0 errors, 2 warnings, 22 info)
 
 ### 🟡 Warnings
 
@@ -196,13 +198,15 @@
   5 bus(es) are degree-1 with no attached load, generator, or shunt.
 - **[W.OPS.IMPORT_DEPENDENT]** `network`  
   Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.03 MW).
-- **[W.SPEC.CONFIG_ARITY]** `slack_source`  
-  generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
 
 ### 🔵 Info
 
 - **[I.DIV.LOAD_CV_LOW]** `load`  
   Load p_nom has very low coefficient of variation (0.0) — all loads nearly identical.
+- **[I.DIV.LOAD_UNIFORM_MODEL]** `load`  
+  All 3 loads use the constant_power model — no load exercises voltage dependence (ZIP/exponential); the case does not test voltage-dependent load behaviour.
+- **[I.DIV.LOAD_UNIFORM_CONFIG]** `load`  
+  All 3 loads share the 'SINGLE_PHASE' configuration — no connection diversity.
 - **[I.DIV.LOAD_PHASE_BALANCED]** `load`  
   Galvanic zone anchored at 'b1210' has balanced aggregate load across 3 phase(s) (max spread 0.0%) — the network is effectively balanced and a single-phase equivalent would suffice.
 - **[I.DIV.LINE_SYMMETRIC]** `line`  
@@ -231,8 +235,8 @@
   16 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
-- **[I.SCHEMA.UNKNOWN_FIELDS]** `[b3190]`  
-  Additional property not defined in schema at [bus][b3190].
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `[source]`  
+  Additional property not defined in schema at [voltage_source][source].
 - **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
   bus has field(s) not in the BMOPF schema: v_declared.
 - **[I.RED.UNUSED_LINECODES]** `linecode`  

@@ -1,6 +1,6 @@
 # Simplification log: LV13_58bus
 
-**Generated:** 2026-06-19 10:46:21  
+**Generated:** 2026-06-21 14:59:28  
 **Buses:** 59 → 25 (−34)  
 **Lines:** 47 → 23 (−24)  
 **Operations:** 40

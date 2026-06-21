@@ -1,6 +1,11 @@
 {
   "voltage_source": {
     "source": {
+      "cost": [
+        1,
+        1,
+        1
+      ],
       "_pmd": {
         "rs": [
           0.0006420118386135532,
@@ -327,7 +332,7 @@
   },
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-19T00:38:32Z",
+    "created": "2026-06-21T04:51:52Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -357,21 +362,101 @@
       "G_1_1": 0
     }
   },
-  "generator": {
-    "slack_source": {
-      "_slack": true,
-      "cost": [
-        1,
-        1,
-        1
+  "load": {
+    "load3": {
+      "p_nom": [
+        2940
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.23,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        966.3312692258578
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "367",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load2": {
+      "p_nom": [
+        306
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.23,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        100.57733618473213
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "286",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load5": {
+      "p_nom": [
+        1332
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.23,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        437.8072280982458
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "459",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load1": {
+      "p_nom": [
+        1968
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.23,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        646.8503189920027
       ],
       "terminal_map": [
         "1",
-        "2",
-        "3"
+        "n"
       ],
-      "bus": "sourcebus",
-      "configuration": "WYE"
+      "bus": "64",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load4": {
+      "p_nom": [
+        324
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.23,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        106.49365007795168
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "442",
+      "configuration": "SINGLE_PHASE"
     }
   },
   "_simplification_log": [
@@ -5932,103 +6017,6 @@
         "3",
         "n"
       ]
-    }
-  },
-  "load": {
-    "load3": {
-      "p_nom": [
-        2940
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        966.3312692258578
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "367",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load2": {
-      "p_nom": [
-        306
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        100.57733618473213
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "286",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load5": {
-      "p_nom": [
-        1332
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        437.8072280982458
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "459",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load1": {
-      "p_nom": [
-        1968
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        646.8503189920027
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "64",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load4": {
-      "p_nom": [
-        324
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        106.49365007795168
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "442",
-      "configuration": "SINGLE_PHASE"
     }
   },
   "linecode": {

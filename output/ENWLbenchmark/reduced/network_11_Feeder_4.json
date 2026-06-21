@@ -2314,23 +2314,6 @@
       "bus": "sourcebus",
       "configuration": "WYE"
     },
-    "der_357": {
-      "cost": [
-        0.000102701198
-      ],
-      "p_max": [
-        4000
-      ],
-      "p_min": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "357",
-      "configuration": "SINGLE_PHASE"
-    },
     "der_855": {
       "cost": [
         0.000489943938
@@ -2346,6 +2329,23 @@
         "n"
       ],
       "bus": "855",
+      "configuration": "SINGLE_PHASE"
+    },
+    "der_357": {
+      "cost": [
+        0.000102701198
+      ],
+      "p_max": [
+        4000
+      ],
+      "p_min": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "357",
       "configuration": "SINGLE_PHASE"
     },
     "der_341": {

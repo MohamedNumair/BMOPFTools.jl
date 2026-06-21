@@ -2723,17 +2723,17 @@
       "element_id": "line90"
     },
     {
-      "message": "Merged line line30 (0.42967 m) into line29 at pass-through bus 30; new length 0.84345 m.",
+      "message": "Merged line line104 (0.33548 m) into line118 at pass-through bus 105; new length 0.89819 m.",
       "detail": {
-        "new_length": 0.84345,
-        "absorbed_line": "line30",
-        "removed_bus": "30"
+        "new_length": 0.89819,
+        "absorbed_line": "line104",
+        "removed_bus": "105"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line29"
+      "element_id": "line118"
     },
     {
       "message": "Merged line line315 (2.957839 m) into line308 at pass-through bus 309; new length 5.340239 m.",
@@ -2762,17 +2762,17 @@
       "element_id": "line2"
     },
     {
-      "message": "Merged line line104 (0.33548 m) into line118 at pass-through bus 105; new length 0.89819 m.",
+      "message": "Merged line line30 (0.42967 m) into line29 at pass-through bus 30; new length 0.84345 m.",
       "detail": {
-        "new_length": 0.89819,
-        "absorbed_line": "line104",
-        "removed_bus": "105"
+        "new_length": 0.84345,
+        "absorbed_line": "line30",
+        "removed_bus": "30"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line118"
+      "element_id": "line29"
     },
     {
       "message": "Merged line line80 (9.5883 m) into line93 at pass-through bus 81; new length 14.566870000000002 m.",

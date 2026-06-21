@@ -1,6 +1,11 @@
 {
   "voltage_source": {
     "source": {
+      "cost": [
+        1,
+        1,
+        1
+      ],
       "_pmd": {
         "rs": [
           1.697627457889352e-8,
@@ -46108,7 +46113,7 @@
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
     "source": "D-Suite Alpha v1.1",
     "reference": "M. Deakin, DOI: 10.25405/data.ncl.27175317",
-    "created": "2026-06-19T00:38:05Z",
+    "created": "2026-06-21T04:51:25Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -46118,24 +46123,7 @@
   "transformer": {
     "delta_wye": {
       "dist_transformer_20190615_9064119": {
-        "v_ref_to": 415,
-        "bus_from": "sourcebusz",
-        "bus_to": "9064119",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
-        "terminal_map_to": [
-          "1",
-          "2",
-          "3",
-          "n"
-        ],
-        "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.0013778,
-        "x_series": 0.01687805,
+        "x_series_to": 0.008439025,
         "_pmd": {
           "polarity": [
             1,
@@ -46191,7 +46179,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -46203,29 +46190,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "dist_transformer_20012486_9049173": {
-        "v_ref_to": 415,
-        "bus_from": "sourcebusz",
-        "bus_to": "9049173",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 0.8383125908633365,
+        "x_series_from": 10.269329238075873,
+        "bus_from": "sourcebusz",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.0013778,
-        "x_series": 0.01687805,
+        "r_series_to": 0.0006889,
+        "v_ref_to": 415,
+        "bus_to": "9064119"
+      },
+      "dist_transformer_20012486_9049173": {
+        "x_series_to": 0.008439025,
         "_pmd": {
           "polarity": [
             1,
@@ -46281,7 +46269,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -46293,29 +46280,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "dist_transformer_10433351_9067554": {
-        "v_ref_to": 415,
-        "bus_from": "sourcebusz",
-        "bus_to": "9067554",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 0.8383125908633365,
+        "x_series_from": 10.269329238075873,
+        "bus_from": "sourcebusz",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.0013778,
-        "x_series": 0.01687805,
+        "r_series_to": 0.0006889,
+        "v_ref_to": 415,
+        "bus_to": "9049173"
+      },
+      "dist_transformer_10433351_9067554": {
+        "x_series_to": 0.008439025,
         "_pmd": {
           "polarity": [
             1,
@@ -46371,7 +46359,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -46383,29 +46370,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "dist_transformer_10350026_9076215": {
-        "v_ref_to": 415,
-        "bus_from": "sourcebusz",
-        "bus_to": "9076215",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 0.8383125908633365,
+        "x_series_from": 10.269329238075873,
+        "bus_from": "sourcebusz",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.0013778,
-        "x_series": 0.01687805,
+        "r_series_to": 0.0006889,
+        "v_ref_to": 415,
+        "bus_to": "9067554"
+      },
+      "dist_transformer_10350026_9076215": {
+        "x_series_to": 0.008439025,
         "_pmd": {
           "polarity": [
             1,
@@ -46461,7 +46449,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -46473,29 +46460,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "dist_transformer_10434231_9125129": {
-        "v_ref_to": 415,
-        "bus_from": "sourcebusz",
-        "bus_to": "9125129",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 0.8383125908633365,
+        "x_series_from": 10.269329238075873,
+        "bus_from": "sourcebusz",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.0013778,
-        "x_series": 0.01687805,
+        "r_series_to": 0.0006889,
+        "v_ref_to": 415,
+        "bus_to": "9076215"
+      },
+      "dist_transformer_10434231_9125129": {
+        "x_series_to": 0.008439025,
         "_pmd": {
           "polarity": [
             1,
@@ -46551,7 +46539,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -46563,29 +46550,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "dist_transformer_10433349_9082814": {
-        "v_ref_to": 415,
-        "bus_from": "sourcebusz",
-        "bus_to": "9082814",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 0.8383125908633365,
+        "x_series_from": 10.269329238075873,
+        "bus_from": "sourcebusz",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.0013778,
-        "x_series": 0.01687805,
+        "r_series_to": 0.0006889,
+        "v_ref_to": 415,
+        "bus_to": "9125129"
+      },
+      "dist_transformer_10433349_9082814": {
+        "x_series_to": 0.008439025,
         "_pmd": {
           "polarity": [
             1,
@@ -46641,7 +46629,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -46653,29 +46640,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "dist_transformer_20096439_9125147": {
-        "v_ref_to": 415,
-        "bus_from": "sourcebusz",
-        "bus_to": "9125147",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 0.8383125908633365,
+        "x_series_from": 10.269329238075873,
+        "bus_from": "sourcebusz",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.0013778,
-        "x_series": 0.01687805,
+        "r_series_to": 0.0006889,
+        "v_ref_to": 415,
+        "bus_to": "9082814"
+      },
+      "dist_transformer_20096439_9125147": {
+        "x_series_to": 0.008439025,
         "_pmd": {
           "polarity": [
             1,
@@ -46731,7 +46719,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -46743,29 +46730,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "dist_transformer_20012512_9082132": {
-        "v_ref_to": 415,
-        "bus_from": "sourcebusz",
-        "bus_to": "9082132",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 0.8383125908633365,
+        "x_series_from": 10.269329238075873,
+        "bus_from": "sourcebusz",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.0013778,
-        "x_series": 0.01687805,
+        "r_series_to": 0.0006889,
+        "v_ref_to": 415,
+        "bus_to": "9125147"
+      },
+      "dist_transformer_20012512_9082132": {
+        "x_series_to": 0.008439025,
         "_pmd": {
           "polarity": [
             1,
@@ -46821,7 +46809,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -46833,29 +46820,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "dist_transformer_20240793_9024306": {
-        "v_ref_to": 415,
-        "bus_from": "sourcebusz",
-        "bus_to": "9024306",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 0.8383125908633365,
+        "x_series_from": 10.269329238075873,
+        "bus_from": "sourcebusz",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.0013778,
-        "x_series": 0.01687805,
+        "r_series_to": 0.0006889,
+        "v_ref_to": 415,
+        "bus_to": "9082132"
+      },
+      "dist_transformer_20240793_9024306": {
+        "x_series_to": 0.008439025,
         "_pmd": {
           "polarity": [
             1,
@@ -46911,7 +46899,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -46923,29 +46910,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "dist_transformer_10432679_9016690": {
-        "v_ref_to": 415,
-        "bus_from": "sourcebusz",
-        "bus_to": "9016690",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 0.8383125908633365,
+        "x_series_from": 10.269329238075873,
+        "bus_from": "sourcebusz",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.0013778,
-        "x_series": 0.01687805,
+        "r_series_to": 0.0006889,
+        "v_ref_to": 415,
+        "bus_to": "9024306"
+      },
+      "dist_transformer_10432679_9016690": {
+        "x_series_to": 0.008439025,
         "_pmd": {
           "polarity": [
             1,
@@ -47001,7 +46989,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -47013,9 +47000,27 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
+          ]
+        },
+        "s_rating": 500000,
+        "terminal_map_to": [
+          "1",
+          "2",
+          "3",
+          "n"
+        ],
+        "r_series_from": 0.8383125908633365,
+        "x_series_from": 10.269329238075873,
+        "bus_from": "sourcebusz",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
+        "v_ref_from": 11000,
+        "r_series_to": 0.0006889,
+        "v_ref_to": 415,
+        "bus_to": "9016690"
       }
     }
   },
@@ -68185,23 +68190,6 @@
       ],
       "bus": "10777192",
       "configuration": "SINGLE_PHASE"
-    }
-  },
-  "generator": {
-    "slack_source": {
-      "_slack": true,
-      "cost": [
-        1,
-        1,
-        1
-      ],
-      "terminal_map": [
-        "1",
-        "2",
-        "3"
-      ],
-      "bus": "sourcebus",
-      "configuration": "WYE"
     }
   },
   "bus": {
