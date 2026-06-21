@@ -923,6 +923,179 @@ function solution_check(net::Dict{String,Any},
     out
 end
 
+"""
+    voltage_zone_summary(net, result) -> Dict{String,Any}
+
+Aggregate the solved bus voltages into a per-galvanic-zone band summary for
+at-a-glance inspection. Galvanic zones (see [`_galvanic_zones`](@ref)) are the
+natural grouping because every bus in a zone shares one voltage base, so the
+per-unit magnitudes are directly comparable; volts across a transformer
+boundary are not.
+
+Each zone is reduced over its phase terminals (the neutral is excluded from the
+magnitude band but tracked separately as a neutral shift):
+
+- `v_base`        — phase-to-neutral voltage base (V). Taken from the zone's
+  voltage source if it contains one, else the midpoint of the buses' `v_min`/
+  `v_max`, else the median solved phase magnitude.
+- `vm_min_pu` / `vm_max_pu` — min/max phase magnitude in the zone, per unit.
+- `vm_min_bus` / `vm_max_bus` — the buses carrying those extremes.
+- `max_imbalance_pct` — worst per-bus phase-magnitude spread (max−min)/v_base.
+- `max_imbalance_bus` — bus carrying that worst imbalance.
+- `max_neutral_shift_v` / `max_neutral_shift_bus` — worst neutral terminal
+  voltage in the zone.
+- `status` — `"ok"`, `"active"` (within 1 % of a bound), or `"violation"`,
+  derived from the buses' own `v_min`/`v_max` using the same threshold as the
+  bound checks.
+- `bus_rows` — per-bus drill-down records (`bus`, `vm_min_v`/`vm_max_v`,
+  `vm_min_pu`/`vm_max_pu`, `imbalance_pct`, `neutral_shift_v`, `deviation_pu`,
+  `status`), sorted worst-deviation-from-1.0-pu first. Rendered only in verbose
+  output.
+
+Returns `Dict("zones" => Vector{Dict}, "n_zones" => Int)`, zones sorted by
+label. Returns empty zones when there is no bus result.
+"""
+function voltage_zone_summary(net::Dict{String,Any}, result::Dict{String,Any})
+    buses   = get(net, "bus", Dict())
+    bus_res = get(result, "bus", Dict())
+    out = Dict{String,Any}("zones" => Dict{String,Any}[], "n_zones" => 0)
+    (isempty(buses) || !(bus_res isa Dict) || isempty(bus_res)) && return out
+
+    active_frac = 0.01   # same "within 1 %" threshold as the bound checks
+
+    # Voltage-source bus → its phase-to-neutral magnitude (for the base).
+    src_vbase = Dict{String,Float64}()
+    for (_, vs) in get(net, "voltage_source", Dict())
+        vs isa Dict || continue
+        b = string(get(vs, "bus", ""))
+        b == "" && continue
+        vmag = Float64.(get(vs, "vm", get(vs, "v_magnitude", Float64[])))
+        isempty(vmag) && continue
+        src_vbase[b] = maximum(abs, vmag)
+    end
+
+    zone_dicts = Dict{String,Any}[]
+    for zone in _galvanic_zones(net)
+        zbuses = sort(collect(zone))
+
+        # ── Zone voltage base ────────────────────────────────────────────────
+        vbase = 0.0
+        for b in zbuses
+            haskey(src_vbase, b) && (vbase = max(vbase, src_vbase[b]))
+        end
+        if vbase == 0.0   # no source in zone: midpoint of declared bounds
+            los = Float64[]; his = Float64[]
+            for b in zbuses
+                bus = get(buses, b, Dict())
+                vlo = get(bus, "v_min", nothing); vhi = get(bus, "v_max", nothing)
+                vlo !== nothing && push!(los, Float64(vlo))
+                vhi !== nothing && push!(his, Float64(vhi))
+            end
+            if !isempty(los) && !isempty(his)
+                vbase = (sum(los)/length(los) + sum(his)/length(his)) / 2
+            end
+        end
+
+        # ── Reduce over phase terminals ──────────────────────────────────────
+        vm_min = Inf;  vm_min_bus = ""
+        vm_max = -Inf; vm_max_bus = ""
+        max_imb = 0.0; max_imb_bus = ""
+        max_neutral = 0.0; max_neutral_bus = ""
+        viol = false; active = false
+        topu(v) = (vbase > 0.0 && isfinite(v)) ? v / vbase : NaN
+        bus_rows = Dict{String,Any}[]
+        for b in zbuses
+            bus = get(buses, b, Dict())
+            bus isa Dict || continue
+            nt = _neutral_terminal(bus)
+            v_min = get(bus, "v_min", nothing)
+            v_max = get(bus, "v_max", nothing)
+            t_res = get(bus_res, b, nothing)
+            t_res isa Dict || continue
+
+            bus_lo = Inf; bus_hi = -Inf; bus_neutral = 0.0; bus_viol = false; bus_active = false
+            for (t, tvals) in t_res
+                tvals isa Dict || continue
+                vm = get(tvals, "vm", NaN)
+                isfinite(vm) || continue
+                if t == nt || lowercase(string(t)) == "n"
+                    vm > bus_neutral && (bus_neutral = vm)
+                    vm > max_neutral && (max_neutral = vm; max_neutral_bus = b)
+                    continue
+                end
+                vm < vm_min && (vm_min = vm; vm_min_bus = b)
+                vm > vm_max && (vm_max = vm; vm_max_bus = b)
+                vm < bus_lo && (bus_lo = vm)
+                vm > bus_hi && (bus_hi = vm)
+                if v_min !== nothing && vm < Float64(v_min) - 1e-9
+                    bus_viol = true
+                elseif v_min !== nothing &&
+                       vm < Float64(v_min) + max(active_frac*abs(Float64(v_min)), 1e-6)
+                    bus_active = true
+                end
+                if v_max !== nothing && vm > Float64(v_max) + 1e-9
+                    bus_viol = true
+                elseif v_max !== nothing &&
+                       vm > Float64(v_max) - max(active_frac*abs(Float64(v_max)), 1e-6)
+                    bus_active = true
+                end
+            end
+            bus_viol   && (viol = true)
+            bus_active && (active = true)
+
+            has_phase = isfinite(bus_lo) && isfinite(bus_hi)
+            spread = has_phase ? bus_hi - bus_lo : NaN
+            has_phase && spread > max_imb && (max_imb = spread; max_imb_bus = b)
+
+            # Per-bus drill-down record (deviation drives the sort in the renderer).
+            vm_lo_pu = topu(bus_lo); vm_hi_pu = topu(bus_hi)
+            dev = (isfinite(vm_lo_pu) && isfinite(vm_hi_pu)) ?
+                  max(abs(vm_hi_pu - 1.0), abs(vm_lo_pu - 1.0)) : NaN
+            push!(bus_rows, Dict{String,Any}(
+                "bus"             => b,
+                "vm_min_v"        => has_phase ? bus_lo : NaN,
+                "vm_max_v"        => has_phase ? bus_hi : NaN,
+                "vm_min_pu"       => vm_lo_pu,
+                "vm_max_pu"       => vm_hi_pu,
+                "imbalance_pct"   => (vbase > 0.0 && has_phase) ? 100 * spread / vbase : NaN,
+                "neutral_shift_v" => bus_neutral,
+                "deviation_pu"    => dev,
+                "status"          => bus_viol ? "violation" : bus_active ? "active" : "ok",
+            ))
+        end
+
+        isfinite(vm_min) || (vm_min = NaN)
+        isfinite(vm_max) || (vm_max = NaN)
+
+        # Worst deviation first; NaN deviations sink to the bottom.
+        sort!(bus_rows, by = r -> (isfinite(r["deviation_pu"]) ? -r["deviation_pu"] : Inf))
+
+        push!(zone_dicts, Dict{String,Any}(
+            "label"                 => first(zbuses),
+            "buses"                 => zbuses,
+            "n_buses"               => length(zbuses),
+            "v_base"                => vbase,
+            "vm_min_v"              => vm_min,
+            "vm_max_v"              => vm_max,
+            "vm_min_pu"             => topu(vm_min),
+            "vm_max_pu"             => topu(vm_max),
+            "vm_min_bus"            => vm_min_bus,
+            "vm_max_bus"            => vm_max_bus,
+            "max_imbalance_pct"     => vbase > 0.0 ? 100 * max_imb / vbase : NaN,
+            "max_imbalance_bus"     => max_imb_bus,
+            "max_neutral_shift_v"   => max_neutral,
+            "max_neutral_shift_bus" => max_neutral_bus,
+            "status"                => viol ? "violation" : active ? "active" : "ok",
+            "bus_rows"              => bus_rows,
+        ))
+    end
+
+    sort!(zone_dicts, by = z -> z["label"])
+    out["zones"]   = zone_dicts
+    out["n_zones"] = length(zone_dicts)
+    out
+end
+
 # ── Formatting helpers (local to this file) ───────────────────────────────────
 _fmt_v(v::Float64)  = "$(round(v; digits=2)) V"
 _fmt_a(v::Float64)  = "$(round(v; digits=2)) A"

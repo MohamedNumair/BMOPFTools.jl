@@ -347,3 +347,78 @@ end
     @test occursin("# BMOPF Solution Profile", content)
     rm(path)
 end
+
+# ── T14: voltage_zone_summary aggregates per galvanic zone ────────────────────
+
+@testset "SOL — voltage zone summary" begin
+    net    = _base_net()
+    result = _base_result()   # all phases at 230 V, source base 230 V
+
+    vz = voltage_zone_summary(net, result)
+    @test vz["n_zones"] == 1   # sourcebus—b1 joined by line l1: one galvanic zone
+    z = vz["zones"][1]
+
+    @test z["n_buses"] == 2
+    @test z["v_base"] ≈ 230.0
+    @test z["vm_min_pu"] ≈ 1.0 atol=1e-6
+    @test z["vm_max_pu"] ≈ 1.0 atol=1e-6
+    @test z["status"] == "ok"
+    @test z["max_neutral_shift_v"] == 0.0          # neutral excluded from the band
+    @test z["max_imbalance_pct"] ≈ 0.0 atol=1e-6   # balanced
+end
+
+# ── T15: zone band reflects violation + imbalance + neutral shift ─────────────
+
+@testset "SOL — voltage zone band flags" begin
+    net    = _base_net()
+    result = _base_result()
+    # Drop b1 phase a below v_min (200 V) and shift its neutral.
+    result["bus"]["b1"]["a"]["vm"] = 150.0
+    result["bus"]["b1"]["n"]["vm"] = 5.0
+
+    vz = voltage_zone_summary(net, result)
+    z  = vz["zones"][1]
+    @test z["status"] == "violation"
+    @test z["vm_min_bus"] == "b1"
+    @test z["vm_min_pu"] ≈ 150.0/230.0 atol=1e-6
+    @test z["max_imbalance_bus"] == "b1"           # a=150 vs b,c=230
+    @test z["max_imbalance_pct"] ≈ 100*(230.0-150.0)/230.0 atol=1e-6
+    @test z["max_neutral_shift_v"] ≈ 5.0
+    @test z["max_neutral_shift_bus"] == "b1"
+
+    # Renderer surfaces the zone section.
+    report = profile_solution(net, result)
+    io = IOBuffer(); render_solution(report, io)
+    md = String(take!(io))
+    @test occursin("## 2. Voltage by Galvanic Zone", md)
+    @test occursin("❌", md)
+end
+
+# ── T16: verbose per-bus drill-down table ─────────────────────────────────────
+
+@testset "SOL — voltage zone per-bus drill-down" begin
+    net    = _base_net()
+    result = _base_result()
+    result["bus"]["b1"]["a"]["vm"] = 150.0   # b1 below v_min, worst deviation
+
+    vz = voltage_zone_summary(net, result)
+    rows = vz["zones"][1]["bus_rows"]
+    @test length(rows) == 2                  # sourcebus + b1
+    @test rows[1]["bus"] == "b1"             # sorted worst-deviation-first
+    @test rows[1]["status"] == "violation"
+
+    report = profile_solution(net, result)
+
+    # verbose=true → drill-down present
+    io = IOBuffer(); render_solution(report, io; verbose=true)
+    md_v = String(take!(io))
+    @test occursin("### Per-bus detail", md_v)
+    @test occursin("Zone `b1`", md_v)       # single galvanic zone, labelled by first bus
+    @test occursin("`sourcebus`", md_v)      # both buses appear as rows
+
+    # verbose=false → band only, no drill-down
+    io = IOBuffer(); render_solution(report, io; verbose=false)
+    md_q = String(take!(io))
+    @test occursin("## 2. Voltage by Galvanic Zone", md_q)
+    @test !occursin("### Per-bus detail", md_q)
+end
