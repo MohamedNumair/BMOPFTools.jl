@@ -32,6 +32,27 @@ function _add_voltage_variables!(model, bus_terminals, grounded)
     vr, vi
 end
 
+"""
+    _add_ground_variables!(model, grounded) -> (cr_gnd, ci_gnd)
+
+Declare `cr_gnd`/`ci_gnd`, a free ground-injection current per perfectly grounded
+`(bus, terminal)`. The terminal voltage is fixed to 0 (the ground reference); this
+current is the conductor current that flows into/out of earth at that terminal. It
+is the degree of freedom KCL uses to balance whatever the connected branches push
+into the node — without it, a grounded terminal whose return path is earth (a
+shunt, or another ground) rather than a neutral wire has no way to carry current,
+forcing it (and the load that needs it) to zero.
+"""
+function _add_ground_variables!(model, grounded)
+    cr_gnd = Dict{Tuple{String,String}, JuMP.VariableRef}()
+    ci_gnd = Dict{Tuple{String,String}, JuMP.VariableRef}()
+    for (bid, t) in grounded
+        cr_gnd[(bid,t)] = @variable(model, base_name = "cr_gnd_$(bid)_$(t)")
+        ci_gnd[(bid,t)] = @variable(model, base_name = "ci_gnd_$(bid)_$(t)")
+    end
+    cr_gnd, ci_gnd
+end
+
 "Declare `cr_fr`/`ci_fr` series current variables for each line conductor.
 `cr_to`/`ci_to` are returned as `AffExpr` aliases equal to `-cr_fr` — there
 is only one independent series current per branch."
@@ -435,9 +456,11 @@ function _build_vars(model, net, bus_terminals, grounded)
     cr_src,ci_src= _add_source_variables!(model, net)
     cr_xf, ci_xf = _add_transformer_variables!(model, net)
     cri,   cii   = _add_inverter_variables!(model, net)
+    cr_gnd,ci_gnd= _add_ground_variables!(model, grounded)
 
     Dict{Symbol,Any}(
         :vr => vr, :vi => vi,
+        :cr_gnd=> cr_gnd,:ci_gnd=> ci_gnd,
         :cr_fr => cr_fr, :ci_fr => ci_fr,
         :cr_to => cr_to, :ci_to => ci_to,
         :cr_sw => cr_sw, :ci_sw => ci_sw,

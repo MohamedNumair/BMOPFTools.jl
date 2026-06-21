@@ -1,0 +1,37 @@
+! Single-phase (phase-to-neutral) load on a four-wire branch — FREE load-bus
+! neutral. Power-flow comparison case for the four-wire grounding study.
+!
+! Topology: src ──[4-wire line, 0.5 km]── lb
+!   src.1/2/3 = phase conductors (3-phase balanced 0.415 kV source)
+!   src.4     = source neutral, earthed via near-zero reactor (system ground)
+!   lb.1      = load phase terminal; load connects lb.1 → lb.4
+!   lb.4      = load-bus neutral: carried by the branch, NOT grounded at lb
+!
+! With a single-phase phase-to-neutral load the full load current returns through
+! the neutral. With the load-bus neutral FREE (grounded only via the line neutral
+! back to the source earth), lb.4 rises by the IZ drop along the neutral conductor.
+! This is the baseline of the three grounding cases (free / impedance / perfect).
+
+Clear
+
+New Circuit.pf_1ph_freeneutral basekv=0.415 pu=1.0 angle=0 phases=3 bus1=src.1.2.3 model=ideal
+
+New Reactor.grnd bus1=src.4 bus2=src.0 R=0.001 X=0
+
+! 4-wire linecode: phase self 0.5 Ohm/km; neutral self 0.5 Ohm/km; mutual 0.02.
+New Linecode.4w nphases=4
+~ Rmatrix=[0.500|0.020 0.500|0.020 0.020 0.500|0.020 0.020 0.020 0.500]
+~ Xmatrix=[0.200|0.050 0.200|0.050 0.050 0.200|0.050 0.050 0.050 0.200]
+~ Cmatrix=[0|0 0|0 0 0|0 0 0 0]
+~ units=km
+
+New Line.l1 bus1=src.1.2.3.4 bus2=lb.1.2.3.4 linecode=4w length=500 units=m
+
+! Single-phase load lb.1 -> lb.4, constant power (model=1).
+! kv = 0.2396 (phase-to-neutral nominal). Vminpu=0 Vmaxpu=2 disables ODS
+! voltage-dependent load switching so model=1 is strict constant P+Q.
+New Load.ld1 bus1=lb.1.4 phases=1 conn=wye kv=0.2396 kw=15 kvar=5 model=1 Vminpu=0 Vmaxpu=2
+
+Set VoltageBases=[0.415]
+CalcVoltageBases
+Solve
