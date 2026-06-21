@@ -1193,6 +1193,66 @@
     end
 
     # ─────────────────────────────────────────────────────────────────────────
+    # T-INV4: per-unit mode parity for inverters
+    #
+    # Regression guard for the inverter per-unit gap: _to_per_unit must scale
+    # the inverter's p/q/s bounds by s_base and _from_per_unit must scale the
+    # cri/cii/pg/qg results back to SI. The SI-mode and PU-mode solves of the
+    # same network must agree on the reported inverter dispatch (pg/qg) and
+    # currents (cri/cii). Without the scalers the PU-mode bounds are applied at
+    # 1e6× the intended tightness and the results come out in a hybrid scale.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T-INV4: per-unit mode matches SI mode for inverters" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "src": {"terminal_names":["1","2","3","n"],
+                    "perfectly_grounded_terminals":["n"],
+                    "v_min":[200.0, 200.0, 200.0],"v_max":[260.0, 260.0, 260.0]},
+            "b1":  {"terminal_names":["1","2","3","n"],
+                    "perfectly_grounded_terminals":["n"],
+                    "v_min":[200.0, 200.0, 200.0],"v_max":[260.0, 260.0, 260.0]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[230.0,230.0,230.0],
+             "v_angle":[0.0,-2.0944,2.0944],"cost":[1.0,1.0,1.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.01,"R_series_2_2":0.01,"R_series_3_3":0.01}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1","2","3"],"terminal_map_to":["1","2","3"],
+             "linecode":"lc","length":10.0}},
+         "load":{"ld":{"bus":"b1","terminal_map":["1","2","3","n"],
+             "configuration":"WYE",
+             "p_nom":[2000.0,2000.0,2000.0],"q_nom":[0.0,0.0,0.0]}},
+         "control_profile":{"pf09":{"power_factor":{"pf":0.9}}},
+         "inverter":{"pv1":{"bus":"b1","terminal_map":["1","2","3","n"],
+             "topology":"FOUR_LEG","prime_mover":"PV",
+             "s_max":[3000.0,3000.0,3000.0],
+             "p_max":[2700.0,2700.0,2700.0],"p_min":[0.0,0.0,0.0],
+             "control_profile":"pf09","cost":[0.1,0.1,0.1]}}}
+        """; from_string=true)
+
+        net′, _ = augment_case(net; recipe=AugmentationRecipe(
+            apply_v_bounds=false, apply_vpn_bounds=false,
+            apply_vpp_bounds=false, apply_vneg_bounds=false,
+            apply_thermal=false, apply_q_bounds=false,
+            apply_slack_generator=false))
+
+        res_si = solve_opf(net′; per_unit=false)
+        res_pu = solve_opf(net′; per_unit=true, s_base=1e6)
+        @test res_si["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res_pu["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+
+        for t in ("1","2","3")
+            si = res_si["inverter"]["pv1"][t]
+            pu = res_pu["inverter"]["pv1"][t]
+            @test pu["pg"]  ≈ si["pg"]   rtol=1e-4
+            @test pu["qg"]  ≈ si["qg"]   atol=1.0
+            @test pu["cri"] ≈ si["cri"]  rtol=1e-4 atol=1e-3
+            @test pu["cii"] ≈ si["cii"]  rtol=1e-4 atol=1e-3
+            # Sanity: PU-mode dispatch is in SI watts, near p_max (cheaper than slack)
+            @test pu["pg"] ≈ 2700.0   atol=5.0
+        end
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
     # T-VBND: per-phase vpn arrays and per-pair vpp arrays on a 4-wire bus.
     # Regression-guards that the OPF constraint builder (and the per-unit scaler)
     # consume them as arrays rather than crashing on Float64(::Vector). Bounds
