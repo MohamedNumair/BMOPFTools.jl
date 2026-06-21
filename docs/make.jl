@@ -12,6 +12,7 @@ makedocs(
     remotes  = nothing,
     pages = [
         "Home"                    => "index.md",
+        "Positioning & ecosystem" => "positioning.md",
         "Data model conventions"  => "conventions.md",
         "Conversion guide"        => "conversion.md",
         "Analysis & reports"      => "analysis.md",
