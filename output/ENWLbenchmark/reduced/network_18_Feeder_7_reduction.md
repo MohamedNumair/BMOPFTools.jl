@@ -1,6 +1,6 @@
 # Simplification log: network_18_Feeder_7
 
-**Generated:** 2026-06-18 09:28:11  
+**Generated:** 2026-06-21 15:02:09  
 **Buses:** 636 → 57 (−579)  
 **Lines:** 635 → 56 (−579)  
 **Operations:** 580
@@ -65,8 +65,8 @@
 | 47 | `remove_dangling_lines` | line `line53` | Removed dangling line line53 and its leaf bus 54 (leaf has no active elements). |
 | 48 | `remove_dangling_lines` | line `line94` | Removed dangling line line94 and its leaf bus 95 (leaf has no active elements). |
 | 49 | `remove_dangling_lines` | line `line85` | Removed dangling line line85 and its leaf bus 86 (leaf has no active elements). |
-| 50 | `merge_series_lines` | line `line167` | Merged line line152 (2.7202 m) into line167 at pass-through bus 153; new length 3.9854000000000003 m. |
-| 51 | `merge_series_lines` | line `line305` | Merged line line320 (0.074653 m) into line305 at pass-through bus 306; new length 0.138291 m. |
+| 50 | `merge_series_lines` | line `line305` | Merged line line320 (0.074653 m) into line305 at pass-through bus 306; new length 0.138291 m. |
+| 51 | `merge_series_lines` | line `line167` | Merged line line152 (2.7202 m) into line167 at pass-through bus 153; new length 3.9854000000000003 m. |
 | 52 | `merge_series_lines` | line `line0` | Merged line line1 (0.23123 m) into line0 at pass-through bus 1; new length 1.23123 m. |
 | 53 | `merge_series_lines` | line `line518` | Merged line line526 (0.14538 m) into line518 at pass-through bus 519; new length 5.20288 m. |
 | 54 | `merge_series_lines` | line `line110` | Merged line line100 (1.1977 m) into line110 at pass-through bus 101; new length 7.4679 m. |

@@ -1,6 +1,6 @@
 # Simplification log: network_17_Feeder_2
 
-**Generated:** 2026-06-18 09:27:56  
+**Generated:** 2026-06-21 15:01:54  
 **Buses:** 539 → 17 (−522)  
 **Lines:** 538 → 16 (−522)  
 **Operations:** 525
@@ -52,8 +52,8 @@
 | 34 | `remove_dangling_lines` | line `line294` | Removed dangling line line294 and its leaf bus 295 (leaf has no active elements). |
 | 35 | `remove_dangling_lines` | line `line385` | Removed dangling line line385 and its leaf bus 386 (leaf has no active elements). |
 | 36 | `remove_dangling_lines` | line `line84` | Removed dangling line line84 and its leaf bus 85 (leaf has no active elements). |
-| 37 | `remove_dangling_lines` | line `line308` | Removed dangling line line308 and its leaf bus 309 (leaf has no active elements). |
-| 38 | `remove_dangling_lines` | line `line104` | Removed dangling line line104 and its leaf bus 105 (leaf has no active elements). |
+| 37 | `remove_dangling_lines` | line `line104` | Removed dangling line line104 and its leaf bus 105 (leaf has no active elements). |
+| 38 | `remove_dangling_lines` | line `line308` | Removed dangling line line308 and its leaf bus 309 (leaf has no active elements). |
 | 39 | `remove_dangling_lines` | line `line80` | Removed dangling line line80 and its leaf bus 81 (leaf has no active elements). |
 | 40 | `remove_dangling_lines` | line `line74` | Removed dangling line line74 and its leaf bus 75 (leaf has no active elements). |
 | 41 | `remove_dangling_lines` | line `line502` | Removed dangling line line502 and its leaf bus 503 (leaf has no active elements). |
@@ -407,8 +407,8 @@
 | 389 | `merge_series_lines` | line `line202` | Merged line line196 (3.6239 m) into line202 at pass-through bus 197; new length 7.3477 m. |
 | 390 | `merge_series_lines` | line `line142` | Merged line line130 (0.16901 m) into line142 at pass-through bus 131; new length 5.671429999999999 m. |
 | 391 | `merge_series_lines` | line `line21` | Merged line line18 (0.6712499999999999 m) into line21 at pass-through bus 21; new length 0.8948599999999999 m. |
-| 392 | `merge_series_lines` | bus `30` | Merge blocked: intermediate bus 30 has non-line elements attached. |
-| 393 | `merge_series_lines` | line `line2` | Merged line line3 (0.069065 m) into line2 at pass-through bus 3; new length 0.138188 m. |
+| 392 | `merge_series_lines` | line `line2` | Merged line line3 (0.069065 m) into line2 at pass-through bus 3; new length 0.138188 m. |
+| 393 | `merge_series_lines` | bus `30` | Merge blocked: intermediate bus 30 has non-line elements attached. |
 | 394 | `merge_series_lines` | bus `27` | Lines line26 (linecode lc8) and line29 (linecode lc1) at bus 27 have different linecodes — not merged. |
 | 395 | `merge_series_lines` | line `line167` | Merged line line161 (0.13479 m) into line167 at pass-through bus 162; new length 0.329599 m. |
 | 396 | `merge_series_lines` | line `line91` | Merged line line99 (0.12603 m) into line91 at pass-through bus 92; new length 0.28896 m. |

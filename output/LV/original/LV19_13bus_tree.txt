@@ -1,6 +1,6 @@
 # Network graph  (14 buses)
 
-b2755 (SRC G1)
+b2755 (SRC)
 └── [tx1257: Dyn1 11.0kV/433V]── b395
     ├── b560
     └── b57
@@ -14,6 +14,3 @@ b2755 (SRC G1)
                 │   └── [SW]── b3141
                 └── b3305
                     └── [SW]── b2715
-
-Generators (1 total):
-  G1 = slack_source     max    0.0 kW  terminals: 1,2,3

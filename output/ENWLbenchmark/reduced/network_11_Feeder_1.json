@@ -911,9 +911,9 @@
       "bus": "207",
       "configuration": "SINGLE_PHASE"
     },
-    "der_121": {
+    "der_202": {
       "cost": [
-        0.000409355028
+        0.000454825205
       ],
       "p_max": [
         4000
@@ -922,10 +922,10 @@
         0
       ],
       "terminal_map": [
-        "3",
+        "2",
         "n"
       ],
-      "bus": "121",
+      "bus": "202",
       "configuration": "SINGLE_PHASE"
     },
     "der_210": {
@@ -985,9 +985,9 @@
       "bus": "sourcebus",
       "configuration": "WYE"
     },
-    "der_202": {
+    "der_121": {
       "cost": [
-        0.000454825205
+        0.000409355028
       ],
       "p_max": [
         4000
@@ -996,10 +996,10 @@
         0
       ],
       "terminal_map": [
-        "2",
+        "3",
         "n"
       ],
-      "bus": "202",
+      "bus": "121",
       "configuration": "SINGLE_PHASE"
     },
     "der_128": {
@@ -1775,19 +1775,6 @@
       "element_id": "85"
     },
     {
-      "message": "Merged line line3 (0.095341 m) into line2 at pass-through bus 3; new length 0.190782 m.",
-      "detail": {
-        "new_length": 0.190782,
-        "absorbed_line": "line3",
-        "removed_bus": "3"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line2"
-    },
-    {
       "message": "Merged line line30 (0.08271 m) into line29 at pass-through bus 30; new length 0.179962 m.",
       "detail": {
         "new_length": 0.179962,
@@ -1799,6 +1786,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line29"
+    },
+    {
+      "message": "Merged line line3 (0.095341 m) into line2 at pass-through bus 3; new length 0.190782 m.",
+      "detail": {
+        "new_length": 0.190782,
+        "absorbed_line": "line3",
+        "removed_bus": "3"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line2"
     },
     {
       "message": "Merged line line27 (19.9569 m) into line26 at pass-through bus 27; new length 20.49776 m.",

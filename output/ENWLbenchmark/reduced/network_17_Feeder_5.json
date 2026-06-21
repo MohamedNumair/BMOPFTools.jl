@@ -6924,9 +6924,9 @@
     }
   },
   "generator": {
-    "der_2289": {
+    "der_1637": {
       "cost": [
-        7.231382e-6
+        0.000436382735
       ],
       "p_max": [
         4000
@@ -6938,7 +6938,7 @@
         "2",
         "n"
       ],
-      "bus": "2289",
+      "bus": "1637",
       "configuration": "SINGLE_PHASE"
     },
     "der_139": {
@@ -7593,23 +7593,6 @@
       "bus": "1471",
       "configuration": "SINGLE_PHASE"
     },
-    "der_1637": {
-      "cost": [
-        0.000436382735
-      ],
-      "p_max": [
-        4000
-      ],
-      "p_min": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "1637",
-      "configuration": "SINGLE_PHASE"
-    },
     "der_2726": {
       "cost": [
         0.000260468948
@@ -7625,6 +7608,23 @@
         "n"
       ],
       "bus": "2726",
+      "configuration": "SINGLE_PHASE"
+    },
+    "der_2289": {
+      "cost": [
+        7.231382e-6
+      ],
+      "p_max": [
+        4000
+      ],
+      "p_min": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "2289",
       "configuration": "SINGLE_PHASE"
     }
   },

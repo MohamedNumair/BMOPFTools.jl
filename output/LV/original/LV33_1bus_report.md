@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV33_1bus
 
-**Generated:** 2026-06-19 10:46:23  
-**Findings:** 2 errors · 3 warnings · 23 info  
+**Generated:** 2026-06-21 14:59:31  
+**Findings:** 2 errors · 2 warnings · 23 info  
 **Convention:** MV_6.4kV: 4-wire; implicit (Kron-style) grounding
 
 ---
@@ -15,10 +15,12 @@
 | linecode | 22 |  |
 | voltage_source | 1 |  |
 | load | 0 | 0.0 W, 0.0 var |
-| generator | 1 | capacity: 0.0 W |
+| generator | 0 | capacity: 0.0 W |
 | shunt | 1 |  |
 | switch | 0 |  |
 | transformer | 1 | Dyn1×1 |
+| inverter | 0 | capacity: 0.0 MVA |
+| control_profile | 0 |  |
 
 ## 2. Voltage Levels
 
@@ -26,7 +28,7 @@
 
 | Level | Nominal | Buses | Lines | Loads | Generators |
 |-------|---------|------:|------:|------:|-----------:|
-| MV_6.4kV | 6.35 kV | 1 | 0 | 0 | 1 |
+| MV_6.4kV | 6.35 kV | 1 | 0 | 0 | 0 |
 
 **Transformer transitions:**
 
@@ -142,7 +144,7 @@
 
 | Spec conformance | Value |
 |------------------|------:|
-| Conformance issues | 1 |
+| Conformance issues | 0 |
 | Voltage sources (spec requires 1) | 1 |
 
 | Structural integrity | Value |
@@ -172,13 +174,11 @@
 
 > 🔴 **[E.INT.NO_VOLTAGE_REFERENCE]** Galvanic island of 1 bus(es) has no voltage reference (no source, perfect grounding, or grounding shunt) — voltages are defined only up to a shift (rank-deficient): b2650.
 
-> 🟡 **[W.SPEC.CONFIG_ARITY]** generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
-
 > 🔵 **[I.BENCH.AUGMENTATION]** Case needs augmentation to be a non-trivial OPF benchmark: only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF.
 
 ## 9. Data Quality Summary
 
-**Total findings:** 28 (2 errors, 3 warnings, 23 info)
+**Total findings:** 27 (2 errors, 2 warnings, 23 info)
 
 ### 🔴 Errors
 
@@ -193,8 +193,6 @@
   2 bus(es) have no reachable voltage source — may be islanded.
 - **[W.CONN.DANGLING]** `bus`  
   1 bus(es) are degree-1 with no attached load, generator, or shunt.
-- **[W.SPEC.CONFIG_ARITY]** `slack_source`  
-  generator 'slack_source': configuration WYE requires 4 terminal(s), terminal_map has 3.
 
 ### 🔵 Info
 
@@ -234,8 +232,8 @@
   3 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
-- **[I.SCHEMA.UNKNOWN_FIELDS]** `[b2577]`  
-  Additional property not defined in schema at [bus][b2577].
+- **[I.SCHEMA.UNKNOWN_FIELDS]** `[source]`  
+  Additional property not defined in schema at [voltage_source][source].
 - **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
   bus has field(s) not in the BMOPF schema: v_declared.
 - **[I.RED.UNUSED_LINECODES]** `linecode`  

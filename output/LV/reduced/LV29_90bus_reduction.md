@@ -1,6 +1,6 @@
 # Simplification log: LV29_90bus
 
-**Generated:** 2026-06-19 10:46:23  
+**Generated:** 2026-06-21 14:59:30  
 **Buses:** 91 → 67 (−24)  
 **Lines:** 82 → 65 (−17)  
 **Operations:** 27

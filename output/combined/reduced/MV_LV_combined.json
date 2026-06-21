@@ -17212,27 +17212,15 @@
     }
   },
   "name": "MV_LV_combined",
-  "generator": {
-    "slack_source": {
-      "_slack": true,
+  "switch": {
+  },
+  "voltage_source": {
+    "source": {
       "cost": [
         1,
         1,
         1
       ],
-      "terminal_map": [
-        "1",
-        "2",
-        "3"
-      ],
-      "bus": "b1726",
-      "configuration": "WYE"
-    }
-  },
-  "switch": {
-  },
-  "voltage_source": {
-    "source": {
       "_pmd": {
         "rs": [
           1.7333333333333332,
@@ -73354,7 +73342,7 @@
   ],
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-19T00:46:24Z",
+    "created": "2026-06-21T04:59:32Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -101701,24 +101689,7 @@
   "transformer": {
     "delta_wye": {
       "tx3913": {
-        "v_ref_to": 415,
-        "bus_from": "b598",
-        "bus_to": "b897",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
-        "terminal_map_to": [
-          "1",
-          "2",
-          "3",
-          "n"
-        ],
-        "v_ref_from": 11000,
-        "s_rating": 200000,
-        "r_series": 0.006889,
-        "x_series": 0.0003374906967604007,
+        "x_series_to": 0.00016874534838020035,
         "_pmd": {
           "polarity": [
             1,
@@ -101774,7 +101745,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -101786,29 +101756,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx1777": {
-        "v_ref_to": 433,
-        "bus_from": "b449",
-        "bus_to": "b1595",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 200000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 4.191562954316683,
+        "x_series_from": 0.20534380925641177,
+        "bus_from": "b598",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.0034445,
+        "v_ref_to": 415,
+        "bus_to": "b897"
+      },
+      "tx1777": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -101864,7 +101835,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -101876,29 +101846,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx848": {
-        "v_ref_to": 433,
-        "bus_from": "b2407",
-        "bus_to": "b2581",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b449",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 315000,
-        "r_series": 0.004761625396825397,
-        "x_series": 0.00023327105136981022,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b1595"
+      },
+      "tx848": {
+        "x_series_to": 0.00011663552568490511,
         "_pmd": {
           "polarity": [
             1,
@@ -101954,7 +101925,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -101966,29 +101936,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx269": {
-        "v_ref_to": 433,
-        "bus_from": "b3309",
-        "bus_to": "b451",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 315000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 2.6613098122645606,
+        "x_series_from": 0.13037702175010274,
+        "bus_from": "b2407",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.0023808126984126987,
+        "v_ref_to": 433,
+        "bus_to": "b2581"
+      },
+      "tx269": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -102044,7 +102015,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -102056,29 +102026,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx3703": {
-        "v_ref_to": 433,
-        "bus_from": "b804",
-        "bus_to": "b641",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b3309",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b451"
+      },
+      "tx3703": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -102134,7 +102105,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -102146,29 +102116,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx1632": {
-        "v_ref_to": 433,
-        "bus_from": "b212",
-        "bus_to": "b557",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b804",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b641"
+      },
+      "tx1632": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -102224,7 +102195,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -102236,29 +102206,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx1108": {
-        "v_ref_to": 433,
-        "bus_from": "b271",
-        "bus_to": "b468",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b212",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b557"
+      },
+      "tx1108": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -102314,7 +102285,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -102326,29 +102296,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx2620": {
-        "v_ref_to": 433,
-        "bus_from": "b1690",
-        "bus_to": "b342",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b271",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b468"
+      },
+      "tx2620": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -102404,7 +102375,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -102416,29 +102386,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx215": {
-        "v_ref_to": 433,
-        "bus_from": "b467",
-        "bus_to": "b1520",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b1690",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 750000,
-        "r_series": 0.0024998533333333334,
-        "x_series": 0.00012246730196933782,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b342"
+      },
+      "tx215": {
+        "x_series_to": 6.123365098466891e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -102494,7 +102465,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -102506,29 +102476,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx2615": {
-        "v_ref_to": 433,
-        "bus_from": "b2700",
-        "bus_to": "b3001",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 750000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.3971876514388943,
+        "x_series_from": 0.06844793641890871,
+        "bus_from": "b467",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 315000,
-        "r_series": 0.004761625396825397,
-        "x_series": 0.00023327105136981022,
+        "r_series_to": 0.0012499266666666667,
+        "v_ref_to": 433,
+        "bus_to": "b1520"
+      },
+      "tx2615": {
+        "x_series_to": 0.00011663552568490511,
         "_pmd": {
           "polarity": [
             1,
@@ -102584,7 +102555,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -102596,29 +102566,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx2458": {
-        "v_ref_to": 433,
-        "bus_from": "b2439",
-        "bus_to": "b2549",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 315000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 2.6613098122645606,
+        "x_series_from": 0.13037702175010274,
+        "bus_from": "b2700",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 1000000,
-        "r_series": 0.00187489,
-        "x_series": 9.185047647700336e-5,
+        "r_series_to": 0.0023808126984126987,
+        "v_ref_to": 433,
+        "bus_to": "b3001"
+      },
+      "tx2458": {
+        "x_series_to": 4.592523823850168e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -102674,7 +102645,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -102686,29 +102656,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx3394": {
-        "v_ref_to": 433,
-        "bus_from": "b169",
-        "bus_to": "b921",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 1000000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.0478907385791707,
+        "x_series_from": 0.051335952314181525,
+        "bus_from": "b2439",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 315000,
-        "r_series": 0.004761625396825397,
-        "x_series": 0.00023327105136981022,
+        "r_series_to": 0.000937445,
+        "v_ref_to": 433,
+        "bus_to": "b2549"
+      },
+      "tx3394": {
+        "x_series_to": 0.00011663552568490511,
         "_pmd": {
           "polarity": [
             1,
@@ -102764,7 +102735,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -102776,29 +102746,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx1941": {
-        "v_ref_to": 433,
-        "bus_from": "b3125",
-        "bus_to": "b1041",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 315000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 2.6613098122645606,
+        "x_series_from": 0.13037702175010274,
+        "bus_from": "b169",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.0023808126984126987,
+        "v_ref_to": 433,
+        "bus_to": "b921"
+      },
+      "tx1941": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -102854,7 +102825,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -102866,29 +102836,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx1257": {
-        "v_ref_to": 433,
-        "bus_from": "b2755",
-        "bus_to": "b395",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b3125",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 1000000,
-        "r_series": 0.00187489,
-        "x_series": 9.185047647700336e-5,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b1041"
+      },
+      "tx1257": {
+        "x_series_to": 4.592523823850168e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -102944,7 +102915,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -102956,29 +102926,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx2177": {
-        "v_ref_to": 433,
-        "bus_from": "b3190",
-        "bus_to": "b1279",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 1000000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.0478907385791707,
+        "x_series_from": 0.051335952314181525,
+        "bus_from": "b2755",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 1000000,
-        "r_series": 0.00187489,
-        "x_series": 9.185047647700336e-5,
+        "r_series_to": 0.000937445,
+        "v_ref_to": 433,
+        "bus_to": "b395"
+      },
+      "tx2177": {
+        "x_series_to": 4.592523823850168e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -103034,7 +103005,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -103046,29 +103016,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx1840": {
-        "v_ref_to": 433,
-        "bus_from": "b2157",
-        "bus_to": "b2824",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 1000000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.0478907385791707,
+        "x_series_from": 0.051335952314181525,
+        "bus_from": "b3190",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.000937445,
+        "v_ref_to": 433,
+        "bus_to": "b1279"
+      },
+      "tx1840": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -103124,7 +103095,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -103136,29 +103106,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx2187": {
-        "v_ref_to": 433,
-        "bus_from": "b185",
-        "bus_to": "b1862",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b2157",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b2824"
+      },
+      "tx2187": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -103214,7 +103185,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -103226,29 +103196,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx3170": {
-        "v_ref_to": 433,
-        "bus_from": "b2577",
-        "bus_to": "b179",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b185",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 100000,
-        "r_series": 0.01499912,
-        "x_series": 0.0007348038118149021,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b1862"
+      },
+      "tx3170": {
+        "x_series_to": 0.00036740190590745105,
         "_pmd": {
           "polarity": [
             1,
@@ -103304,7 +103275,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -103316,29 +103286,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx4271": {
-        "v_ref_to": 433,
-        "bus_from": "b3198",
-        "bus_to": "b1522",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 100000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 8.383125908633366,
+        "x_series_from": 0.41068761851282354,
+        "bus_from": "b2577",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.00749956,
+        "v_ref_to": 433,
+        "bus_to": "b179"
+      },
+      "tx4271": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -103394,7 +103365,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -103406,29 +103376,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx1621": {
-        "v_ref_to": 433,
-        "bus_from": "b1569",
-        "bus_to": "b2161",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b3198",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b1522"
+      },
+      "tx1621": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -103484,7 +103455,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -103496,29 +103466,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx381": {
-        "v_ref_to": 433,
-        "bus_from": "b2262",
-        "bus_to": "b1163",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b1569",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 1000000,
-        "r_series": 0.00187489,
-        "x_series": 9.185047647700336e-5,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b2161"
+      },
+      "tx381": {
+        "x_series_to": 4.592523823850168e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -103574,7 +103545,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -103586,29 +103556,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx2831": {
-        "v_ref_to": 433,
-        "bus_from": "b325",
-        "bus_to": "b1090",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 1000000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.0478907385791707,
+        "x_series_from": 0.051335952314181525,
+        "bus_from": "b2262",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.000937445,
+        "v_ref_to": 433,
+        "bus_to": "b1163"
+      },
+      "tx2831": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -103664,7 +103635,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -103676,29 +103646,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx2059": {
-        "v_ref_to": 433,
-        "bus_from": "b380",
-        "bus_to": "b255",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b325",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 750000,
-        "r_series": 0.0024998533333333334,
-        "x_series": 0.00012246730196933782,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b1090"
+      },
+      "tx2059": {
+        "x_series_to": 6.123365098466891e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -103754,7 +103725,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -103766,29 +103736,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx4279": {
-        "v_ref_to": 433,
-        "bus_from": "b2995",
-        "bus_to": "b639",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 750000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.3971876514388943,
+        "x_series_from": 0.06844793641890871,
+        "bus_from": "b380",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.0012499266666666667,
+        "v_ref_to": 433,
+        "bus_to": "b255"
+      },
+      "tx4279": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -103844,7 +103815,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -103856,29 +103826,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx2677": {
-        "v_ref_to": 433,
-        "bus_from": "b1386",
-        "bus_to": "b1337",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b2995",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b639"
+      },
+      "tx2677": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -103934,7 +103905,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -103946,29 +103916,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx3831": {
-        "v_ref_to": 433,
-        "bus_from": "b2234",
-        "bus_to": "b3041",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b1386",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 1000000,
-        "r_series": 0.00187489,
-        "x_series": 9.185047647700336e-5,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b1337"
+      },
+      "tx3831": {
+        "x_series_to": 4.592523823850168e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -104024,7 +103995,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -104036,29 +104006,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx475": {
-        "v_ref_to": 433,
-        "bus_from": "b2650",
-        "bus_to": "b2885",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 1000000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.0478907385791707,
+        "x_series_from": 0.051335952314181525,
+        "bus_from": "b2234",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 1000000,
-        "r_series": 0.00187489,
-        "x_series": 9.185047647700336e-5,
+        "r_series_to": 0.000937445,
+        "v_ref_to": 433,
+        "bus_to": "b3041"
+      },
+      "tx475": {
+        "x_series_to": 4.592523823850168e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -104114,7 +104085,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -104126,29 +104096,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx4258": {
-        "v_ref_to": 433,
-        "bus_from": "b784",
-        "bus_to": "b855",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 1000000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.0478907385791707,
+        "x_series_from": 0.051335952314181525,
+        "bus_from": "b2650",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 315000,
-        "r_series": 0.004761625396825397,
-        "x_series": 0.00023327105136981022,
+        "r_series_to": 0.000937445,
+        "v_ref_to": 433,
+        "bus_to": "b2885"
+      },
+      "tx4258": {
+        "x_series_to": 0.00011663552568490511,
         "_pmd": {
           "polarity": [
             1,
@@ -104204,7 +104175,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -104216,29 +104186,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx377": {
-        "v_ref_to": 433,
-        "bus_from": "b3271",
-        "bus_to": "b1609",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 315000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 2.6613098122645606,
+        "x_series_from": 0.13037702175010274,
+        "bus_from": "b784",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.0023808126984126987,
+        "v_ref_to": 433,
+        "bus_to": "b855"
+      },
+      "tx377": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -104294,7 +104265,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -104306,29 +104276,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx1902": {
-        "v_ref_to": 433,
-        "bus_from": "b2918",
-        "bus_to": "b915",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b3271",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b1609"
+      },
+      "tx1902": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -104384,7 +104355,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -104396,29 +104366,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx3676": {
-        "v_ref_to": 433,
-        "bus_from": "b548",
-        "bus_to": "b694",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 500000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b2918",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 1000000,
-        "r_series": 0.00187489,
-        "x_series": 9.185047647700336e-5,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b915"
+      },
+      "tx3676": {
+        "x_series_to": 4.592523823850168e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -104474,7 +104445,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -104486,29 +104456,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx3270": {
-        "v_ref_to": 433,
-        "bus_from": "b1504",
-        "bus_to": "b1080",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 1000000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.0478907385791707,
+        "x_series_from": 0.051335952314181525,
+        "bus_from": "b548",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 750000,
-        "r_series": 0.0024998533333333334,
-        "x_series": 0.00012246730196933782,
+        "r_series_to": 0.000937445,
+        "v_ref_to": 433,
+        "bus_to": "b694"
+      },
+      "tx3270": {
+        "x_series_to": 6.123365098466891e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -104564,7 +104535,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -104576,29 +104546,30 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
-      },
-      "tx2382": {
-        "v_ref_to": 433,
-        "bus_from": "b2268",
-        "bus_to": "b908",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
+          ]
+        },
+        "s_rating": 750000,
         "terminal_map_to": [
           "1",
           "2",
           "3",
           "n"
         ],
+        "r_series_from": 1.3971876514388943,
+        "x_series_from": 0.06844793641890871,
+        "bus_from": "b1504",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
         "v_ref_from": 11000,
-        "s_rating": 500000,
-        "r_series": 0.002999824,
-        "x_series": 0.0001469607623629804,
+        "r_series_to": 0.0012499266666666667,
+        "v_ref_to": 433,
+        "bus_to": "b1080"
+      },
+      "tx2382": {
+        "x_series_to": 7.34803811814902e-5,
         "_pmd": {
           "polarity": [
             1,
@@ -104654,7 +104625,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -104666,9 +104636,27 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
+          ]
+        },
+        "s_rating": 500000,
+        "terminal_map_to": [
+          "1",
+          "2",
+          "3",
+          "n"
+        ],
+        "r_series_from": 1.676625181726673,
+        "x_series_from": 0.0821375237025647,
+        "bus_from": "b2268",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
+        "v_ref_from": 11000,
+        "r_series_to": 0.001499912,
+        "v_ref_to": 433,
+        "bus_to": "b908"
       }
     }
   },

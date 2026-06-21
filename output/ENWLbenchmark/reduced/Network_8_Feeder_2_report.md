@@ -1,7 +1,7 @@
 # BMOPF Network Summary: Network_8_Feeder_2
 
-**Generated:** 2026-06-18 09:27:22  
-**Findings:** 0 errors · 1 warnings · 81 info  
+**Generated:** 2026-06-21 15:01:18  
+**Findings:** 1 errors · 2 warnings · 82 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -19,6 +19,8 @@
 | shunt | 1 |  |
 | switch | 0 |  |
 | transformer | 0 |  |
+| inverter | 0 | capacity: 0.0 MVA |
+| control_profile | 0 |  |
 
 ## 2. Voltage Levels
 
@@ -70,6 +72,7 @@
 | R_series_1_1 | 0.000259 | 0.00228 | 0.713 | 9 |
 
 > 🟡 **[W.DIV.LOAD_SYMMETRIC]** 250 of 302 loads share identical (p_nom, q_nom) — possible copy-paste symmetry.
+> 🔵 **[I.DIV.LOAD_UNIFORM_MODEL]** All 302 loads use the constant_power model — no load exercises voltage dependence (ZIP/exponential); the case does not test voltage-dependent load behaviour.
 
 ## 5. Loading & Operational Summary
 
@@ -91,6 +94,7 @@
 | TPIA status | not_run |
 
 > 🔵 **[I.PRE.NO_VOLT_BOUNDS]** 538 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
+> 🟡 **[W.PRE.SOURCE_BUS_GENERATOR]** Generator 'grid' is at voltage-source bus 'sourcebus' and lacks p_max/q_max bounds. The voltage source is the network's current slack, so two unbounded current injections share one fixed-voltage bus — the dispatch split is degenerate (non-unique). Remove this generator and express its role as flow bounds/cost on the voltage source instead.
 > 🔵 **[I.PRE.SINGLE_SOURCE]** Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
 
 ## 7. Provenance & Model Conventions
@@ -237,15 +241,24 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 82 (0 errors, 1 warnings, 81 info)
+**Total findings:** 85 (1 errors, 2 warnings, 82 info)
+
+### 🔴 Errors
+
+- **[E.SCHEMA.TYPE]** `[4497]`  
+  Type error at [bus][4497][vpn_min]: got Float64, expected array.
 
 ### 🟡 Warnings
 
 - **[W.DIV.LOAD_SYMMETRIC]** `load`  
   250 of 302 loads share identical (p_nom, q_nom) — possible copy-paste symmetry.
+- **[W.PRE.SOURCE_BUS_GENERATOR]** `grid`  
+  Generator 'grid' is at voltage-source bus 'sourcebus' and lacks p_max/q_max bounds. The voltage source is the network's current slack, so two unbounded current injections share one fixed-voltage bus — the dispatch split is degenerate (non-unique). Remove this generator and express its role as flow bounds/cost on the voltage source instead.
 
 ### 🔵 Info
 
+- **[I.DIV.LOAD_UNIFORM_MODEL]** `load`  
+  All 302 loads use the constant_power model — no load exercises voltage dependence (ZIP/exponential); the case does not test voltage-dependent load behaviour.
 - **[I.PROV.NO_PI_SHUNT]** `linecode`  
   All 9 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 - **[I.PRE.NO_VOLT_BOUNDS]** `bus`  

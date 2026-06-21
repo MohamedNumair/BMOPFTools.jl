@@ -1,6 +1,11 @@
 {
   "voltage_source": {
     "source": {
+      "cost": [
+        1,
+        1,
+        1
+      ],
       "_pmd": {
         "rs": [
           1.697627457889352e-8,
@@ -3089,7 +3094,7 @@
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
     "source": "D-Suite Alpha v1.1",
     "reference": "M. Deakin, DOI: 10.25405/data.ncl.27175317",
-    "created": "2026-06-19T00:38:02Z",
+    "created": "2026-06-21T04:51:22Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"
@@ -3099,24 +3104,7 @@
   "transformer": {
     "delta_wye": {
       "dist_transformer_10148922_9108515": {
-        "v_ref_to": 415,
-        "bus_from": "sourcebusz",
-        "bus_to": "9108515",
-        "terminal_map_from": [
-          "1",
-          "2",
-          "3"
-        ],
-        "terminal_map_to": [
-          "1",
-          "2",
-          "3",
-          "n"
-        ],
-        "v_ref_from": 11000,
-        "s_rating": 750000,
-        "r_series": 0.0009185333333333333,
-        "x_series": 0.011252033333333333,
+        "x_series_to": 0.0056260166666666665,
         "_pmd": {
           "polarity": [
             1,
@@ -3172,7 +3160,6 @@
               1
             ]
           ],
-          "noloadloss": 0,
           "tm_step": [
             [
               0.03125,
@@ -3184,27 +3171,2291 @@
               0.03125,
               0.03125
             ]
-          ],
-          "cmag": 0
-        }
+          ]
+        },
+        "s_rating": 750000,
+        "terminal_map_to": [
+          "1",
+          "2",
+          "3",
+          "n"
+        ],
+        "r_series_from": 0.5588750605755578,
+        "x_series_from": 6.846219492050582,
+        "bus_from": "sourcebusz",
+        "terminal_map_from": [
+          "1",
+          "2",
+          "3"
+        ],
+        "v_ref_from": 11000,
+        "r_series_to": 0.00045926666666666664,
+        "v_ref_to": 415,
+        "bus_to": "9108515"
       }
     }
   },
-  "generator": {
-    "slack_source": {
-      "_slack": true,
-      "cost": [
-        1,
-        1,
-        1
+  "load": {
+    "sop_x1_12934917_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
       ],
       "terminal_map": [
         "1",
-        "2",
-        "3"
+        "n"
       ],
-      "bus": "sourcebus",
-      "configuration": "WYE"
+      "bus": "12934917",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_12958003_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "12958003",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_17874064_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "17874064",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11730481": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "11730481",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_13435074_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "13435074",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12156586": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "12156586",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12317603": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "12317603",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_12958003_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "12958003",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13601751": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "13601751",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12817081": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "12817081",
+      "configuration": "SINGLE_PHASE"
+    },
+    "str_9108515_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "9108515",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13714731": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "13714731",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13601756": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "13601756",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11983736": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "11983736",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_12969125_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "12969125",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13357787": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "13357787",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_10628787": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "10628787",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_9369082_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "9369082",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11068333": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "11068333",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_13435074_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "13435074",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_12725180_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "12725180",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11068336": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "11068336",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_10493341": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "10493341",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13624269": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "13624269",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11083673": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "11083673",
+      "configuration": "SINGLE_PHASE"
+    },
+    "sop_x2_13363295_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "13363295",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_12934941_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "12934941",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_14756890_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "14756890",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_12725180_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "12725180",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13595203": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "13595203",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13812808": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "13812808",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_10905410": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "10905410",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_10932313": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "10932313",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12807645": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "12807645",
+      "configuration": "SINGLE_PHASE"
+    },
+    "sop_x4_17655571_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "17655571",
+      "configuration": "SINGLE_PHASE"
+    },
+    "sop_x1_12934917_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "12934917",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13691505": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "13691505",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_17855759_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "17855759",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_9369082_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "9369082",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12308114": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "12308114",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11650515": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "11650515",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_12969125_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "12969125",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11910744": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "11910744",
+      "configuration": "SINGLE_PHASE"
+    },
+    "sop_x3_12934945_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "12934945",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_12934941_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "12934941",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13595202": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "13595202",
+      "configuration": "SINGLE_PHASE"
+    },
+    "sop_x4_17655571_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "17655571",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_12934941_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "12934941",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_10652242": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "10652242",
+      "configuration": "SINGLE_PHASE"
+    },
+    "str_9108515_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "9108515",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13357773": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "13357773",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12156592": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "12156592",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13725341": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "13725341",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_13435074_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "13435074",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13691475": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "13691475",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11113663": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "11113663",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12308113": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "12308113",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_17874064_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "17874064",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13355047": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "13355047",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_12969125_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "12969125",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12208987": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "12208987",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13691477": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "13691477",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_10511265": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "10511265",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13357776": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "13357776",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_13435075_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "13435075",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13624263": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "13624263",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_17855759_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "17855759",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_10915895": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "10915895",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11729147": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "11729147",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_10803945": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "10803945",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13357796": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "13357796",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11627664": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "11627664",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12185636": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "12185636",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_13435075_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "13435075",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_14756890_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "14756890",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_10792061": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "10792061",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_17874064_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "17874064",
+      "configuration": "SINGLE_PHASE"
+    },
+    "sop_x2_13363295_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "13363295",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13357784": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "13357784",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13691508": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "13691508",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11068335": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "11068335",
+      "configuration": "SINGLE_PHASE"
+    },
+    "str_9108515_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "9108515",
+      "configuration": "SINGLE_PHASE"
+    },
+    "sop_x2_13363295_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "13363295",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13728130": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "13728130",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12317602": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "12317602",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11650907": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "11650907",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_17855759_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "17855759",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13408540": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "13408540",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11730483": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "11730483",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11910740": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "11910740",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12385154": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "12385154",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13601748": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "13601748",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11410018": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "11410018",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13513456": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "13513456",
+      "configuration": "SINGLE_PHASE"
+    },
+    "sop_x3_12934945_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "12934945",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_10956350": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "10956350",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_10932282": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "10932282",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13357779": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "13357779",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11978903": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "11978903",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_13435075_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "13435075",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_14756890_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "14756890",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13601746": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "13601746",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11278631": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "11278631",
+      "configuration": "SINGLE_PHASE"
+    },
+    "sop_x1_12934917_2": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "12934917",
+      "configuration": "SINGLE_PHASE"
+    },
+    "sop_x4_17655571_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "17655571",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_9369082_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "9369082",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_12725180_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "12725180",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12327065": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "12327065",
+      "configuration": "SINGLE_PHASE"
+    },
+    "sop_x3_12934945_3": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "12934945",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13572881": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "13572881",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12807627": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "12807627",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_10484937": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "3",
+        "n"
+      ],
+      "bus": "10484937",
+      "configuration": "SINGLE_PHASE"
+    },
+    "statcom_12958003_1": {
+      "p_nom": [
+        0
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "12958003",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11730840": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "2",
+        "n"
+      ],
+      "bus": "11730840",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12848124": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "12848124",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13601753": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "13601753",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_12184416": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "12184416",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_11335818": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "11335818",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load_13507545": {
+      "p_nom": [
+        1000
+      ],
+      "_pmd": {
+        "model": "POWER",
+        "vm_nom": 0.2396003617136947,
+        "dispatchable": "NO"
+      },
+      "q_nom": [
+        0
+      ],
+      "terminal_map": [
+        "1",
+        "n"
+      ],
+      "bus": "13507545",
+      "configuration": "SINGLE_PHASE"
     }
   },
   "_simplification_log": [
@@ -7451,2269 +9702,6 @@
         "3"
       ],
       "longitude": -0.0191
-    }
-  },
-  "load": {
-    "sop_x1_12934917_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "12934917",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_12958003_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "12958003",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_17874064_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "17874064",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11730481": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "11730481",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_13435074_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "13435074",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12156586": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "12156586",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12317603": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "12317603",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_12958003_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "12958003",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13601751": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "13601751",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12817081": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "12817081",
-      "configuration": "SINGLE_PHASE"
-    },
-    "str_9108515_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "9108515",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13714731": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "13714731",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13601756": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "13601756",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11983736": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "11983736",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_12969125_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "12969125",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13357787": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "13357787",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_10628787": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "10628787",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_9369082_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "9369082",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11068333": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "11068333",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_13435074_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "13435074",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_12725180_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "12725180",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11068336": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "11068336",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_10493341": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "10493341",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13624269": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "13624269",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11083673": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "11083673",
-      "configuration": "SINGLE_PHASE"
-    },
-    "sop_x2_13363295_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "13363295",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_12934941_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "12934941",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_14756890_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "14756890",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_12725180_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "12725180",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13595203": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "13595203",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13812808": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "13812808",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_10905410": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "10905410",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_10932313": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "10932313",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12807645": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "12807645",
-      "configuration": "SINGLE_PHASE"
-    },
-    "sop_x4_17655571_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "17655571",
-      "configuration": "SINGLE_PHASE"
-    },
-    "sop_x1_12934917_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "12934917",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13691505": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "13691505",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_17855759_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "17855759",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_9369082_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "9369082",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12308114": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "12308114",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11650515": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "11650515",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_12969125_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "12969125",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11910744": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "11910744",
-      "configuration": "SINGLE_PHASE"
-    },
-    "sop_x3_12934945_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "12934945",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_12934941_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "12934941",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13595202": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "13595202",
-      "configuration": "SINGLE_PHASE"
-    },
-    "sop_x4_17655571_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "17655571",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_12934941_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "12934941",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_10652242": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "10652242",
-      "configuration": "SINGLE_PHASE"
-    },
-    "str_9108515_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "9108515",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13357773": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "13357773",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12156592": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "12156592",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13725341": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "13725341",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_13435074_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "13435074",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13691475": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "13691475",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11113663": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "11113663",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12308113": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "12308113",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_17874064_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "17874064",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13355047": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "13355047",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_12969125_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "12969125",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12208987": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "12208987",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13691477": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "13691477",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_10511265": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "10511265",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13357776": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "13357776",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_13435075_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "13435075",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13624263": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "13624263",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_17855759_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "17855759",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_10915895": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "10915895",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11729147": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "11729147",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_10803945": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "10803945",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13357796": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "13357796",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11627664": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "11627664",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12185636": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "12185636",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_13435075_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "13435075",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_14756890_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "14756890",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_10792061": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "10792061",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_17874064_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "17874064",
-      "configuration": "SINGLE_PHASE"
-    },
-    "sop_x2_13363295_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "13363295",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13357784": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "13357784",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13691508": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "13691508",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11068335": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "11068335",
-      "configuration": "SINGLE_PHASE"
-    },
-    "str_9108515_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "9108515",
-      "configuration": "SINGLE_PHASE"
-    },
-    "sop_x2_13363295_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "13363295",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13728130": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "13728130",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12317602": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "12317602",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11650907": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "11650907",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_17855759_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "17855759",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13408540": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "13408540",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11730483": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "11730483",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11910740": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "11910740",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12385154": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "12385154",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13601748": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "13601748",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11410018": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "11410018",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13513456": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "13513456",
-      "configuration": "SINGLE_PHASE"
-    },
-    "sop_x3_12934945_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "12934945",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_10956350": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "10956350",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_10932282": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "10932282",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13357779": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "13357779",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11978903": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "11978903",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_13435075_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "13435075",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_14756890_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "14756890",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13601746": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "13601746",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11278631": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "11278631",
-      "configuration": "SINGLE_PHASE"
-    },
-    "sop_x1_12934917_2": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "12934917",
-      "configuration": "SINGLE_PHASE"
-    },
-    "sop_x4_17655571_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "17655571",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_9369082_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "9369082",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_12725180_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "12725180",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12327065": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "12327065",
-      "configuration": "SINGLE_PHASE"
-    },
-    "sop_x3_12934945_3": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "12934945",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13572881": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "13572881",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12807627": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "12807627",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_10484937": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "10484937",
-      "configuration": "SINGLE_PHASE"
-    },
-    "statcom_12958003_1": {
-      "p_nom": [
-        0
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "12958003",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11730840": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "2",
-        "n"
-      ],
-      "bus": "11730840",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12848124": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "12848124",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13601753": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "13601753",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_12184416": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "12184416",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_11335818": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "11335818",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load_13507545": {
-      "p_nom": [
-        1000
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.2396003617136947,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        0
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "13507545",
-      "configuration": "SINGLE_PHASE"
     }
   },
   "linecode": {

@@ -1,6 +1,6 @@
 # Network graph  (189 buses)
 
-b1690 (SRC G1)
+b1690 (SRC)
 └── [tx2620: Dyn1 11.0kV/433V]── b342
     ├── b1097 (L31)
     ├── b1214
@@ -242,6 +242,3 @@ Loads (123 total):
   L49 = ld2730_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
   L50 = ld2747_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
   … and 73 more (pass legend_limit= to show all)
-
-Generators (1 total):
-  G1 = slack_source     max    0.0 kW  terminals: 1,2,3

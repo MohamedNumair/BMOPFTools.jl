@@ -8174,9 +8174,9 @@
       "bus": "232",
       "configuration": "SINGLE_PHASE"
     },
-    "der_560": {
+    "der_2586": {
       "cost": [
-        0.000213687938
+        0.000293716718
       ],
       "p_max": [
         4000
@@ -8188,7 +8188,7 @@
         "2",
         "n"
       ],
-      "bus": "560",
+      "bus": "2586",
       "configuration": "SINGLE_PHASE"
     },
     "der_968": {
@@ -8208,9 +8208,9 @@
       "bus": "968",
       "configuration": "SINGLE_PHASE"
     },
-    "der_2586": {
+    "der_560": {
       "cost": [
-        0.000293716718
+        0.000213687938
       ],
       "p_max": [
         4000
@@ -8222,7 +8222,7 @@
         "2",
         "n"
       ],
-      "bus": "2586",
+      "bus": "560",
       "configuration": "SINGLE_PHASE"
     },
     "der_1741": {
