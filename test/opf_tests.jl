@@ -373,6 +373,37 @@
     end
 
     # ─────────────────────────────────────────────────────────────────────────
+    # T9b: shunt-carrying line WITH a phase-to-ground v_max array. This drives
+    # the series-current box derivation through _terminal_vmax_to_ground, which
+    # must read the per-phase v_max[k] entry (a scalar Float64(v_max) crashes on
+    # the array). Regression for the per-phase v_min/v_max migration.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T9b: series-current box with per-phase v_max + line shunt" begin
+        # The shunt-carrying line l2 has from-bus b1, which carries a per-phase
+        # v_max array → _terminal_vmax_to_ground reads v_max[k] for b1's phase.
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "b1":       {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
+                         "v_min":[900.0],"v_max":[1100.0]},
+            "b2":       {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":1.0e-4,"i_max":[120.0]},
+                     "lcsh":{"R_series_1_1":1.0e-4,"G_from_1_1":0.1,"i_max":[120.0]}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"b1",
+                       "terminal_map_from":["1"],"terminal_map_to":["1"],
+                       "linecode":"lc","length":1.0},
+                 "l2":{"bus_from":"b1","bus_to":"b2",
+                       "terminal_map_from":["1"],"terminal_map_to":["1"],
+                       "linecode":"lcsh","length":1.0}}}
+        """; from_string=true)
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["bus"]["b1"]["1"]["vm"] ≤ 1100.0 + 1e-3
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
     # T10: Sequence voltage bounds — all three sequence components constrained
     #
     # Balanced 3-phase source at V_s=1000 V feeds a generator-only bus lb
