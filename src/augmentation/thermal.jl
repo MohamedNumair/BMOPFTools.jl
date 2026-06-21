@@ -33,7 +33,9 @@ const _IEC_CONDUCTOR_TABLE = [
     (0.082, 240, 541, 600),
 ]  # Source: IEC 60228:2004 (resistance), IEC 60364-5-52:2009 Table B.52 (ampacity)
 
-const _THERMAL_TOLERANCE = 0.15   # 15 % relative tolerance for R₁₁ matching
+# 15 % relative tolerance (default) for R₁₁ matching against the IEC table.
+# Sourced from config/default.toml [thermal].tolerance.
+const _THERMAL_TOLERANCE = Float64(_thermal_cfg()["tolerance"])
 
 # Confidence ordering for threshold comparison
 const _CONFIDENCE_ORDER = Dict(:low => 1, :medium => 2, :high => 3)

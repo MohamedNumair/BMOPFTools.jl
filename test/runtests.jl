@@ -2512,4 +2512,46 @@ const IEEE13_FIXTURE = """
 
     include("admittance_tests.jl")
 
+    @testset "Config — TOML thresholds" begin
+        # Defaults load and match the historical hardcoded values.
+        cfg = load_config()
+        @test cfg["domain_rules"]["pf_min"] == 0.70
+        @test cfg["domain_rules"]["cost_max_per_kwh"] == 10.0
+        @test cfg["thermal"]["tolerance"] == 0.15
+        @test cfg["provenance"]["grounding"]["earth_solid_ohm"] == 1.0
+        @test cfg["provenance"]["dss_defaults"]["normamps"] == 400.0
+
+        # The module consts are sourced from the config.
+        @test BMOPFTools._THERMAL_TOLERANCE == cfg["thermal"]["tolerance"]
+        @test BMOPFTools._EARTH_SOLID_OHM == cfg["provenance"]["grounding"]["earth_solid_ohm"]
+        @test BMOPFTools._DSS_NORMAMPS == cfg["provenance"]["dss_defaults"]["normamps"]
+        @test BMOPFTools._DEFAULT_THRESHOLDS["pf_min"] == cfg["domain_rules"]["pf_min"]
+
+        # A user file deep-merges over the defaults: only the named key changes.
+        mktemp() do path, io
+            write(io, "[domain_rules]\npf_min = 0.95\n"); close(io)
+            user = load_config(path)
+            @test user["domain_rules"]["pf_min"] == 0.95
+            @test user["domain_rules"]["xfmr_ratio_max"] == cfg["domain_rules"]["xfmr_ratio_max"]
+        end
+
+        # A nonexistent path errors rather than silently using defaults.
+        @test_throws ArgumentError load_config(joinpath(tempdir(), "no_such_bmopf_cfg.toml"))
+
+        # domain_rules_check honours an overridden threshold: a load whose PF is
+        # below the raised pf_min is flagged, but not under the default.
+        net = parse_bmopf(IEEE13_FIXTURE; from_string=true)
+        net["load"]["load_632"]["p_nom"] = [800.0, 800.0, 800.0]
+        net["load"]["load_632"]["q_nom"] = [600.0, 600.0, 600.0]   # PF = 0.8
+        f_def = Finding[]
+        domain_rules_check(net, f_def)   # default pf_min 0.70 → no flag
+        @test !any(f -> f.code == "W.DOM.LOAD_PF_LOW" && f.component_id == "load_632", f_def)
+        f_strict = Finding[]
+        domain_rules_check(net, f_strict; thresholds=Dict{String,Any}(
+            "pf_min" => 0.90, "cost_max_per_kwh" => 10.0, "r_series_min" => 1e-9,
+            "xfmr_ratio_max" => 1000.0, "z_line_min_ohm" => 1e-4,
+            "z_spread_info" => 1e3, "z_spread_warn" => 1e5))
+        @test any(f -> f.code == "W.DOM.LOAD_PF_LOW" && f.component_id == "load_632", f_strict)
+    end
+
 end  # @testset "BMOPFTools"

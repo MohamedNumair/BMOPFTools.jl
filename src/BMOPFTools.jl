@@ -224,6 +224,8 @@ end
 # Submodule includes — order matters; IO first, then analysis, then report
 # ---------------------------------------------------------------------------
 
+include("config.jl")
+
 include("io/migrate.jl")
 include("io/parse_bmopf.jl")
 include("io/write_bmopf.jl")
@@ -275,7 +277,7 @@ a [`SummaryReport`](@ref).
 For snapshot networks, `t_index` is ignored. For networks with a
 `"time_series"` key, the snapshot at `t_index` is materialised first.
 """
-function analyze(net::Dict{String,Any}; t_index::Int=1)
+function analyze(net::Dict{String,Any}; t_index::Int=1, config::Dict=_DEFAULT_CONFIG)
     working = is_timeseries(net) ? get_snapshot(net, t_index) : net
     findings = Finding[]
     results  = Dict{Symbol,Dict{String,Any}}()
@@ -293,7 +295,7 @@ function analyze(net::Dict{String,Any}; t_index::Int=1)
     # Validation passes
     results[:schema]         = schema_check(working, findings)
     results[:completeness]   = completeness_check(working, findings)
-    results[:domain_rules]   = domain_rules_check(working, findings)
+    results[:domain_rules]   = domain_rules_check(working, findings; thresholds=_domain_thresholds(config))
     results[:redundancy]     = redundancy_check(working, findings)
     results[:integrity]      = integrity_check(working, findings)
     results[:spec]           = spec_conformance_check(working, findings)
@@ -482,6 +484,7 @@ export from_pmd, to_pmd
 export from_dss
 export sideload_coordinates!
 export analyze, render
+export load_config                      # tunable thresholds (config/default.toml)
 export is_timeseries, get_snapshot      # useful for interactive use
 
 # Analysis and validation functions (used directly in tests)

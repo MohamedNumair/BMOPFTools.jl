@@ -11,7 +11,7 @@ configurable via the `thresholds` keyword (see `_DEFAULT_THRESHOLDS`).
 """
 function domain_rules_check(net::Dict{String,Any},
                              findings::Vector{Finding};
-                             thresholds::Dict=_DEFAULT_THRESHOLDS)::Dict{String,Any}
+                             thresholds::Dict=_domain_thresholds())::Dict{String,Any}
     result = Dict{String,Any}()
     n_checks = Ref(0)
 
@@ -34,22 +34,10 @@ function domain_rules_check(net::Dict{String,Any},
     result
 end
 
-const _DEFAULT_THRESHOLDS = Dict{String,Any}(
-    # Power factor
-    "pf_min"            => 0.70,
-    # Generator cost
-    "cost_max_per_kwh"  => 10.0,   # $/kWh — flag if unrealistically high
-    # Line series resistance: Ω/m; flag near-zero diagonal
-    "r_series_min"      => 1e-9,
-    # Transformer: max step ratio in either direction (33/0.4 kV ≈ 83,
-    # 132/11 kV = 12; anything beyond 1000:1 is suspect)
-    "xfmr_ratio_max"    => 1000.0,
-    # Absolute series impedance ||Z||_F (Ω) below which a line should be a switch
-    "z_line_min_ohm"    => 1e-4,
-    # Adjacent-line ||Z||_F ratio thresholds (info / warning)
-    "z_spread_info"     => 1e3,
-    "z_spread_warn"     => 1e5,
-)
+# Backwards-compatible handle on the domain-rules thresholds. These now live in
+# `config/default.toml` under `[domain_rules]`; this is a view of that section.
+# Pass a `thresholds=` (or `analyze(...; config=)`) to override per call.
+const _DEFAULT_THRESHOLDS = _domain_thresholds()
 
 function _check_bus_voltage_bounds(net, findings, n_checks)
     # v_min/v_max are per-phase arrays (phase-to-ground); vn_max is the optional

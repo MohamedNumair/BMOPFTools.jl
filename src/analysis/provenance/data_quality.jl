@@ -305,12 +305,14 @@ end
 
 const _DSS_Z1_DEFAULT = (0.058 + im * 0.1206) / 304.8   # Ω/kft → Ω/m
 const _DSS_Z0_DEFAULT = (0.1784 + im * 0.4047) / 304.8
-const _DSS_NORMAMPS   = 400.0
-const _DSS_EMERGAMPS  = 600.0
-const _DSS_XHL_PU     = 0.07     # xhl = 7 %
-const _DSS_RW_PU      = 0.004    # %r = 0.2 per winding, two windings
-const _DSS_PF_TAN     = tan(acos(0.88))
-const _DSS_KV_LL      = (115_000.0, 12_470.0)   # basekv / kv defaults (V, LL)
+# Defaults from config/default.toml [provenance.dss_defaults].
+const _DSS_NORMAMPS   = Float64(_dss_defaults_cfg()["normamps"])
+const _DSS_EMERGAMPS  = Float64(_dss_defaults_cfg()["emergamps"])
+const _DSS_XHL_PU     = Float64(_dss_defaults_cfg()["xhl_pu"])   # xhl = 7 %
+const _DSS_RW_PU      = Float64(_dss_defaults_cfg()["rw_pu"])    # %r = 0.2 per winding, two windings
+const _DSS_PF_TAN     = tan(acos(Float64(_dss_defaults_cfg()["pf"])))
+const _DSS_KV_LL      = (Float64(_dss_defaults_cfg()["basekv_v"]),
+                         Float64(_dss_defaults_cfg()["kv_v"]))   # basekv / kv defaults (V, LL)
 
 # total per-unit series impedance of a transformer on its own rating base
 function _xfmr_pu(t::Dict{String,Any}, subtype::String)
@@ -542,8 +544,9 @@ end
 # Threshold for "effectively zero" series impedance.
 # Per-unit-length: < 1e-6 Ω/m on every diagonal entry.
 # Effective (Z * length): < 1e-4 Ω total on every diagonal entry.
-const _SWITCH_LIKE_Z_PER_M  = 1e-6   # Ω/m
-const _SWITCH_LIKE_Z_TOTAL  = 1e-4   # Ω
+# Defaults from config/default.toml [provenance.switch_like].
+const _SWITCH_LIKE_Z_PER_M  = Float64(_switch_like_cfg()["z_per_m"])   # Ω/m
+const _SWITCH_LIKE_Z_TOTAL  = Float64(_switch_like_cfg()["z_total"])   # Ω
 
 """
     _check_switch_like_lines(net, findings) -> Dict{String,Any}

@@ -265,8 +265,9 @@ end
 # Earthing system classification per galvanic island
 # ---------------------------------------------------------------------------
 
-const _EARTH_SOLID_OHM = 1.0      # |Z| below this: "solid"
-const _EARTH_T_I_OHM   = 200.0    # |Z| above this (or absent): isolated (I)
+# Defaults from config/default.toml [provenance.grounding].
+const _EARTH_SOLID_OHM = Float64(_grounding_cfg()["earth_solid_ohm"])     # |Z| below this: "solid"
+const _EARTH_T_I_OHM   = Float64(_grounding_cfg()["earth_isolated_ohm"])  # |Z| above this (or absent): isolated (I)
 
 # bus => smallest |Z| of any neutral-earthing path at that bus
 function _bus_neutral_earthing(net::Dict{String,Any},

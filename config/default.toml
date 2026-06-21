@@ -1,0 +1,68 @@
+# BMOPFTools default configuration
+#
+# Tunable thresholds for the analysis, validation, and augmentation passes.
+# These are *defaults*; they are loaded once at package load time into
+# `BMOPFTools._DEFAULT_CONFIG`. To override them for a particular study,
+# copy this file, edit the values you care about, and pass it via
+# `load_config("my.toml")` to the relevant entry point's `config=` keyword
+# (e.g. `analyze(net; config=load_config("my.toml"))`).
+#
+# Only values that a user might reasonably want to tune per-network or
+# per-study live here. Schema-level facts (terminal maps, the IEC conductor
+# ampacity table, field-name sets, regexes) stay in the source code, since
+# changing them would be a correctness bug, not a preference.
+
+# ---------------------------------------------------------------------------
+# Domain plausibility checks  (validation/domain_rules.jl)
+# ---------------------------------------------------------------------------
+[domain_rules]
+# Power factor: warn on loads below this
+pf_min = 0.70
+# Generator cost: flag if unrealistically high ($/kWh)
+cost_max_per_kwh = 10.0
+# Line series resistance: Ω/m; flag near-zero diagonal
+r_series_min = 1e-9
+# Transformer: max step ratio in either direction (anything beyond 1000:1
+# is suspect; 33/0.4 kV ≈ 83, 132/11 kV = 12)
+xfmr_ratio_max = 1000.0
+# Absolute series impedance ||Z||_F (Ω) below which a line should be a switch
+z_line_min_ohm = 1e-4
+# Adjacent-line ||Z||_F ratio thresholds (info / warning)
+z_spread_info = 1e3
+z_spread_warn = 1e5
+
+# ---------------------------------------------------------------------------
+# Thermal-rating inference  (augmentation/thermal.jl)
+# ---------------------------------------------------------------------------
+[thermal]
+# Relative tolerance for matching R₁₁ against the IEC ampacity lookup table
+tolerance = 0.15
+
+# ---------------------------------------------------------------------------
+# Provenance: neutral-earthing classification  (provenance/wires_grounding.jl)
+# ---------------------------------------------------------------------------
+[provenance.grounding]
+# |Z| (Ω) below this at a bus: "solid" earth
+earth_solid_ohm = 1.0
+# |Z| (Ω) above this (or absent): isolated (I) system
+earth_isolated_ohm = 200.0
+
+# ---------------------------------------------------------------------------
+# Provenance: OpenDSS default-value fingerprints  (provenance/data_quality.jl)
+# Defaults OpenDSS substitutes for missing fields; flagged so users know a
+# value came from a tool default rather than real data. Tune to a utility's
+# house standards when importing their models.
+# ---------------------------------------------------------------------------
+[provenance.dss_defaults]
+normamps = 400.0
+emergamps = 600.0
+xhl_pu = 0.07            # transformer xhl = 7 %
+rw_pu = 0.004            # %r = 0.2 per winding, two windings
+pf = 0.88               # load power factor whose tan(acos(pf)) is fingerprinted
+basekv_v = 115000.0     # basekv default (V, line-to-line)
+kv_v = 12470.0          # kv default (V, line-to-line)
+
+# Switch-like (near-zero-impedance) line detection
+[provenance.switch_like]
+z_per_m = 1e-6          # Ω/m on all diagonals
+z_total = 1e-4          # Ω effective (Z·length) on all diagonals
