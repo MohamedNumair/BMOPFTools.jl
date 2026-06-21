@@ -1,10 +1,10 @@
 # BMOPF Solution Profile: Network_24_Feeder_1
 
-**Generated:** 2026-06-18 09:29:14  
+**Generated:** 2026-06-21 16:42:22  
 **Status:** `LOCALLY_SOLVED`  
-**Objective:** 14.4731  
-**Solve time:** 0.114 s  
-**Findings:** 0 errors · 14 warnings · 2 info  
+**Objective:** -306.098  
+**Solve time:** 0.265 s  
+**Findings:** 3 errors · 1 warnings · 2 info  
 
 ---
 
@@ -13,12 +13,12 @@
 | Field | Value |
 |-------|-------|
 | Status | `LOCALLY_SOLVED` |
-| Total generation | 52.972 kW |
+| Total generation | -316.469 kW |
 | Total load | 52.745 kW |
-| Total line losses | 418.4 W |
-| Loss fraction | 0.8% |
-| Power balance error | 191.0 W |
-| Max neutral shift | 0.974 V (bus `935`) |
+| Total line losses | 1.204 kW |
+| Loss fraction | 2.3% |
+| Power balance error | 370.417 kW |
+| Max neutral shift | 1.773 V (bus `935`) |
 
 ### Bound status
 
@@ -26,59 +26,143 @@
 |----------|:--------:|:-------------:|
 | Voltage  | 0 | 0 |
 | Thermal  | 0 | 0 |
-| Generator| 0 | 14 |
+| Generator| 3 | 0 |
+
+## 2. Voltage by Galvanic Zone
+
+Per-unit magnitudes are relative to each zone's own voltage base; volts are not comparable across transformer boundaries.
+
+| St | Zone | V base | Buses | Vm min (pu) | Vm max (pu) | Max imbalance | Max neutral shift |
+|:--:|------|-------:|------:|------------:|------------:|--------------:|------------------:|
+| ✅ | `1001` | 240.0 V | 96 | 0.987 (`935`) | 1.0 (`sourcebus`) | 0.9 % (`935`) | 1.77 V (`935`) |
+
+### Per-bus detail
+
+**Zone `1001`** (base 240.0 V):
+
+| St | Bus | Vm min (V) | Vm max (V) | Vm min (pu) | Vm max (pu) | Imbalance | Neutral |
+|:--:|-----|-----------:|-----------:|------------:|------------:|----------:|--------:|
+| ✅ | `935` | 237.0 | 239.3 | 0.987 | 0.996 | 0.9 % | 1.77 V |
+| ✅ | `936` | 237.5 | 239.2 | 0.989 | 0.996 | 0.7 % | 1.28 V |
+| ✅ | `937` | 237.5 | 239.2 | 0.989 | 0.996 | 0.7 % | 1.27 V |
+| ✅ | `925` | 237.5 | 239.2 | 0.989 | 0.996 | 0.7 % | 1.26 V |
+| ✅ | `1029` | 237.8 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.93 V |
+| ✅ | `1069` | 237.8 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.83 V |
+| ✅ | `985` | 237.8 | 238.9 | 0.99 | 0.994 | 0.4 % | 0.92 V |
+| ✅ | `1071` | 237.8 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.81 V |
+| ✅ | `1068` | 237.8 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.81 V |
+| ✅ | `1072` | 237.8 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.8 V |
+| ✅ | `1065` | 237.8 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.81 V |
+| ✅ | `884` | 237.8 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.89 V |
+| ✅ | `1066` | 237.8 | 239.2 | 0.99 | 0.996 | 0.5 % | 0.74 V |
+| ✅ | `1009` | 237.8 | 239.2 | 0.99 | 0.996 | 0.5 % | 0.87 V |
+| ✅ | `872` | 237.8 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.88 V |
+| ✅ | `999` | 237.8 | 239.1 | 0.99 | 0.996 | 0.5 % | 0.85 V |
+| ✅ | `797` | 237.8 | 239.1 | 0.99 | 0.996 | 0.5 % | 0.85 V |
+| ✅ | `811` | 237.8 | 239.1 | 0.99 | 0.996 | 0.5 % | 0.85 V |
+| ✅ | `1001` | 237.8 | 239.1 | 0.99 | 0.996 | 0.5 % | 0.84 V |
+| ✅ | `1007` | 237.8 | 239.1 | 0.99 | 0.996 | 0.5 % | 0.82 V |
+| ✅ | `972` | 237.8 | 239.1 | 0.99 | 0.996 | 0.5 % | 0.84 V |
+| ✅ | `981` | 237.8 | 239.1 | 0.99 | 0.996 | 0.5 % | 0.84 V |
+| ✅ | `989` | 237.8 | 239.1 | 0.99 | 0.996 | 0.5 % | 0.83 V |
+| ✅ | `1002` | 237.8 | 239.1 | 0.99 | 0.996 | 0.5 % | 0.84 V |
+| ✅ | `995` | 237.8 | 239.1 | 0.99 | 0.996 | 0.5 % | 0.84 V |
+| ✅ | `784` | 237.8 | 239.2 | 0.99 | 0.996 | 0.5 % | 0.87 V |
+| ✅ | `1026` | 237.8 | 239.2 | 0.99 | 0.996 | 0.5 % | 0.86 V |
+| ✅ | `772` | 237.8 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.87 V |
+| ✅ | `897` | 237.8 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.87 V |
+| ✅ | `973` | 237.9 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.93 V |
+| ✅ | `908` | 237.9 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.89 V |
+| ✅ | `896` | 237.9 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.89 V |
+| ✅ | `738` | 237.9 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.89 V |
+| ✅ | `729` | 237.9 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.89 V |
+| ✅ | `1010` | 237.9 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.87 V |
+| ✅ | `792` | 237.9 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.82 V |
+| ✅ | `956` | 237.9 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.89 V |
+| ✅ | `722` | 237.9 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.9 V |
+| ✅ | `710` | 237.9 | 239.2 | 0.99 | 0.996 | 0.6 % | 0.92 V |
+| ✅ | `698` | 238.0 | 239.3 | 0.991 | 0.996 | 0.5 % | 0.86 V |
+| ✅ | `695` | 238.0 | 239.3 | 0.991 | 0.996 | 0.5 % | 0.85 V |
+| ✅ | `694` | 238.0 | 239.3 | 0.991 | 0.996 | 0.5 % | 0.83 V |
+| ✅ | `691` | 238.0 | 239.3 | 0.991 | 0.996 | 0.5 % | 0.83 V |
+| ✅ | `673` | 238.1 | 239.3 | 0.991 | 0.996 | 0.5 % | 0.8 V |
+| ✅ | `742` | 238.1 | 239.3 | 0.991 | 0.996 | 0.5 % | 0.77 V |
+| ✅ | `755` | 238.1 | 239.3 | 0.991 | 0.996 | 0.5 % | 0.77 V |
+| ✅ | `754` | 238.1 | 239.3 | 0.991 | 0.996 | 0.5 % | 0.76 V |
+| ✅ | `753` | 238.1 | 239.3 | 0.991 | 0.996 | 0.5 % | 0.72 V |
+| ✅ | `584` | 238.2 | 239.4 | 0.992 | 0.997 | 0.5 % | 0.87 V |
+| ✅ | `818` | 238.3 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.83 V |
+| ✅ | `592` | 238.3 | 239.4 | 0.992 | 0.997 | 0.4 % | 0.66 V |
+| ✅ | `585` | 238.3 | 239.4 | 0.992 | 0.997 | 0.4 % | 0.71 V |
+| ✅ | `812` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.78 V |
+| ✅ | `815` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.77 V |
+| ✅ | `840` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.69 V |
+| ✅ | `837` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.69 V |
+| ✅ | `821` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.76 V |
+| ✅ | `814` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.75 V |
+| ✅ | `817` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.75 V |
+| ✅ | `820` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.76 V |
+| ✅ | `798` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.76 V |
+| ✅ | `822` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.76 V |
+| ✅ | `819` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.75 V |
+| ✅ | `816` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.83 V |
+| ✅ | `813` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.84 V |
+| ✅ | `836` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.68 V |
+| ✅ | `842` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.68 V |
+| ✅ | `839` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.68 V |
+| ✅ | `823` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.69 V |
+| ✅ | `838` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.68 V |
+| ✅ | `841` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.65 V |
+| ✅ | `725` | 238.4 | 239.3 | 0.992 | 0.996 | 0.4 % | 0.7 V |
+| ✅ | `577` | 238.4 | 239.4 | 0.993 | 0.997 | 0.4 % | 0.71 V |
+| ✅ | `712` | 238.4 | 239.3 | 0.993 | 0.996 | 0.4 % | 0.73 V |
+| ✅ | `540` | 238.5 | 239.4 | 0.993 | 0.997 | 0.4 % | 0.67 V |
+| ✅ | `556` | 238.5 | 239.2 | 0.993 | 0.996 | 0.3 % | 0.62 V |
+| ✅ | `549` | 238.5 | 239.4 | 0.993 | 0.997 | 0.4 % | 0.64 V |
+| ✅ | `541` | 238.5 | 239.4 | 0.993 | 0.997 | 0.4 % | 0.64 V |
+| ✅ | `548` | 238.5 | 239.4 | 0.993 | 0.997 | 0.4 % | 0.61 V |
+| ✅ | `412` | 238.5 | 239.4 | 0.993 | 0.997 | 0.4 % | 0.63 V |
+| ✅ | `361` | 238.6 | 239.5 | 0.994 | 0.997 | 0.3 % | 0.6 V |
+| ✅ | `370` | 238.6 | 239.5 | 0.994 | 0.997 | 0.3 % | 0.6 V |
+| ✅ | `631` | 238.6 | 239.5 | 0.994 | 0.997 | 0.3 % | 0.58 V |
+| ✅ | `659` | 238.8 | 239.5 | 0.994 | 0.997 | 0.3 % | 0.56 V |
+| ✅ | `655` | 238.8 | 239.5 | 0.994 | 0.997 | 0.3 % | 0.55 V |
+| ✅ | `358` | 238.8 | 239.5 | 0.994 | 0.997 | 0.3 % | 0.53 V |
+| ✅ | `353` | 238.8 | 239.5 | 0.994 | 0.997 | 0.3 % | 0.53 V |
+| ✅ | `306` | 239.3 | 239.8 | 0.996 | 0.998 | 0.2 % | 0.44 V |
+| ✅ | `465` | 239.3 | 239.8 | 0.996 | 0.998 | 0.2 % | 0.36 V |
+| ✅ | `125` | 239.3 | 239.8 | 0.996 | 0.998 | 0.2 % | 0.33 V |
+| ✅ | `351` | 239.3 | 239.8 | 0.996 | 0.998 | 0.2 % | 0.31 V |
+| ✅ | `120` | 239.3 | 239.8 | 0.996 | 0.998 | 0.2 % | 0.33 V |
+| ✅ | `360` | 239.4 | 239.7 | 0.997 | 0.998 | 0.1 % | 0.36 V |
+| ✅ | `106` | 239.4 | 239.8 | 0.997 | 0.998 | 0.2 % | 0.29 V |
+| ✅ | `102` | 239.4 | 239.8 | 0.997 | 0.998 | 0.2 % | 0.29 V |
+| ✅ | `sourcebus` | 240.2 | 240.2 | 1.0 | 1.0 | 0.0 % | — |
 
 ## 4. Generator Dispatch
 
 | Sev | Generator | Terminal | Field | Value | Bound |
 |-----|-----------|----------|-------|-------|-------|
-| W | `der_973` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1066` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_792` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_818` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_981` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_592` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_813` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1009` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_815` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_306` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_816` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_842` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_841` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_465` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
+| **E** | `grid` | `1` | pg | -105.49 kW | [-105.49 kW, 105.49 kW] |
+| **E** | `grid` | `2` | pg | -105.49 kW | [-105.49 kW, 105.49 kW] |
+| **E** | `grid` | `3` | pg | -105.49 kW | [-105.49 kW, 105.49 kW] |
+
+## 5. Constraint Residuals
+
+> ⚠ Network power balance error: |pg_total − pd_total − p_loss| = 370.417 kW (>1 % of load). pg=-316.47 kW, pd=52.74 kW, p_loss=1.2 kW.
 
 ## 6. All Findings
 
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_973`  
-  Generator 'der_973' phase '1': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1066`  
-  Generator 'der_1066' phase '3': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_792`  
-  Generator 'der_792' phase '3': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_818`  
-  Generator 'der_818' phase '1': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_981`  
-  Generator 'der_981' phase '2': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_592`  
-  Generator 'der_592' phase '2': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_813`  
-  Generator 'der_813' phase '2': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1009`  
-  Generator 'der_1009' phase '1': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_815`  
-  Generator 'der_815' phase '1': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_306`  
-  Generator 'der_306' phase '1': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_816`  
-  Generator 'der_816' phase '2': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_842`  
-  Generator 'der_842' phase '3': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_841`  
-  Generator 'der_841' phase '2': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_465`  
-  Generator 'der_465' phase '1': pg=4.0 kW is within 1 % of its bound (active).
+- **ERROR** `E.SOL.GEN_VIOLATION` — generator/`grid`  
+  Generator 'grid' phase '1': pg=-105.49 kW violates [-105.49 kW, 105.49 kW].
+- **ERROR** `E.SOL.GEN_VIOLATION` — generator/`grid`  
+  Generator 'grid' phase '2': pg=-105.49 kW violates [-105.49 kW, 105.49 kW].
+- **ERROR** `E.SOL.GEN_VIOLATION` — generator/`grid`  
+  Generator 'grid' phase '3': pg=-105.49 kW violates [-105.49 kW, 105.49 kW].
+- **WARN** `W.SOL.POWER_BALANCE`  
+  Network power balance error: |pg_total − pd_total − p_loss| = 370.417 kW (>1 % of load). pg=-316.47 kW, pd=52.74 kW, p_loss=1.2 kW.
 - INFO `I.SOL.BINDING_SUMMARY`  
-  Solution bound summary: 0 violation(s), 14 active constraint(s). Voltage: 0V / 0A. Thermal: 0V / 0A. Generator: 0V / 14A.
+  Solution bound summary: 3 violation(s), 0 active constraint(s). Voltage: 0V / 0A. Thermal: 0V / 0A. Generator: 3V / 0A.
 - INFO `I.SOL.NEUTRAL_SHIFT`  
-  Maximum neutral terminal voltage: 0.97 V at bus '935' — reflects the neutral shift under unbalanced loading.
+  Maximum neutral terminal voltage: 1.77 V at bus '935' — reflects the neutral shift under unbalanced loading.
 
