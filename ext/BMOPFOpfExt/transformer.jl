@@ -582,9 +582,32 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
     # For Dy (wye_is_from=false): V_del[k] - V_del[k_prev] = n_eff*(V_wye[k] - V_n)
     # The Dy direction matches the ODS backward-delta convention.
     #
-    # Per-winding T: subtract the series drop across the wye branch (current
-    # I_wye,k) and the delta branch (current I_del,k, referred through n_eff):
-    #   ΔV_del = n_eff·ΔV_wye − (Rw+jXw)·I_wye,k − n_eff·(Rd+jXd)·I_del,k
+    # Per-winding T: subtract the series drop across the wye coil (winding
+    # current I_wye,k) and the delta coil k (arm current I_arm,k):
+    #   ΔV_del = n_eff·ΔV_wye − n_eff·(Rw+jXw)·I_wye,k − (Rd_coil+jXd_coil)·I_arm,k
+    #
+    # Both drops are driven by the WYE phase current I_wye,k.  The delta-arm
+    # current is the magnetising image of the wye winding current:
+    #   I_arm,k = (1/n_eff)·I_wye,k    (amp-turn balance; verified numerically to
+    #   match the OpenDSS terminal-Y oracle to 3 d.p. on the unbalanced fixture).
+    # NB: the delta CURRENT variable cr_xf[del,k] is the delta LINE current
+    # (= I_arm,k − I_arm,k_other, set by the current-coupling constraint below and
+    # injected at the delta node by KCL) — NOT the arm current, so it must NOT be
+    # used for the coil voltage drop.  Using the line current here was the cause
+    # of the historical mis-referral (wrong-direction sensitivity, negative
+    # transformer losses).
+    #
+    # Delta-coil impedance base (matches OpenDSS Transformer.pas exactly).
+    # OpenDSS builds Y_term[i,j] = Y_1volt[i,j]/(VBase_i·VBase_j) with the
+    # per-winding VBase line-to-NEUTRAL for a wye winding (kVLL/√3) but the full
+    # line-to-LINE coil voltage (kVLL) for a delta winding — the √3 lives
+    # entirely in VBase_delta, and the delta connection (1→2→3→1) is a pure
+    # incidence matrix that scales nothing.  Our `r/x_series_to` (delta side)
+    # arrive referred to the delta BUS line-to-neutral base, which is 1/n_ph of
+    # the delta-COIL (line-to-line) base (V_LL²/S vs V_LL²/(S/n_ph)).  So
+    # Zd_coil = n_ph·(Rd+jXd).  Combined with I_arm,k = I_wye,k/n_eff, the delta
+    # drop coefficient on the wye current is (n_ph/n_eff)·(Rd+jXd).
+    Zd_coil_coef = n_ph / n_eff   # (n_ph·Zd) on arm current = (n_ph/n_eff)·Zd on wye current
     for k in 1:n_ph
         t_del_k   = tm_del[k]
         ph_pos    = ph_idx[k]
@@ -608,17 +631,19 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
 
         if has_series
             Iwr = cr_xf[(tid, side_wye, ph_pos)]; Iwi = ci_xf[(tid, side_wye, ph_pos)]
-            Idr = cr_xf[(tid, side_del, k)];      Idi = ci_xf[(tid, side_del, k)]
+            # Effective wye-referred series impedance on the wye phase current:
+            #   wye coil  : n_eff·(Rw+jXw)
+            #   delta coil: (n_ph/n_eff)·(Rd+jXd)   via I_arm = I_wye/n_eff
+            Reff = n_eff * Rw + Zd_coil_coef * Rd
+            Xeff = n_eff * Xw + Zd_coil_coef * Xd
             @constraint(model,
                 vr[(b_del, t_del_k)] - vr[(b_del, t_del_other)] ==
                 n_eff * vr_wye_pn
-                - n_eff * (Rw * Iwr - Xw * Iwi)
-                - (Rd * Idr - Xd * Idi))
+                - (Reff * Iwr - Xeff * Iwi))
             @constraint(model,
                 vi[(b_del, t_del_k)] - vi[(b_del, t_del_other)] ==
                 n_eff * vi_wye_pn
-                - n_eff * (Rw * Iwi + Xw * Iwr)
-                - (Rd * Idi + Xd * Idr))
+                - (Reff * Iwi + Xeff * Iwr))
         else
             @constraint(model,
                 vr[(b_del, t_del_k)] - vr[(b_del, t_del_other)] == n_eff * vr_wye_pn)
@@ -640,10 +665,10 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
         ph_other = ph_idx[k_other]
         @constraint(model,
             n_eff * cr_xf[(tid, side_del, k)] ==
-            cr_xf[(tid, side_wye, ph_pos)] - cr_xf[(tid, side_wye, ph_other)])
+            -(cr_xf[(tid, side_wye, ph_pos)] - cr_xf[(tid, side_wye, ph_other)]))
         @constraint(model,
             n_eff * ci_xf[(tid, side_del, k)] ==
-            ci_xf[(tid, side_wye, ph_pos)] - ci_xf[(tid, side_wye, ph_other)])
+            -(ci_xf[(tid, side_wye, ph_pos)] - ci_xf[(tid, side_wye, ph_other)]))
     end
 
     # Neutral KCL at the transformer star point:
