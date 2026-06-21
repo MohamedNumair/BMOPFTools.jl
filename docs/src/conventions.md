@@ -168,6 +168,90 @@ parks them in `single_phase` with 3-phase terminal maps and the conformance
 check flags the arity (`W.SPEC.XFMR_TMAP_ARITY`) — see the
 [conversion guide](conversion.md).
 
+## Switches
+
+### Scope: what the `switch` object represents
+
+The `switch` is the data model's element for **any section of negligible series
+impedance** — a per-conductor short between two buses that either carries current
+with no voltage drop (closed) or carries none (open). It is an *idealised,
+lossless* two-bus element: there is no `linecode`, no `length`, and no `R`/`X`
+(contrast [Lines](#Lines,-linecodes-and-matrices)). The closed switch imposes
+$v_{b^\text{fr}} = v_{b^\text{to}}$ on every conductor in its terminal map and
+the open switch fixes its currents to zero (see
+[the OPF switch model](opf.md#Switches)).
+
+A single object therefore covers a family of physical devices that, for
+steady-state OPF, all reduce to the same idealisation. The intended scope:
+
+| Physical device | Why it maps to `switch` |
+|---|---|
+| **Disconnector / isolator** | Manually-operated open/close point; impedance negligible when closed. |
+| **Load-break switch / sectionaliser** | Field switching point for reconfiguration; lossless when closed. |
+| **Circuit breaker** | The *conducting path* is lossless; protection/trip logic is out of scope for steady-state OPF. |
+| **Recloser** | As above — a breaker with reclosing control; only its open/closed conduction state matters here. |
+| **Tie switch** | Normally-open reconfiguration link between feeders. |
+| **Busbar section / jumper / bus-tie** | A near-zero-impedance metallic connection between nodes; an explicit object instead of merging the buses. |
+| **Near-zero-impedance line** | A line whose $\|Z\|$ is below the conditioning threshold — the augmentation pass converts it to a closed switch (`W.DOM.LINE_LOW_IMPEDANCE`, [ref. 2](methodology.md#refs)). |
+
+What it is **not**: a switch never carries impedance, losses, shunt admittance,
+tap or phase-shift (use a `line`, `shunt`, or `transformer`); it never connects
+to ground (only to bus terminals, like lines); and its `open_switch` flag is a
+*data* state, not a control law — there is no protection, fault, or
+time-sequence model. Reliability/protection studies that need trip curves and
+reclose sequences are out of scope for the steady-state benchmark.
+
+### Why a dedicated element (rather than zero-impedance lines or bus merging)
+
+Inserting a zero- or near-zero-impedance branch into an admittance (bus-injection)
+formulation produces an infinite entry in **Y** and an ill-conditioned or
+rank-deficient system; the classic remedies are either *bus merging* (contract
+the branch and fuse its endpoints into a "super bus") or special zero-impedance
+branch handling [ref. 2](methodology.md#refs). The branch-flow / current–voltage
+formulation used here sidesteps this: a closed switch is expressed as an exact
+voltage-equality constraint with explicit current variables, so it is represented
+without an admittance and without losing the two distinct buses (and their
+bounds, names and attached devices). Keeping the section as a first-class object
+— rather than silently merging buses — preserves topology, lets the open/closed
+state be toggled for reconfiguration studies, and keeps current results
+addressable per switch (see [`switch` currents](results.md#switch-—-switch-currents)).
+
+### Terminology in other tools and standards
+
+The same "lossless conducting section" concept appears across the field under a
+range of names:
+
+- **OpenDSS** has no separate switch *element*: a `Line` with `Switch=yes`
+  becomes a 1 mΩ line that protection control elements (`Fuse`, `Relay`,
+  `Recloser`) open and close on a terminal. So in OpenDSS the conduction path and
+  the control are deliberately split — the line is the switchable section, the
+  control element is the logic. The BMOPF `switch` corresponds to the
+  *switchable line*, not the controller.
+- **PowerModels / PowerModelsDistribution** define an explicit `switch`
+  component with a discrete `state` ∈ {`OPEN`, `CLOSED`}; closed enforces equal
+  voltages across the two buses, open blocks flow. A switch with no `rs`/`xs`/
+  linecode is *ideal* (lossless); lossy parameters trigger a decomposition into a
+  virtual branch + bus + ideal switch. BMOPF's `open_switch` boolean maps
+  directly onto PMD `state` (`0`=OPEN, `1`=CLOSED) — see
+  [`to_pmd`](api.md) — and the BMOPF switch is always the ideal, lossless case.
+- **CIM (IEC 61970-301)** models this as a `Switch` class with `open` /
+  `normalOpen` / `ratedCurrent` attributes, specialised into `ProtectedSwitch`
+  (→ `Breaker`, `Recloser`, `LoadBreakSwitch`), `Disconnector`,
+  `GroundDisconnector` and `Sectionaliser`, with `Jumper` and `BusbarSection` as
+  related connectivity elements. BMOPF deliberately collapses this whole taxonomy
+  into one object: the device *subtype* (breaker vs. disconnector vs. busbar) is
+  not represented because it does not change the steady-state equations.
+- **General power-flow literature** calls these **zero-impedance branches**
+  (ZIB) or zero-impedance lines, and discusses the super-bus / branch-contraction
+  treatment they require in admittance formulations [ref. 2](methodology.md#refs).
+
+The takeaway: most tools either (a) reuse a line with a flag (OpenDSS) or (b)
+provide a dedicated ideal switch with an open/closed state (PMD, CIM). BMOPF
+follows (b), with a single lossless `switch` object whose `open_switch` boolean
+is the open/closed state, and intentionally abstracts away the device-class
+distinctions (breaker / recloser / disconnector / busbar / tie) that CIM
+enumerates, since they are immaterial to a steady-state OPF.
+
 ## Metadata blocks
 
 The network dict carries two distinct metadata containers, with different

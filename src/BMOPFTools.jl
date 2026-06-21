@@ -364,6 +364,7 @@ function profile_solution(net::Dict{String,Any}, result::Dict{String,Any};
     findings = Finding[]
     results  = Dict{Symbol,Dict{String,Any}}()
     results[:solution] = solution_check(working, result, findings)
+    results[:voltage_zones] = voltage_zone_summary(working, result)
     meta = Dict{String,Any}(
         "termination_status" => get(result, "termination_status", "UNKNOWN"),
         "objective"          => get(result, "objective",          NaN),
@@ -451,7 +452,7 @@ export solve_feasibility_opf
 export Severity, ERROR, WARNING, INFO
 export Finding, SummaryReport, SolutionReport
 export errors, warnings, infos
-export profile_solution, render_solution, solution_check
+export profile_solution, render_solution, solution_check, voltage_zone_summary
 export parse_bmopf, write_bmopf, migrate
 export from_pmd, to_pmd
 export from_dss

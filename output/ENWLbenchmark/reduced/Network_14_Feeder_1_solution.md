@@ -1,10 +1,10 @@
 # BMOPF Solution Profile: Network_14_Feeder_1
 
-**Generated:** 2026-06-18 09:29:13  
-**Status:** `LOCALLY_SOLVED`  
-**Objective:** 10.0053  
-**Solve time:** 0.524 s  
-**Findings:** 0 errors · 18 warnings · 2 info  
+**Generated:** 2026-06-21 16:42:19  
+**Status:** `ITERATION_LIMIT`  
+**Objective:** -349.2742  
+**Solve time:** 2.367 s  
+**Findings:** 1 errors · 0 warnings · 0 info  
 
 ---
 
@@ -12,85 +12,159 @@
 
 | Field | Value |
 |-------|-------|
-| Status | `LOCALLY_SOLVED` |
-| Total generation | 61.625 kW |
-| Total load | 60.845 kW |
-| Total line losses | 1.375 kW |
-| Loss fraction | 2.3% |
-| Power balance error | 595.15 W |
-| Max neutral shift | 3.165 V (bus `2303`) |
+| Status | `ITERATION_LIMIT` |
 
-### Bound status
+## 2. Voltage by Galvanic Zone
 
-| Category | Violated | Active (≤1 %) |
-|----------|:--------:|:-------------:|
-| Voltage  | 0 | 0 |
-| Thermal  | 0 | 0 |
-| Generator| 0 | 18 |
+Per-unit magnitudes are relative to each zone's own voltage base; volts are not comparable across transformer boundaries.
 
-## 4. Generator Dispatch
+| St | Zone | V base | Buses | Vm min (pu) | Vm max (pu) | Max imbalance | Max neutral shift |
+|:--:|------|-------:|------:|------------:|------------:|--------------:|------------------:|
+| ✅ | `100` | 240.0 V | 134 | ? | ? | 0.0 % | — |
 
-| Sev | Generator | Terminal | Field | Value | Bound |
-|-----|-----------|----------|-------|-------|-------|
-| W | `der_500` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1974` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1719` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_2303` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_592` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_569` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1655` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_546` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_2301` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1127` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_411` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1591` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1857` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1918` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1919` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1367` | `3` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_2299` | `1` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
-| W | `der_1994` | `2` | pg | 4.0 kW | [0.0 W, 4.0 kW] |
+### Per-bus detail
+
+**Zone `100`** (base 240.0 V):
+
+| St | Bus | Vm min (V) | Vm max (V) | Vm min (pu) | Vm max (pu) | Imbalance | Neutral |
+|:--:|-----|-----------:|-----------:|------------:|------------:|----------:|--------:|
+| ✅ | `100` | ? | ? | ? | ? | — | — |
+| ✅ | `1025` | ? | ? | ? | ? | — | — |
+| ✅ | `1037` | ? | ? | ? | ? | — | — |
+| ✅ | `1063` | ? | ? | ? | ? | — | — |
+| ✅ | `1077` | ? | ? | ? | ? | — | — |
+| ✅ | `1093` | ? | ? | ? | ? | — | — |
+| ✅ | `1106` | ? | ? | ? | ? | — | — |
+| ✅ | `111` | ? | ? | ? | ? | — | — |
+| ✅ | `1119` | ? | ? | ? | ? | — | — |
+| ✅ | `1127` | ? | ? | ? | ? | — | — |
+| ✅ | `1128` | ? | ? | ? | ? | — | — |
+| ✅ | `1129` | ? | ? | ? | ? | — | — |
+| ✅ | `116` | ? | ? | ? | ? | — | — |
+| ✅ | `1169` | ? | ? | ? | ? | — | — |
+| ✅ | `1186` | ? | ? | ? | ? | — | — |
+| ✅ | `1218` | ? | ? | ? | ? | — | — |
+| ✅ | `1231` | ? | ? | ? | ? | — | — |
+| ✅ | `1276` | ? | ? | ? | ? | — | — |
+| ✅ | `1313` | ? | ? | ? | ? | — | — |
+| ✅ | `1314` | ? | ? | ? | ? | — | — |
+| ✅ | `1334` | ? | ? | ? | ? | — | — |
+| ✅ | `1353` | ? | ? | ? | ? | — | — |
+| ✅ | `1366` | ? | ? | ? | ? | — | — |
+| ✅ | `1367` | ? | ? | ? | ? | — | — |
+| ✅ | `1416` | ? | ? | ? | ? | — | — |
+| ✅ | `1419` | ? | ? | ? | ? | — | — |
+| ✅ | `1433` | ? | ? | ? | ? | — | — |
+| ✅ | `1439` | ? | ? | ? | ? | — | — |
+| ✅ | `1444` | ? | ? | ? | ? | — | — |
+| ✅ | `1469` | ? | ? | ? | ? | — | — |
+| ✅ | `1486` | ? | ? | ? | ? | — | — |
+| ✅ | `1591` | ? | ? | ? | ? | — | — |
+| ✅ | `1607` | ? | ? | ? | ? | — | — |
+| ✅ | `1630` | ? | ? | ? | ? | — | — |
+| ✅ | `1638` | ? | ? | ? | ? | — | — |
+| ✅ | `1649` | ? | ? | ? | ? | — | — |
+| ✅ | `1654` | ? | ? | ? | ? | — | — |
+| ✅ | `1655` | ? | ? | ? | ? | — | — |
+| ✅ | `1693` | ? | ? | ? | ? | — | — |
+| ✅ | `1705` | ? | ? | ? | ? | — | — |
+| ✅ | `1708` | ? | ? | ? | ? | — | — |
+| ✅ | `1712` | ? | ? | ? | ? | — | — |
+| ✅ | `1719` | ? | ? | ? | ? | — | — |
+| ✅ | `1720` | ? | ? | ? | ? | — | — |
+| ✅ | `1744` | ? | ? | ? | ? | — | — |
+| ✅ | `1785` | ? | ? | ? | ? | — | — |
+| ✅ | `1830` | ? | ? | ? | ? | — | — |
+| ✅ | `1853` | ? | ? | ? | ? | — | — |
+| ✅ | `1857` | ? | ? | ? | ? | — | — |
+| ✅ | `1861` | ? | ? | ? | ? | — | — |
+| ✅ | `1877` | ? | ? | ? | ? | — | — |
+| ✅ | `1880` | ? | ? | ? | ? | — | — |
+| ✅ | `1894` | ? | ? | ? | ? | — | — |
+| ✅ | `1897` | ? | ? | ? | ? | — | — |
+| ✅ | `190` | ? | ? | ? | ? | — | — |
+| ✅ | `1900` | ? | ? | ? | ? | — | — |
+| ✅ | `1918` | ? | ? | ? | ? | — | — |
+| ✅ | `1919` | ? | ? | ? | ? | — | — |
+| ✅ | `192` | ? | ? | ? | ? | — | — |
+| ✅ | `1925` | ? | ? | ? | ? | — | — |
+| ✅ | `1967` | ? | ? | ? | ? | — | — |
+| ✅ | `1974` | ? | ? | ? | ? | — | — |
+| ✅ | `1980` | ? | ? | ? | ? | — | — |
+| ✅ | `1981` | ? | ? | ? | ? | — | — |
+| ✅ | `1982` | ? | ? | ? | ? | — | — |
+| ✅ | `1983` | ? | ? | ? | ? | — | — |
+| ✅ | `1994` | ? | ? | ? | ? | — | — |
+| ✅ | `2018` | ? | ? | ? | ? | — | — |
+| ✅ | `2053` | ? | ? | ? | ? | — | — |
+| ✅ | `2074` | ? | ? | ? | ? | — | — |
+| ✅ | `2113` | ? | ? | ? | ? | — | — |
+| ✅ | `2173` | ? | ? | ? | ? | — | — |
+| ✅ | `2175` | ? | ? | ? | ? | — | — |
+| ✅ | `2184` | ? | ? | ? | ? | — | — |
+| ✅ | `2189` | ? | ? | ? | ? | — | — |
+| ✅ | `2215` | ? | ? | ? | ? | — | — |
+| ✅ | `2219` | ? | ? | ? | ? | — | — |
+| ✅ | `2229` | ? | ? | ? | ? | — | — |
+| ✅ | `2248` | ? | ? | ? | ? | — | — |
+| ✅ | `2262` | ? | ? | ? | ? | — | — |
+| ✅ | `2268` | ? | ? | ? | ? | — | — |
+| ✅ | `2274` | ? | ? | ? | ? | — | — |
+| ✅ | `2276` | ? | ? | ? | ? | — | — |
+| ✅ | `2295` | ? | ? | ? | ? | — | — |
+| ✅ | `2299` | ? | ? | ? | ? | — | — |
+| ✅ | `2300` | ? | ? | ? | ? | — | — |
+| ✅ | `2301` | ? | ? | ? | ? | — | — |
+| ✅ | `2302` | ? | ? | ? | ? | — | — |
+| ✅ | `2303` | ? | ? | ? | ? | — | — |
+| ✅ | `2304` | ? | ? | ? | ? | — | — |
+| ✅ | `2305` | ? | ? | ? | ? | — | — |
+| ✅ | `2306` | ? | ? | ? | ? | — | — |
+| ✅ | `360` | ? | ? | ? | ? | — | — |
+| ✅ | `394` | ? | ? | ? | ? | — | — |
+| ✅ | `406` | ? | ? | ? | ? | — | — |
+| ✅ | `411` | ? | ? | ? | ? | — | — |
+| ✅ | `412` | ? | ? | ? | ? | — | — |
+| ✅ | `468` | ? | ? | ? | ? | — | — |
+| ✅ | `478` | ? | ? | ? | ? | — | — |
+| ✅ | `490` | ? | ? | ? | ? | — | — |
+| ✅ | `500` | ? | ? | ? | ? | — | — |
+| ✅ | `511` | ? | ? | ? | ? | — | — |
+| ✅ | `531` | ? | ? | ? | ? | — | — |
+| ✅ | `539` | ? | ? | ? | ? | — | — |
+| ✅ | `540` | ? | ? | ? | ? | — | — |
+| ✅ | `546` | ? | ? | ? | ? | — | — |
+| ✅ | `554` | ? | ? | ? | ? | — | — |
+| ✅ | `561` | ? | ? | ? | ? | — | — |
+| ✅ | `562` | ? | ? | ? | ? | — | — |
+| ✅ | `564` | ? | ? | ? | ? | — | — |
+| ✅ | `569` | ? | ? | ? | ? | — | — |
+| ✅ | `573` | ? | ? | ? | ? | — | — |
+| ✅ | `592` | ? | ? | ? | ? | — | — |
+| ✅ | `610` | ? | ? | ? | ? | — | — |
+| ✅ | `652` | ? | ? | ? | ? | — | — |
+| ✅ | `685` | ? | ? | ? | ? | — | — |
+| ✅ | `729` | ? | ? | ? | ? | — | — |
+| ✅ | `737` | ? | ? | ? | ? | — | — |
+| ✅ | `766` | ? | ? | ? | ? | — | — |
+| ✅ | `774` | ? | ? | ? | ? | — | — |
+| ✅ | `790` | ? | ? | ? | ? | — | — |
+| ✅ | `798` | ? | ? | ? | ? | — | — |
+| ✅ | `799` | ? | ? | ? | ? | — | — |
+| ✅ | `809` | ? | ? | ? | ? | — | — |
+| ✅ | `818` | ? | ? | ? | ? | — | — |
+| ✅ | `830` | ? | ? | ? | ? | — | — |
+| ✅ | `861` | ? | ? | ? | ? | — | — |
+| ✅ | `887` | ? | ? | ? | ? | — | — |
+| ✅ | `909` | ? | ? | ? | ? | — | — |
+| ✅ | `936` | ? | ? | ? | ? | — | — |
+| ✅ | `973` | ? | ? | ? | ? | — | — |
+| ✅ | `997` | ? | ? | ? | ? | — | — |
+| ✅ | `999` | ? | ? | ? | ? | — | — |
+| ✅ | `sourcebus` | ? | ? | ? | ? | — | — |
 
 ## 6. All Findings
 
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_500`  
-  Generator 'der_500' phase '2': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1974`  
-  Generator 'der_1974' phase '3': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1719`  
-  Generator 'der_1719' phase '3': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_2303`  
-  Generator 'der_2303' phase '1': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_592`  
-  Generator 'der_592' phase '3': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_569`  
-  Generator 'der_569' phase '3': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1655`  
-  Generator 'der_1655' phase '1': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_546`  
-  Generator 'der_546' phase '3': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_2301`  
-  Generator 'der_2301' phase '1': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1127`  
-  Generator 'der_1127' phase '1': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_411`  
-  Generator 'der_411' phase '3': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1591`  
-  Generator 'der_1591' phase '1': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1857`  
-  Generator 'der_1857' phase '1': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1918`  
-  Generator 'der_1918' phase '2': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1919`  
-  Generator 'der_1919' phase '2': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1367`  
-  Generator 'der_1367' phase '3': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_2299`  
-  Generator 'der_2299' phase '1': pg=4.0 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.GEN_ACTIVE` — generator/`der_1994`  
-  Generator 'der_1994' phase '2': pg=4.0 kW is within 1 % of its bound (active).
-- INFO `I.SOL.BINDING_SUMMARY`  
-  Solution bound summary: 0 violation(s), 18 active constraint(s). Voltage: 0V / 0A. Thermal: 0V / 0A. Generator: 0V / 18A.
-- INFO `I.SOL.NEUTRAL_SHIFT`  
-  Maximum neutral terminal voltage: 3.16 V at bus '2303' — reflects the neutral shift under unbalanced loading.
+- **ERROR** `E.SOL.INFEASIBLE`  
+  Solver terminated with status 'ITERATION_LIMIT' — all numeric results are unreliable (NaN). No bound or residual checks are meaningful.
 
