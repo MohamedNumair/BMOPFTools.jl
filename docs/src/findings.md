@@ -90,8 +90,9 @@ Symmetries in data create symmetric optima and degrade NLP convergence
 
 | Code | Sev | Trigger & rationale |
 |---|---|---|
-| `E.DOM.VMIN_NEGATIVE` | E | Negative `v_min` — magnitudes are nonnegative by definition. |
-| `E.DOM.VMAX_NONPOSITIVE` | E | `v_max ≤ 0` — forces zero voltage; almost certainly a unit/typo error. |
+| `E.DOM.VMIN_NEGATIVE` | E | A negative per-phase entry in `v_min` — magnitudes are nonnegative by definition. (`v_min` is a per-phase array, phase-to-ground.) |
+| `E.DOM.VMAX_NONPOSITIVE` | E | A per-phase `v_max` entry ≤ 0 — forces zero voltage; almost certainly a unit/typo error. |
+| `E.DOM.VNMAX_NEGATIVE` | E | Negative `vn_max` (the optional, maximum-only neutral-to-ground cap). |
 | `E.DOM.NEGATIVE_VALUE` | E | Negative value in an inherently nonnegative field (length, diagonal resistance). |
 | `W.DOM.LOAD_PF_LOW` | W | Load power factor below 0.70 — plausible but unusual for aggregated demand; often a P/Q unit mix-up. |
 | `W.DOM.GEN_COST_NEGATIVE` | W | Negative generation cost — the optimizer will dispatch it to its bound; verify it is intended (e.g. must-run subsidy). |
@@ -190,6 +191,8 @@ The largest family; full derivations in the
 | `W.PROV.I_MAX_INCOMPLETE` | W | One or more lines have fewer `i_max` entries than conductors — the thermal limit is only partially specified; the unspecified conductors are left unconstrained. |
 | `W.PROV.I_MAX_INCOMPLETE_SWITCH` | W | Same as above for switches. |
 | `W.PROV.I_MAX_INCOMPLETE_XFMR` | W | Same for transformers (`i_max_from`/`i_max_to` shorter than the winding conductor count). |
+| `W.PROV.I_MAX_ABSENT` | W | One or more lines have **no** `i_max` on their linecode (or no linecode) — the series current is left entirely unconstrained in the OPF, so no thermal limit is enforced on the branch at all (distinct from `I_MAX_INCOMPLETE`, which is a partial limit). |
+| `W.PROV.I_MAX_ABSENT_SWITCH` | W | Same for **closed** switches with no `i_max`. Open switches are excluded — their current is fixed to zero regardless. |
 
 ### Zone phase topology
 

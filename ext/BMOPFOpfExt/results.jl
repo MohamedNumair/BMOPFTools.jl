@@ -13,6 +13,7 @@ numeric field contains `NaN`.
 Returned top-level keys
 -----------------------
 - `"termination_status"` — string form of `JuMP.termination_status`
+- `"feasible"`           — `true` iff the solver reached a (locally) optimal/solved status
 - `"objective"`          — objective value (cost units)
 - `"solve_time"`         — solver wall-clock time (s)
 - `"bus"`        — `bus_id => terminal => {vr, vi, vm [V], va [rad]}`
@@ -410,6 +411,7 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
 
     Dict{String,Any}(
         "termination_status" => status,
+        "feasible"           => feasible,
         "objective"          => obj,
         "solve_time"         => tsolve,
         "bus"                => bus_res,

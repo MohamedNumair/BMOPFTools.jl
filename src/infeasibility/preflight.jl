@@ -155,17 +155,21 @@ function _check_source_setpoints(net::Dict{String,Any},
         v_max = get(bus, "v_max", nothing)
         v_min === nothing && v_max === nothing && continue
 
+        # v_min/v_max are per-phase arrays (phase-to-ground); the source phase
+        # index k aligns with the bus phase order. Look up the k-th entry.
         for (k, vm) in enumerate(vms)
             isfinite(vm) || continue
-            lo_viol = v_min !== nothing && vm < Float64(v_min)
-            hi_viol = v_max !== nothing && vm > Float64(v_max)
+            lb = v_min isa AbstractVector ? get(v_min, k, nothing) : v_min
+            ub = v_max isa AbstractVector ? get(v_max, k, nothing) : v_max
+            lo_viol = lb !== nothing && vm < Float64(lb)
+            hi_viol = ub !== nothing && vm > Float64(ub)
             if lo_viol || hi_viol
                 n_oob += 1
-                bound = lo_viol ? "below v_min=$(Float64(v_min)) V" :
-                                  "above v_max=$(Float64(v_max)) V"
+                bound = lo_viol ? "below v_min=$(Float64(lb)) V" :
+                                  "above v_max=$(Float64(ub)) V"
                 push!(violations, Dict{String,Any}(
                     "source" => sid, "bus" => bid, "phase" => k,
-                    "vm" => vm, "v_min" => v_min, "v_max" => v_max))
+                    "vm" => vm, "v_min" => lb, "v_max" => ub))
                 push!(findings, Finding(WARNING, "W.PRE.SOURCE_VOLTAGE_OOB",
                     :preflight, :voltage_source, sid,
                     "Voltage source '$sid' phase $k: setpoint vm=$(round(vm; digits=2)) V " *
@@ -173,7 +177,7 @@ function _check_source_setpoints(net::Dict{String,Any},
                     "equality — the bus voltage bound is trivially violated before " *
                     "the OPF starts.",
                     Dict{String,Any}("source"=>sid,"bus"=>bid,"phase"=>k,
-                                     "vm"=>vm,"v_min"=>v_min,"v_max"=>v_max)))
+                                     "vm"=>vm,"v_min"=>lb,"v_max"=>ub)))
             end
         end
     end

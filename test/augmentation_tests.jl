@@ -75,9 +75,10 @@ end
 
     b1 = net′["bus"]["b1"]
 
-    # v_min / v_max: 230 V nominal × 0.85 / 1.15
-    @test b1["v_min"] ≈ 230.0 * 0.85   atol=1e-6
-    @test b1["v_max"] ≈ 230.0 * 1.15   atol=1e-6
+    # v_min / v_max: per-phase arrays, 230 V nominal × 0.85 / 1.15
+    @test all(≈(230.0 * 0.85; atol=1e-6), b1["v_min"])
+    @test all(≈(230.0 * 1.15; atol=1e-6), b1["v_max"])
+    @test length(b1["v_min"]) == 3 && length(b1["v_max"]) == 3
 
     # vpn: per-phase array (length = n_phase = 3); v_declared is per-conductor
     # (phase-to-neutral), so vpn_nom = 230 × pu — no √3 division.
@@ -138,9 +139,9 @@ end
     mv = net′["bus"]["mv_src"]
     lv = net′["bus"]["lv_bus"]
 
-    # v_min/v_max are solver regularisation — same pu band at all levels
-    @test mv["v_min"] ≈ 6350.0 * 0.85  atol=1.0
-    @test mv["v_max"] ≈ 6350.0 * 1.15  atol=1.0
+    # v_min/v_max are solver regularisation — same pu band at all levels (per-phase arrays)
+    @test all(≈(6350.0 * 0.85; atol=1.0), mv["v_min"])
+    @test all(≈(6350.0 * 1.15; atol=1.0), mv["v_max"])
 
     # MV source bus gets v_min/v_max but NOT vpn/vpp/vneg (source bus)
     @test !haskey(mv, "vpn_min")
@@ -148,8 +149,8 @@ end
 
     # LV bus: v_min/v_max use same 0.85/1.15 band
     lv_vnom = get(voltage_level_analysis(net, Finding[])["bus_voltage_map"], "lv_bus", NaN)
-    @test lv["v_min"] ≈ lv_vnom * 0.85  atol=1.0
-    @test lv["v_max"] ≈ lv_vnom * 1.15  atol=1.0
+    @test all(≈(lv_vnom * 0.85; atol=1.0), lv["v_min"])
+    @test all(≈(lv_vnom * 1.15; atol=1.0), lv["v_max"])
 
     # MV vpn band (±6%) is tighter than LV vpn band (±10%) in per-unit terms
     # lv_bus is a four-wire LV bus so it gets vpn bounds (per-phase array, length 3)
@@ -365,7 +366,7 @@ end
     @test n_after <= n_before
 
     # Deep copy: mutating net′ must not affect net
-    net′["bus"]["b1"]["v_min"] = -999.0
+    net′["bus"]["b1"]["v_min"] = [-999.0, -999.0, -999.0]
     @test !haskey(get(net["bus"], "b1", Dict()), "v_min")
 end
 

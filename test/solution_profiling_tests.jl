@@ -17,8 +17,8 @@ function _base_net()
             ),
             "b1" => Dict{String,Any}(
                 "terminal_names" => ["a","b","c","n"],
-                "v_min" => 200.0,
-                "v_max" => 260.0,
+                "v_min" => [200.0, 200.0, 200.0],
+                "v_max" => [260.0, 260.0, 260.0],
             ),
         ),
         "voltage_source" => Dict{String,Any}(

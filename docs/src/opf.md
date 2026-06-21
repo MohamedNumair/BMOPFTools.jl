@@ -125,18 +125,25 @@ current can satisfy it.
 
 #### Voltage magnitude bounds
 
-Applied at every ungrounded, non-source, non-neutral phase terminal:
+`v_min`/`v_max` are **per-phase arrays** (phase-to-ground), one entry per phase
+terminal in `terminal_names` order. The $k$-th entry bounds the $k$-th phase
+terminal, applied at every ungrounded, non-source phase terminal:
 
 ```math
-\bigl(v^b_\text{min}\bigr)^2
+\bigl(v^{b}_{\text{min},k}\bigr)^2
 \;\leq\;
-\bigl(v^r_{b,t}\bigr)^2 + \bigl(v^i_{b,t}\bigr)^2
+\bigl(v^r_{b,t_k}\bigr)^2 + \bigl(v^i_{b,t_k}\bigr)^2
 \;\leq\;
-\bigl(v^b_\text{max}\bigr)^2,
-\qquad t \in \mathcal{T}_b^\phi
+\bigl(v^{b}_{\text{max},k}\bigr)^2,
+\qquad t_k \in \mathcal{T}_b^\phi
 ```
 
-The neutral terminal is excluded; its voltage is determined by KCL.
+The phase index $k$ is kept aligned to the array even when a phase is
+grounded/source-fixed (those terminals are skipped without shifting $k$). The
+**neutral** terminal is not bounded phase-to-ground; instead it has its own
+optional **maximum-only** cap `vn_max` (when present and ungrounded):
+$\bigl(v^r_{b,n}\bigr)^2 + \bigl(v^i_{b,n}\bigr)^2 \leq \bigl(v^b_{n,\text{max}}\bigr)^2$.
+Otherwise the neutral voltage is determined by KCL.
 
 #### Lines
 
@@ -186,6 +193,35 @@ $-(\tilde{c}^r_{\ell,k} + I^{\text{sh},r}_k(b^\text{to}))$ at the to-bus.
 + \bigl(\tilde{c}^i_{\ell,k} + I^{\text{sh},i}_k(b^\text{to})\bigr)^2
 \leq \bigl(I^\text{max}_{\ell,k}\bigr)^2
 ```
+
+!!! note "Current-limit box bounds"
+    Wherever a magnitude limit $I^\text{max}$ applies directly to a current
+    **variable** — switch, generator, and transformer winding currents — the
+    implied box $-I^\text{max} \leq c^r,\,c^i \leq I^\text{max}$ is also placed
+    on the variable (it follows from $|c| \leq I^\text{max}$ and is redundant
+    with the cone, but bounds the variable from the start, helping the NLP
+    solver).
+
+    For **lines** the cone limits the *total* current $I^\text{tot} =
+    c_{\ell,k} + I^\text{sh}_k$ (series + π-shunt), not the series variable
+    itself, so the series box must absorb the shunt contribution:
+    ```math
+    |c^r_{\ell,k}|,\,|c^i_{\ell,k}| \;\le\; I^\text{tot,max}_{\ell,k}
+      \;=\; I^\text{max}_{\ell,k} \;+\; \textstyle\sum_j |Y^\text{sh}_{kj}|\,V^\text{max}_{j},
+    ```
+    from $|c_{\ell,k}| = |I^\text{tot} - I^\text{sh}_k| \le I^\text{max} +
+    \sum_j |Y^\text{sh}_{kj}|\,V^\text{max}_j$ (triangle inequality), where
+    $|Y^\text{sh}_{kj}| = \sqrt{G_{kj}^2 + B_{kj}^2}$ is the from-side π-shunt
+    admittance and $V^\text{max}_j$ is a **hard** to-ground voltage-magnitude
+    bound on from-terminal $j$. This box is added only when such a $V^\text{max}$
+    exists for every terminal feeding row $k$ — i.e. a phase-to-ground bound
+    `v_max`, a phase-to-neutral bound `vpn_max` with a grounded neutral, or
+    `vpn_max` together with a neutral-to-ground bound `vn_max`. With only a
+    `vpn_max` on a floating neutral (no `vn_max`) the to-ground voltage is
+    unbounded, so the series variable is **left free** rather than risk an
+    unsound box. A transformer's from-side winding with a no-load shunt is the
+    one remaining cone-on-an-expression case; it is left cone-only for now (the
+    same construction would apply).
 
 #### Switches
 

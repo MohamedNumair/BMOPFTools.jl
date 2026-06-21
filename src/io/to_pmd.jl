@@ -39,7 +39,7 @@ function to_pmd(net::Dict{String,Any})::Dict{String,Any}
     terminal_int_map = _build_terminal_int_map(net)
 
     haskey(net, "bus") &&
-        (eng["bus"] = Dict(id => _bus_to_pmd(b, vscale)
+        (eng["bus"] = Dict(id => _bus_to_pmd(b, vscale, id)
                            for (id, b) in net["bus"]))
 
     haskey(net, "line") &&
@@ -135,7 +135,24 @@ function _terminal_map_to_connections(tmap::Vector, bus_id::String,
     [get(bus_map, string(t), _terminal_name_to_int(string(t))) for t in tmap]
 end
 
-function _bus_to_pmd(b::Dict{String,Any}, vscale::Real)::Dict{String,Any}
+"""
+    _reduce_phase_bound(v, field, id) -> Float64
+
+Reduce a per-phase voltage-bound array to the single scalar PMD requires.
+Errors if the phase entries differ — PMD `vm_lb`/`vm_ub` cannot represent a
+genuinely per-phase bound. Accepts a scalar for robustness.
+"""
+function _reduce_phase_bound(v, field::AbstractString, id)
+    v isa AbstractVector || return Float64(v)
+    isempty(v) && error("Bus '$id': `$field` is an empty array.")
+    vals = Float64.(v)
+    all(x -> isapprox(x, vals[1]; rtol=1e-9, atol=1e-9), vals) || error(
+        "Bus '$id': `$field` = $vals has per-phase differences that PMD's scalar " *
+        "vm_lb/vm_ub cannot represent. to_pmd supports only uniform per-phase bounds.")
+    vals[1]
+end
+
+function _bus_to_pmd(b::Dict{String,Any}, vscale::Real, id)::Dict{String,Any}
     pmd = _merge_pmd_extra(Dict{String,Any}(), b)
     tnames = get(b, "terminal_names", String[])
     pmd["terminals"] = [_terminal_name_to_int(t) for t in tnames]
@@ -147,10 +164,12 @@ function _bus_to_pmd(b::Dict{String,Any}, vscale::Real)::Dict{String,Any}
         pmd["xg"] = zeros(length(grounded))
     end
 
-    # voltage bounds: V → p.u. (approximate; exact requires per-bus vbase)
-    # stored as-is; caller should run apply_voltage_bounds! or similar
-    haskey(b, "v_min") && (pmd["vm_lb"] = b["v_min"] / vscale)
-    haskey(b, "v_max") && (pmd["vm_ub"] = b["v_max"] / vscale)
+    # voltage bounds: V → p.u. (approximate; exact requires per-bus vbase).
+    # BMOPF v_min/v_max are per-phase arrays; PMD vm_lb/vm_ub are scalar per bus,
+    # so reduce to a scalar only when every phase shares the same bound — a
+    # genuinely per-phase bound cannot be represented and is an error.
+    haskey(b, "v_min") && (pmd["vm_lb"] = _reduce_phase_bound(b["v_min"], "v_min", id) / vscale)
+    haskey(b, "v_max") && (pmd["vm_ub"] = _reduce_phase_bound(b["v_max"], "v_max", id) / vscale)
 
     pmd["status"] = "ENABLED"
     pmd
