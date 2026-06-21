@@ -79,12 +79,22 @@
                         "description": "Array of terminal names which are perfectly grounded"
                         },
                     "v_min": {
-                        "$ref": "#/$defs/nonnegative_number",
-                        "description": "Minimum per-phase voltage magnitude at bus [V]"
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/$defs/nonnegative_number"
+                        },
+                        "description": "Minimum per-phase voltage magnitude(s) at bus, phase-to-ground, one entry per phase terminal [V]"
                     },
                     "v_max": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/$defs/nonnegative_number"
+                        },
+                        "description": "Maximum per-phase voltage magnitude(s) at bus, phase-to-ground, one entry per phase terminal [V]"
+                    },
+                    "vn_max": {
                         "$ref": "#/$defs/nonnegative_number",
-                        "description": "Maximum per-phase voltage magnitude at bus [V]"
+                        "description": "Maximum neutral-to-ground voltage magnitude [V]; only valid when the bus has a neutral terminal"
                     },
                     "vpn_min": {
                         "type": "array",

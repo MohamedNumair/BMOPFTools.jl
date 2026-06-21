@@ -51,15 +51,23 @@ function _add_voltage_bounds!(model, net, bus_terminals, grounded, vars)
 
         terminals = get(bus_terminals, bid, String[])
         neutral   = BMOPFTools._neutral_terminal(terminals)
+        # Phase terminals in declaration order (neutral excluded). v_min/v_max are
+        # per-phase arrays indexed by this order, so the phase index k is kept
+        # aligned to the array even when a phase is grounded/source-fixed (those
+        # are skipped at apply-time but do not shift k).
+        phase_terms = [t for t in terminals if t != neutral]
+        _check_per_phase_bound(v_min, length(phase_terms), bid, "v_min")
+        _check_per_phase_bound(v_max, length(phase_terms), bid, "v_max")
 
-        for t in terminals
+        for (k, t) in enumerate(phase_terms)
             (bid, t) in grounded && continue   # vr=vi=0 already fixed
             (bid, t) in fixed   && continue   # source-fixed, skip
-            t == neutral        && continue   # neutral floats; don't apply phase bounds
             vr_t = vr[(bid, t)]; vi_t = vi[(bid, t)]
             v2 = @expression(model, vr_t^2 + vi_t^2)
-            v_min !== nothing && @constraint(model, v2 >= Float64(v_min)^2)
-            v_max !== nothing && @constraint(model, v2 <= Float64(v_max)^2)
+            lb = v_min isa AbstractVector ? get(v_min, k, nothing) : v_min
+            ub = v_max isa AbstractVector ? get(v_max, k, nothing) : v_max
+            lb !== nothing && @constraint(model, v2 >= Float64(lb)^2)
+            ub !== nothing && @constraint(model, v2 <= Float64(ub)^2)
         end
     end
 end
@@ -83,15 +91,19 @@ function _add_wide_voltage_bounds!(model, net, bus_terminals, grounded, vars)
 
         terminals = get(bus_terminals, bid, String[])
         neutral   = BMOPFTools._neutral_terminal(terminals)
+        phase_terms = [t for t in terminals if t != neutral]
+        _check_per_phase_bound(v_min, length(phase_terms), bid, "v_min")
+        _check_per_phase_bound(v_max, length(phase_terms), bid, "v_max")
 
-        for t in terminals
+        for (k, t) in enumerate(phase_terms)
             (bid, t) in grounded && continue
             (bid, t) in fixed   && continue
-            t == neutral        && continue
             vr_t = vr[(bid, t)]; vi_t = vi[(bid, t)]
             v2 = @expression(model, vr_t^2 + vi_t^2)
-            v_min !== nothing && @constraint(model, v2 >= (Float64(v_min) * 0.5)^2)
-            v_max !== nothing && @constraint(model, v2 <= (Float64(v_max) * 2.0)^2)
+            lb = v_min isa AbstractVector ? get(v_min, k, nothing) : v_min
+            ub = v_max isa AbstractVector ? get(v_max, k, nothing) : v_max
+            lb !== nothing && @constraint(model, v2 >= (Float64(lb) * 0.5)^2)
+            ub !== nothing && @constraint(model, v2 <= (Float64(ub) * 2.0)^2)
         end
     end
 end
@@ -117,11 +129,15 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
         terminals = get(bus_terminals, bid, String[])
         neutral   = BMOPFTools._neutral_terminal(bus)
 
-        # Collect phase terminals: not grounded, not fixed, not neutral
-        phase_terms = [t for t in terminals
-                       if !((bid, t) in grounded) &&
-                          !((bid, t) in fixed)     &&
-                          t != neutral]
+        # All phase terminals in declaration order (neutral excluded). The
+        # per-phase (vpn) and per-pair (vpp/angle) bound arrays are indexed by
+        # this *full* order to match the producer (src/augmentation/voltage_bounds.jl)
+        # and the post-solve validator. A grounded or source-fixed phase is
+        # skipped at apply-time but does NOT shift the index — collapsing onto the
+        # filtered list would misalign every entry after the first such phase.
+        phase_all  = [t for t in terminals if t != neutral]
+        n_phase    = length(phase_all)
+        applicable(t) = !((bid, t) in grounded) && !((bid, t) in fixed)
 
         # ── a. Neutral voltage upper bound ──────────────────────────────────
         vn_max = get(bus, "vn_max", nothing)
@@ -132,14 +148,15 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
 
         # ── b. Phase-to-neutral voltage magnitude bounds ─────────────────────
         # vpn_min/vpn_max are per-phase arrays, one element per phase terminal in
-        # phase_terms order (see src/augmentation/voltage_bounds.jl).
+        # full terminal_names phase order.
         vpn_min = get(bus, "vpn_min", nothing)
         vpn_max = get(bus, "vpn_max", nothing)
         if neutral !== nothing && (vpn_min !== nothing || vpn_max !== nothing)
-            _check_per_phase_bound(vpn_min, length(phase_terms), bid, "vpn_min")
-            _check_per_phase_bound(vpn_max, length(phase_terms), bid, "vpn_max")
+            _check_per_phase_bound(vpn_min, n_phase, bid, "vpn_min")
+            _check_per_phase_bound(vpn_max, n_phase, bid, "vpn_max")
             neutral_grounded = (bid, neutral) in grounded
-            for (k, t) in enumerate(phase_terms)
+            for (k, t) in enumerate(phase_all)
+                applicable(t) || continue
                 vr_t = vr[(bid, t)]; vi_t = vi[(bid, t)]
                 if neutral_grounded
                     v2 = @expression(model, vr_t^2 + vi_t^2)
@@ -155,18 +172,20 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
 
         # ── c. Phase-to-phase voltage magnitude bounds ────────────────────────
         # vpp_min/vpp_max are per-pair arrays, one element per unordered phase
-        # pair in (ki<kj) enumeration order.
+        # pair in (i<j) order over the *full* phase list. A pair touching a
+        # grounded/fixed terminal is skipped but still consumes its pair index.
         vpp_min = get(bus, "vpp_min", nothing)
         vpp_max = get(bus, "vpp_max", nothing)
-        if (vpp_min !== nothing || vpp_max !== nothing) && length(phase_terms) >= 2
-            n_pairs = length(phase_terms) * (length(phase_terms) - 1) ÷ 2
+        if (vpp_min !== nothing || vpp_max !== nothing) && n_phase >= 2
+            n_pairs = n_phase * (n_phase - 1) ÷ 2
             _check_per_phase_bound(vpp_min, n_pairs, bid, "vpp_min")
             _check_per_phase_bound(vpp_max, n_pairs, bid, "vpp_max")
             pair_idx = 0
-            for ki in 1:length(phase_terms)-1
-                for kj in ki+1:length(phase_terms)
+            for ki in 1:n_phase-1
+                for kj in ki+1:n_phase
                     pair_idx += 1
-                    tk = phase_terms[ki]; tj = phase_terms[kj]
+                    tk = phase_all[ki]; tj = phase_all[kj]
+                    (applicable(tk) && applicable(tj)) || continue
                     dvr = @expression(model, vr[(bid,tk)] - vr[(bid,tj)])
                     dvi = @expression(model, vi[(bid,tk)] - vi[(bid,tj)])
                     v2  = @expression(model, dvr^2 + dvi^2)
@@ -177,14 +196,16 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
         end
 
         # ── d. Intra-bus angle difference ─────────────────────────────────────
+        # va_diff_* are scalars; enforced on every applicable phase pair.
         va_diff_min = get(bus, "va_diff_min", nothing)
         va_diff_max = get(bus, "va_diff_max", nothing)
-        if (va_diff_min !== nothing || va_diff_max !== nothing) && length(phase_terms) >= 2
+        if (va_diff_min !== nothing || va_diff_max !== nothing) && n_phase >= 2
             tan_min = va_diff_min !== nothing ? tan(Float64(va_diff_min)) : nothing
             tan_max = va_diff_max !== nothing ? tan(Float64(va_diff_max)) : nothing
-            for ki in 1:length(phase_terms)-1
-                for kj in ki+1:length(phase_terms)
-                    tk = phase_terms[ki]; tj = phase_terms[kj]
+            for ki in 1:n_phase-1
+                for kj in ki+1:n_phase
+                    tk = phase_all[ki]; tj = phase_all[kj]
+                    (applicable(tk) && applicable(tj)) || continue
                     s = @expression(model, vr[(bid,tk)]*vi[(bid,tj)] - vi[(bid,tk)]*vr[(bid,tj)])
                     c = @expression(model, vr[(bid,tk)]*vr[(bid,tj)] + vi[(bid,tk)]*vi[(bid,tj)])
                     tan_min !== nothing && @constraint(model, tan_min * c <= s)
@@ -207,7 +228,10 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
         vpos_max  = get(bus, "vpos_max",  nothing)
         vneg_max  = get(bus, "vneg_max",  nothing)
         vzero_max = get(bus, "vzero_max", nothing)
-        if length(phase_terms) == 3 &&
+        # Sequence components require the full set of three phase terminals
+        # (the symmetrical-component transform is defined over all three phases),
+        # so use phase_all — not a grounded/fixed-filtered subset.
+        if n_phase == 3 &&
                 (vpos_min !== nothing || vpos_max !== nothing ||
                  vneg_max !== nothing || vzero_max !== nothing)
             s3 = sqrt(3.0) / 2.0
@@ -223,9 +247,9 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
                 end
             end
 
-            (dvr1, dvi1) = _dv(phase_terms[1])
-            (dvr2, dvi2) = _dv(phase_terms[2])
-            (dvr3, dvi3) = _dv(phase_terms[3])
+            (dvr1, dvi1) = _dv(phase_all[1])
+            (dvr2, dvi2) = _dv(phase_all[2])
+            (dvr3, dvi3) = _dv(phase_all[3])
 
             if vpos_min !== nothing || vpos_max !== nothing
                 V1_r = @expression(model,

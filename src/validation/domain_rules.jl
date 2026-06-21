@@ -52,21 +52,30 @@ const _DEFAULT_THRESHOLDS = Dict{String,Any}(
 )
 
 function _check_bus_voltage_bounds(net, findings, n_checks)
+    # v_min/v_max are per-phase arrays (phase-to-ground); vn_max is the optional
+    # scalar neutral-to-ground maximum. Check value validity on every entry.
+    _as_vec(x) = x === nothing ? Float64[] : (x isa AbstractVector ? Float64.(x) : [Float64(x)])
     for (id, b) in get(net, "bus", Dict())
         vmin = get(b, "v_min", nothing)
         vmax = get(b, "v_max", nothing)
-        vmin === nothing && vmax === nothing && continue
+        vnmax = get(b, "vn_max", nothing)
+        (vmin === nothing && vmax === nothing && vnmax === nothing) && continue
         n_checks[] += 1
 
-        if vmin !== nothing && Float64(vmin) < 0
+        if any(<(0), _as_vec(vmin))
             push!(findings, Finding(ERROR, "E.DOM.VMIN_NEGATIVE", :domain_rules, :bus, id,
-                "Bus '$id': v_min = $(vmin) V is negative.",
+                "Bus '$id': v_min = $(vmin) V has a negative per-phase entry.",
                 Dict{String,Any}("v_min" => vmin)))
         end
-        if vmax !== nothing && Float64(vmax) <= 0
+        if any(<=(0), _as_vec(vmax))
             push!(findings, Finding(ERROR, "E.DOM.VMAX_NONPOSITIVE", :domain_rules, :bus, id,
-                "Bus '$id': v_max = $(vmax) V is ≤ 0.",
+                "Bus '$id': v_max = $(vmax) V has a per-phase entry ≤ 0.",
                 Dict{String,Any}("v_max" => vmax)))
+        end
+        if vnmax !== nothing && Float64(vnmax) < 0
+            push!(findings, Finding(ERROR, "E.DOM.VNMAX_NEGATIVE", :domain_rules, :bus, id,
+                "Bus '$id': vn_max = $(vnmax) V is negative.",
+                Dict{String,Any}("vn_max" => vnmax)))
         end
     end
 end

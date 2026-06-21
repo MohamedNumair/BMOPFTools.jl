@@ -90,8 +90,9 @@ Symmetries in data create symmetric optima and degrade NLP convergence
 
 | Code | Sev | Trigger & rationale |
 |---|---|---|
-| `E.DOM.VMIN_NEGATIVE` | E | Negative `v_min` — magnitudes are nonnegative by definition. |
-| `E.DOM.VMAX_NONPOSITIVE` | E | `v_max ≤ 0` — forces zero voltage; almost certainly a unit/typo error. |
+| `E.DOM.VMIN_NEGATIVE` | E | A negative per-phase entry in `v_min` — magnitudes are nonnegative by definition. (`v_min` is a per-phase array, phase-to-ground.) |
+| `E.DOM.VMAX_NONPOSITIVE` | E | A per-phase `v_max` entry ≤ 0 — forces zero voltage; almost certainly a unit/typo error. |
+| `E.DOM.VNMAX_NEGATIVE` | E | Negative `vn_max` (the optional, maximum-only neutral-to-ground cap). |
 | `E.DOM.NEGATIVE_VALUE` | E | Negative value in an inherently nonnegative field (length, diagonal resistance). |
 | `W.DOM.LOAD_PF_LOW` | W | Load power factor below 0.70 — plausible but unusual for aggregated demand; often a P/Q unit mix-up. |
 | `W.DOM.GEN_COST_NEGATIVE` | W | Negative generation cost — the optimizer will dispatch it to its bound; verify it is intended (e.g. must-run subsidy). |

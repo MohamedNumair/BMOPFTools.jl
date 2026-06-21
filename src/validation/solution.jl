@@ -155,6 +155,8 @@ function solution_check(net::Dict{String,Any},
     n_volt_active = 0
 
     # ── Voltage magnitude bounds (v_min / v_max) ─────────────────────────────
+    # Per-phase arrays (phase-to-ground), one entry per phase terminal in
+    # terminal_names order; index k corresponds to the k-th phase terminal.
     for (bid, bus) in buses
         bus isa Dict || continue
         v_min = get(bus, "v_min", nothing)
@@ -164,28 +166,33 @@ function solution_check(net::Dict{String,Any},
         t_res isa Dict || continue
         nt = _neutral_terminal(bus)
 
-        for (t, tvals) in t_res
+        term_names = Vector{String}(get(bus, "terminal_names", String[]))
+        phase_ts_ordered = [t for t in term_names if t != nt]
+
+        for (k, t) in enumerate(phase_ts_ordered)
+            haskey(t_res, t) || continue
+            tvals = t_res[t]
             tvals isa Dict || continue
-            t == nt && continue   # neutral vm is not constrained by v_min/v_max
-            lowercase(t) == "n" && continue
             vm = get(tvals, "vm", NaN)
             isfinite(vm) || continue
-            viol, act = _bound_status(vm, v_min, v_max)
+            lb = v_min isa AbstractVector ? get(v_min, k, nothing) : v_min
+            ub = v_max isa AbstractVector ? get(v_max, k, nothing) : v_max
+            viol, act = _bound_status(vm, lb, ub)
             if viol
                 n_volt_viol += 1
                 push!(findings, Finding(ERROR, "E.SOL.VOLT_VIOLATION", :solution, :bus, bid,
                     "Bus '$bid' terminal '$t': vm=$(_fmt_v(vm)) violates " *
-                    "[$(v_min === nothing ? "−∞" : _fmt_v(Float64(v_min))), " *
-                    "$(v_max === nothing ? "+∞" : _fmt_v(Float64(v_max)))].",
+                    "[$(lb === nothing ? "−∞" : _fmt_v(Float64(lb))), " *
+                    "$(ub === nothing ? "+∞" : _fmt_v(Float64(ub)))].",
                     Dict{String,Any}("bus"=>bid,"terminal"=>t,"vm"=>vm,
-                                     "v_min"=>v_min,"v_max"=>v_max,"flavour"=>"vm")))
+                                     "v_min"=>lb,"v_max"=>ub,"flavour"=>"vm")))
             elseif act
                 n_volt_active += 1
                 push!(findings, Finding(WARNING, "W.SOL.VOLT_ACTIVE", :solution, :bus, bid,
                     "Bus '$bid' terminal '$t': vm=$(_fmt_v(vm)) is within 1 % of a " *
                     "voltage bound (active constraint).",
                     Dict{String,Any}("bus"=>bid,"terminal"=>t,"vm"=>vm,
-                                     "v_min"=>v_min,"v_max"=>v_max,"flavour"=>"vm")))
+                                     "v_min"=>lb,"v_max"=>ub,"flavour"=>"vm")))
             end
         end
     end
@@ -251,13 +258,17 @@ function solution_check(net::Dict{String,Any},
         t_res isa Dict || continue
         nt = _neutral_terminal(bus)
         term_names = Vector{String}(get(bus, "terminal_names", String[]))
-        phase_ts_ordered = [t for t in term_names if t != nt && haskey(t_res, t)]
+        # Enumerate pairs over the FULL phase list (i<j); the pair index must
+        # match the producer/OPF, so a terminal absent from the result is skipped
+        # without shifting the index (see _add_bus_limit_constraints!).
+        phase_ts_ordered = [t for t in term_names if t != nt]
         length(phase_ts_ordered) < 2 && continue
 
         pair_idx = 0
         for i in eachindex(phase_ts_ordered), j in (i+1):length(phase_ts_ordered)
             pair_idx += 1
             ta = phase_ts_ordered[i]; tb = phase_ts_ordered[j]
+            (haskey(t_res, ta) && haskey(t_res, tb)) || continue
             va = t_res[ta]; vb = t_res[tb]
             dvr = get(va,"vr",NaN) - get(vb,"vr",NaN)
             dvi = get(va,"vi",NaN) - get(vb,"vi",NaN)
@@ -984,12 +995,14 @@ function voltage_zone_summary(net::Dict{String,Any}, result::Dict{String,Any})
             haskey(src_vbase, b) && (vbase = max(vbase, src_vbase[b]))
         end
         if vbase == 0.0   # no source in zone: midpoint of declared bounds
+            # v_min/v_max are per-phase arrays — flatten every phase entry.
+            _flat(x) = x === nothing ? Float64[] :
+                       (x isa AbstractVector ? Float64.(x) : [Float64(x)])
             los = Float64[]; his = Float64[]
             for b in zbuses
                 bus = get(buses, b, Dict())
-                vlo = get(bus, "v_min", nothing); vhi = get(bus, "v_max", nothing)
-                vlo !== nothing && push!(los, Float64(vlo))
-                vhi !== nothing && push!(his, Float64(vhi))
+                append!(los, _flat(get(bus, "v_min", nothing)))
+                append!(his, _flat(get(bus, "v_max", nothing)))
             end
             if !isempty(los) && !isempty(his)
                 vbase = (sum(los)/length(los) + sum(his)/length(his)) / 2
@@ -1013,6 +1026,15 @@ function voltage_zone_summary(net::Dict{String,Any}, result::Dict{String,Any})
             t_res = get(bus_res, b, nothing)
             t_res isa Dict || continue
 
+            # v_min/v_max are per-phase arrays; map each phase terminal to its
+            # index so the bound for terminal t can be looked up.
+            phase_ix = Dict{String,Int}()
+            for (k, t) in enumerate(t for t in Vector{String}(get(bus, "terminal_names", String[])) if t != nt)
+                phase_ix[t] = k
+            end
+            _vb(v, t) = v === nothing ? nothing :
+                        (v isa AbstractVector ? get(v, get(phase_ix, string(t), 0), nothing) : v)
+
             bus_lo = Inf; bus_hi = -Inf; bus_neutral = 0.0; bus_viol = false; bus_active = false
             for (t, tvals) in t_res
                 tvals isa Dict || continue
@@ -1027,16 +1049,17 @@ function voltage_zone_summary(net::Dict{String,Any}, result::Dict{String,Any})
                 vm > vm_max && (vm_max = vm; vm_max_bus = b)
                 vm < bus_lo && (bus_lo = vm)
                 vm > bus_hi && (bus_hi = vm)
-                if v_min !== nothing && vm < Float64(v_min) - 1e-9
+                lb = _vb(v_min, t); ub = _vb(v_max, t)
+                if lb !== nothing && vm < Float64(lb) - 1e-9
                     bus_viol = true
-                elseif v_min !== nothing &&
-                       vm < Float64(v_min) + max(active_frac*abs(Float64(v_min)), 1e-6)
+                elseif lb !== nothing &&
+                       vm < Float64(lb) + max(active_frac*abs(Float64(lb)), 1e-6)
                     bus_active = true
                 end
-                if v_max !== nothing && vm > Float64(v_max) + 1e-9
+                if ub !== nothing && vm > Float64(ub) + 1e-9
                     bus_viol = true
-                elseif v_max !== nothing &&
-                       vm > Float64(v_max) - max(active_frac*abs(Float64(v_max)), 1e-6)
+                elseif ub !== nothing &&
+                       vm > Float64(ub) - max(active_frac*abs(Float64(ub)), 1e-6)
                     bus_active = true
                 end
             end

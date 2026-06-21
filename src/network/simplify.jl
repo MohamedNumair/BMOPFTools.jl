@@ -375,14 +375,17 @@ function _collapse_closed_switches!(net)
                 Set(String.(get(bus_t, "perfectly_grounded_terminals", String[])))))
             isempty(pg_merged) || (bus_f["perfectly_grounded_terminals"] = pg_merged)
 
-            # Tighter voltage bounds.
+            # Tighter voltage bounds. v_min/v_max are per-phase arrays; combine
+            # element-wise (max of the lower bounds, min of the upper bounds).
             for (field, op) in (("v_min", max), ("v_max", min))
                 vf = get(bus_f, field, nothing)
                 vt = get(bus_t, field, nothing)
                 if vf !== nothing && vt !== nothing
-                    bus_f[field] = op(Float64(vf), Float64(vt))
+                    fv = Float64.(vf); tv = Float64.(vt)
+                    n = min(length(fv), length(tv))
+                    bus_f[field] = [op(fv[i], tv[i]) for i in 1:n]
                 elseif vt !== nothing
-                    bus_f[field] = Float64(vt)
+                    bus_f[field] = Float64.(vt)
                 end
             end
 

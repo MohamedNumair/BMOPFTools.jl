@@ -327,11 +327,15 @@ function _bus_diversity(net::Dict{String,Any},
     length(buses) < 2 && return r
     r["analysed"] = true
 
+    # v_min/v_max are per-phase arrays; flatten every phase entry across buses to
+    # assess spatial (and per-phase) uniformity of the voltage bounds.
+    _flat(x) = x === nothing ? Float64[] :
+               (x isa AbstractVector ? Float64.(x) : [Float64(x)])
     v_min_vals = Float64[]
     v_max_vals = Float64[]
     for (_, b) in buses
-        haskey(b, "v_min") && push!(v_min_vals, Float64(b["v_min"]))
-        haskey(b, "v_max") && push!(v_max_vals, Float64(b["v_max"]))
+        append!(v_min_vals, _flat(get(b, "v_min", nothing)))
+        append!(v_max_vals, _flat(get(b, "v_max", nothing)))
     end
 
     n_with_bounds = count(b -> haskey(b, "v_min") || haskey(b, "v_max"), values(buses))

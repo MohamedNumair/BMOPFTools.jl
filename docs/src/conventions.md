@@ -62,10 +62,14 @@ verbatim decimal string. Coercion is recorded in
 
 A bus carries `terminal_names`, optionally `perfectly_grounded_terminals`,
 and optional voltage-magnitude bounds in four flavours: phase-to-ground
-(`v_min`/`v_max`, scalar), phase-to-neutral (`vpn_*`), phase-to-phase (`vpp_*`)
-and sequence (`vpos_*`). `vpn_min`/`vpn_max` are **per-phase arrays** (one element
-per phase terminal, in `terminal_names` order); `vpp_min`/`vpp_max` are
-**per-pair arrays** (one element per unordered phase pair, in `(i<j)` order).
+(`v_min`/`v_max`), phase-to-neutral (`vpn_*`), phase-to-phase (`vpp_*`)
+and sequence (`vpos_*`). `v_min`/`v_max` and `vpn_min`/`vpn_max` are
+**per-phase arrays** (one element per phase terminal, in `terminal_names` order,
+neutral excluded); `vpp_min`/`vpp_max` are **per-pair arrays** (one element per
+unordered phase pair, in `(i<j)` order). A scalar `v_min`/`v_max` is **rejected
+at ingest** (`parse_bmopf`) — wrap it in an array of the phase count. The
+neutral conductor has its own separate, optional, **maximum-only** bound
+`vn_max` (scalar, neutral-to-ground), valid only when the bus has a neutral.
 Absent bounds mean *unconstrained* (spec §4.1.5).
 
 Grounding semantics (spec Table 10):
