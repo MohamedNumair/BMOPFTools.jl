@@ -65,8 +65,11 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
                 length(q_max) >= idx && @constraint(model, q_expr <= q_max[idx])
 
                 # Current magnitude limit
-                length(i_max_g) >= idx && @constraint(model,
-                    crg[(gid,idx)]^2 + cig[(gid,idx)]^2 <= i_max_g[idx]^2)
+                if length(i_max_g) >= idx
+                    @constraint(model,
+                        crg[(gid,idx)]^2 + cig[(gid,idx)]^2 <= i_max_g[idx]^2)
+                    _limit_current_box!(crg[(gid,idx)], cig[(gid,idx)], i_max_g[idx])
+                end
 
                 # Apparent power limit (via auxiliary variables to keep quadratic)
                 if length(s_max_g) >= idx
@@ -99,8 +102,11 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
                 length(q_max) >= k && @constraint(model, q_expr <= q_max[k])
 
                 # Current magnitude limit
-                length(i_max_g) >= k && @constraint(model,
-                    crg[(gid,k)]^2 + cig[(gid,k)]^2 <= i_max_g[k]^2)
+                if length(i_max_g) >= k
+                    @constraint(model,
+                        crg[(gid,k)]^2 + cig[(gid,k)]^2 <= i_max_g[k]^2)
+                    _limit_current_box!(crg[(gid,k)], cig[(gid,k)], i_max_g[k])
+                end
 
                 # Apparent power limit (via auxiliary variables to keep quadratic)
                 if length(s_max_g) >= k

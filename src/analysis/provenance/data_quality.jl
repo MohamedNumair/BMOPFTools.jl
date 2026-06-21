@@ -75,13 +75,15 @@ function _check_i_max_completeness(net::Dict{String,Any},
 
     # Lines: i_max lives on the linecode, indexed by conductor position.
     incomplete_lines = String[]
+    absent_lines     = String[]
     for (lid, line) in get(net, "line", Dict())
         lcid = get(line, "linecode", nothing)
-        lcid === nothing && continue
-        lc = get(linecodes, lcid, nothing)
-        lc === nothing && continue
-        i_max = get(lc, "i_max", nothing)
-        i_max === nothing && continue   # no limit defined — not a violation
+        lc   = lcid === nothing ? nothing : get(linecodes, lcid, nothing)
+        i_max = lc === nothing ? nothing : get(lc, "i_max", nothing)
+        if i_max === nothing
+            push!(absent_lines, lid)   # no thermal limit anywhere on this branch
+            continue
+        end
 
         n_fr = length(get(line, "terminal_map_from", String[]))
         n_to = length(get(line, "terminal_map_to",   String[]))
@@ -96,13 +98,27 @@ function _check_i_max_completeness(net::Dict{String,Any},
             "all conductors (the neutral conductor may be unprotected).",
             Dict{String,Any}("lines" => incomplete_lines)))
     end
+    if !isempty(absent_lines)
+        push!(findings, Finding(WARNING, "W.PROV.I_MAX_ABSENT",
+            :provenance, :line, nothing,
+            "$(length(absent_lines)) line(s) have no `i_max` on their linecode " *
+            "(or no linecode at all) — their series current is left entirely " *
+            "unconstrained in the OPF, so no thermal limit is enforced on the branch.",
+            Dict{String,Any}("lines" => absent_lines)))
+    end
 
     # Switches: i_max is on the switch element itself.
     incomplete_switches = String[]
+    absent_switches     = String[]
     for (sid, sw) in get(net, "switch", Dict())
         sw isa Dict || continue
         i_max = get(sw, "i_max", nothing)
-        i_max === nothing && continue
+        if i_max === nothing
+            # An open switch carries zero current by construction, so a missing
+            # limit only leaves a *closed* switch unprotected.
+            get(sw, "open_switch", false) || push!(absent_switches, sid)
+            continue
+        end
 
         n_fr = length(get(sw, "terminal_map_from", String[]))
         n_to = length(get(sw, "terminal_map_to",   String[]))
@@ -115,6 +131,14 @@ function _check_i_max_completeness(net::Dict{String,Any},
             "$(length(incomplete_switches)) switch(es) have fewer `i_max` entries " *
             "than conductors — current limits will not be enforced on all conductors.",
             Dict{String,Any}("switches" => incomplete_switches)))
+    end
+    if !isempty(absent_switches)
+        push!(findings, Finding(WARNING, "W.PROV.I_MAX_ABSENT_SWITCH",
+            :provenance, :switch, nothing,
+            "$(length(absent_switches)) closed switch(es) have no `i_max` — their " *
+            "current is left entirely unconstrained in the OPF, so no thermal limit " *
+            "is enforced on the branch.",
+            Dict{String,Any}("switches" => absent_switches)))
     end
 
     # Transformers: i_max_from / i_max_to are per-winding, indexed by conductor.
@@ -143,12 +167,15 @@ function _check_i_max_completeness(net::Dict{String,Any},
             Dict{String,Any}("transformers" => incomplete_xfmr)))
     end
 
-    n_total = length(incomplete_lines) + length(incomplete_switches) + length(incomplete_xfmr)
+    n_total = length(incomplete_lines) + length(incomplete_switches) + length(incomplete_xfmr) +
+              length(absent_lines) + length(absent_switches)
     Dict{String,Any}(
         "n"                  => n_total,
         "lines"              => incomplete_lines,
         "switches"           => incomplete_switches,
         "transformers"       => incomplete_xfmr,
+        "absent_lines"       => absent_lines,
+        "absent_switches"    => absent_switches,
     )
 end
 

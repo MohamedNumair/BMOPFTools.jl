@@ -215,6 +215,8 @@ function _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
             if length(i_max_fr) >= k
                 @constraint(model,
                     cr_xf[(tid,"fr",k)]^2 + ci_xf[(tid,"fr",k)]^2 <= i_max_fr[k]^2)
+                # No-load shunt absent here, so the limit is on the bare variable.
+                _limit_current_box!(cr_xf[(tid,"fr",k)], ci_xf[(tid,"fr",k)], i_max_fr[k])
             end
         end
 
@@ -242,6 +244,7 @@ function _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
         if length(i_max_to_v) >= k
             @constraint(model,
                 cr_xf[(tid,"to",k)]^2 + ci_xf[(tid,"to",k)]^2 <= i_max_to_v[k]^2)
+            _limit_current_box!(cr_xf[(tid,"to",k)], ci_xf[(tid,"to",k)], i_max_to_v[k])
         end
     end
 end
@@ -456,7 +459,10 @@ function _add_center_tap_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kc
         length(i_max_fr) >= 1 && @constraint(model, icr_ph^2 + ici_ph^2 <= i_max_fr[1]^2)
     else
         _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_ph, -Isr, -Isi)
-        length(i_max_fr) >= 1 && @constraint(model, Isr^2 + Isi^2 <= i_max_fr[1]^2)
+        if length(i_max_fr) >= 1
+            @constraint(model, Isr^2 + Isi^2 <= i_max_fr[1]^2)
+            _limit_current_box!(Isr, Isi, i_max_fr[1])  # bare HV series-current variable
+        end
     end
     # HV neutral: series current returns here (shunt is phase-to-ground, not phase-to-neutral).
     _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_n, Isr, Isi)
@@ -466,10 +472,20 @@ function _add_center_tap_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kc
     _kcl_add!(kcl_r, kcl_i, b_to, t_lv_n, -Inr,  -Ini)
     _kcl_add!(kcl_r, kcl_i, b_to, t_lv_2, -Il2r, -Il2i)
 
-    # ── Current magnitude limits ───────────────────────────────────────────────
-    length(i_max_to_v) >= 1 && @constraint(model, Il1r^2 + Il1i^2 <= i_max_to_v[1]^2)
-    length(i_max_to_v) >= 2 && @constraint(model, Inr^2  + Ini^2  <= i_max_to_v[2]^2)
-    length(i_max_to_v) >= 3 && @constraint(model, Il2r^2 + Il2i^2 <= i_max_to_v[3]^2)
+    # ── Current magnitude limits (Il1/In/Il2 are bare LV winding-current
+    #    variables, so the limit also tightens each component's box bound) ───────
+    if length(i_max_to_v) >= 1
+        @constraint(model, Il1r^2 + Il1i^2 <= i_max_to_v[1]^2)
+        _limit_current_box!(Il1r, Il1i, i_max_to_v[1])
+    end
+    if length(i_max_to_v) >= 2
+        @constraint(model, Inr^2 + Ini^2 <= i_max_to_v[2]^2)
+        _limit_current_box!(Inr, Ini, i_max_to_v[2])
+    end
+    if length(i_max_to_v) >= 3
+        @constraint(model, Il2r^2 + Il2i^2 <= i_max_to_v[3]^2)
+        _limit_current_box!(Il2r, Il2i, i_max_to_v[3])
+    end
 end
 
 # ── YD / DY ─────────────────────────────────────────────────────────────────
@@ -689,17 +705,20 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
         end
     end
 
-    # ── Current magnitude limits ───────────────────────────────────────────────
+    # ── Current magnitude limits (bare winding-current variables, so the
+    #    magnitude limit also tightens each component's box bound) ───────────────
+    _limit_xf_current!(s, t, ilim) = (@constraint(model, s^2 + t^2 <= ilim^2);
+                                      _limit_current_box!(s, t, ilim))
     for k in 1:n_wye
-        length(i_max_fr)   >= k && side_wye == "fr" && @constraint(model,
-            cr_xf[(tid,"fr",k)]^2 + ci_xf[(tid,"fr",k)]^2 <= i_max_fr[k]^2)
-        length(i_max_to_v) >= k && side_wye == "to" && @constraint(model,
-            cr_xf[(tid,"to",k)]^2 + ci_xf[(tid,"to",k)]^2 <= i_max_to_v[k]^2)
+        length(i_max_fr)   >= k && side_wye == "fr" &&
+            _limit_xf_current!(cr_xf[(tid,"fr",k)], ci_xf[(tid,"fr",k)], i_max_fr[k])
+        length(i_max_to_v) >= k && side_wye == "to" &&
+            _limit_xf_current!(cr_xf[(tid,"to",k)], ci_xf[(tid,"to",k)], i_max_to_v[k])
     end
     for k in 1:n_ph
-        length(i_max_fr)   >= k && side_del == "fr" && @constraint(model,
-            cr_xf[(tid,"fr",k)]^2 + ci_xf[(tid,"fr",k)]^2 <= i_max_fr[k]^2)
-        length(i_max_to_v) >= k && side_del == "to" && @constraint(model,
-            cr_xf[(tid,"to",k)]^2 + ci_xf[(tid,"to",k)]^2 <= i_max_to_v[k]^2)
+        length(i_max_fr)   >= k && side_del == "fr" &&
+            _limit_xf_current!(cr_xf[(tid,"fr",k)], ci_xf[(tid,"fr",k)], i_max_fr[k])
+        length(i_max_to_v) >= k && side_del == "to" &&
+            _limit_xf_current!(cr_xf[(tid,"to",k)], ci_xf[(tid,"to",k)], i_max_to_v[k])
     end
 end

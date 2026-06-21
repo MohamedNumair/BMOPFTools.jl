@@ -15,15 +15,25 @@
 """
     BMOPFTools.solve_feasibility_opf(net; optimizer, t_index) -> Dict
 
-Feasibility-relaxed four-wire IVR-EN OPF. Adds elastic slack current
-injections at every non-source bus terminal so that KCL can always be
-satisfied. Minimises ∑ |sₖ|² (L2² over all slack terminals).
+Feasibility-relaxed four-wire IVR-EN OPF. Adds an elastic slack current
+injection (the nodal current residual) at every non-source bus terminal and
+minimises ∑ |sₖ|² (L2² over all slack terminals).
 
-Because the problem is always feasible, Ipopt always converges. Non-zero
-slacks in the result reveal where the network cannot satisfy its constraints
-without external intervention.
+The model carries the **same hard constraints as [`solve_opf`](@ref)** — voltage
+bounds, bus/line angle limits, and all device current limits — so its feasible
+set is identical to the OPF's. The current residual is the *only* relaxation, and
+it relaxes **KCL**: at each node it injects whatever current is needed to balance
+power. Because of this, voltages still satisfy their hard bounds (a constrained
+bus voltage simply sits at its bound), and the resulting power mismatch surfaces
+as a non-zero residual at that node — so a network infeasible on either power
+balance *or* a voltage/angle bound is diagnosed by the residual pattern, not by a
+solver failure. The problem therefore stays solvable in the usual case; a
+genuine solver-infeasible status is reserved for hard bounds that even an
+arbitrary nodal current cannot reconcile (e.g. a fixed source voltage directly
+contradicting a bound on the same terminal), which `feasible == false` flags.
 
-Use [`BMOPFTools.diagnose_infeasibility`](@ref) to interpret the result.
+Non-zero residuals localise and quantify the infeasibility. Pass the result to
+[`BMOPFTools.diagnose_infeasibility`](@ref) to interpret it.
 """
 function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
                                            optimizer=Ipopt.Optimizer,
@@ -58,12 +68,20 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     _set_level_aware_start_values!(vars, working, bus_terminals, grounded)
     _set_yd_dy_start_values!(vars, working, grounded)
 
-    # Voltage bounds are NOT enforced as hard constraints — they are evaluated
-    # post-solve by diagnose_infeasibility, which reports violations.
+    # Bound parity with solve_opf: the feasibility model carries the *identical*
+    # hard constraints (voltage bounds, bus limits, line/bus angle limits, and
+    # all device current limits) so its feasible set equals the OPF's. The ONLY
+    # relaxation is the free nodal current residual (cs_r, cs_i) added to KCL
+    # below and penalised in the least-squares objective. Voltages thus respect
+    # their hard bounds; any resulting power imbalance shows up as residual
+    # current at the affected node rather than as an unbounded voltage.
+    _add_voltage_bounds!(model, working, bus_terminals, grounded, vars)
+    _add_bus_limit_constraints!(model, working, bus_terminals, grounded, vars)
 
     kcl_r, kcl_i = _init_kcl(bus_terminals, grounded)
     _add_source_constraints!(model, working, vars, kcl_r, kcl_i)
-    _add_line_constraints!(model, working, vars, kcl_r, kcl_i)
+    _add_line_constraints!(model, working, vars, kcl_r, kcl_i; grounded=grounded)
+    _add_line_angle_constraints!(model, working, vars)
     _add_switch_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_transformer_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_shunt_constraints!(working, vars, kcl_r, kcl_i)

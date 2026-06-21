@@ -37,6 +37,31 @@ function diagnose_infeasibility(fopf_result::Dict{String,Any},
         error("fopf_result must come from solve_feasibility_opf " *
               "(missing \"is_feasibility_opf\" key).")
 
+    # The feasibility model shares the OPF's hard voltage/angle bounds; KCL is
+    # relaxed by the nodal current residual, so power/voltage infeasibility
+    # normally surfaces as a non-zero residual (handled below). A non-converged
+    # solver status is the rare case where even an arbitrary nodal current cannot
+    # satisfy the hard bounds (e.g. a fixed source voltage contradicting a bound
+    # on the same terminal); there is no residual pattern to rank, so report it.
+    if !get(fopf_result, "feasible", true)
+        return Dict{String,Any}(
+            "is_feasible"           => false,
+            "solver_infeasible"     => true,
+            "termination_status"    => get(fopf_result, "termination_status", "UNKNOWN"),
+            "total_infeasibility_A" => NaN,
+            "n_infeasible_buses"    => 0,
+            "top_buses"             => Dict{String,Any}[],
+            "failure_mode_summary"  => Dict{String,Any}(
+                "voltage_bound" => 0, "power_balance" => 0),
+            "voltage_violations"    => String[],
+            "n_voltage_violations"  => 0,
+            "note" => "Feasibility NLP did not converge: a hard voltage/angle " *
+                      "bound cannot be satisfied by any nodal current (e.g. a " *
+                      "source voltage contradicting a bound on the same terminal). " *
+                      "Inspect the bus bounds directly.",
+        )
+    end
+
     total_mag  = Float64(get(fopf_result, "total_slack_magnitude_A", 0.0))
     slack_data = get(fopf_result, "slack_injections", Dict())
     bus_result = get(fopf_result, "bus", Dict())

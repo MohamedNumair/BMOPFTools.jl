@@ -187,6 +187,35 @@ $-(\tilde{c}^r_{\ell,k} + I^{\text{sh},r}_k(b^\text{to}))$ at the to-bus.
 \leq \bigl(I^\text{max}_{\ell,k}\bigr)^2
 ```
 
+!!! note "Current-limit box bounds"
+    Wherever a magnitude limit $I^\text{max}$ applies directly to a current
+    **variable** — switch, generator, and transformer winding currents — the
+    implied box $-I^\text{max} \leq c^r,\,c^i \leq I^\text{max}$ is also placed
+    on the variable (it follows from $|c| \leq I^\text{max}$ and is redundant
+    with the cone, but bounds the variable from the start, helping the NLP
+    solver).
+
+    For **lines** the cone limits the *total* current $I^\text{tot} =
+    c_{\ell,k} + I^\text{sh}_k$ (series + π-shunt), not the series variable
+    itself, so the series box must absorb the shunt contribution:
+    ```math
+    |c^r_{\ell,k}|,\,|c^i_{\ell,k}| \;\le\; I^\text{tot,max}_{\ell,k}
+      \;=\; I^\text{max}_{\ell,k} \;+\; \textstyle\sum_j |Y^\text{sh}_{kj}|\,V^\text{max}_{j},
+    ```
+    from $|c_{\ell,k}| = |I^\text{tot} - I^\text{sh}_k| \le I^\text{max} +
+    \sum_j |Y^\text{sh}_{kj}|\,V^\text{max}_j$ (triangle inequality), where
+    $|Y^\text{sh}_{kj}| = \sqrt{G_{kj}^2 + B_{kj}^2}$ is the from-side π-shunt
+    admittance and $V^\text{max}_j$ is a **hard** to-ground voltage-magnitude
+    bound on from-terminal $j$. This box is added only when such a $V^\text{max}$
+    exists for every terminal feeding row $k$ — i.e. a phase-to-ground bound
+    `v_max`, a phase-to-neutral bound `vpn_max` with a grounded neutral, or
+    `vpn_max` together with a neutral-to-ground bound `vn_max`. With only a
+    `vpn_max` on a floating neutral (no `vn_max`) the to-ground voltage is
+    unbounded, so the series variable is **left free** rather than risk an
+    unsound box. A transformer's from-side winding with a no-load shunt is the
+    one remaining cone-on-an-expression case; it is left cone-only for now (the
+    same construction would apply).
+
 #### Switches
 
 A **closed** switch enforces zero voltage drop:

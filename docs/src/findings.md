@@ -190,6 +190,8 @@ The largest family; full derivations in the
 | `W.PROV.I_MAX_INCOMPLETE` | W | One or more lines have fewer `i_max` entries than conductors — the thermal limit is only partially specified; the unspecified conductors are left unconstrained. |
 | `W.PROV.I_MAX_INCOMPLETE_SWITCH` | W | Same as above for switches. |
 | `W.PROV.I_MAX_INCOMPLETE_XFMR` | W | Same for transformers (`i_max_from`/`i_max_to` shorter than the winding conductor count). |
+| `W.PROV.I_MAX_ABSENT` | W | One or more lines have **no** `i_max` on their linecode (or no linecode) — the series current is left entirely unconstrained in the OPF, so no thermal limit is enforced on the branch at all (distinct from `I_MAX_INCOMPLETE`, which is a partial limit). |
+| `W.PROV.I_MAX_ABSENT_SWITCH` | W | Same for **closed** switches with no `i_max`. Open switches are excluded — their current is fixed to zero regardless. |
 
 ### Zone phase topology
 
