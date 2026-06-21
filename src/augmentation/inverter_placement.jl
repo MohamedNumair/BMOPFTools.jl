@@ -1,0 +1,378 @@
+# Inverter placement: deliberate, explainable addition of inverter-interfaced DERs.
+#
+# Parallel to `add_generators` (see der_placement.jl), but for the richer
+# `inverter` element. Where `add_generators` writes a thin generator object,
+# `add_inverters` places an inverter nameplate — `topology`, `prime_mover`,
+# `s_max`, `p_avail`, `cost` — and leaves the P/Q dispatch box to be filled by
+# `augment_case`'s inverter pass (`_apply_inverter_augmentation!`, augment.jl
+# Pass 4), which derives p_max/p_min/q_min/q_max from s_max/p_avail. This keeps
+# the same "placement places, augment bounds" division used for generators:
+#   fix_case → add_inverters → augment_case → solve_opf
+#
+# MVP scope: PV prime movers, box reactive bounds (no control_profile, no
+# batteries, no grid-forming). Topology is inferred from the host load's
+# terminal_map (a neutral terminal ⇒ FOUR_LEG, otherwise SINGLE_PHASE).
+#
+# Filtering and topology context reuse the element-agnostic helpers in
+# der_placement.jl (`_xfmr_downstream`, `_collect_load_aggregates`,
+# `_voltage_family`, `_source_buses`, `_total_load_w`, `_resolve_connectivity`,
+# `_resolve_voltage_levels`). The recipe-typed helpers (candidate buses, sizing
+# basis, cost) are specialised here because `GeneratorRecipe`/`InverterRecipe`
+# are standalone structs — see `_inv_strategy_buses` / `_inv_basis_total` /
+# `_cost_inverter`.
+#
+# NOTE: the OPF engine fully supports inverters (constraints, objective, results,
+# per-unit), so placed inverters ARE dispatched by solve_opf once augment_case
+# has filled their P/Q box. Only the I/O converters (from_pmd/to_pmd/from_dss) do
+# not yet map inverter elements.
+
+"""
+    InverterRecipe
+
+Declarative configuration for [`add_inverters`](@ref). Mirrors
+[`GeneratorRecipe`](@ref) for the shared placement knobs, with inverter-specific
+fields for topology, prime mover and apparent-power sizing. Every field is a
+deliberate, explainable knob — no randomness.
+
+Placement strategy
+------------------
+- `strategy` — `:load_following` (one inverter per load bus),
+  `:hosting_capacity` (sized to a fraction of the feeding transformer rating),
+  or `:topology_targeted` (inverters at feeder leaves / near the source).
+- `topology_mode` — `:leaves` or `:near_source` (only for `:topology_targeted`).
+
+Filters (composable over any strategy)
+-------------------------------------
+- `voltage_levels` — restrict placement to these voltage-level families
+  (`:LV`, `:MV`, `:HV`, `:EHV`); `nothing` = all levels.
+- `min_local_load_va` — skip buses whose aggregated local load is below this.
+- `skip_source_buses` — never place at a voltage-source bus.
+
+Sizing (targets apparent power `s_max`)
+--------------------------------------
+- `size_basis` — `:fraction_of_local_load`, `:fraction_of_downstream_load`,
+  `:fraction_of_transformer_rating`, or `:fixed_tiers`.
+- `s_fraction` — fraction applied for the `:fraction_of_*` bases (sets `s_max`).
+- `fixed_tier_va` — voltage-level-family → fixed `s_max` (VA) for `:fixed_tiers`.
+- `s_to_p_ratio` — `p_avail = s_to_p_ratio × s_max` per phase (1.0 = unity-rated
+  PV; < 1.0 leaves headroom for reactive support at full irradiance).
+
+Inverter model
+--------------
+- `prime_mover` — `:PV` (MVP). Drives `p_min = 0` in the augment pass.
+- `inverter_topology` — `:infer` (FOUR_LEG when the host load has a neutral
+  terminal, else SINGLE_PHASE), or a forced `:FOUR_LEG` / `:THREE_LEG` /
+  `:SINGLE_PHASE`.
+
+Cost (makes the OPF dispatch non-trivial)
+----------------------------------------
+- `cost_basis` — `:cheaper_than_slack`, `:uniform`, or `:tiered_by_level`.
+- `slack_cost`, `der_cost_factor` — `cost = der_cost_factor × slack_cost`.
+- `der_cost_uniform` — used when `cost_basis = :uniform`.
+- `der_cost_tiers` — voltage-level-family → cost for `:tiered_by_level`.
+
+Identity / safety
+-----------------
+- `id_prefix` — new inverter ids are `\$(id_prefix)\$(bus)`.
+- `overwrite_existing` — if `false`, buses that already host an inverter are
+  skipped (no duplicate / replacement).
+- `apply_placement` — master enable; `false` makes `add_inverters` a no-op copy.
+"""
+Base.@kwdef struct InverterRecipe
+    strategy          :: Symbol = :load_following
+    topology_mode     :: Symbol = :leaves
+    # filters
+    voltage_levels    :: Union{Vector{Symbol},Nothing} = [:LV]
+    min_local_load_va :: Float64 = 0.0
+    skip_source_buses :: Bool    = true
+    # sizing (apparent power)
+    size_basis        :: Symbol  = :fraction_of_local_load
+    s_fraction        :: Float64 = 0.8
+    fixed_tier_va     :: Dict{Symbol,Float64} = Dict(:LV => 30_000.0, :MV => 1_000_000.0)
+    s_to_p_ratio      :: Float64 = 1.0
+    # inverter model
+    prime_mover       :: Symbol  = :PV
+    inverter_topology :: Symbol  = :infer
+    # cost
+    cost_basis        :: Symbol  = :cheaper_than_slack
+    slack_cost        :: Float64 = 1.0
+    der_cost_factor   :: Float64 = 0.5
+    der_cost_uniform  :: Float64 = 0.5
+    der_cost_tiers    :: Dict{Symbol,Float64} = Dict(:LV => 0.0, :MV => 0.8)
+    # identity / safety
+    id_prefix         :: String = "pv_"
+    overwrite_existing:: Bool   = false
+    apply_placement   :: Bool   = true
+end
+
+"""
+    default_inverter_recipe() -> InverterRecipe
+
+The default inverter placement recipe: load-following PV inverters at LV buses,
+`s_max` sized to 80 % of local load, unity-rated (`p_avail = s_max`), priced at
+half the slack cost.
+"""
+default_inverter_recipe() = InverterRecipe()
+
+# ── Public entry point ───────────────────────────────────────────────────────
+
+"""
+    add_inverters(net; recipe=default_inverter_recipe(), analysis=nothing)
+        -> (net′::Dict{String,Any}, manifest::TransformationManifest)
+
+Place inverter-interfaced DERs into `net` using an explainable, semantics-driven
+recipe. `net` is never mutated; `net′` is an independent deep copy.
+
+Writes the inverter nameplate — `bus`, `terminal_map`, `topology`,
+`prime_mover`, `s_max`, `p_avail`, `cost` — on each new inverter. The active and
+reactive dispatch box (`p_max`/`p_min`/`q_min`/`q_max`) is intentionally left to
+[`augment_case`](@ref)'s inverter pass, which derives it from `s_max`/`p_avail`.
+Every inverter field written is recorded in the returned
+[`TransformationManifest`](@ref) with confidence `:synthetic`.
+
+`analysis` may be the output of [`analyze`](@ref) (or a dict carrying
+`"voltage_levels"` / `"connectivity"`); if `nothing`, the needed sub-analyses are
+run internally.
+
+The placed inverters are dispatched by [`solve_opf`](@ref) once
+[`augment_case`](@ref) has filled their P/Q box. (The OPF *engine* fully supports
+inverters; only the `from_pmd`/`to_pmd`/`from_dss` I/O converters do not yet map
+inverter elements.)
+
+# Example
+```julia
+net1, _    = fix_case(net)
+net2, imf  = add_inverters(net1; recipe=InverterRecipe(strategy=:load_following))
+net3, _    = augment_case(net2)   # fills p_max/p_min/q_min/q_max on the new inverters
+```
+"""
+function add_inverters(net::Dict{String,Any};
+                       recipe::InverterRecipe = default_inverter_recipe(),
+                       analysis = nothing)::Tuple{Dict{String,Any}, TransformationManifest}
+
+    net′    = deepcopy(net)
+    entries = TransformEntry[]
+
+    fb = Finding[]; benchmark_readiness_check(net,  fb)
+    fa = Finding[]
+
+    inv_findings = Finding[]
+    if recipe.apply_placement
+        _apply_inverter_placement!(net′, entries, inv_findings, recipe, analysis)
+    end
+
+    benchmark_readiness_check(net′, fa)
+    append!(fa, inv_findings)   # inverter placement advisories (I.INV.* / W.INV.*)
+
+    manifest = TransformationManifest(string(Dates.now()), recipe, entries, fb, fa)
+    (net′, manifest)
+end
+
+# ── Core placement ───────────────────────────────────────────────────────────
+
+function _apply_inverter_placement!(net′::Dict{String,Any},
+                                    entries::Vector{TransformEntry},
+                                    inv_findings::Vector{Finding},
+                                    recipe::InverterRecipe,
+                                    analysis)
+    vl   = _resolve_voltage_levels(net′, analysis)
+    conn = _resolve_connectivity(net′, analysis)
+    bus_v = get(vl, "bus_voltage_map", Dict{String,Float64}())
+
+    loads = _collect_load_aggregates(net′)
+    xfmr  = _xfmr_downstream(net′, loads)
+
+    # 1. strategy-specific candidate bus set (shared with generator placement)
+    candidate_buses = _inv_strategy_buses(recipe, conn, loads)
+
+    # 2. shared filters
+    src_buses = _source_buses(net′)
+    dangling  = Set(get(conn, "dangling_buses", String[]))
+    selected = String[]
+    for bus in candidate_buses
+        haskey(loads, bus)                           || continue      # only at load buses
+        bus in dangling                              && continue
+        recipe.skip_source_buses && bus in src_buses && continue
+        lvl = _voltage_family(get(bus_v, bus, NaN))
+        if recipe.voltage_levels !== nothing
+            (lvl === nothing || !(lvl in recipe.voltage_levels)) && continue
+        end
+        agg = loads[bus]
+        sum(agg.p_nom) < recipe.min_local_load_va && continue
+        if !recipe.overwrite_existing && _bus_has_inverter(net′, bus)
+            continue
+        end
+        push!(selected, bus)
+    end
+    sort!(unique!(selected))
+
+    # 3. build, size, cost, and write each inverter
+    invs = get!(net′, "inverter", Dict{String,Any}())
+    n_placed = 0
+    total_s  = 0.0
+    for bus in selected
+        agg = loads[bus]
+        lvl = something(_voltage_family(get(bus_v, bus, NaN)), :LV)
+        basis, note_basis = _inv_basis_total(recipe, bus, agg, xfmr)
+        s_max = _size_inverter(recipe, agg.p_nom, basis, lvl)
+        all(iszero, s_max) && continue
+        p_avail = recipe.s_to_p_ratio * sum(s_max)
+        cost  = _cost_inverter(recipe, length(s_max), lvl)
+        topo  = _resolve_topology(recipe, agg.terminal_map)
+
+        iid  = string(recipe.id_prefix, bus)
+        rule = string("INVERTER_PLACEMENT/", recipe.strategy)
+        invs[iid] = Dict{String,Any}(
+            "bus" => bus, "terminal_map" => copy(agg.terminal_map),
+            "topology" => topo, "prime_mover" => string(recipe.prime_mover),
+            "s_max" => s_max, "p_avail" => p_avail, "cost" => cost)
+
+        note = "Inverter at bus '$bus' (level $lvl); $note_basis; topology $topo; " *
+               "phasing inherited from load"
+        push!(entries, TransformEntry(:inverter, iid, "bus", nothing, bus, rule, :synthetic, note))
+        push!(entries, TransformEntry(:inverter, iid, "terminal_map", nothing,
+            agg.terminal_map, rule, :synthetic, "inherited from load at '$bus'"))
+        push!(entries, TransformEntry(:inverter, iid, "topology", nothing,
+            topo, rule, :synthetic,
+            recipe.inverter_topology === :infer ?
+                "inferred from load terminal_map ($(length(agg.terminal_map)) terminals)" :
+                "forced by recipe"))
+        push!(entries, TransformEntry(:inverter, iid, "prime_mover", nothing,
+            string(recipe.prime_mover), rule, :synthetic, "recipe prime_mover"))
+        push!(entries, TransformEntry(:inverter, iid, "s_max", nothing, s_max, rule, :synthetic, note))
+        push!(entries, TransformEntry(:inverter, iid, "p_avail", nothing, p_avail, rule, :synthetic,
+            "p_avail = $(recipe.s_to_p_ratio) × Σ s_max"))
+        push!(entries, TransformEntry(:inverter, iid, "cost", nothing, cost,
+            string("INVERTER_PLACEMENT/cost_", recipe.cost_basis), :synthetic,
+            "cost basis $(recipe.cost_basis) → $(cost[1]) \$/kWh per phase (linear dispatch cost)"))
+
+        n_placed += 1
+        total_s  += sum(s_max)
+    end
+
+    _emit_inverter_findings!(inv_findings, net′, recipe, n_placed, total_s)
+    return n_placed
+end
+
+# ── Strategy candidate builder ────────────────────────────────────────────────
+# Mirrors _strategy_buses (der_placement.jl), specialised to InverterRecipe.
+function _inv_strategy_buses(recipe::InverterRecipe, conn, loads)
+    if recipe.strategy == :load_following || recipe.strategy == :hosting_capacity
+        return collect(keys(loads))
+    elseif recipe.strategy == :topology_targeted
+        if recipe.topology_mode == :leaves
+            return collect(get(conn, "degree_1_buses", String[]))
+        else # :near_source — load buses on the source→leaf longest path (first half)
+            path = collect(get(conn, "longest_path_buses", String[]))
+            half = max(1, cld(length(path), 2))
+            return path[1:min(half, length(path))]
+        end
+    else
+        error("unknown InverterRecipe.strategy = $(recipe.strategy)")
+    end
+end
+
+# ── Sizing (apparent power) ───────────────────────────────────────────────────
+
+# Resolve the raw basis quantity (VA) for the chosen size_basis, plus a note.
+# Mirrors _basis_total (der_placement.jl) but phrases the note in terms of s_max.
+# The s_fraction is applied later in _size_inverter, not here.
+function _inv_basis_total(recipe::InverterRecipe, bus::String, agg, xfmr)
+    local_total = sum(agg.p_nom)
+    if recipe.size_basis == :fraction_of_local_load
+        return local_total, "s_max = $(recipe.s_fraction) × local load $(round(local_total)) VA"
+    elseif recipe.size_basis == :fixed_tiers
+        return local_total, "s_max from fixed voltage-level tier"
+    elseif recipe.size_basis == :fraction_of_transformer_rating
+        info = get(xfmr.bus_info, bus, nothing)
+        info === nothing && return local_total, "s_max = $(recipe.s_fraction) × local load (no feeding transformer found)"
+        share = info.down_total > 0 ? local_total / info.down_total : 1.0
+        basis = info.s_rating * share
+        return basis, "s_max = $(recipe.s_fraction) × transformer '$(info.xfmr_id)' rating $(round(info.s_rating)) VA × load share $(round(share, digits=3))"
+    elseif recipe.size_basis == :fraction_of_downstream_load
+        info = get(xfmr.bus_info, bus, nothing)
+        info === nothing && return local_total, "s_max = $(recipe.s_fraction) × local load (no downstream context)"
+        return local_total, "s_max = $(recipe.s_fraction) × downstream-load share at bus"
+    else
+        error("unknown InverterRecipe.size_basis = $(recipe.size_basis)")
+    end
+end
+
+# Distribute the sized s_max across phases, mirroring the local load shape.
+function _size_inverter(recipe::InverterRecipe, p_nom::Vector{Float64},
+                        basis_total::Float64, level::Symbol)::Vector{Float64}
+    n = length(p_nom)
+    n == 0 && return Float64[]
+    total = recipe.size_basis == :fixed_tiers ?
+        get(recipe.fixed_tier_va, level, 0.0) :
+        recipe.s_fraction * basis_total
+    s = sum(p_nom)
+    weights = s > 0 ? p_nom ./ s : fill(1.0 / n, n)
+    total .* weights
+end
+
+# Per-phase linear dispatch cost, mirroring _cost_der (der_placement.jl). Kept
+# local because InverterRecipe is a standalone struct; the field meanings are
+# identical (cost_basis / der_cost_factor / slack_cost / der_cost_uniform /
+# der_cost_tiers).
+function _cost_inverter(recipe::InverterRecipe, n_phases::Int, level::Symbol)::Vector{Float64}
+    c = if recipe.cost_basis == :cheaper_than_slack
+        recipe.der_cost_factor * recipe.slack_cost
+    elseif recipe.cost_basis == :uniform
+        recipe.der_cost_uniform
+    elseif recipe.cost_basis == :tiered_by_level
+        get(recipe.der_cost_tiers, level, recipe.der_cost_factor * recipe.slack_cost)
+    else
+        error("unknown InverterRecipe.cost_basis = $(recipe.cost_basis)")
+    end
+    fill(Float64(c), n_phases)
+end
+
+# ── Topology inference ────────────────────────────────────────────────────────
+# A load terminal_map of [phase…, neutral] (≥ 2 terminals with a neutral) maps to
+# FOUR_LEG; a two-terminal [phase, ref] map to SINGLE_PHASE. Forced values are
+# normalised to the schema's uppercase enum strings.
+function _resolve_topology(recipe::InverterRecipe, terminal_map::Vector{String})::String
+    if recipe.inverter_topology !== :infer
+        return uppercase(string(recipe.inverter_topology))
+    end
+    n = length(terminal_map)
+    n <= 2 ? "SINGLE_PHASE" : "FOUR_LEG"
+end
+
+# ── Findings ──────────────────────────────────────────────────────────────────
+
+function _emit_inverter_findings!(inv_findings::Vector{Finding}, net′, recipe, n_placed, total_s)
+    if n_placed == 0
+        push!(inv_findings, Finding(WARNING, "W.INV.NO_CANDIDATES", :augmentation,
+            :network, nothing,
+            "Inverter placement strategy '$(recipe.strategy)' produced no placements " *
+            "(no candidate load buses passed the filters).",
+            Dict{String,Any}("strategy" => string(recipe.strategy))))
+        return
+    end
+    total_load = _total_load_w(net′)
+    ratio = total_load > 0 ? total_s / total_load : Inf
+    push!(inv_findings, Finding(INFO, "I.INV.PLACED", :augmentation, :inverter, nothing,
+        "Placed $n_placed inverter(s) (strategy=$(recipe.strategy), total s_max=" *
+        "$(round(total_s)) VA); inverter-rating/load ≈ $(round(ratio*100, digits=1))%.",
+        Dict{String,Any}("n_placed" => n_placed, "total_s_max_va" => total_s,
+                         "rating_load_ratio" => ratio,
+                         "strategy" => string(recipe.strategy))))
+    if ratio > 1.5
+        push!(inv_findings, Finding(WARNING, "W.INV.OVERSUPPLY", :augmentation,
+            :inverter, nothing,
+            "Inverter-rating/load ratio $(round(ratio*100, digits=1))% exceeds 150% — " *
+            "the OPF may be trivially over-supplied; consider lowering s_fraction.",
+            Dict{String,Any}("rating_load_ratio" => ratio)))
+    end
+end
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+function _bus_has_inverter(net, bus::String)::Bool
+    for (_, inv) in get(net, "inverter", Dict())
+        inv isa Dict && string(get(inv, "bus", "")) == bus && return true
+    end
+    false
+end
