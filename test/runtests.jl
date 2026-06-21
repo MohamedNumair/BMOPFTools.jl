@@ -2100,6 +2100,46 @@ const IEEE13_FIXTURE = """
         @test any(x -> x.code == "W.DOM.SOURCE_V_NEAR_BOUND", fwide)
     end
 
+    @testset "Domain rules — shunt on perfectly grounded terminal warning" begin
+        codes(net) = (f = Finding[]; domain_rules_check(net, f);
+                      [x.code for x in f])
+
+        # Shunt on a perfectly grounded bus terminal → inert → warning.
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "lb":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[230.0],"v_angle":[0.0]}},
+         "shunt":{"g1":{"bus":"lb","terminal_map":["n"],"G_1_1":5.0,"B_1_1":0.0}}}
+        """; from_string=true)
+        f = Finding[]; domain_rules_check(net, f)
+        @test any(x -> x.code == "W.DOM.SHUNT_ON_GROUNDED" && x.component_id == "g1", f)
+
+        # Shunt on a source-bus neutral (source-pinned to 0) → also inert → warning.
+        net2 = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","n"],"neutral_terminal":"n"},
+            "lb":{"terminal_names":["1","n"],"neutral_terminal":"n"}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[230.0],"v_angle":[0.0]}},
+         "shunt":{"srcg":{"bus":"src","terminal_map":["n"],"G_1_1":1000.0,"B_1_1":0.0}}}
+        """; from_string=true)
+        f2 = Finding[]; domain_rules_check(net2, f2)
+        @test any(x -> x.code == "W.DOM.SHUNT_ON_GROUNDED" && x.component_id == "srcg", f2)
+
+        # Shunt on an UNGROUNDED (floating-neutral) terminal → carries current → no warning.
+        net3 = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","n"],"neutral_terminal":"n"},
+            "lb":{"terminal_names":["1","n"],"neutral_terminal":"n"}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[230.0],"v_angle":[0.0]}},
+         "shunt":{"lbg":{"bus":"lb","terminal_map":["n"],"G_1_1":5.0,"B_1_1":0.0}}}
+        """; from_string=true)
+        @test !("W.DOM.SHUNT_ON_GROUNDED" in codes(net3))
+    end
+
     @testset "Redundancy — linecodes without impedance not duplicates" begin
         net = parse_bmopf(IEEE13_FIXTURE; from_string=true)
         # two linecodes with no R/X data must not fingerprint as identical
