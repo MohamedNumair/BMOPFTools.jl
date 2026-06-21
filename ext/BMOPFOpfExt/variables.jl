@@ -161,6 +161,54 @@ function _add_transformer_variables!(model, net)
 end
 
 """
+    _split_phase_init_angles(net, base_angle) -> Dict{String,Dict{String,Float64}}
+
+For every split-phase galvanic zone (fed by a `center_tap` transformer, per
+`BMOPFTools._classify_zones`), return per-bus, per-terminal warm-start angles in
+which the two legs are **anti-phase**: leg-1 at θ and leg-2 at θ+π, where θ is the
+feeding MV phase angle (looked up in `base_angle` from the centre-tap's from-side
+phase terminal). The neutral is 0. Applied across every bus in the zone, since the
+LV section keeps the centre-tap leg terminal names. Buses not in a split-phase zone
+are absent (callers fall back to the canonical 3-phase angles).
+"""
+function _split_phase_init_angles(net, base_angle::Dict{String,Float64})
+    out   = Dict{String,Dict{String,Float64}}()
+    buses = get(net, "bus", Dict())
+    cts   = get(get(net, "transformer", Dict()), "center_tap", Dict())
+
+    for z in BMOPFTools._classify_zones(net)
+        z.topology == :split_phase || continue
+        ctid = nothing
+        for (sub, id) in z.feed
+            sub == "center_tap" && (ctid = id; break)
+        end
+        ctid === nothing && continue
+        ct = get(cts, ctid, nothing); ct isa Dict || continue
+
+        tmfr = string.(get(ct, "terminal_map_from", String[]))
+        tmto = string.(get(ct, "terminal_map_to",   String[]))
+        nt_fr = BMOPFTools._neutral_terminal(get(buses, get(ct, "bus_from", ""), Dict()))
+        nt_to = BMOPFTools._neutral_terminal(get(buses, get(ct, "bus_to",   ""), Dict()))
+
+        ph_fr = findfirst(t -> t != nt_fr, tmfr)
+        θ     = ph_fr === nothing ? 0.0 : get(base_angle, tmfr[ph_fr], 0.0)
+
+        legs = [t for t in tmto if t != nt_to]
+        length(legs) >= 2 || continue
+        leg1, leg2 = legs[1], legs[end]
+
+        for bid in z.buses
+            d = get!(out, bid, Dict{String,Float64}())
+            d[leg1] = θ
+            d[leg2] = θ + π
+            nt = BMOPFTools._neutral_terminal(get(buses, bid, Dict()))
+            nt !== nothing && (d[nt] = 0.0)
+        end
+    end
+    out
+end
+
+"""
     _set_voltage_start_values!(vars, net, bus_terminals, grounded)
 
 Provide Ipopt with phase-correct initial voltage estimates.
@@ -196,6 +244,8 @@ function _set_voltage_start_values!(vars, net, bus_terminals, grounded)
     end
     v_nom == 0.0 && (v_nom = 1.0)   # degenerate fallback
 
+    sp = _split_phase_init_angles(net, t_angle)   # anti-phase legs for split-phase zones
+
     for (bid, terminals) in bus_terminals
         nt = BMOPFTools._neutral_terminal(terminals)
         for t in terminals
@@ -205,7 +255,8 @@ function _set_voltage_start_values!(vars, net, bus_terminals, grounded)
                 JuMP.set_start_value(vr[key], 0.0)
                 JuMP.set_start_value(vi[key], 0.0)
             else
-                ang = get(t_angle, t, 0.0)
+                ang = haskey(sp, bid) && haskey(sp[bid], t) ?
+                      sp[bid][t] : get(t_angle, t, 0.0)
                 JuMP.set_start_value(vr[key], v_nom * cos(ang))
                 JuMP.set_start_value(vi[key], v_nom * sin(ang))
             end
@@ -239,6 +290,8 @@ function _set_level_aware_start_values!(vars, net, bus_terminals, grounded)
 
     v_nom_by_bus = BMOPFTools._assign_nominal_voltages(net)
 
+    sp = _split_phase_init_angles(net, t_angle)   # anti-phase legs for split-phase zones
+
     for (bid, terminals) in bus_terminals
         nt    = BMOPFTools._neutral_terminal(terminals)
         v_nom = get(v_nom_by_bus, bid, 1000.0)
@@ -249,7 +302,8 @@ function _set_level_aware_start_values!(vars, net, bus_terminals, grounded)
                 JuMP.set_start_value(vr[key], 0.0)
                 JuMP.set_start_value(vi[key], 0.0)
             else
-                ang = get(t_angle, t, 0.0)
+                ang = haskey(sp, bid) && haskey(sp[bid], t) ?
+                      sp[bid][t] : get(t_angle, t, 0.0)
                 JuMP.set_start_value(vr[key], v_nom * cos(ang))
                 JuMP.set_start_value(vi[key], v_nom * sin(ang))
             end

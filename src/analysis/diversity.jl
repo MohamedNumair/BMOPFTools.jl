@@ -150,11 +150,18 @@ function _load_diversity(net::Dict{String,Any},
     # Per-galvanic-zone phase balance: sum p_nom by phase terminal label.
     # Flag zones where the phase totals are within 2% of each other — the
     # network is secretly balanced and a simpler per-phase model would suffice.
+    # Skip split-phase and SWER zones: their legs are intrinsically anti-phase /
+    # single-wire, so "balanced ⇒ single-phase equivalent" does not apply.
     buses = get(net, "bus", Dict())
     vsrc_buses = Set(string(get(vs, "bus", ""))
                      for (_, vs) in get(net, "voltage_source", Dict()))
+    skip_buses = Set{String}()
+    for z in _classify_zones(net)
+        z.topology in (:split_phase, :swer) && union!(skip_buses, z.buses)
+    end
     n_balanced_zones = 0
     for zone in _galvanic_zones(net)
+        any(bid -> bid in skip_buses, zone) && continue
         phase_power = Dict{String,Float64}()
         for (_, l) in loads
             get(l, "bus", "") in zone || continue
