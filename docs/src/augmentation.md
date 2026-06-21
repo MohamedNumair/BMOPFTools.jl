@@ -49,7 +49,9 @@ existing value** — augmentation only fills gaps.
 ### Pass 1 — Voltage bounds
 
 Sets `v_min`/`v_max`, `vpn_min`/`vpn_max`, `vpp_min`/`vpp_max`, and
-`vneg_max` on buses that lack them.
+`vneg_max` on buses that lack them. `vpn_*` are written as per-phase arrays and
+`vpp_*` as per-pair arrays (see [Conventions](conventions.md)); the OPF consumes
+them in those shapes.
 
 Bounds are expressed as fractions of a **declared supply voltage** — the
 nominal voltage defined by the relevant power-quality standard, which may
@@ -243,15 +245,63 @@ open("feeder_aug_manifest.json", "w") do io
 end
 ```
 
+## Adding generators (DER placement)
+
+`augment_case` deliberately only gap-fills standards-grounded bounds; it does
+**not** create generation.  Without dispatchable generators the OPF is trivial
+(the slack imports everything).  [`add_generators`](@ref) is a separate, opt-in
+pass that *places* dispatchable `generator` elements using the semantic and
+topological knowledge the library already computes — never randomly — so the OPF
+becomes a meaningful optimisation.  Like `fix_case`/`augment_case` it never
+mutates its input and returns a `(net′, manifest)` pair recording every field
+written.
+
+It writes only `bus`, `terminal_map`, `configuration`, `p_min`, `p_max`, and
+`cost`; reactive bounds are intentionally left to `augment_case`'s generation
+pass.  The intended order is therefore:
+
+```julia
+net1, _   = fix_case(net)
+net2, dmf = add_generators(net1;
+              recipe = GeneratorRecipe(strategy = :load_following))
+render_manifest(dmf)               # every placement is explained
+net3, _   = augment_case(net2)     # fills q_min/q_max on the new DERs
+result    = solve_opf(net3)
+```
+
+Placement is controlled by a [`GeneratorRecipe`](@ref):
+
+- **`strategy`** — `:load_following` (one DER per load bus, phasing inherited
+  from the load), `:hosting_capacity` (DERs sized to a fraction of the feeding
+  transformer's `s_rating`), or `:topology_targeted` (`topology_mode = :leaves`
+  for embedded generation at feeder ends, or `:near_source` for bulk injection).
+- **filters** — `voltage_levels` (e.g. `[:LV]`), `min_local_load_va`, and
+  `skip_source_buses` compose over any strategy.
+- **sizing** — `size_basis` (`:fraction_of_local_load`,
+  `:fraction_of_transformer_rating`, `:fraction_of_downstream_load`,
+  `:fixed_tiers`) with `der_p_fraction`.
+- **cost** — `cost_basis` (`:cheaper_than_slack`, `:tiered_by_level`,
+  `:uniform`); pricing DERs below the slack makes dispatch non-trivial — the
+  solver uses local generation until a voltage or thermal constraint binds.
+
+Every generator field written is recorded as a `TransformEntry` with rule
+`DER_PLACEMENT/<strategy>` and confidence `:synthetic` (a design choice, not a
+standard), and the run emits `I.DER.PLACED` / `W.DER.NO_CANDIDATES` /
+`W.DER.OVERSUPPLY` findings into the manifest's `findings_after`.
+
+```@docs
+add_generators
+GeneratorRecipe
+default_generator_recipe
+```
+
 ## Limitations
 
-The following augmentation tasks are **not** handled automatically:
+The following augmentation tasks are **not** handled by `augment_case`:
 
-- **DER placement** — adding dispatchable generators to load buses.  Where to
-  place them and how to size them is a design choice, not standards-derivable.
-  Use the standard generator dict format and add entries to `net["generator"]`
-  manually before calling `augment_case`, so reactive bounds are then filled
-  in by pass 3.
+- **DER placement** — handled by the separate [`add_generators`](@ref) pass
+  documented above, not by `augment_case`, because where to place generators and
+  how to size them is a deliberate design choice rather than standards-derivable.
 
 - **Zero-sequence voltage bound (`vzero_max`)** — the appropriate limit
   depends on the earthing system (TN, TT, IT have fundamentally different

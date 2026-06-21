@@ -79,18 +79,21 @@ end
     @test b1["v_min"] ≈ 230.0 * 0.85   atol=1e-6
     @test b1["v_max"] ≈ 230.0 * 1.15   atol=1e-6
 
-    # vpn: per-phase array (length = n_phase = 3), value = 230/√3 × pu
-    v_pn = 230.0 / sqrt(3.0)
+    # vpn: per-phase array (length = n_phase = 3); v_declared is per-conductor
+    # (phase-to-neutral), so vpn_nom = 230 × pu — no √3 division.
+    v_pn = 230.0
     @test b1["vpn_min"] isa Vector && length(b1["vpn_min"]) == 3
     @test b1["vpn_max"] isa Vector && length(b1["vpn_max"]) == 3
     @test all(b1["vpn_min"] .≈ v_pn * 0.90)
     @test all(b1["vpn_max"] .≈ v_pn * 1.10)
 
-    # vpp: per-pair array (length = n_pairs = 3 for 3 phases), value = 230 × pu
+    # vpp: per-pair array (length = n_pairs = 3 for 3 phases); line-to-line
+    # nominal = 230 × √3 ≈ 398 V, so vpp_nom = 230√3 × pu.
+    v_pp = 230.0 * sqrt(3.0)
     @test b1["vpp_min"] isa Vector && length(b1["vpp_min"]) == 3
     @test b1["vpp_max"] isa Vector && length(b1["vpp_max"]) == 3
-    @test all(b1["vpp_min"] .≈ 230.0 * 0.90)
-    @test all(b1["vpp_max"] .≈ 230.0 * 1.10)
+    @test all(b1["vpp_min"] .≈ v_pp * 0.90)
+    @test all(b1["vpp_max"] .≈ v_pp * 1.10)
 
     # vneg_max: 2% of v_pn
     @test b1["vneg_max"] ≈ v_pn * 0.02  atol=1e-6
@@ -109,6 +112,23 @@ end
     @test "vpn_min"  in fields_written
     @test "vpp_min"  in fields_written
     @test "vneg_max" in fields_written
+end
+
+@testset "T1: Voltage bounds — physically bracket actual voltages" begin
+    # Regression for the 4-wire bounds bug: the injected vpn/vpp bounds must
+    # bracket the real operating voltages. For a 230 V (L-N) source with a
+    # grounded neutral the actual voltages at b1 are ≈230 V phase-to-neutral
+    # and ≈230√3 ≈ 398 V phase-to-phase. The previous (buggy) bounds required
+    # vpn ≈ 120-146 V and vpp ≈ 207-253 V — physically impossible.
+    net  = _lv_net()
+    net′, _ = augment_case(net)
+    b1 = net′["bus"]["b1"]
+
+    v_pn_actual = 230.0              # phase-to-neutral (neutral grounded)
+    v_pp_actual = 230.0 * sqrt(3.0)  # line-to-line ≈ 398 V
+
+    @test all(b1["vpn_min"] .< v_pn_actual .< b1["vpn_max"])
+    @test all(b1["vpp_min"] .< v_pp_actual .< b1["vpp_max"])
 end
 
 @testset "T1: Voltage bounds — MV tighter than LV" begin
@@ -133,7 +153,7 @@ end
 
     # MV vpn band (±6%) is tighter than LV vpn band (±10%) in per-unit terms
     # lv_bus is a four-wire LV bus so it gets vpn bounds (per-phase array, length 3)
-    lv_vpn_nom = lv_vnom / sqrt(3.0)
+    lv_vpn_nom = lv_vnom
     @test lv["vpn_min"] isa Vector && length(lv["vpn_min"]) == 3
     lv_vpn_range = first(lv["vpn_max"]) - first(lv["vpn_min"])
     @test lv_vpn_range / lv_vpn_nom ≈ 0.20  atol=0.01   # ±10 % → 20 % window

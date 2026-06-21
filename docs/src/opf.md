@@ -82,11 +82,13 @@ variable per phase — see the inverter section.)
 Minimise total active-power generation cost (linear in current variables):
 
 $$\min \sum_{g \in \mathcal{G}} \sum_{k=1}^{|\mathcal{T}_g^\phi|}
-  c^g_1 \cdot \bigl(\Delta v^r_k \, c^{r,g}_{g,k} + \Delta v^i_k \, c^{i,g}_{g,k}\bigr)$$
+  c^g_k \cdot \bigl(\Delta v^r_k \, c^{r,g}_{g,k} + \Delta v^i_k \, c^{i,g}_{g,k}\bigr)$$
 
-where $c^g_1$ (currency/W) is the linear cost coefficient and $\Delta v_k$ is the
-phase-to-neutral (WYE) or line-to-line (DELTA) voltage at generator $g$'s
-$k$-th phase terminal (see [Generators](@ref generators-section) below).
+where $c^g_k$ (currency/W) is the **per-phase** linear cost coefficient — the
+`cost` field is a vector with one entry per phase term, indexed by $k$ — and
+$\Delta v_k$ is the phase-to-neutral (WYE) or line-to-line (DELTA) voltage at
+generator $g$'s $k$-th phase terminal (see [Generators](@ref generators-section)
+below). The same per-phase `cost` vector prices the voltage source and inverters.
 
 ---
 
@@ -471,8 +473,8 @@ fields on the `voltage_source` object shape the slack:
 
 - **`p_min`/`p_max`/`q_min`/`q_max`** — per-phase box bounds. Absent ⇒ unbounded
   (pure power-flow slack); present ⇒ a bounded grid connection.
-- **`cost`** — per-phase active-power price added to the objective (scalar `c1`
-  or `[c2, c1, c0]`; the linear term is exact since the source voltage is fixed).
+- **`cost`** — a per-phase vector of linear active-power prices (one entry per
+  phase term) added to the objective; exact since the source voltage is fixed.
 
 The source-bus **neutral** is fixed to zero and carries the summed slack return
 current, so neutral KCL is satisfied without a neutral voltage reference.

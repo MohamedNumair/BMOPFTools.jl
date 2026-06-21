@@ -478,6 +478,7 @@ export benchmark_readiness_check
 export render_markdown, render_terminal, render_ascii_tree
 export augment_case, AugmentationRecipe, default_recipe
 export fix_case, FixRecipe
+export add_generators, GeneratorRecipe, default_generator_recipe
 export TransformationManifest, TransformEntry, manifest_to_dict, render_manifest
 export diagnose_infeasibility
 export merge_series_lines, remove_dangling_lines

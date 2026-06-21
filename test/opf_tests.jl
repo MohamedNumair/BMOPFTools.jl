@@ -127,7 +127,7 @@
          "generator":{"gen1":{"bus":"bus1","terminal_map":["1"],
              "configuration":"WYE",
              "p_min":[50000.0],"p_max":[50000.0],
-             "q_min":[0.0],"q_max":[0.0],"cost":0.1}}}
+             "q_min":[0.0],"q_max":[0.0],"cost":[0.1]}}}
         """; from_string=true)
 
         res = solve_opf(net)
@@ -169,7 +169,7 @@
          "generator":{"gen1":{"bus":"bus1","terminal_map":["1","2","3","n"],
              "configuration":"WYE",
              "p_min":[0.0,0.0,0.0],"p_max":[50000.0,50000.0,50000.0],
-             "q_min":[0.0,0.0,0.0],"q_max":[0.0,0.0,0.0],"cost":-1.0}}}
+             "q_min":[0.0,0.0,0.0],"q_max":[0.0,0.0,0.0],"cost":[-1.0,-1.0,-1.0]}}}
         """; from_string=true)
 
         res = solve_opf(net)
@@ -410,7 +410,7 @@
              "terminal_map":["1","2","3","n"],
              "p_min":[0.0,0.0,0.0],"p_max":[200000.0,200000.0,200000.0],
              "q_min":[0.0,0.0,0.0],"q_max":[0.0,0.0,0.0],
-             "cost":-1.0}}}
+             "cost":[-1.0,-1.0,-1.0]}}}
         """; from_string=true)
 
         res = solve_opf(net)
@@ -493,7 +493,7 @@
          "configuration":"SINGLE_PHASE",
          "p_min":[0.0],"p_max":[200000.0],
          "q_min":[0.0],"q_max":[0.0],
-         "cost":-0.05}}}
+         "cost":[-0.05]}}}
     """; from_string=true)
 
     @testset "T11: per_unit=true returns SI results" begin
@@ -607,7 +607,7 @@
              "configuration":"SINGLE_PHASE",
              "p_min":[10000.0],"p_max":[10000.0],
              "q_min":[0.0],"q_max":[0.0],
-             "cost":0.01}}}
+             "cost":[0.01]}}}
         """; from_string=true)
 
         res = solve_opf(net)
@@ -741,7 +741,7 @@
              "p_nom":[50000.0],"q_nom":[0.0]}},
          "generator":{"gen1":{"bus":"bus1","terminal_map":["1","n"],
              "configuration":"SINGLE_PHASE",
-             "cost":0.01}}}
+             "cost":[0.01]}}}
         """; from_string=true)
 
         res = solve_opf(net)
@@ -775,7 +775,7 @@
              "p_nom":[50000.0],"q_nom":[0.0]}},
          "generator":{"gen1":{"bus":"bus1","terminal_map":["1","n"],
              "configuration":"SINGLE_PHASE",
-             "cost":0.01}}}
+             "cost":[0.01]}}}
         """; from_string=true)
 
         res = solve_opf(net)
@@ -1156,6 +1156,90 @@
         sm = sqrt(pg^2 + qg^2)
         @test sm <= s_max_k * 1.001   # within 0.1 % of nameplate
         @test pg <= p_max_k * 1.001
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # T-VBND: per-phase vpn arrays and per-pair vpp arrays on a 4-wire bus.
+    # Regression-guards that the OPF constraint builder (and the per-unit scaler)
+    # consume them as arrays rather than crashing on Float64(::Vector). Bounds
+    # are hand-set to physically feasible values (phase-to-ground ≈1000 V,
+    # line-to-line ≈1732 V) so the solve is well-posed.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T-VBND: per-phase vpn/vpp array bounds solve" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
+            "b1": {"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"],
+                   "v_min":900.0,"v_max":1100.0,
+                   "vpn_min":[900.0,900.0,900.0],"vpn_max":[1100.0,1100.0,1100.0],
+                   "vpp_min":[1500.0,1500.0,1500.0],"vpp_max":[2000.0,2000.0,2000.0]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[1000.0,1000.0,1000.0],"v_angle":[0.0,-2.0944,2.0944]}},
+         "linecode":{"lc":{"R_series_1_1":1.0e-4,"R_series_2_2":1.0e-4,"R_series_3_3":1.0e-4}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1","2","3","n"],"terminal_map_to":["1","2","3","n"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld":{"bus":"b1","terminal_map":["1","2","3","n"],"configuration":"WYE",
+             "p_nom":[1000.0,1000.0,1000.0],"q_nom":[0.0,0.0,0.0]}}}
+        """; from_string=true)
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # T-PCOST: non-uniform per-phase cost. A generator is forced (p_min=p_max)
+    # to distinct per-phase outputs that exactly serve the per-phase load, so
+    # the objective is the deterministic Σ cost_k · P_k:
+    #   0.1·10000 + 0.2·20000 + 0.3·30000 = 14 000.
+    # The old polynomial reading ([c2,c1,c0]) would have applied a single c1 to
+    # every phase (0.2·60000 = 12 000), so this value distinguishes the two.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T-PCOST: per-phase linear cost → objective" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
+            "bus1":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"],"v_min":950.0,"v_max":1050.0}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1","2","3"],
+             "v_magnitude":[1000.0,1000.0,1000.0],"v_angle":[0.0,-2.0944,2.0944]}},
+         "linecode":{"lc":{"R_series_1_1":1.0e-4,"R_series_2_2":1.0e-4,"R_series_3_3":1.0e-4}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1","terminal_map_from":["1","2","3"],
+             "terminal_map_to":["1","2","3"],"linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","2","3","n"],"configuration":"WYE",
+             "p_nom":[10000.0,20000.0,30000.0],"q_nom":[0.0,0.0,0.0]}},
+         "generator":{"g1":{"bus":"bus1","terminal_map":["1","2","3","n"],"configuration":"WYE",
+             "p_min":[10000.0,20000.0,30000.0],"p_max":[10000.0,20000.0,30000.0],
+             "q_min":[0.0,0.0,0.0],"q_max":[0.0,0.0,0.0],
+             "cost":[0.1,0.2,0.3]}}}
+        """; from_string=true)
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["objective"] ≈ 14_000.0   atol=1.0
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # T-AUGBND: end-to-end regression — augment_case must produce voltage bounds
+    # that a plain 4-wire LV feeder can actually satisfy. Before the fix the
+    # injected vpn (≈120-146 V) and vpp (≈207-253 V) bounds were physically
+    # impossible for a 230 V (L-N) / 398 V (L-L) feeder → LOCALLY_INFEASIBLE.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T-AUGBND: augment_case bounds solve on 4-wire LV feeder" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
+            "b1": {"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[230.0,230.0,230.0],"v_angle":[0.0,-2.0944,2.0944]}},
+         "linecode":{"lc":{"R_series_1_1":3.96e-4,"R_series_2_2":3.96e-4,
+                           "R_series_3_3":3.96e-4,"R_series_4_4":3.96e-4}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1","2","3","n"],"terminal_map_to":["1","2","3","n"],
+             "linecode":"lc","length":100.0}},
+         "load":{"ld":{"bus":"b1","terminal_map":["1","2","3","n"],"configuration":"WYE",
+             "p_nom":[1000.0,1000.0,1000.0],"q_nom":[0.0,0.0,0.0]}}}
+        """; from_string=true)
+        net′, _ = augment_case(net)
+        res = solve_opf(net′)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
     end
 
 end  # @testset "OPF — solve_opf extension"
