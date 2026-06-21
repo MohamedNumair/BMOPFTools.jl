@@ -30,6 +30,10 @@ z_line_min_ohm = 1e-4
 # Adjacent-line ||Z||_F ratio thresholds (info / warning)
 z_spread_info = 1e3
 z_spread_warn = 1e5
+# Source voltage headroom: warn if a voltage source's fixed v_magnitude is
+# within this fraction of the (v_max - v_min) band from either bound, on the
+# source bus or a same-base neighbour (risk of OPF infeasibility)
+source_v_margin_frac = 0.05
 
 # ---------------------------------------------------------------------------
 # Thermal-rating inference  (augmentation/thermal.jl)

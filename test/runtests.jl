@@ -2007,6 +2007,99 @@ const IEEE13_FIXTURE = """
                        f.component_id == "tx_dist", findings2)
     end
 
+    @testset "Domain rules — non-uniform per-phase cost warning" begin
+        dcodes(net) = (f = Finding[]; domain_rules_check(net, f);
+                       [x.code for x in f])
+
+        # Uniform per-phase generator cost → no warning
+        net = parse_bmopf("""
+        {"bus":{"b1":{"terminal_names":["1","2","3","n"],
+            "perfectly_grounded_terminals":["n"],
+            "v_min":[200.0,200.0,200.0],"v_max":[260.0,260.0,260.0]}},
+         "generator":{"g1":{"bus":"b1","terminal_map":["1","2","3","n"],
+             "cost":[0.1,0.1,0.1]}}}
+        """; from_string=true)
+        @test !("W.DOM.COST_PHASE_NONUNIFORM" in dcodes(net))
+
+        # Non-uniform generator cost → warning on the generator
+        net["generator"]["g1"]["cost"] = [0.1, 0.12, 0.1]
+        f = Finding[]; domain_rules_check(net, f)
+        @test any(x -> x.code == "W.DOM.COST_PHASE_NONUNIFORM" &&
+                       x.component_id == "g1", f)
+
+        # Scalar cost is uniform by definition → no warning
+        net["generator"]["g1"]["cost"] = 0.1
+        @test !("W.DOM.COST_PHASE_NONUNIFORM" in dcodes(net))
+
+        # voltage_source with non-uniform cost → warning on the source
+        vsnet = parse_bmopf("""
+        {"bus":{"src":{"terminal_names":["1","2","3","n"],
+            "perfectly_grounded_terminals":["n"],
+            "v_min":[200.0,200.0,200.0],"v_max":[260.0,260.0,260.0]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[230.0,230.0,230.0],"v_angle":[0.0,-2.0944,2.0944],
+             "cost":[1.0,1.0,2.0]}}}
+        """; from_string=true)
+        f2 = Finding[]; domain_rules_check(vsnet, f2)
+        @test any(x -> x.code == "W.DOM.COST_PHASE_NONUNIFORM" &&
+                       x.component_id == "vs", f2)
+    end
+
+    @testset "Domain rules — source voltage near bus bound warning" begin
+        # v_magnitude 230 sits mid-band of [200,260] → no warning
+        mk(vmag, vmin, vmax) = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","2","3","n"],
+                "perfectly_grounded_terminals":["n"],
+                "v_min":$vmin,"v_max":$vmax},
+            "b1":{"terminal_names":["1","2","3","n"],
+                "perfectly_grounded_terminals":["n"],
+                "v_min":[200.0,200.0,200.0],"v_max":[260.0,260.0,260.0]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":$vmag,"v_angle":[0.0,-2.0944,2.0944]}},
+         "linecode":{"lc":{"R_series_1_1":0.01,"R_series_2_2":0.01,"R_series_3_3":0.01}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1","2","3"],"terminal_map_to":["1","2","3"],
+             "linecode":"lc","length":10.0}}}
+        """; from_string=true)
+        dcodes(net) = (f = Finding[]; domain_rules_check(net, f);
+                       [x.code for x in f])
+
+        # comfortably mid-band → no warning
+        @test !("W.DOM.SOURCE_V_NEAR_BOUND" in
+                dcodes(mk("[230.0,230.0,230.0]",
+                          "[200.0,200.0,200.0]", "[260.0,260.0,260.0]")))
+
+        # within 5 % of upper bound on source bus (band 60, margin 3 → ≥257) → warning
+        @test "W.DOM.SOURCE_V_NEAR_BOUND" in
+              dcodes(mk("[258.0,258.0,258.0]",
+                        "[200.0,200.0,200.0]", "[260.0,260.0,260.0]"))
+
+        # within 5 % of lower bound → warning
+        @test "W.DOM.SOURCE_V_NEAR_BOUND" in
+              dcodes(mk("[201.0,201.0,201.0]",
+                        "[200.0,200.0,200.0]", "[260.0,260.0,260.0]"))
+
+        # source bus comfortable, but neighbour bus (b1, [200,260]) tight against
+        # 258 → still flagged via same-base line adjacency
+        net = mk("[258.0,258.0,258.0]", "[100.0,100.0,100.0]", "[400.0,400.0,400.0]")
+        f = Finding[]; domain_rules_check(net, f)
+        hit = filter(x -> x.code == "W.DOM.SOURCE_V_NEAR_BOUND", f)
+        @test length(hit) == 1
+        @test hit[1].detail["bus"] == "b1"
+
+        # Configurable margin: 250 is 10/60 ≈ 16.7 % below the 260 upper bound, so
+        # it clears the default 5 % margin but trips a widened 20 % one.
+        net2 = mk("[250.0,250.0,250.0]", "[200.0,200.0,200.0]", "[260.0,260.0,260.0]")
+        fdef = Finding[]; domain_rules_check(net2, fdef)
+        @test !any(x -> x.code == "W.DOM.SOURCE_V_NEAR_BOUND", fdef)
+        fwide = Finding[]
+        domain_rules_check(net2, fwide;
+            thresholds=merge(BMOPFTools._domain_thresholds(),
+                             Dict{String,Any}("source_v_margin_frac" => 0.20)))
+        @test any(x -> x.code == "W.DOM.SOURCE_V_NEAR_BOUND", fwide)
+    end
+
     @testset "Redundancy — linecodes without impedance not duplicates" begin
         net = parse_bmopf(IEEE13_FIXTURE; from_string=true)
         # two linecodes with no R/X data must not fingerprint as identical
