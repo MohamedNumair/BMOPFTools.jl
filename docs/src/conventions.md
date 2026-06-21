@@ -62,8 +62,11 @@ verbatim decimal string. Coercion is recorded in
 
 A bus carries `terminal_names`, optionally `perfectly_grounded_terminals`,
 and optional voltage-magnitude bounds in four flavours: phase-to-ground
-(`v_min`/`v_max`), phase-to-neutral (`vpn_*`), phase-to-phase (`vpp_*`) and
-sequence (`vpos_*`). Absent bounds mean *unconstrained* (spec §4.1.5).
+(`v_min`/`v_max`, scalar), phase-to-neutral (`vpn_*`), phase-to-phase (`vpp_*`)
+and sequence (`vpos_*`). `vpn_min`/`vpn_max` are **per-phase arrays** (one element
+per phase terminal, in `terminal_names` order); `vpp_min`/`vpp_max` are
+**per-pair arrays** (one element per unordered phase pair, in `(i<j)` order).
+Absent bounds mean *unconstrained* (spec §4.1.5).
 
 Grounding semantics (spec Table 10):
 
@@ -98,9 +101,11 @@ vectors `p_nom`/`q_nom` have length 1 (single-phase) or 3. Note the spec
 FAQ: a "wye" in the BMOPF sense always has the neutral return — a
 2-terminal load is `SINGLE_PHASE`, not a degenerate wye.
 
-Generators additionally carry per-phase `cost` (\$/kWh; scalar shorthand
-accepted) and optional `p_min/p_max/q_min/q_max`. A generator without
-bounds is an unbounded (slack-style) unit.
+Generators additionally carry `cost` and optional `p_min/p_max/q_min/q_max`.
+`cost` is a **per-phase vector of linear coefficients** (\$/W), one element per
+phase term; the objective contribution of phase `k` is `cost[k]·P_k`. (There is
+no polynomial/quadratic cost form.) A generator without bounds is an unbounded
+(slack-style) unit.
 
 **Voltage source as slack.** The `voltage_source` fixes its terminal voltages
 **and** acts as the network's current slack — it injects the current that closes

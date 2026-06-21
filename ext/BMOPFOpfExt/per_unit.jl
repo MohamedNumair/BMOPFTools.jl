@@ -126,14 +126,12 @@ function _pu_scale_buses!(net, bases)
                       "vpos_min", "vpos_max", "vneg_max", "vzero_max")
     for (bid, bus) in get(net, "bus", Dict())
         vb = get(v_base, bid, 1.0)
+        # Scale each voltage bound by V_base. vpn_* (per-phase) and vpp_* (per-pair)
+        # are vectors; v_min/v_max and the sequence bounds are scalars.
         for f in voltage_fields
-            haskey(bus, f) && (bus[f] = Float64(bus[f]) / vb)
-        end
-        # vpn_min/vpn_max and sequence bounds may be vectors
-        for f in ("vpn_min", "vpn_max")
-            if haskey(bus, f) && bus[f] isa AbstractVector
-                bus[f] = Float64.(bus[f]) ./ vb
-            end
+            haskey(bus, f) || continue
+            v = bus[f]
+            bus[f] = v isa AbstractVector ? Float64.(v) ./ vb : Float64(v) / vb
         end
         # va_diff_min/max are angles (radians) — unchanged
     end
@@ -154,21 +152,10 @@ function _pu_scale_sources!(net, bases)
         for f in ("p_min", "p_max", "q_min", "q_max")
             haskey(vs, f) && (vs[f] = Float64.(vs[f]) ./ sb)
         end
-        # Cost: $/W in SI → $/PU-W in PU (multiply by s_base; c2 by s_base²)
+        # Cost: per-phase linear coefficient $/W in SI → $/PU-W in PU (× s_base)
         if haskey(vs, "cost")
             c = vs["cost"]
-            if c isa AbstractVector
-                if length(c) == 1
-                    vs["cost"] = [Float64(c[1]) * sb]
-                else
-                    vs["cost"] = [i == 1 ? Float64(ci) * sb^2 :
-                                  i == 2 ? Float64(ci) * sb   :
-                                           Float64(ci)
-                                  for (i, ci) in enumerate(c)]
-                end
-            else
-                vs["cost"] = Float64(c) * sb
-            end
+            vs["cost"] = c isa AbstractVector ? Float64.(c) .* sb : Float64(c) * sb
         end
     end
 end
@@ -227,24 +214,11 @@ function _pu_scale_generators!(net, bases)
         if haskey(gen, "i_max")
             gen["i_max"] = Float64.(gen["i_max"]) ./ ib
         end
-        # Cost: $/W in SI → $/PU-W in PU means multiply by s_base
+        # Cost: per-phase linear coefficient $/W in SI → $/PU-W in PU (× s_base)
         # (cost per PU power = cost_si * s_base, since P_pu = P_si/s_base)
         if haskey(gen, "cost")
             c = gen["cost"]
-            if c isa AbstractVector
-                if length(c) == 1
-                    # [c1]: scalar linear cost — multiply by s_base
-                    gen["cost"] = [Float64(c[1]) * sb]
-                else
-                    # [c2, c1, c0] polynomial: scale each term by its power of s_base
-                    gen["cost"] = [i == 1 ? Float64(ci) * sb^2 :   # c2: $/W² → $/PU²
-                                    i == 2 ? Float64(ci) * sb   :   # c1: $/W → $/PU
-                                             Float64(ci)            # c0: constant
-                                   for (i, ci) in enumerate(c)]
-                end
-            else
-                gen["cost"] = Float64(c) * sb
-            end
+            gen["cost"] = c isa AbstractVector ? Float64.(c) .* sb : Float64(c) * sb
         end
     end
 end

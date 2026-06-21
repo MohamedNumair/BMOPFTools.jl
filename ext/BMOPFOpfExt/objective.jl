@@ -1,27 +1,30 @@
 # Objective: minimise total generation cost.
 #
-# cost on a generator is either:
-#   - a scalar c1  → linear cost  c1 * P  per phase ($/W)
-#   - a 3-vector [c2, c1, c0] → c2*P² + c1*P + c0  per phase
-#
-# P per phase is the bilinear expression:
-#   P_k = dvr * crg[k] + dvi * cig[k]
-#
-# We accumulate a single QuadExpr (covers both linear and quadratic cases)
-# and set it as the objective once.
+# `cost` is a per-phase vector of linear coefficients, one element per phase term
+# of the element ($/W): the cost of phase k is cost[k] * P_k, where
+#   P_k = dvr * cr[k] + dvi * ci[k]
+# is the per-phase active power (bilinear in voltage and current). This applies
+# uniformly to generators, the voltage source (slack), and inverters.
+
+# Linear cost coefficient for loop position `idx` (1-based). `cost` must be a
+# per-phase vector; a scalar (legacy/polynomial form) is rejected.
+function _phase_cost(cost, idx::Int, kind::AbstractString, id::AbstractString)::Float64
+    cost isa AbstractVector ||
+        error("$kind '$id': cost must be a per-phase vector of linear coefficients, got a scalar")
+    idx <= length(cost) ||
+        error("$kind '$id': cost vector has length $(length(cost)) but phase index $idx requested")
+    Float64(cost[idx])
+end
 
 """
     _add_objective!(model, net, vars)
 
 Set the JuMP objective to minimise total active-power generation cost.
 
-Cost coefficients per generator come from the `"cost"` field:
-- Scalar `c1`               → linear cost `c1·P` per phase
-- 3-vector `[c2, c1, c0]`   → `c2·P² + c1·P + c0` per phase
-
-Only the linear term `c1·P` is exact in the current IVR-EN variables because `P`
-is bilinear in voltage and current.  A non-zero quadratic coefficient `c2` emits
-a warning and is *not* added to the objective.
+The `"cost"` field on generators, the voltage source, and inverters is a
+**per-phase vector of linear coefficients** `[c_1, …, c_nphase]` (\$/W); the
+objective contribution of phase `k` is `cost[k]·P_k`.  Costs are linear in the
+IVR-EN power expression and added exactly — there is no polynomial/quadratic term.
 """
 function _add_objective!(model, net, vars)
     vr = vars[:vr]; vi = vars[:vi]
@@ -37,19 +40,12 @@ function _add_objective!(model, net, vars)
         cost = get(gen, "cost", nothing)
         cost === nothing && continue
 
-        c2, c1 = if cost isa AbstractVector
-            length(cost) >= 3 ? (Float64(cost[1]), Float64(cost[2])) :
-            length(cost) == 2 ? (0.0, Float64(cost[1])) :
-                                (0.0, Float64(cost[1]))
-        else
-            (0.0, Float64(cost))
-        end
-
         ph_pos    = cfg == "DELTA" ? collect(eachindex(tm)) : _phase_positions(tm)
         n_pos_idx = cfg == "DELTA" ? nothing : _neutral_pos(tm)
         t_n       = n_pos_idx !== nothing ? tm[n_pos_idx] : nothing
 
         for (idx, ph) in enumerate(ph_pos)
+            c1   = _phase_cost(cost, idx, "Generator", gid)
             t_ph = tm[ph]
             dvr  = t_n !== nothing ?
                    @expression(model, vr[(bus,t_ph)] - vr[(bus,t_n)]) :
@@ -64,17 +60,6 @@ function _add_objective!(model, net, vars)
             # VariableRef × VariableRef, so we use the (scalar, QuadExpr) form.
             JuMP.add_to_expression!(obj, c1,
                 @expression(model, dvr*crg[(gid,idx)] + dvi*cig[(gid,idx)]))
-
-            # Quadratic cost: c2 * P² — expand P² = (dvr*crg + dvi*cig)²
-            # Only exact when dvr/dvi are constants (fixed voltages); for a
-            # validation tool the linear term is the primary cost signal.
-            # Quadratic contribution added as c2 * (dvr²*(crg²) + ...) only
-            # when dvr/dvi are scalar constants (source bus fixed voltages).
-            if c2 != 0.0
-                @warn "Generator '$gid': quadratic cost (c2=$c2) not fully " *
-                      "representable as a polynomial in current variables; " *
-                      "using linear approximation only."
-            end
         end
     end
 
@@ -90,15 +75,6 @@ function _add_objective!(model, net, vars)
         cost = get(vs, "cost", nothing)
         cost === nothing && continue
 
-        c2, c1 = if cost isa AbstractVector
-            length(cost) >= 3 ? (Float64(cost[1]), Float64(cost[2])) :
-            length(cost) >= 1 ? (0.0, Float64(cost[1])) : (0.0, 0.0)
-        else
-            (0.0, Float64(cost))
-        end
-        c2 != 0.0 && @warn "Voltage source '$sid': quadratic cost (c2=$c2) not " *
-                           "added to the objective; using linear term only."
-
         cfg in ("WYE", "SINGLE_PHASE") || continue
         ph_pos    = _phase_positions(tm)
         n_pos_idx = _neutral_pos(tm)
@@ -110,6 +86,7 @@ function _add_objective!(model, net, vars)
         end
 
         for (idx, ph) in enumerate(ph_pos)
+            c1   = _phase_cost(cost, idx, "Voltage source", sid)
             t_ph = tm[ph]
             dvr = t_n !== nothing ?
                   @expression(model, vr[(bus,t_ph)] - vr[(bus,t_n)]) : vr[(bus,t_ph)]
@@ -129,15 +106,8 @@ function _add_objective!(model, net, vars)
         cost = get(inv, "cost", nothing)
         cost === nothing && continue
 
-        c2, c1 = if cost isa AbstractVector
-            length(cost) >= 3 ? (Float64(cost[1]), Float64(cost[2])) :
-            length(cost) >= 1 ? (0.0, Float64(cost[1])) : (0.0, 0.0)
-        else
-            (0.0, Float64(cost))
-        end
-        c2 != 0.0 && @warn "Inverter '$inv_id': quadratic cost not supported; using linear term only."
-
         if topo == "SINGLE_PHASE" && length(tm) >= 2
+            c1 = _phase_cost(cost, 1, "Inverter", inv_id)
             t_ph = tm[1]; t_ref = tm[2]
             dvr = @expression(model, vr[(bus,t_ph)] - vr[(bus,t_ref)])
             dvi = @expression(model, vi[(bus,t_ph)] - vi[(bus,t_ref)])
@@ -149,6 +119,7 @@ function _add_objective!(model, net, vars)
             n_pos_idx = _neutral_pos(tm)
             t_n       = n_pos_idx !== nothing ? tm[n_pos_idx] : nothing
             for (idx, ph) in enumerate(ph_pos)
+                c1   = _phase_cost(cost, idx, "Inverter", inv_id)
                 t_ph = tm[ph]
                 dvr = t_n !== nothing ?
                       @expression(model, vr[(bus,t_ph)] - vr[(bus,t_n)]) : vr[(bus,t_ph)]
@@ -161,6 +132,7 @@ function _add_objective!(model, net, vars)
         elseif topo == "THREE_LEG"
             n_c = length(tm)
             for k in 1:n_c
+                c1 = _phase_cost(cost, k, "Inverter", inv_id)
                 t_pos = tm[k]; t_neg = tm[(k % n_c) + 1]
                 dvr = @expression(model, vr[(bus,t_pos)] - vr[(bus,t_neg)])
                 dvi = @expression(model, vi[(bus,t_pos)] - vi[(bus,t_neg)])

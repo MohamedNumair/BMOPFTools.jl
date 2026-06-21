@@ -33,7 +33,8 @@ Complete audit trail for one call to [`augment_case`](@ref).
 Fields
 ------
 - `created_at`      — ISO-8601 timestamp of the augmentation run
-- `recipe`          — the [`AugmentationRecipe`](@ref) used
+- `recipe`          — the recipe used (`AugmentationRecipe`, `FixRecipe`, or
+                      `GeneratorRecipe`); the change detail is also captured in `entries`
 - `entries`         — ordered list of [`TransformEntry`](@ref) records
 - `findings_before` — [`benchmark_readiness_check`](@ref) findings on the
                       input case (snapshot)
@@ -41,7 +42,7 @@ Fields
 """
 struct TransformationManifest
     created_at      :: String
-    recipe          :: AugmentationRecipe
+    recipe          :: Any
     entries         :: Vector{TransformEntry}
     findings_before :: Vector{Finding}
     findings_after  :: Vector{Finding}
