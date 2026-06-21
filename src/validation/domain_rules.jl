@@ -29,6 +29,8 @@ function domain_rules_check(net::Dict{String,Any},
     _check_low_impedance_lines(net, findings, thresholds, n_checks)
     _check_adjacent_line_impedance_spread(net, findings, thresholds, n_checks, result)
     _check_inverter_capability(net, findings, n_checks)
+    _check_cost_phase_uniformity(net, findings, n_checks)
+    _check_source_voltage_margin(net, findings, thresholds, n_checks)
 
     result["n_checks_run"] = n_checks[]
     result
@@ -108,6 +110,126 @@ function _check_generator_cost(net, findings, thresh, n_checks)
                 :generator, id,
                 "Generator '$id' cost $(maximum(costs)) \$/kWh exceeds threshold $cost_max \$/kWh.",
                 Dict{String,Any}("cost" => costs, "threshold" => cost_max)))
+        end
+    end
+end
+
+"""
+    _check_cost_phase_uniformity(net, findings, n_checks)
+
+Warn when a dispatchable element's per-phase `cost` vector is non-uniform across
+phases. Costs usually represent a single \$/W price applied symmetrically; a
+vector with differing entries is more often a data-entry slip than an intended
+per-phase price signal. Covers `generator` and `voltage_source` today; extend the
+`elements` list as further dispatchable element types gain a `cost` field.
+"""
+function _check_cost_phase_uniformity(net, findings, n_checks)
+    elements = (("generator", :generator), ("voltage_source", :voltage_source))
+    for (key, kind) in elements
+        for (id, el) in get(net, key, Dict())
+            el isa Dict || continue
+            haskey(el, "cost") || continue
+            c = el["cost"]
+            c isa AbstractVector || continue   # scalar cost is uniform by definition
+            costs = Float64.(c)
+            length(costs) > 1 || continue
+            n_checks[] += 1
+            spread = maximum(costs) - minimum(costs)
+            # Relative tolerance against the largest |cost|; absolute floor guards
+            # the all-near-zero case.
+            scale = maximum(abs, costs)
+            if spread > max(1e-9, 1e-6 * scale)
+                push!(findings, Finding(WARNING, "W.DOM.COST_PHASE_NONUNIFORM",
+                    :domain_rules, kind, id,
+                    "$(uppercasefirst(replace(key, '_' => ' '))) '$id' has " *
+                    "non-uniform per-phase cost $(costs) — costs usually apply " *
+                    "symmetrically across phases; check this is intentional.",
+                    Dict{String,Any}("cost" => costs, "spread" => spread)))
+            end
+        end
+    end
+end
+
+"""
+    _check_source_voltage_margin(net, findings, thresh, n_checks)
+
+Warn when a voltage source's fixed `v_magnitude` sits within
+`source_v_margin_frac` of the (v_max − v_min) band from either bound, on the
+source bus or on a same-voltage-base neighbour (reachable via lines/switches;
+transformers change the base and are not crossed). A fixed source voltage hard
+against a phase bound leaves the OPF no headroom and is a common cause of
+infeasibility.
+"""
+function _check_source_voltage_margin(net, findings, thresh, n_checks)
+    margin_frac = Float64(get(thresh, "source_v_margin_frac", 0.05))
+    buses = get(net, "bus", Dict())
+    sources = get(net, "voltage_source", Dict())
+    isempty(sources) && return
+
+    # Same-base adjacency: lines and switches preserve the voltage base.
+    adj = Dict{String,Vector{String}}()
+    for key in ("line", "switch")
+        for (_, br) in get(net, key, Dict())
+            br isa Dict || continue
+            bf = get(br, "bus_from", ""); bt = get(br, "bus_to", "")
+            (isempty(bf) || isempty(bt)) && continue
+            push!(get!(adj, bf, String[]), bt)
+            push!(get!(adj, bt, String[]), bf)
+        end
+    end
+
+    _as_vec(x) = x === nothing ? Float64[] :
+                 (x isa AbstractVector ? Float64.(x) : [Float64(x)])
+
+    for (sid, vs) in sources
+        vs isa Dict || continue
+        vmag = _as_vec(get(vs, "v_magnitude", nothing))
+        isempty(vmag) && continue
+        src_bus = get(vs, "bus", "")
+        isempty(src_bus) && continue
+        n_checks[] += 1
+
+        # Source bus plus its same-base neighbours (one hop is enough to cover
+        # "the next bus"; lines/switches share the base so bounds are comparable).
+        check_buses = String[src_bus]
+        append!(check_buses, get(adj, src_bus, String[]))
+
+        flagged = false
+        for bid in unique(check_buses)
+            flagged && break
+            bus = get(buses, bid, nothing)
+            bus isa Dict || continue
+            vmin = _as_vec(get(bus, "v_min", nothing))
+            vmax = _as_vec(get(bus, "v_max", nothing))
+            (isempty(vmin) || isempty(vmax)) && continue
+            np = min(length(vmag), length(vmin), length(vmax))
+            for k in 1:np
+                lo = vmin[k]; hi = vmax[k]
+                band = hi - lo
+                band > 0 || continue
+                margin = margin_frac * band
+                v = vmag[k]
+                near_lo = v <= lo + margin
+                near_hi = v >= hi - margin
+                if near_lo || near_hi
+                    side = near_lo ? "lower" : "upper"
+                    bound = near_lo ? lo : hi
+                    where = bid == src_bus ? "its bus '$bid'" :
+                            "neighbour bus '$bid'"
+                    push!(findings, Finding(WARNING, "W.DOM.SOURCE_V_NEAR_BOUND",
+                        :domain_rules, :voltage_source, sid,
+                        "Voltage source '$sid' magnitude $(round(v, digits=1)) V " *
+                        "(phase $k) is within $(round(margin_frac*100, digits=1)) % " *
+                        "of the $side voltage bound " *
+                        "$(round(bound, digits=1)) V on $where — little OPF " *
+                        "headroom; risk of infeasibility.",
+                        Dict{String,Any}("v_magnitude" => v, "bus" => bid,
+                            "phase" => k, "side" => side, "bound" => bound,
+                            "band" => band)))
+                    flagged = true   # one warning per source
+                    break
+                end
+            end
         end
     end
 end
