@@ -145,7 +145,7 @@ variables), so it must never over-tighten.
 
 Sources, in order of preference:
 - a perfectly grounded terminal → `0`;
-- phase-to-ground bound `v_max` → `v_max`;
+- phase-to-ground bound `v_max[k]` for the terminal's phase index `k` → `v_max[k]`;
 - phase-to-neutral bound `vpn_max[k]` with a perfectly grounded neutral
   (so `|V_n| = 0`) → `vpn_max[k]`;
 - `vpn_max[k]` plus a neutral-to-ground bound `vn_max` (floating neutral) →
@@ -159,23 +159,31 @@ function _terminal_vmax_to_ground(bus::Dict{String,Any}, terminal::String,
                                   grounded::Set{Tuple{String,String}}, bid::String)
     (bid, terminal) in grounded && return 0.0
 
-    v_max = get(bus, "v_max", nothing)
-    v_max !== nothing && return Float64(v_max)
-
     neutral = BMOPFTools._neutral_terminal(bus)
     vn_max  = get(bus, "vn_max", nothing)
 
-    # Neutral terminal: only vn_max can bound it to ground.
+    # Neutral terminal: only vn_max can bound it to ground (phase-to-ground
+    # v_max/vpn_max do not apply to the neutral).
     if neutral !== nothing && terminal == neutral
         return vn_max === nothing ? nothing : Float64(vn_max)
     end
 
-    # Phase terminal: locate its vpn_max entry (per-phase array in phase-term order).
-    vpn_max = get(bus, "vpn_max", nothing)
-    (vpn_max === nothing || neutral === nothing) && return nothing
+    # Phase terminal: find its index among the phase terminals (terminal_names
+    # order, neutral excluded). v_min/v_max and vpn_max are per-phase arrays.
     phase_terms = [t for t in get(bus, "terminal_names", String[]) if t != neutral]
     k = findfirst(==(terminal), phase_terms)
-    (k === nothing || k > length(vpn_max)) && return nothing
+    k === nothing && return nothing
+
+    # Phase-to-ground bound is the direct, sound to-ground cap.
+    v_max = get(bus, "v_max", nothing)
+    if v_max isa AbstractVector && k <= length(v_max)
+        return Float64(v_max[k])
+    end
+
+    # Otherwise fall back to the phase-to-neutral bound plus a neutral cap.
+    vpn_max = get(bus, "vpn_max", nothing)
+    (vpn_max === nothing || neutral === nothing) && return nothing
+    (k > length(vpn_max)) && return nothing
     vpn = Float64(vpn_max[k])
 
     if (bid, neutral) in grounded

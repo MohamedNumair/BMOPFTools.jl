@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV1_14bus
 
-**Generated:** 2026-06-21 16:06:16  
-**Findings:** 0 errors · 4 warnings · 27 info  
+**Generated:** 2026-06-21 18:37:39  
+**Findings:** 0 errors · 3 warnings · 27 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 4 grounding point(s)
 
 ---
@@ -108,7 +108,6 @@
 | Single point of failure | true |
 | TPIA status | not_run |
 
-> 🟡 **[W.PRE.SOURCE_VOLTAGE_OOB]** Voltage source 'source' phase 4: setpoint vm=0.0 V is below v_min=5398.225016923 V on bus 'b2577'. The source pins this voltage as a hard equality — the bus voltage bound is trivially violated before the OPF starts.
 > 🔵 **[I.PRE.SINGLE_SOURCE]** Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
 
 ## 7. Provenance & Model Conventions
@@ -193,12 +192,10 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 31 (0 errors, 4 warnings, 27 info)
+**Total findings:** 30 (0 errors, 3 warnings, 27 info)
 
 ### 🟡 Warnings
 
-- **[W.PRE.SOURCE_VOLTAGE_OOB]** `source`  
-  Voltage source 'source' phase 4: setpoint vm=0.0 V is below v_min=5398.225016923 V on bus 'b2577'. The source pins this voltage as a hard equality — the bus voltage bound is trivially violated before the OPF starts.
 - **[W.DOM.GEN_COST_NEGATIVE]** `der_bat`  
   Generator 'der_bat' has negative cost -0.5 $/kWh.
 - **[W.DOM.GEN_COST_NEGATIVE]** `der_pv_b`  
