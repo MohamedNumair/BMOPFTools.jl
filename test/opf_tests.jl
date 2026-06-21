@@ -980,6 +980,35 @@
     # cost < slack cost, the OPF should dispatch the inverter at p_avail and
     # let it offset the load.
     # ─────────────────────────────────────────────────────────────────────────
+    @testset "T-SP: split-phase center-tap init angles are anti-phase" begin
+        # The two LV legs of a center-tap (split-phase) secondary must be warm-
+        # started 180° apart, not the canonical −120°.
+        net = parse_bmopf("""
+        {"bus":{
+            "mv":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "lv":{"terminal_names":["1","2","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"src":{"bus":"mv","terminal_map":["1"],
+             "v_magnitude":[2400.0],"v_angle":[0.0]}},
+         "transformer":{"center_tap":{"ct":{"bus_from":"mv","bus_to":"lv",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n","2"],
+             "v_ref_from":2400.0,"v_ref_to":120.0,"s_rating":25000.0,
+             "r_series_from":0.1,"x_series_from":0.4,
+             "r_series_to":0.001,"x_series_to":0.004}}},
+         "load":{
+             "l1":{"bus":"lv","terminal_map":["1","n"],"configuration":"SINGLE_PHASE",
+                   "p_nom":[2000.0],"q_nom":[0.0]},
+             "l2":{"bus":"lv","terminal_map":["2","n"],"configuration":"SINGLE_PHASE",
+                   "p_nom":[2000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_opf(net)
+        # Initialisation block is captured from the warm-start regardless of the
+        # solve outcome.
+        i1 = res["initialisation"]["lv"]["1"]["va_init"]
+        i2 = res["initialisation"]["lv"]["2"]["va_init"]
+        @test isapprox(abs(rem2pi(i2 - i1, RoundNearest)), π; atol=0.05)  # legs ~180° apart
+    end
+
     @testset "T-INV1: FOUR_LEG inverter, box Q bounds via augmentation" begin
         net = parse_bmopf("""
         {"bus":{

@@ -491,6 +491,17 @@ source by default (see [Conversion](conversion.md) / [Augmentation](augmentation
 
 ---
 
+## Warm-start initialisation
+
+Both solvers seed Ipopt with phase-correct voltage start values (rectangular
+`v_nom·∠angle`) so the NLP converges to the physical solution without a load-flow
+pre-solve. Phase terminals use the canonical three-phase angles (0°, −120°, +120°)
+taken from the voltage source. **Split-phase zones are special-cased**: a zone fed
+by a `center_tap` transformer (see [`I.PROV.SPLIT_PHASE_ZONE`](findings.md)) has its
+two legs initialised **anti-phase** — θ and θ+180° about the centre-tap neutral,
+where θ is the feeding MV phase angle — rather than 120° apart. Without this, every
+centre-tap secondary starts with a 60° leg error.
+
 ## Feasibility relaxation
 
 `solve_feasibility_opf` adds an **elastic slack current**

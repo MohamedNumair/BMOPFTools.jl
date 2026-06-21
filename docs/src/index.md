@@ -118,6 +118,8 @@ normalisations) so the case's assumptions are explicit rather than implied.
 
 ## Where to go next
 
+- [Positioning & ecosystem](positioning.md) — where BMOPFTools fits among
+  distribution optimization and modelling tools, and the benchmarking gap it targets.
 - [Data model conventions](conventions.md) — units, terminal names,
   transformer subtypes, grounding semantics.
 - [Conversion guide](conversion.md) — every deliberate decision in
