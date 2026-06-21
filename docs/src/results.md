@@ -65,7 +65,7 @@ voltage source neutral) are present in the result with `vr = vi = vm = 0`,
 The neutral terminal voltage is an explicit variable. In a balanced network it
 is close to zero; in an unbalanced network it reflects the neutral shift.
 
-## `line` — series currents
+## `line` — terminal currents
 
 ```
 result["line"][line_id][terminal_name] => Dict
@@ -75,26 +75,28 @@ Conductors are keyed by **terminal name** taken from `terminal_map_from` of the
 input line. A line with `terminal_map_from = ["1","2","n"]` produces result
 keys `"1"`, `"2"`, `"n"`.
 
-The IVR formulation carries separate current variables at each end of every
-line to account for the shunt (capacitive) half-sections of the π model. Both
-ends are available in the result.
+The reported quantities are the **total per-end currents**: the series current
+plus that end's π-model shunt half-section, expressed as the current flowing out
+of the bus into the branch. This is exactly the quantity the thermal magnitude
+limit is enforced on (see [Lines](opf.md#lines)).
 
 | Field | Unit | Description |
 |---|---|---|
-| `cr_fr` | A | Real part of current leaving the from-terminal |
-| `ci_fr` | A | Imaginary part of current leaving the from-terminal |
-| `cr_to` | A | Real part of current entering the to-terminal |
-| `ci_to` | A | Imaginary part of current entering the to-terminal |
-| `cm_fr` | A | Current magnitude at from-terminal: `√(cr_fr² + ci_fr²)` |
-| `cm_to` | A | Current magnitude at to-terminal: `√(cr_to² + ci_to²)` |
+| `cr_fr` | A | Real part of total current leaving the from-bus into the line |
+| `ci_fr` | A | Imaginary part of total current leaving the from-bus |
+| `cr_to` | A | Real part of total current leaving the to-bus into the line |
+| `ci_to` | A | Imaginary part of total current leaving the to-bus |
+| `cm_fr` | A | Current magnitude at from-end: `√(cr_fr² + ci_fr²)` |
+| `cm_to` | A | Current magnitude at to-end: `√(cr_to² + ci_to²)` |
 
-KCL sign convention: current is positive flowing **into** the bus. `cr_fr` and
-`ci_fr` are the current *leaving* the from-bus into the line, so they appear as
-negative contributions in the from-bus KCL and positive in the to-bus KCL
-(after traversing the series impedance).
+KCL sign convention: current is positive flowing **out of** the bus into the
+branch. Internally the OPF solves a single series-current variable per conductor
+with `c_to = −c_fr`; the shunt currents are linear functions of the bus voltages
+and are added here to form the totals.
 
-`cm_fr ≠ cm_to` when the linecode has nonzero shunt admittance (π model). For
-purely series lines (no shunt) they are equal.
+`cm_fr ≠ cm_to` when the linecode has a nonzero shunt admittance (π model),
+because the two ends draw different shunt currents. For purely series lines (no
+shunt) the totals reduce to the series current and `cm_fr = cm_to`.
 
 ## `switch` — switch currents
 
@@ -153,6 +155,36 @@ Same terminal indexing as `load` — phase terminals only, neutral absent.
 | `cig` | A | Imaginary part of phase current injected by the generator |
 | `pg`  | W | Active power produced: `Δvr·crg + Δvi·cig` |
 | `qg`  | var | Reactive power produced: `Δvi·crg − Δvr·cig` |
+
+## `inverter` — produced power
+
+```
+result["inverter"][inverter_id][phase_terminal] => Dict
+```
+
+Inverters are keyed by **phase terminal** name, following the inverter's
+`topology`:
+
+- `FOUR_LEG` — keyed by each phase terminal in `terminal_map` (the neutral, the
+  last terminal, carries the summed return current and is absent).
+- `THREE_LEG` (delta) — keyed by the first terminal of each conductor pair
+  `(k, k mod n + 1)`; there is no neutral.
+- `SINGLE_PHASE` — a single key, the phase terminal `terminal_map[1]`
+  (referenced against `terminal_map[2]`).
+
+| Field | Unit | Description |
+|---|---|---|
+| `cri` | A | Real part of phase current injected by the inverter |
+| `cii` | A | Imaginary part of phase current injected by the inverter |
+| `pg`  | W | Active power produced: `Δvr·cri + Δvi·cii` |
+| `qg`  | var | Reactive power produced: `Δvi·cri − Δvr·cii` |
+
+`Δv` is the topology-appropriate voltage difference: phase-to-neutral for
+`FOUR_LEG`, phase-to-reference for `SINGLE_PHASE`, and across the conductor pair
+for `THREE_LEG`. Sign convention matches the generator: positive `pg`/`qg` is
+power injected into the network. See [Inverters](opf.md#inverters) for the
+constraint model (box `q_min`/`q_max` bounds, constant-power-factor coupling, and
+the `s_max` apparent-power circle).
 
 ## `transformer` — winding currents
 

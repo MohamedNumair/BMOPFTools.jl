@@ -68,12 +68,13 @@ All variables are real-valued and in SI units (V and A).
 | $\tilde{c}^r_{\ell,k},\; \tilde{c}^i_{\ell,k}$ | line $\ell$, conductor $k$ | Series current, to-side |
 | $c^{r,d}_{d,k},\; c^{i,d}_{d,k}$ | load $d$, phase $k$ | Load current |
 | $c^{r,g}_{g,k},\; c^{i,g}_{g,k}$ | generator $g$, phase $k$ | Generator current |
+| $c^{r,n}_{n,k},\; c^{i,n}_{n,k}$ | inverter $n$, phase $k$ | Inverter current |
 | $c^{r,s}_{v,k},\; c^{i,s}_{v,k}$ | voltage source $v$, phase $k$ | Source slack current |
 | $c^{r,x}_{x,\sigma,k},\; c^{i,x}_{x,\sigma,k}$ | transformer $x$, side $\sigma$, conductor $k$ | Transformer winding current |
 
-Load, generator, and source current variables cover **phase conductors only**;
-neutral return current is implicit in KCL. (Inverters add an analogous current
-variable per phase — see the inverter section.)
+Load, generator, inverter, and source current variables cover **phase
+conductors only**; neutral return current is implicit in KCL. Inverters add an
+analogous current variable per phase — see [Inverters](#inverters) below.
 
 ---
 
@@ -290,6 +291,55 @@ Q^{g,\text{min}}_{g,k}
 \;\leq\; \Delta v^i_k \, c^{r,g}_{g,k} - \Delta v^r_k \, c^{i,g}_{g,k}
 \;\leq\; Q^{g,\text{max}}_{g,k}
 ```
+
+#### Inverters
+
+Inverters use the same bilinear current/power model as generators, with the
+per-phase active and reactive powers
+
+```math
+P_{n,k} = \Delta v^r_k \, c^{r,n}_{n,k} + \Delta v^i_k \, c^{i,n}_{n,k},
+\qquad
+Q_{n,k} = \Delta v^i_k \, c^{r,n}_{n,k} - \Delta v^r_k \, c^{i,n}_{n,k}.
+```
+
+The voltage difference $\Delta v_k$ depends on the inverter **topology**:
+
+- **`FOUR_LEG`** — phase-to-neutral, $\Delta v_k = v_{b,t_k} - v_{b,t_n}$, one
+  current per phase conductor; the neutral is the last terminal in
+  `terminal_map`.
+- **`THREE_LEG`** — line-to-line (delta), $\Delta v_k = v_{b,t_k} - v_{b,t_{k^+}}$
+  with cyclic index $k^+ = (k \bmod n) + 1$; no neutral current.
+- **`SINGLE_PHASE`** — phase-to-reference, $\Delta v = v_{b,t_1} - v_{b,t_2}$,
+  a single current.
+
+Each phase $k$ is constrained by an active-power box and, when an apparent-power
+rating $S^{\max}_{n,k}$ is given, an apparent-power circle:
+
+```math
+P^{\min}_{n,k} \;\leq\; P_{n,k} \;\leq\; P^{\max}_{n,k},
+\qquad
+P_{n,k}^2 + Q_{n,k}^2 \;\leq\; \bigl(S^{\max}_{n,k}\bigr)^2 .
+```
+
+Reactive power is governed in one of two mutually exclusive ways:
+
+- **Box bounds** (default): $Q^{\min}_{n,k} \leq Q_{n,k} \leq Q^{\max}_{n,k}$.
+  These are normally filled by the augmentation pass before the OPF runs.
+- **Constant power factor**: when the inverter references a `control_profile`
+  with a signed `power_factor.pf`, $Q$ is coupled to $P$ by the exact equality
+
+  ```math
+  \operatorname{sign}(\mathrm{pf}) \, Q_{n,k}
+  + \tan\!\bigl(\arccos|\mathrm{pf}|\bigr) \, P_{n,k} = 0,
+  ```
+
+  with $\mathrm{pf} > 0$ lagging (absorbing VAr) and $\mathrm{pf} < 0$ leading
+  (injecting VAr).
+
+The inverter current variables enter KCL with the same sign convention as
+generators (injection positive into the bus); for `FOUR_LEG` the negated phase
+current is also added to the neutral terminal.
 
 #### Transformers
 
