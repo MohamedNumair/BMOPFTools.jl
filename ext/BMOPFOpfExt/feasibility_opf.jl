@@ -40,27 +40,34 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
                                            t_index::Int=1,
                                            per_unit::Bool=false,
                                            s_base::Float64=1e6)
+    # cs_r/cs_i are created inside build! and read again in extract!; share them
+    # across the two hooks via this closed-over scratch dict.
+    slack = Dict{Symbol,Any}()
+    _build_and_solve(net; optimizer=optimizer, t_index=t_index,
+                     per_unit=per_unit, s_base=s_base,
+                     configure! = _configure_feasibility!,
+                     build! = ctx -> build_feasibility!(ctx, slack),
+                     extract! = (ctx, result) -> extract_feasibility!(ctx, result, slack))
+end
 
-    working = BMOPFTools.is_timeseries(net) ?
-              BMOPFTools.get_snapshot(net, t_index) : deepcopy(net)
-
-    bases = nothing
-    if per_unit
-        working, bases = _to_per_unit(working, s_base)
-    end
-
-    model = JuMP.Model(optimizer)
-    JuMP.set_silent(model)
-    # Disable "acceptable level" early stopping so Ipopt always converges to the
-    # regular tolerance (1e-8).  Without this, problems with bilinear P/Q
-    # constraints and active thermal limits can exit prematurely, producing
-    # inaccurate voltages.
+# Disable "acceptable level" early stopping so Ipopt always converges to the
+# regular tolerance (1e-8).  Without this, problems with bilinear P/Q
+# constraints and active thermal limits can exit prematurely, producing
+# inaccurate voltages.
+_configure_feasibility!(model) =
     JuMP.set_optimizer_attribute(model, "acceptable_tol", 1e-8)
 
-    bus_terminals = _bus_terminals(working)
-    grounded      = _grounded_terminals(working)
+"""
+    build_feasibility!(ctx, slack)
 
-    vars = _build_vars(model, working, bus_terminals, grounded)
+Build recipe for the elastic slack-current feasibility OPF. Stores the slack
+variable dicts in `slack[:cs_r]` / `slack[:cs_i]` for `extract_feasibility!`.
+"""
+function build_feasibility!(ctx::OpfContext, slack::Dict{Symbol,Any})
+    model = ctx.model; working = ctx.net; vars = ctx.vars
+    bus_terminals = ctx.bus_terminals; grounded = ctx.grounded
+    kcl_r = ctx.kcl_r; kcl_i = ctx.kcl_i
+
     # Use level-aware start values so that LV buses are initialised at ~250 V
     # rather than at the source voltage (~6350 V). Without voltage bounds the
     # unconstrained NLP has a degenerate high-voltage local minimum; correct
@@ -75,19 +82,9 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     # below and penalised in the least-squares objective. Voltages thus respect
     # their hard bounds; any resulting power imbalance shows up as residual
     # current at the affected node rather than as an unbounded voltage.
-    _add_voltage_bounds!(model, working, bus_terminals, grounded, vars)
-    _add_bus_limit_constraints!(model, working, bus_terminals, grounded, vars)
+    _add_voltage_and_bus_bounds!(ctx)
 
-    kcl_r, kcl_i = _init_kcl(bus_terminals, grounded)
-    _add_source_constraints!(model, working, vars, kcl_r, kcl_i)
-    _add_line_constraints!(model, working, vars, kcl_r, kcl_i; grounded=grounded)
-    _add_line_angle_constraints!(model, working, vars)
-    _add_switch_constraints!(model, working, vars, kcl_r, kcl_i)
-    _add_transformer_constraints!(model, working, vars, kcl_r, kcl_i)
-    _add_shunt_constraints!(working, vars, kcl_r, kcl_i)
-    _add_load_constraints!(model, working, vars, kcl_r, kcl_i)
-    _add_generator_constraints!(model, working, vars, kcl_r, kcl_i)
-    _add_inverter_constraints!(model, working, vars, kcl_r, kcl_i)
+    _add_device_constraints!(ctx)
 
     # ── Slack current injections ──────────────────────────────────────────────
     # One (cs_r, cs_i) pair per KCL node. Grounded terminals are excluded
@@ -109,7 +106,8 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
         end
     end
 
-    _add_kcl_constraints!(model, kcl_r, kcl_i)
+    slack[:cs_r] = cs_r
+    slack[:cs_i] = cs_i
 
     # ── Objective: minimise L2² of all slack injections ───────────────────────
     # A small linear term on Yd/Dy wye winding currents (1e-6 × cr_xf_wye) breaks
@@ -143,11 +141,20 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
         end
     end
     @objective(model, Min, slack_obj)
+end
 
-    JuMP.optimize!(model)
+"""
+    extract_feasibility!(ctx, result, slack)
 
-    # ── Results ───────────────────────────────────────────────────────────────
-    result = _extract_results(model, working, bus_terminals, grounded, vars)
+Post-solve hook: append the feasibility-specific result keys (`slack_injections`,
+`total_slack_magnitude_A`, `is_feasibility_opf`) using the slack variables saved
+by `build_feasibility!`. Runs before per-unit unwrapping, exactly as before.
+"""
+function extract_feasibility!(ctx::OpfContext, result::Dict{String,Any},
+                              slack::Dict{Symbol,Any})
+    model = ctx.model
+    cs_r = slack[:cs_r]::Dict{Tuple{String,String}, JuMP.VariableRef}
+    cs_i = slack[:cs_i]::Dict{Tuple{String,String}, JuMP.VariableRef}
 
     solved = JuMP.termination_status(model) in (JuMP.MOI.LOCALLY_SOLVED,
                                                  JuMP.MOI.OPTIMAL,
@@ -156,7 +163,7 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
 
     # Slack injection results — keyed by bus then terminal
     slack_by_bus = Dict{String,Any}()
-    for (bid, terminals) in bus_terminals
+    for (bid, terminals) in ctx.bus_terminals
         t_slacks = Dict{String,Any}()
         for t in terminals
             key = (bid, t)
@@ -181,5 +188,4 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
     result["slack_injections"]        = slack_by_bus
     result["total_slack_magnitude_A"] = sqrt(total_sq)
     result["is_feasibility_opf"]      = true
-    bases !== nothing ? _from_per_unit(result, bases, net) : result
 end

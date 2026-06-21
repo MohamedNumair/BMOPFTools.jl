@@ -1,0 +1,129 @@
+# Generic build/solve engine shared by every problem formulation.
+#
+# Each problem (OPF, feasibility OPF, and future power-flow / state-estimation
+# variants) is expressed as a small *build recipe* — a function that declares
+# which start values, bounds, device constraints, slacks, and objective to add.
+# `_build_and_solve` owns the invariant pipeline around those recipes:
+#
+#   1. snapshot / per-unit the network
+#   2. build the JuMP model + index structures + variables
+#   3. initialise the KCL accumulators
+#   4. run the problem's `build!(ctx)` recipe        ← the only part that varies
+#   5. enforce KCL and optimize
+#   6. extract the standard result dict
+#   7. run the problem's optional `extract!(ctx, result)` hook for extra keys
+#   8. unwrap per-unit
+#
+# This mirrors the PowerModels/InfrastructureModels pattern where a generic
+# `solve_model(data, type, optimizer, build_method)` core is parameterised by a
+# per-problem `build_*` function.
+
+"""
+    OpfContext
+
+Bundle of everything a build recipe needs, threaded through the device-constraint
+helpers in place of the previous 7 positional arguments. Field names match the
+local variables the helpers already expect.
+
+- `model`         — the JuMP model
+- `net`           — the working network dict (snapshot + per-unit applied)
+- `bus_terminals` — `Dict{String,Vector{String}}` bus → ordered terminals
+- `grounded`      — `Set{Tuple{String,String}}` perfectly-grounded (bus, terminal)
+- `vars`          — variable dict returned by `_build_vars`
+- `kcl_r`/`kcl_i` — per-terminal KCL accumulator expressions
+"""
+struct OpfContext
+    model
+    net::Dict{String,Any}
+    bus_terminals::Dict{String,Vector{String}}
+    grounded::Set{Tuple{String,String}}
+    vars::Dict
+    kcl_r::Dict
+    kcl_i::Dict
+end
+
+"""
+    _add_device_constraints!(ctx)
+
+Add the constraints shared by *every* problem formulation: the voltage source,
+all branch/transformer/shunt couplings, and the load/generator/inverter power
+equations, each contributing to the KCL accumulators. Voltage and bus-limit
+bounds are NOT added here — a build recipe adds them explicitly so that an
+unbounded formulation (e.g. power flow) can omit them.
+"""
+function _add_device_constraints!(ctx::OpfContext)
+    model = ctx.model; net = ctx.net; vars = ctx.vars
+    kcl_r = ctx.kcl_r; kcl_i = ctx.kcl_i
+
+    _add_source_constraints!(model, net, vars, kcl_r, kcl_i)
+    _add_line_constraints!(model, net, vars, kcl_r, kcl_i; grounded=ctx.grounded)
+    _add_line_angle_constraints!(model, net, vars)
+    _add_switch_constraints!(model, net, vars, kcl_r, kcl_i)
+    _add_transformer_constraints!(model, net, vars, kcl_r, kcl_i)
+    _add_shunt_constraints!(net, vars, kcl_r, kcl_i)
+    _add_load_constraints!(model, net, vars, kcl_r, kcl_i)
+    _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
+    _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i)
+end
+
+"""
+    _add_voltage_and_bus_bounds!(ctx)
+
+Add the hard operational voltage bounds and bus-limit constraints. Shared by
+`solve_opf` and `solve_feasibility_opf` (both carry the identical hard feasible
+set); a future power-flow recipe would simply not call this.
+"""
+function _add_voltage_and_bus_bounds!(ctx::OpfContext)
+    _add_voltage_bounds!(ctx.model, ctx.net, ctx.bus_terminals, ctx.grounded, ctx.vars)
+    _add_bus_limit_constraints!(ctx.model, ctx.net, ctx.bus_terminals, ctx.grounded, ctx.vars)
+end
+
+"""
+    _build_and_solve(net; optimizer, t_index, per_unit, s_base, build!, extract!, configure!) -> Dict
+
+Generic build/solve engine. `build!(ctx)` is the per-problem recipe run after
+variables exist and before KCL is enforced. `extract!(ctx, result)` is an
+optional post-solve hook to append problem-specific result keys. `configure!`
+is an optional hook to set solver attributes on the freshly created model.
+"""
+function _build_and_solve(net::Dict{String,Any};
+                          optimizer,
+                          t_index::Int,
+                          per_unit::Bool,
+                          s_base::Float64,
+                          build!::Function,
+                          extract!::Union{Function,Nothing}=nothing,
+                          configure!::Union{Function,Nothing}=nothing)
+
+    working = BMOPFTools.is_timeseries(net) ?
+              BMOPFTools.get_snapshot(net, t_index) : deepcopy(net)
+
+    bases = nothing
+    if per_unit
+        working, bases = _to_per_unit(working, s_base)
+    end
+
+    model = JuMP.Model(optimizer)
+    JuMP.set_silent(model)
+    configure! === nothing || configure!(model)
+
+    bus_terminals = _bus_terminals(working)
+    grounded      = _grounded_terminals(working)
+
+    vars = _build_vars(model, working, bus_terminals, grounded)
+
+    kcl_r, kcl_i = _init_kcl(bus_terminals, grounded)
+
+    ctx = OpfContext(model, working, bus_terminals, grounded, vars, kcl_r, kcl_i)
+
+    build!(ctx)
+
+    _add_kcl_constraints!(model, kcl_r, kcl_i)
+
+    JuMP.optimize!(model)
+
+    result = _extract_results(model, working, bus_terminals, grounded, vars)
+    extract! === nothing || extract!(ctx, result)
+
+    bases !== nothing ? _from_per_unit(result, bases, net) : result
+end
