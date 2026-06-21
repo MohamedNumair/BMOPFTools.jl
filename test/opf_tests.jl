@@ -334,10 +334,11 @@
     # bus.  With no to-end load the series current is zero, so the total
     # from-end current = G_fr · V_s.  We verify:
     #   (a) The solver is feasible (i_max = 120 A > G_fr · V_s = 100 A)
-    #   (b) The series current cr_fr ≈ 0 A (no load drives no series flow)
-    #   (c) The shunt current G_fr · |V_fr| ≈ 100 A < i_max
-    # If the magnitude constraint used only the series term, (b) would make
-    # the constraint vacuous; counting the shunt correctly exercises the code.
+    #   (b) The reported total from-end current cm_fr ≈ 100 A — i.e. it includes
+    #       the π-shunt, even though the series component is ≈ 0 (no load)
+    #   (c) That total equals G_fr · |V_fr| ≈ 100 A < i_max
+    # The reported cr_fr/cm_fr are series + π-shunt, the same quantity the
+    # thermal magnitude limit is enforced on.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "T9: total current limit includes from-end π-shunt" begin
         V_s = 1000.0;  G_fr = 0.1   # shunt draws 100 A from source bus to ground
@@ -359,9 +360,11 @@
 
         res = solve_opf(net)
         @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
-        # Series current ≈ 0: no load, no to-end shunt
-        @test abs(res["line"]["l1"]["1"]["cr_fr"]) < 1.0
-        # Shunt current = G_fr · |V_sourcebus| ≈ 100 A, within i_max = 120 A
+        # Total from-end current = series (≈0) + from-end π-shunt (≈100 A)
+        @test res["line"]["l1"]["1"]["cm_fr"] ≈ I_sh_exp   atol=1.0
+        # The to-end carries no shunt and no series flow → ≈ 0 A
+        @test res["line"]["l1"]["1"]["cm_to"] < 1.0
+        # Cross-check against G_fr · |V_sourcebus|, within i_max = 120 A
         vr_src = res["bus"]["sourcebus"]["1"]["vr"]
         vi_src = res["bus"]["sourcebus"]["1"]["vi"]
         I_sh_computed = G_fr * sqrt(vr_src^2 + vi_src^2)

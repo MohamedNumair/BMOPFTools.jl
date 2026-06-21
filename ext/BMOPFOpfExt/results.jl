@@ -17,9 +17,11 @@ Returned top-level keys
 - `"solve_time"`         — solver wall-clock time (s)
 - `"bus"`        — `bus_id => terminal => {vr, vi, vm [V], va [rad]}`
 - `"line"`       — `line_id => terminal_name => {cr_fr, ci_fr, cr_to, ci_to [A], cm_fr, cm_to [A]}`
+                   (total per-end current: series + π-shunt half-section)
 - `"switch"`     — `switch_id => terminal_name => {cr, ci [A], cm [A]}`
 - `"load"`       — `load_id => terminal_name => {crd, cid [A], pd [W], qd [var]}`
 - `"generator"`  — `gen_id => terminal_name => {crg, cig [A], pg [W], qg [var]}`
+- `"inverter"`   — `inv_id => terminal_name => {cri, cii [A], pg [W], qg [var]}`
 - `"transformer"`— `xfmr_id => {"fr" => {k => {cr, ci [A]}}, "to" => {k => {cr, ci [A]}}}`
 - `"voltage_source"` — `src_id => terminal => {cr, ci [A], ps [W], qs [var]}`
 - `"initialisation"` — `bus_id => terminal => {vr_init, vi_init, vm_init [V], va_init [rad]}`
@@ -35,6 +37,31 @@ Transformer results use winding-side keys `"fr"` and `"to"`, each mapping to a
 positional index (string `"1"`, `"2"`, ...) because the two winding terminal
 maps may have different lengths and terminal-name sets.
 """
+# Numeric π-shunt current (A) leaving `bus` at each of `terminals`, evaluated at
+# the solved voltages. The result-side counterpart of `_shunt_current!`: it
+# returns Float64 values rather than accumulating AffExpr terms into the model.
+# Grounded terminals (absent from `vr_v`) have zero voltage and contribute
+# nothing, matching the model-build convention.
+function _shunt_current_value(vr_v, vi_v, val,
+                              G::Union{Matrix{Float64},Nothing},
+                              B::Union{Matrix{Float64},Nothing},
+                              bus::String, terminals::Vector{String})
+    n  = length(terminals)
+    cr = zeros(Float64, n); ci = zeros(Float64, n)
+    (G === nothing && B === nothing) && return cr, ci
+    for k in 1:n, j in 1:n
+        key_j = (bus, terminals[j])
+        haskey(vr_v, key_j) || continue   # grounded — voltage is zero
+        g_kj = (G !== nothing && k <= size(G,1) && j <= size(G,2)) ? G[k,j] : 0.0
+        b_kj = (B !== nothing && k <= size(B,1) && j <= size(B,2)) ? B[k,j] : 0.0
+        (iszero(g_kj) && iszero(b_kj)) && continue
+        vrj = val(vr_v[key_j]); vij = val(vi_v[key_j])
+        cr[k] += g_kj*vrj - b_kj*vij
+        ci[k] += g_kj*vij + b_kj*vrj
+    end
+    cr, ci
+end
+
 function _extract_results(model, net, bus_terminals, grounded, vars)
     status = string(JuMP.termination_status(model))
     obj    = JuMP.objective_value(model)
@@ -71,16 +98,32 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
     end
 
     # ── Line currents (keyed by terminal name, not position) ─────────────────
-    line_res = Dict{String,Any}()
+    # Reported quantities are the TOTAL per-end terminal currents (series +
+    # π-shunt half-section), positive leaving their bus into the branch — exactly
+    # the quantity the thermal limits are enforced on. The series-current
+    # variables alone satisfy cr_to = −cr_fr, so the totals differ (cm_fr ≠
+    # cm_to) only when the linecode carries a non-zero shunt admittance.
+    linecodes = get(net, "linecode", Dict())
+    line_res  = Dict{String,Any}()
     for (lid, line) in get(net, "line", Dict())
         tm_fr = string.(get(line, "terminal_map_from", String[]))
-        cond  = Dict{String,Any}()
-        for (k, t_fr) in enumerate(tm_fr)
-            cr_fr = val(cr_fr_v[(lid, k)])
-            ci_fr = val(ci_fr_v[(lid, k)])
-            cr_to = val(cr_to_v[(lid, k)])
-            ci_to = val(ci_to_v[(lid, k)])
-            cond[t_fr] = Dict{String,Any}(
+        tm_to = string.(get(line, "terminal_map_to", tm_fr))
+        b_fr  = string(get(line, "bus_from", ""))
+        b_to  = string(get(line, "bus_to",   ""))
+        n_map = min(length(tm_fr), length(tm_to))
+
+        # π-shunt currents leaving each bus (zero when the linecode has no shunt)
+        G_fr, B_fr, G_to, B_to = _line_pi_shunt(line, linecodes)
+        ish_fr_r, ish_fr_i = _shunt_current_value(vr_v, vi_v, val, G_fr, B_fr, b_fr, tm_fr[1:n_map])
+        ish_to_r, ish_to_i = _shunt_current_value(vr_v, vi_v, val, G_to, B_to, b_to, tm_to[1:n_map])
+
+        cond = Dict{String,Any}()
+        for k in 1:n_map
+            cr_fr = val(cr_fr_v[(lid, k)]) + ish_fr_r[k]
+            ci_fr = val(ci_fr_v[(lid, k)]) + ish_fr_i[k]
+            cr_to = val(cr_to_v[(lid, k)]) + ish_to_r[k]
+            ci_to = val(ci_to_v[(lid, k)]) + ish_to_i[k]
+            cond[tm_fr[k]] = Dict{String,Any}(
                 "cr_fr" => cr_fr,
                 "ci_fr" => ci_fr,
                 "cr_to" => cr_to,
