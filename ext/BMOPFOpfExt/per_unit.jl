@@ -68,6 +68,26 @@ function _compute_bases(net::Dict{String,Any}, s_base::Float64)
         end
     end
 
+    # Lines and switches do not change the voltage base; build adjacency for
+    # same-base propagation so all buses on an LV feeder inherit the correct
+    # v_base from the transformer LV terminal rather than falling back to the
+    # MV source base.
+    line_adj = Dict{String,Vector{String}}()
+    for (_, line) in get(net, "line", Dict())
+        bf = get(line, "bus_from", "")
+        bt = get(line, "bus_to",   "")
+        (isempty(bf) || isempty(bt)) && continue
+        push!(get!(line_adj, bf, String[]), bt)
+        push!(get!(line_adj, bt, String[]), bf)
+    end
+    for (_, sw) in get(net, "switch", Dict())
+        bf = get(sw, "bus_from", "")
+        bt = get(sw, "bus_to",   "")
+        (isempty(bf) || isempty(bt)) && continue
+        push!(get!(line_adj, bf, String[]), bt)
+        push!(get!(line_adj, bt, String[]), bf)
+    end
+
     queue = [src_bus]
     visited = Set{String}([src_bus])
     while !isempty(queue)
@@ -79,6 +99,12 @@ function _compute_bases(net::Dict{String,Any}, s_base::Float64)
             # V_base[nb] = V_base[bus] * (vref_nb / vref_this)
             ratio = vref_this > 0.0 ? vref_nb / vref_this : 1.0
             v_base[nb] = vb * ratio
+            push!(queue, nb)
+        end
+        for nb in get(line_adj, bus, String[])
+            nb in visited && continue
+            push!(visited, nb)
+            v_base[nb] = vb   # lines preserve the voltage base
             push!(queue, nb)
         end
     end
