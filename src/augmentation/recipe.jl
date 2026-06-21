@@ -19,14 +19,19 @@ not the transformer rated voltage.  The authoritative source is the optional
 are used; when those are `nothing`, the bus's `v_nom` from voltage-level
 analysis is used as a last resort.
 
-Set the fallbacks to the standard declared voltage for the deployment region,
-e.g. `v_declared_lv = 230.0` for Europe/Australia.
+The declared voltage is expressed **per conductor** (phase-to-ground ≈
+phase-to-neutral), the same basis as `v_nom`.  Phase-to-neutral bounds use it
+directly; phase-to-phase (line-to-line) bounds derive their nominal as
+`v_declared × √3`.  Set the fallbacks to the per-conductor declared voltage for
+the deployment region, e.g. `v_declared_lv = 230.0` for Europe/Australia
+(230 V L-N → 400 V L-L); for an 11 kV (L-L) MV system use
+`v_declared_mv = 11000 / √3 ≈ 6350.0`.
 """
 Base.@kwdef struct AugmentationRecipe
     # ── Declared supply voltage fallbacks (V) ────────────────────────────────
     # Used when bus["v_declared"] is absent. `nothing` → fall back to v_nom.
-    v_declared_lv :: Union{Float64,Nothing} = nothing   # e.g. 230.0 for EU/AU
-    v_declared_mv :: Union{Float64,Nothing} = nothing   # e.g. 11000.0
+    v_declared_lv :: Union{Float64,Nothing} = nothing   # e.g. 230.0 for EU/AU (L-N)
+    v_declared_mv :: Union{Float64,Nothing} = nothing   # e.g. 6350.0 (= 11 kV L-L /√3)
     v_declared_hv :: Union{Float64,Nothing} = nothing
 
     # ── Phase-to-neutral bounds (four-wire buses with neutral) ────────────────
@@ -38,9 +43,9 @@ Base.@kwdef struct AugmentationRecipe
     vpn_mv_pu :: Tuple{Float64,Float64} = (0.94, 1.06)   # DSO planning MV ±6 %
 
     # ── Phase-to-phase bounds ─────────────────────────────────────────────────
-    # Four-wire buses: vpp_nom = vpn_nom × √3; same percentage window as vpn.
-    # Three-wire buses: vpp_nom = v_nom (declared line voltage); this is the
-    # only phase-voltage constraint available without a neutral.
+    # vpp_nom = v_declared × √3 (line-to-line) for both four-wire and three-wire
+    # buses, since v_declared is the per-conductor phase-to-ground nominal.
+    # For three-wire buses this is the only phase-voltage constraint available.
     # HV (three-wire only in practice): ±5 % transmission planning band.
     vpp_lv_pu :: Tuple{Float64,Float64} = (0.90, 1.10)   # EN 50160 LV ±10 %
     vpp_mv_pu :: Tuple{Float64,Float64} = (0.94, 1.06)   # DSO planning MV ±6 %
