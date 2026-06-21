@@ -18,14 +18,17 @@ end
 """
     _init_kcl(bus_terminals, grounded) -> (kcl_r, kcl_i)
 
-Allocate zero JuMP AffExpr accumulators for every ungrounded (bus, terminal).
+Allocate zero JuMP AffExpr accumulators for every (bus, terminal), **including**
+perfectly grounded terminals. A grounded terminal keeps its KCL equation; its
+ground-injection current (`cr_gnd`/`ci_gnd`) is the free term that balances it.
+This is what lets current actually flow into earth at a grounded terminal — the
+return path for an earth-return circuit or a shunt-grounded neutral.
 """
-function _init_kcl(bus_terminals, grounded)
+function _init_kcl(bus_terminals, _grounded=nothing)
     kcl_r = Dict{Tuple{String,String}, JuMP.AffExpr}()
     kcl_i = Dict{Tuple{String,String}, JuMP.AffExpr}()
     for (bid, terminals) in bus_terminals
         for t in terminals
-            (bid, t) in grounded && continue
             kcl_r[(bid, t)] = JuMP.AffExpr(0.0)
             kcl_i[(bid, t)] = JuMP.AffExpr(0.0)
         end

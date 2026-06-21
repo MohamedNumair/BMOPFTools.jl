@@ -64,6 +64,23 @@ function _add_device_constraints!(ctx::OpfContext)
     _add_load_constraints!(model, net, vars, kcl_r, kcl_i)
     _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
     _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i)
+    _add_ground_injections!(vars, kcl_r, kcl_i, ctx.grounded)
+end
+
+"""
+    _add_ground_injections!(vars, kcl_r, kcl_i, grounded)
+
+Inject the free ground current `cr_gnd`/`ci_gnd` into the KCL accumulator at every
+perfectly grounded terminal (current flowing from earth into the node). The
+terminal voltage is fixed to 0; this current is what the solid ground sinks or
+sources, giving KCL the degree of freedom to balance the branch currents arriving
+at a grounded node — the physical earth-return path.
+"""
+function _add_ground_injections!(vars, kcl_r, kcl_i, grounded)
+    cr_gnd = vars[:cr_gnd]; ci_gnd = vars[:ci_gnd]
+    for (bid, t) in grounded
+        _kcl_add!(kcl_r, kcl_i, bid, t, cr_gnd[(bid,t)], ci_gnd[(bid,t)])
+    end
 end
 
 """

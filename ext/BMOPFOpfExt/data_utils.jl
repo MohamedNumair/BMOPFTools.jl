@@ -21,7 +21,17 @@ end
     _grounded_terminals(net) -> Set{Tuple{String,String}}
 
 Set of (bus_id, terminal) pairs that are perfectly grounded (vr=vi=0).
-Includes `perfectly_grounded_terminals` declared on buses.
+
+Includes both:
+  - terminals declared in a bus's `perfectly_grounded_terminals`, and
+  - the **neutral terminal of every voltage-source bus**, which the source
+    pins to 0 V as the system ground reference (see `_add_source_constraints!`).
+
+Both kinds are V=0 references AND physical earth connections, so both must get a
+free ground-injection current (`cr_gnd`) and a KCL equation. Omitting the source
+neutral here is what previously left an earth-return circuit with no return path:
+the source neutral could only return `-Σcr_src` (rigidly the phase-slack sum), so
+current that had to flow phase→earth→source-ground was forced to zero.
 """
 function _grounded_terminals(net::Dict{String,Any})
     grounded = Set{Tuple{String,String}}()
@@ -29,6 +39,14 @@ function _grounded_terminals(net::Dict{String,Any})
         for t in get(bus, "perfectly_grounded_terminals", String[])
             push!(grounded, (bid, string(t)))
         end
+    end
+    # Source-bus neutrals are pinned to 0 by the source; treat them as grounded
+    # so they receive a ground-injection current and KCL like any other ground.
+    buses = get(net, "bus", Dict())
+    for (_, vs) in get(net, "voltage_source", Dict())
+        bus = get(vs, "bus", "")
+        nt  = BMOPFTools._neutral_terminal(get(buses, bus, Dict()))
+        nt === nothing || push!(grounded, (bus, string(nt)))
     end
     grounded
 end

@@ -622,6 +622,44 @@ function _net_delta_load()
     return net
 end
 
+# ── Four-wire grounding study: single-phase load, three load-bus neutral cases ──
+# These exercise the ground-injection current variable at perfectly grounded and
+# source-pinned neutral terminals. A single-phase phase-to-neutral load forces the
+# full return current through the neutral, so the load-bus neutral condition (free
+# / impedance / perfect) directly shapes the neutral-point voltage rise.
+
+function _net_1ph_freeneutral()
+    # pf_1ph_freeneutral.dss: 15 kW + 5 kVAr single-phase load lb.1 → lb.4, with
+    # the load-bus neutral FREE (grounded only via the line neutral back to src).
+    net = _net_3ph_line()
+    net["load"] = Dict{String,Any}(
+        "ld1" => Dict{String,Any}(
+            "bus"           => "lb",
+            "terminal_map"  => ["1", "n"],
+            "configuration" => "WYE",
+            "p_nom"         => [15_000.0],
+            "q_nom"         => [ 5_000.0]))
+    return net
+end
+
+function _net_1ph_perfectneutral()
+    # pf_1ph_perfectneutral.dss: same load, but lb.4 is perfectly grounded
+    # (perfectly_grounded_terminals=["n"], exact vr=vi=0). ODS hard-ties lb.4→lb.0.
+    net = _net_1ph_freeneutral()
+    net["bus"]["lb"]["perfectly_grounded_terminals"] = ["n"]
+    return net
+end
+
+function _net_1ph_impedanceneutral()
+    # pf_1ph_impedanceneutral.dss: same load, lb.4 grounded through Z = 0.2 Ω,
+    # modelled as a shunt G = 1/0.2 = 5 S on the lb neutral terminal. ODS uses a
+    # 0.2 Ω grounding reactor lb.4 → lb.0.
+    net = _net_1ph_freeneutral()
+    net["shunt"]["lbgrnd"] = Dict{String,Any}(
+        "bus" => "lb", "terminal_map" => ["n"], "G_1_1" => 5.0, "B_1_1" => 0.0)
+    return net
+end
+
 function _net_zip_1ph()
     # pf_zip_1ph.dss: single-phase ZIP load, distinct P and Q coefficients.
     net = _net_1ph_line()
@@ -782,6 +820,60 @@ end
     @test ld["2"]["qd"] ≈  3_000.0  atol=1.0
     @test ld["3"]["pd"] ≈ 20_000.0  atol=1.0
     @test ld["3"]["qd"] ≈  7_000.0  atol=1.0
+end
+
+# ── Four-wire grounding study (single-phase load) ──────────────────────────────
+# Three load-bus neutral conditions, each compared against OpenDSS. Together they
+# regression-guard the ground-injection current variable at perfectly grounded and
+# source-pinned neutral terminals: without it the determined power flow (solve_pf)
+# of the impedance/perfect cases is infeasible (the neutral return current has no
+# earth path) and the feasibility OPF needs non-zero slack. The neutral-rise
+# ladder free > impedance > perfect = 0 distinguishes the three cases.
+
+@testset "PF comparison — 1φ load, FREE load-bus neutral" begin
+    path = joinpath(_PF_CMP_DIR, "pf_1ph_freeneutral.dss")
+    net           = _net_1ph_freeneutral()
+    V_ods         = _ods_volts(path)
+    V_bm, slack_A = _bmopf_volts(net)
+    @test slack_A < 1e-3
+    _cmp_volts(V_ods, V_bm; label="1ph-free: ")
+    # Free neutral: full single-phase return through the line neutral → ~20 V rise.
+    @test abs(V_bm["lb.4"]) > 15.0
+    # solve_pf (determined) must also solve and agree with the feasibility voltages.
+    V_pf = _bmopf_volts_pf(net)
+    @test isapprox(V_pf["lb.4"], V_bm["lb.4"]; atol=0.5)
+    @test isapprox(V_pf["lb.1"], V_bm["lb.1"]; atol=0.5)
+end
+
+@testset "PF comparison — 1φ load, IMPEDANCE-grounded neutral (Z=0.2Ω)" begin
+    path = joinpath(_PF_CMP_DIR, "pf_1ph_impedanceneutral.dss")
+    net           = _net_1ph_impedanceneutral()
+    V_ods         = _ods_volts(path)
+    V_bm, slack_A = _bmopf_volts(net)
+    @test slack_A < 1e-3
+    _cmp_volts(V_ods, V_bm; label="1ph-impedance: ")
+    # Impedance ground: neutral rise between the free and perfect cases (~8 V).
+    @test 4.0 < abs(V_bm["lb.4"]) < 15.0
+    # Determined power flow: previously INFEASIBLE; the ground-injection fix makes
+    # it solve and match the feasibility solution.
+    V_pf = _bmopf_volts_pf(net)
+    @test isapprox(V_pf["lb.4"], V_bm["lb.4"]; atol=0.5)
+    @test isapprox(V_pf["lb.1"], V_bm["lb.1"]; atol=0.5)
+end
+
+@testset "PF comparison — 1φ load, PERFECTLY grounded neutral" begin
+    path = joinpath(_PF_CMP_DIR, "pf_1ph_perfectneutral.dss")
+    net           = _net_1ph_perfectneutral()
+    V_ods         = _ods_volts(path)
+    V_bm, slack_A = _bmopf_volts(net)
+    @test slack_A < 1e-3
+    _cmp_volts(V_ods, V_bm; label="1ph-perfect: ")
+    # Perfect ground pins the load-bus neutral to 0 V exactly.
+    @test abs(V_bm["lb.4"]) < 1e-6
+    # Determined power flow: previously INFEASIBLE; now solves and agrees.
+    V_pf = _bmopf_volts_pf(net)
+    @test abs(V_pf["lb.4"]) < 1e-6
+    @test isapprox(V_pf["lb.1"], V_bm["lb.1"]; atol=0.5)
 end
 
 @testset "PF comparison — single-phase ZIP load (mixed Z/I/P, P and Q)" begin
