@@ -1,0 +1,151 @@
+# Power flow — determined four-wire IVR-EN nodal solve.
+#
+# A power flow is the same physics as solve_opf / solve_feasibility_opf with two
+# deliberate omissions that make it a *determined* problem rather than an
+# optimisation:
+#
+#   1. NO operational bounds (voltage limits, bus limits, device current/thermal
+#      limits). The power flow solves the network as-is and reports whatever
+#      currents and voltages result; rating violations are a separate validation
+#      concern. This mirrors PowerModels `build_pf_iv` (variable_*(bounded=false)).
+#   2. NO objective (Min 0). The voltage source fixes the slack-bus voltages and
+#      supplies the free swing current; constant-power loads/generators/inverters
+#      and exact KCL then fully determine the nodal state.
+#
+# Because generators in this model are P/Q *ranges* (p_min..p_max), they would
+# leave the system underdetermined under no objective. A power flow therefore
+# requires every generator to be a fixed setpoint (p_min==p_max, q_min==q_max);
+# a non-degenerate range is rejected with a clear error. Inverters governed by a
+# control_profile are voltage-dependent and remain determined, so they are fine.
+
+"""
+    BMOPFTools.solve_pf(net; optimizer=Ipopt.Optimizer, t_index=1,
+                        per_unit=false, s_base=1e6) -> Dict
+
+Determined four-wire rectangular current-voltage (IVR-EN) power flow on a BMOPF
+network dict.
+
+Same device models as [`solve_opf`](@ref) but with **no operational bounds and no
+objective** — the network's physics (fixed source voltages + constant-power
+injections + exact KCL) fully determine the solution. Device current/thermal
+limits and voltage bounds are intentionally ignored; use `solve_opf` (or a
+post-solve validation pass) when limits must be enforced.
+
+Generators must be specified as **fixed setpoints** (`p_min == p_max` and
+`q_min == q_max`); a non-degenerate P/Q range is rejected, since a power flow has
+no objective to select a dispatch within the range.
+
+The result dict has the same structure as `solve_opf` (`bus`, `line`, `load`,
+`generator`, `transformer`, `voltage_source`, …) plus `is_power_flow == true`.
+"""
+function BMOPFTools.solve_pf(net::Dict{String,Any};
+                              optimizer=Ipopt.Optimizer,
+                              t_index::Int=1,
+                              per_unit::Bool=false,
+                              s_base::Float64=1e6)
+    _build_and_solve(net; optimizer=optimizer, t_index=t_index,
+                     per_unit=per_unit, s_base=s_base,
+                     build! = build_pf!,
+                     extract! = (ctx, result) -> (result["is_power_flow"] = true; nothing))
+end
+
+"""
+    build_pf!(ctx)
+
+Build recipe for the determined power flow: strip operational limits, warm-start,
+require fixed generator setpoints, add the device constraints, and set a trivial
+(feasibility) objective. No voltage/bus/current bounds are added.
+"""
+function build_pf!(ctx::OpfContext)
+    # ctx.net is the engine's private working copy (snapshot + per-unit already
+    # applied), so removing limit fields here cannot affect the caller's dict.
+    _strip_operational_limits!(ctx.net)
+
+    _set_voltage_start_values!(ctx.vars, ctx.net, ctx.bus_terminals, ctx.grounded)
+
+    _validate_pf_generators(ctx.net)
+
+    # Device constraints only — no _add_voltage_and_bus_bounds!.
+    _add_device_constraints!(ctx)
+
+    # Feasibility objective: the equations fully determine the state.
+    @objective(ctx.model, Min, 0.0)
+end
+
+# Limit fields removed for a pure power flow. Each device helper guards on the
+# field being present, so deleting them is sufficient to omit every operational
+# current/thermal/apparent-power limit while leaving all KVL/KCL physics intact.
+const _PF_LIMIT_FIELDS = ("i_max", "i_max_from", "i_max_to", "s_max")
+
+"""
+    _strip_operational_limits!(net)
+
+Delete current/thermal/apparent-power limit fields from every component and
+linecode in the (private working) network, so the power flow imposes no
+operational limits. Voltage bounds are never added by `build_pf!`, so they need
+no stripping.
+"""
+function _strip_operational_limits!(net::Dict{String,Any})
+    # linecodes carry line thermal limits (i_max)
+    for (_, lc) in get(net, "linecode", Dict())
+        lc isa Dict || continue
+        for f in _PF_LIMIT_FIELDS
+            delete!(lc, f)
+        end
+    end
+
+    # flat component collections: switch, generator, inverter
+    for coll in ("switch", "generator", "inverter")
+        for (_, comp) in get(net, coll, Dict())
+            comp isa Dict || continue
+            for f in _PF_LIMIT_FIELDS
+                delete!(comp, f)
+            end
+        end
+    end
+
+    # transformers are nested one level by subtype
+    for (_, subdict) in get(net, "transformer", Dict())
+        subdict isa Dict || continue
+        for (_, xfmr) in subdict
+            xfmr isa Dict || continue
+            for f in _PF_LIMIT_FIELDS
+                delete!(xfmr, f)
+            end
+        end
+    end
+
+    return nothing
+end
+
+"""
+    _validate_pf_generators(net)
+
+Throw an `ArgumentError` if any generator has a non-degenerate active or reactive
+power range (`p_min != p_max` or `q_min != q_max`). A power flow has no objective
+to select a point within a range, so generators must be fixed setpoints.
+"""
+function _validate_pf_generators(net::Dict{String,Any})
+    for (gid, gen) in get(net, "generator", Dict())
+        gen isa Dict || continue
+        p_min = Float64.(get(gen, "p_min", Float64[]))
+        p_max = Float64.(get(gen, "p_max", Float64[]))
+        q_min = Float64.(get(gen, "q_min", Float64[]))
+        q_max = Float64.(get(gen, "q_max", Float64[]))
+
+        for (lo, hi, label) in ((p_min, p_max, "p"), (q_min, q_max, "q"))
+            n = min(length(lo), length(hi))
+            for k in 1:n
+                if !isapprox(lo[k], hi[k]; atol=1e-9, rtol=1e-9)
+                    throw(ArgumentError(
+                        "Generator '$gid': $(label)_min[$k]=$(lo[k]) ≠ " *
+                        "$(label)_max[$k]=$(hi[k]). solve_pf requires fixed " *
+                        "generator setpoints ($(label)_min == $(label)_max); a " *
+                        "power flow has no objective to choose a dispatch within " *
+                        "a range. Use solve_opf for range-bounded generators."))
+                end
+            end
+        end
+    end
+    return nothing
+end

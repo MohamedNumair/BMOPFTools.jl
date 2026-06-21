@@ -73,7 +73,9 @@ include("inverter.jl")
 include("objective.jl")
 include("results.jl")
 include("per_unit.jl")
+include("core.jl")
 include("feasibility_opf.jl")
+include("pf.jl")
 
 """
     BMOPFTools.solve_opf(net; optimizer=Ipopt.Optimizer, t_index=1) -> Dict
@@ -98,61 +100,28 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
                                t_index::Int=1,
                                per_unit::Bool=false,
                                s_base::Float64=1e6)
+    _build_and_solve(net; optimizer=optimizer, t_index=t_index,
+                     per_unit=per_unit, s_base=s_base, build! = build_opf!)
+end
 
-    working = BMOPFTools.is_timeseries(net) ?
-              BMOPFTools.get_snapshot(net, t_index) : deepcopy(net)
+"""
+    build_opf!(ctx)
 
-    bases = nothing
-    if per_unit
-        working, bases = _to_per_unit(working, s_base)
-    end
-
-    model = JuMP.Model(optimizer)
-    JuMP.set_silent(model)
-
-    # Index structures
-    bus_terminals = _bus_terminals(working)
-    grounded      = _grounded_terminals(working)
-
-    # Variables
-    vars = _build_vars(model, working, bus_terminals, grounded)
-
+Build recipe for the standard generation-cost OPF.
+"""
+function build_opf!(ctx::OpfContext)
     # Warm-start: set phase-angle-correct initial values so Ipopt can find
     # the physical (high-voltage) solution without a load-flow pre-solve.
-    _set_voltage_start_values!(vars, working, bus_terminals, grounded)
+    _set_voltage_start_values!(ctx.vars, ctx.net, ctx.bus_terminals, ctx.grounded)
 
-    # Voltage bounds
-    _add_voltage_bounds!(model, working, bus_terminals, grounded, vars)
-    _add_bus_limit_constraints!(model, working, bus_terminals, grounded, vars)
+    # Hard operational voltage and bus-limit bounds.
+    _add_voltage_and_bus_bounds!(ctx)
 
-    # Voltage source: fix reference voltages and inject slack current into KCL
-    kcl_r, kcl_i = _init_kcl(bus_terminals, grounded)
-    _add_source_constraints!(model, working, vars, kcl_r, kcl_i)
+    # Source + all device constraints and their KCL contributions.
+    _add_device_constraints!(ctx)
 
-    # Branch constraints and KCL contributions
-    _add_line_constraints!(model, working, vars, kcl_r, kcl_i; grounded=grounded)
-    _add_line_angle_constraints!(model, working, vars)
-    _add_switch_constraints!(model, working, vars, kcl_r, kcl_i)
-    _add_transformer_constraints!(model, working, vars, kcl_r, kcl_i)
-
-    # Shunt admittances (standalone shunt objects)
-    _add_shunt_constraints!(working, vars, kcl_r, kcl_i)
-
-    # Load, generator, and inverter power equations and KCL contributions
-    _add_load_constraints!(model, working, vars, kcl_r, kcl_i)
-    _add_generator_constraints!(model, working, vars, kcl_r, kcl_i)
-    _add_inverter_constraints!(model, working, vars, kcl_r, kcl_i)
-
-    # Enforce KCL
-    _add_kcl_constraints!(model, kcl_r, kcl_i)
-
-    # Objective
-    _add_objective!(model, working, vars)
-
-    JuMP.optimize!(model)
-
-    result = _extract_results(model, working, bus_terminals, grounded, vars)
-    bases !== nothing ? _from_per_unit(result, bases, net) : result
+    # Objective: minimise total generation cost.
+    _add_objective!(ctx.model, ctx.net, ctx.vars)
 end
 
 end # module BMOPFOpfExt

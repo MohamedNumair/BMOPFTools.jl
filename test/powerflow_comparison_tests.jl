@@ -76,6 +76,27 @@ function _bmopf_volts(net::Dict{String,Any})
 end
 
 """
+    _bmopf_volts_pf(net) -> Dict{String, ComplexF64}
+
+Run the determined power flow (`solve_pf`) on a BMOPF network dict and return a
+dict mapping `"bus.node"` → complex voltage in V. Same node-name mapping as
+`_bmopf_volts`. `solve_pf` enforces KCL exactly (no elastic slack), so a valid
+power-flow solution needs no slack check — the comparison against OpenDSS is the
+correctness test.
+"""
+function _bmopf_volts_pf(net::Dict{String,Any})
+    res = solve_pf(net; optimizer=Ipopt.Optimizer)
+    volts = Dict{String,ComplexF64}()
+    for (bid, t_dict) in res["bus"]
+        for (t, tv) in t_dict
+            node_str = t == "n" ? "4" : t
+            volts[bid * "." * node_str] = tv["vr"] + im * tv["vi"]
+        end
+    end
+    return volts
+end
+
+"""
     _bmopf_losses_W(res, net) -> Float64
 
 Compute total transformer losses (W) as the sum of complex power flowing into
@@ -964,3 +985,53 @@ end
     @test isapprox(P_bm, P_ods; rtol=0.05)
 end
 =#
+
+# ── solve_pf cross-checks vs OpenDSS ────────────────────────────────────────────
+# The determined power flow (solve_pf) must reproduce the same node voltages as
+# OpenDSS on the same networks the feasibility OPF validates above. solve_pf
+# enforces KCL exactly (no elastic slack) and imposes no bounds, so for these
+# generator-free fixtures it is the canonical power flow. Each case mirrors its
+# feasibility-OPF counterpart, swapping _bmopf_volts → _bmopf_volts_pf.
+
+@testset "PF (solve_pf) comparison — single-phase 2-wire line" begin
+    path  = joinpath(_PF_CMP_DIR, "pf_1ph_line.dss")
+    V_ods = _ods_volts(path)
+    V_bm  = _bmopf_volts_pf(_net_1ph_line())
+    _cmp_volts(V_ods, V_bm; label="pf-1ph-line: ")
+end
+
+@testset "PF (solve_pf) comparison — three-phase 4-wire unbalanced line" begin
+    path  = joinpath(_PF_CMP_DIR, "pf_3ph_line.dss")
+    V_ods = _ods_volts(path)
+    V_bm  = _bmopf_volts_pf(_net_3ph_line())
+    _cmp_volts(V_ods, V_bm; label="pf-3ph-line: ")
+end
+
+@testset "PF (solve_pf) comparison — three-phase delta load on a 4-wire branch" begin
+    path  = joinpath(_PF_CMP_DIR, "pf_delta_load.dss")
+    net   = _net_delta_load()
+    V_ods = _ods_volts(path)
+    V_bm  = _bmopf_volts_pf(net)
+    _cmp_volts(V_ods, V_bm; label="pf-delta-load: ")
+    # Pure delta load draws no zero-sequence current → neutral stays at earth.
+    @test abs(V_bm["lb.4"]) < 1.0
+end
+
+@testset "PF (solve_pf) comparison — single-phase transformer (single_phase YY)" begin
+    path  = joinpath(_PF_CMP_DIR, "pf_1ph_xfmr.dss")
+    net   = _net_1ph_xfmr()
+    V_ods = _ods_volts(path)
+    V_bm  = _bmopf_volts_pf(net)
+    @test haskey(get(net, "transformer", Dict()), "single_phase")
+    _cmp_volts(V_ods, V_bm; label="pf-1ph-xfmr: ")
+end
+
+@testset "PF (solve_pf) vs feasibility OPF — voltages agree on 3-phase line" begin
+    # Internal consistency: on a feasible, generator-free network the determined
+    # power flow and the (slack≈0) feasibility OPF must return the same voltages.
+    net   = _net_3ph_line()
+    V_pf  = _bmopf_volts_pf(net)
+    V_fe, slack_A = _bmopf_volts(net)
+    @test slack_A < 1e-3
+    _cmp_volts(V_fe, V_pf; label="pf-vs-feas: ", atol=0.05)
+end
