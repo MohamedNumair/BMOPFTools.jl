@@ -366,10 +366,16 @@ function _set_yd_dy_start_values!(vars, net, grounded)
             side_del = wye_is_from ? "to" : "fr"
             n_ph   = length(tm_del)
 
-            # Read wye neutral start value (zero if no neutral or grounded)
-            Vn = n_pos !== nothing ?
+            # Read wye neutral start value (zero if no neutral or grounded). A
+            # grounded neutral (incl. a source-pinned neutral) is fixed to 0 with
+            # no start value, so JuMP.start_value would return `nothing` — treat it
+            # as 0 explicitly.
+            Vn = if n_pos !== nothing && !((b_wye, tm_wye[n_pos]) in grounded)
                 complex(JuMP.start_value(vr[(b_wye, tm_wye[n_pos])]),
-                        JuMP.start_value(vi[(b_wye, tm_wye[n_pos])])) : 0.0 + 0.0im
+                        JuMP.start_value(vi[(b_wye, tm_wye[n_pos])]))
+            else
+                0.0 + 0.0im
+            end
 
             # Read wye phase start values
             Vw = [complex(JuMP.start_value(vr[(b_wye, tm_wye[ph_idx[k]])]),

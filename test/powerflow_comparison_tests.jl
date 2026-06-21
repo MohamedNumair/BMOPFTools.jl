@@ -128,6 +128,22 @@ function _bmopf_losses_W(res::Dict, net::Dict)::Float64
                 tv === nothing && continue
                 p_loss += tv["vr"] * cd["cr"] + tv["vi"] * cd["ci"]
             end
+
+            # Core-loss (no-load) shunt at the from-side phase terminals. The
+            # winding-current sum above is the copper loss only; the magnetising
+            # conductance draws G·|V|² per phase that does not appear in cr_xf.
+            G_total = Float64(get(xfmr, "g_no_load", 0.0))
+            if G_total != 0.0
+                ph = BMOPFTools._phase_positions(
+                    Vector{String}(get(xfmr, "terminal_map_from", String[])))
+                Gph = G_total / max(length(ph), 1)
+                for pidx in ph
+                    t = tmfr[pidx]
+                    tv = get(get(bus_v, b_fr, Dict()), t, nothing)
+                    tv === nothing && continue
+                    p_loss += Gph * (tv["vr"]^2 + tv["vi"]^2)
+                end
+            end
         end
     end
     return p_loss
@@ -1032,11 +1048,12 @@ end
     _cmp_volts(V_ods, V_bm; label="1ph-xfmr: ")
 end
 
-# TODO(issue): Yd/Dy transformer power-flow comparison vs OpenDSS is failing
-# (voltage mismatch on the delta/wye side and large losses-sign discrepancy).
-# Pre-existing failure, unrelated to the voltage-source slack change. Commented
-# out pending investigation — see issue tracker.
-#=
+# Yd/Dy transformer PF comparison vs OpenDSS. The delta-winding leakage is
+# referred to the wye side with the delta-COIL (line-to-line) base, matching
+# OpenDSS Transformer.pas: Y_term[i,j] = Y_1volt[i,j]/(VBase_i·VBase_j), with
+# VBase_delta = kVLL (not kVLL/√3). In _add_yd_transformer! this is the n_ph
+# factor (Zd_scale) on the delta-arm series drop — without it the delta arm
+# under-refers by 1:n_ph, giving the historical 3/4 effective-Z deficit.
 @testset "PF comparison — wye-delta transformer (wye_delta Yd)" begin
     path = joinpath(_PF_CMP_DIR, "pf_yd_xfmr.dss")
     net   = _net_yd_xfmr()
@@ -1076,7 +1093,6 @@ end
     P_bm  = _bmopf_losses_W(res, net)
     @test isapprox(P_bm, P_ods; rtol=0.05)
 end
-=#
 
 # ── solve_pf cross-checks vs OpenDSS ────────────────────────────────────────────
 # The determined power flow (solve_pf) must reproduce the same node voltages as
