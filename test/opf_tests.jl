@@ -30,7 +30,7 @@
                          "perfectly_grounded_terminals":["n"]},
             "bus1":     {"terminal_names":["1","n"],
                          "perfectly_grounded_terminals":["n"],
-                         "v_min":900.0,"v_max":999.0}},
+                         "v_min":[900.0],"v_max":[999.0]}},
          "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
              "v_magnitude":[1000.0],"v_angle":[0.0]}},
          "linecode":{"lc":{"R_series_1_1":0.5}},
@@ -66,7 +66,7 @@
                          "perfectly_grounded_terminals":["n"]},
             "bus1":     {"terminal_names":["1","2","3","n"],
                          "perfectly_grounded_terminals":["n"],
-                         "v_min":900.0,"v_max":999.0}},
+                         "v_min":[900.0, 900.0, 900.0],"v_max":[999.0, 999.0, 999.0]}},
          "voltage_source":{"vs":{"bus":"sourcebus",
              "terminal_map":["1","2","3"],
              "v_magnitude":[1000.0,1000.0,1000.0],
@@ -114,7 +114,7 @@
                          "perfectly_grounded_terminals":["n"]},
             "bus1":     {"terminal_names":["1","n"],
                          "perfectly_grounded_terminals":["n"],
-                         "v_min":960.0,"v_max":999.0}},
+                         "v_min":[960.0],"v_max":[999.0]}},
          "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
              "v_magnitude":[1000.0],"v_angle":[0.0]}},
          "linecode":{"lc":{"R_series_1_1":0.5}},
@@ -153,7 +153,7 @@
                          "perfectly_grounded_terminals":["n"]},
             "bus1":     {"terminal_names":["1","2","3","n"],
                          "perfectly_grounded_terminals":["n"],
-                         "v_min":990.0,"v_max":1001.0}},
+                         "v_min":[990.0, 990.0, 990.0],"v_max":[1001.0, 1001.0, 1001.0]}},
          "voltage_source":{"vs":{"bus":"sourcebus",
              "terminal_map":["1","2","3"],
              "v_magnitude":[1000.0,1000.0,1000.0],
@@ -195,7 +195,7 @@
                          "perfectly_grounded_terminals":["n"]},
             "bus1":     {"terminal_names":["1","n"],
                          "perfectly_grounded_terminals":["n"],
-                         "v_min":900.0,"v_max":999.0}},
+                         "v_min":[900.0],"v_max":[999.0]}},
          "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
              "v_magnitude":[1000.0],"v_angle":[0.0]}},
          "linecode":{"lc":{"R_series_1_1":0.5}},
@@ -238,7 +238,7 @@
             "sourcebus":{"terminal_names":["1","2","3","n"],
                          "perfectly_grounded_terminals":["n"]},
             "bus1":     {"terminal_names":["1","2","3","n"],
-                         "v_min":850.0,"v_max":1050.0}},
+                         "v_min":[850.0, 850.0, 850.0],"v_max":[1050.0, 1050.0, 1050.0]}},
          "voltage_source":{"vs":{"bus":"sourcebus",
              "terminal_map":["1","2","3"],
              "v_magnitude":[1000.0,1000.0,1000.0],
@@ -373,6 +373,37 @@
     end
 
     # ─────────────────────────────────────────────────────────────────────────
+    # T9b: shunt-carrying line WITH a phase-to-ground v_max array. This drives
+    # the series-current box derivation through _terminal_vmax_to_ground, which
+    # must read the per-phase v_max[k] entry (a scalar Float64(v_max) crashes on
+    # the array). Regression for the per-phase v_min/v_max migration.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T9b: series-current box with per-phase v_max + line shunt" begin
+        # The shunt-carrying line l2 has from-bus b1, which carries a per-phase
+        # v_max array → _terminal_vmax_to_ground reads v_max[k] for b1's phase.
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "b1":       {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
+                         "v_min":[900.0],"v_max":[1100.0]},
+            "b2":       {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":1.0e-4,"i_max":[120.0]},
+                     "lcsh":{"R_series_1_1":1.0e-4,"G_from_1_1":0.1,"i_max":[120.0]}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"b1",
+                       "terminal_map_from":["1"],"terminal_map_to":["1"],
+                       "linecode":"lc","length":1.0},
+                 "l2":{"bus_from":"b1","bus_to":"b2",
+                       "terminal_map_from":["1"],"terminal_map_to":["1"],
+                       "linecode":"lcsh","length":1.0}}}
+        """; from_string=true)
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["bus"]["b1"]["1"]["vm"] ≤ 1100.0 + 1e-3
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
     # T10: Sequence voltage bounds — all three sequence components constrained
     #
     # Balanced 3-phase source at V_s=1000 V feeds a generator-only bus lb
@@ -397,7 +428,7 @@
             "lb":{"terminal_names":["1","2","3","n"],
                   "neutral_terminal":"n",
                   "perfectly_grounded_terminals":["n"],
-                  "v_min":200.0,
+                  "v_min":[200.0, 200.0, 200.0],
                   "vpos_max":$(vpos_max),
                   "vneg_max":1.0,
                   "vzero_max":1.0}},
@@ -482,7 +513,7 @@
                      "perfectly_grounded_terminals":["n"]},
         "bus1":     {"terminal_names":["1","n"],
                      "perfectly_grounded_terminals":["n"],
-                     "v_min":900.0,"v_max":1100.0}},
+                     "v_min":[900.0],"v_max":[1100.0]}},
      "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
          "v_magnitude":[1000.0],"v_angle":[0.0]}},
      "linecode":{"lc":{"R_series_1_1":0.5}},
@@ -593,7 +624,7 @@
                           "perfectly_grounded_terminals":["n"]},
             "bus1":      {"terminal_names":["1","n"],
                           "perfectly_grounded_terminals":["n"],
-                          "v_min":800.0,"v_max":1050.0}},
+                          "v_min":[800.0],"v_max":[1050.0]}},
          "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
              "v_magnitude":[1000.0],"v_angle":[0.0]}},
          "linecode":{"lc":{"R_series_1_1":0.1}},
@@ -797,7 +828,7 @@
                    "perfectly_grounded_terminals":["n"]},
             "b1": {"terminal_names":["1","2","3","n"],
                    "perfectly_grounded_terminals":["n"],
-                   "v_min":900.0,"v_max":1100.0}},
+                   "v_min":[900.0, 900.0, 900.0],"v_max":[1100.0, 1100.0, 1100.0]}},
          "voltage_source":{"vs":{"bus":"src",
              "terminal_map":["1","2","3"],
              "v_magnitude":[1000.0,1000.0,1000.0],
@@ -862,10 +893,10 @@
         {"bus":{
             "hv":{"terminal_names":["a","b","c","n"],
                   "perfectly_grounded_terminals":["n"],
-                  "v_min":5500.0,"v_max":7000.0},
+                  "v_min":[5500.0, 5500.0, 5500.0],"v_max":[7000.0, 7000.0, 7000.0]},
             "lv":{"terminal_names":["a","b","c","n"],
                   "perfectly_grounded_terminals":["n"],
-                  "v_min":200.0,"v_max":260.0}},
+                  "v_min":[200.0, 200.0, 200.0],"v_max":[260.0, 260.0, 260.0]}},
          "voltage_source":{"vs":{"bus":"hv",
              "terminal_map":["a","b","c"],
              "v_magnitude":[6350.0,6350.0,6350.0],
@@ -916,7 +947,7 @@
                          "perfectly_grounded_terminals":["n"]},
             "bus1":     {"terminal_names":["1","n"],
                          "perfectly_grounded_terminals":["n"],
-                         "v_min":850.0,"v_max":999.0}},
+                         "v_min":[850.0],"v_max":[999.0]}},
          "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
              "v_magnitude":[1000.0],"v_angle":[0.0]}},
          "linecode":{"lc":{"R_series_1_1":0.5}},
@@ -1017,10 +1048,10 @@
         {"bus":{
             "src": {"terminal_names":["1","2","3","n"],
                     "perfectly_grounded_terminals":["n"],
-                    "v_min":200.0,"v_max":260.0},
+                    "v_min":[200.0, 200.0, 200.0],"v_max":[260.0, 260.0, 260.0]},
             "b1":  {"terminal_names":["1","2","3","n"],
                     "perfectly_grounded_terminals":["n"],
-                    "v_min":200.0,"v_max":260.0}},
+                    "v_min":[200.0, 200.0, 200.0],"v_max":[260.0, 260.0, 260.0]}},
          "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
              "v_magnitude":[230.0,230.0,230.0],
              "v_angle":[0.0,-2.0944,2.0944],"cost":[1.0,1.0,1.0]}},
@@ -1074,10 +1105,10 @@
         {"bus":{
             "src": {"terminal_names":["1","2","3","n"],
                     "perfectly_grounded_terminals":["n"],
-                    "v_min":200.0,"v_max":260.0},
+                    "v_min":[200.0, 200.0, 200.0],"v_max":[260.0, 260.0, 260.0]},
             "b1":  {"terminal_names":["1","2","3","n"],
                     "perfectly_grounded_terminals":["n"],
-                    "v_min":200.0,"v_max":260.0}},
+                    "v_min":[200.0, 200.0, 200.0],"v_max":[260.0, 260.0, 260.0]}},
          "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
              "v_magnitude":[230.0,230.0,230.0],
              "v_angle":[0.0,-2.0944,2.0944],"cost":[1.0,1.0,1.0]}},
@@ -1134,9 +1165,9 @@
         net = parse_bmopf("""
         {"bus":{
             "src": {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
-                    "v_min":200.0,"v_max":260.0},
+                    "v_min":[200.0],"v_max":[260.0]},
             "b1":  {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
-                    "v_min":200.0,"v_max":260.0}},
+                    "v_min":[200.0],"v_max":[260.0]}},
          "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
              "v_magnitude":[230.0],"v_angle":[0.0],"cost":[1.0]}},
          "linecode":{"lc":{"R_series_1_1":0.001}},
@@ -1173,7 +1204,7 @@
         {"bus":{
             "src":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
             "b1": {"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"],
-                   "v_min":900.0,"v_max":1100.0,
+                   "v_min":[900.0, 900.0, 900.0],"v_max":[1100.0, 1100.0, 1100.0],
                    "vpn_min":[900.0,900.0,900.0],"vpn_max":[1100.0,1100.0,1100.0],
                    "vpp_min":[1500.0,1500.0,1500.0],"vpp_max":[2000.0,2000.0,2000.0]}},
          "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
@@ -1190,6 +1221,105 @@
     end
 
     # ─────────────────────────────────────────────────────────────────────────
+    # T-VBND2: per-phase ASYMMETRIC v_min/v_max bind differently per phase. A
+    # tight upper bound on phase 1 only must cap phase-1 voltage while phases
+    # 2/3 stay higher — proving the bound is indexed per phase, not shared.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T-VBND2: per-phase asymmetric v_min/v_max" begin
+        # A reactive-capable generator with negative cost pushes every phase
+        # voltage up to ~1069.6 V when uncapped. Capping phase 1 only (at 1030)
+        # must bind there while phases 2/3 stay at the higher uncapped level —
+        # proving the bound is indexed per phase, not shared.
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
+            "b1": {"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"],
+                   "v_min":[900.0,900.0,900.0],"v_max":[1030.0, 1200.0, 1200.0]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[1000.0,1000.0,1000.0],"v_angle":[0.0,-2.0944,2.0944]}},
+         "linecode":{"lc":{"R_series_1_1":0.5,"R_series_2_2":0.5,"R_series_3_3":0.5,
+             "X_series_1_1":0.5,"X_series_2_2":0.5,"X_series_3_3":0.5}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1","2","3","n"],"terminal_map_to":["1","2","3","n"],
+             "linecode":"lc","length":1.0}},
+         "generator":{"g":{"bus":"b1","terminal_map":["1","2","3","n"],"configuration":"WYE",
+             "p_min":[0.0,0.0,0.0],"p_max":[1.0e5,1.0e5,1.0e5],
+             "q_min":[0.0,0.0,0.0],"q_max":[1.0e5,1.0e5,1.0e5],
+             "cost":[-1.0,-1.0,-1.0]}}}
+        """; from_string=true)
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        vm1 = res["bus"]["b1"]["1"]["vm"]
+        vm2 = res["bus"]["b1"]["2"]["vm"]
+        @test vm1 ≤ 1030.0 + 1e-2            # phase-1 cap is active
+        @test vm2 > 1030.0 + 5.0             # phase-2 free to exceed phase-1 cap
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # T-VNMAX: the optional scalar vn_max caps the neutral-to-ground voltage.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "T-VNMAX: neutral-to-ground cap" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
+            "b1": {"terminal_names":["1","2","3","n"],
+                   "v_min":[900.0,900.0,900.0],"v_max":[1100.0,1100.0,1100.0],
+                   "vn_max":5.0}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[1000.0,1000.0,1000.0],"v_angle":[0.0,-2.0944,2.0944]}},
+         "linecode":{"lc":{"R_series_1_1":1.0e-3,"R_series_2_2":1.0e-3,"R_series_3_3":1.0e-3,
+             "R_series_4_4":1.0e-3}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1","2","3","n"],"terminal_map_to":["1","2","3","n"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld":{"bus":"b1","terminal_map":["1","n"],"configuration":"WYE",
+             "p_nom":[5000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        vmn = res["bus"]["b1"]["n"]["vm"]
+        @test vmn ≤ 5.0 + 1e-3               # neutral cap enforced
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # T-VBND-ALIGN: per-phase bound index alignment when a phase is grounded.
+    # Bus b1 has phase "1" perfectly grounded, so it is skipped when applying
+    # phase bounds. The vpn_max array is [tight, loose, loose]; the tight entry
+    # belongs to phase 1 (grounded, never applied). A buggy implementation that
+    # collapses onto the filtered phase list would apply vpn_max[1] (tight) to
+    # phase 2 — so phase 2's voltage would be wrongly capped. With correct
+    # full-order indexing phase 2 sees vpn_max[2] (loose) and stays high.
+    @testset "T-VBND-ALIGN: per-phase index alignment under grounded phase" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
+            "b1": {"terminal_names":["1","2","3","n"],
+                   "perfectly_grounded_terminals":["1","n"],
+                   "vpn_min":[1.0, 900.0, 900.0],
+                   "vpn_max":[2.0, 1100.0, 1100.0]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[1000.0,1000.0,1000.0],"v_angle":[0.0,-2.0944,2.0944]}},
+         "linecode":{"lc":{"R_series_1_1":1.0e-3,"R_series_2_2":1.0e-3,"R_series_3_3":1.0e-3}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1","2","3"],"terminal_map_to":["1","2","3"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld":{"bus":"b1","terminal_map":["2","n"],"configuration":"WYE",
+             "p_nom":[1000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+        # Phase 1 is grounded, so the phase-bound loop skips it. Phase 2's bound
+        # is vpn_max[2]=1100 (≈ solved 1000 V is feasible). A buggy collapse onto
+        # the filtered list would apply vpn_max[1]=2.0 to phase 2 — making the
+        # problem infeasible (2 V cap vs ~1000 V solution). So a successful solve
+        # with phase 2 ≈ 1000 V proves the indices are aligned.
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        vpn2 = let b = res["bus"]["b1"]
+            sqrt((b["2"]["vr"] - b["n"]["vr"])^2 + (b["2"]["vi"] - b["n"]["vi"])^2)
+        end
+        @test vpn2 > 900.0    # governed by its own loose bound, not phase 1's 2 V
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
     # T-PCOST: non-uniform per-phase cost. A generator is forced (p_min=p_max)
     # to distinct per-phase outputs that exactly serve the per-phase load, so
     # the objective is the deterministic Σ cost_k · P_k:
@@ -1201,7 +1331,7 @@
         net = parse_bmopf("""
         {"bus":{
             "sourcebus":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
-            "bus1":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"],"v_min":950.0,"v_max":1050.0}},
+            "bus1":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"],"v_min":[950.0, 950.0, 950.0],"v_max":[1050.0, 1050.0, 1050.0]}},
          "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1","2","3"],
              "v_magnitude":[1000.0,1000.0,1000.0],"v_angle":[0.0,-2.0944,2.0944]}},
          "linecode":{"lc":{"R_series_1_1":1.0e-4,"R_series_2_2":1.0e-4,"R_series_3_3":1.0e-4}},

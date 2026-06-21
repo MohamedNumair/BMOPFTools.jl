@@ -50,6 +50,7 @@ an already-parsed dict.
 function migrate(net::Dict{String,Any})::Dict{String,Any}
     # Field-level migrations run unconditionally (independent of spec version).
     _migrate_transformer_series_fields!(net)
+    _reject_scalar_v_bounds!(net)
 
     v = _detect_spec_version(net)
 
@@ -106,6 +107,33 @@ function _migrate_transformer_series_fields!(net::Dict{String,Any})
                 "subtype"   => subtype,
                 "message"   => "Migrated legacy r_series/x_series to per-winding r/x_series_from/to (r/x_series_to=0).",
             ))
+        end
+    end
+end
+
+"""
+    _reject_scalar_v_bounds!(net::Dict{String,Any}) -> nothing
+
+Ingest gate: `v_min`/`v_max` are per-phase arrays (one entry per phase terminal,
+phase-to-ground). A scalar value is a pre-migration shape and is rejected with a
+clear `ArgumentError` rather than silently coerced — the caller must migrate the
+file (e.g. wrap the scalar `s` as `fill(s, n_phase)`). The neutral bound is the
+separate, optional, maximum-only `vn_max`.
+"""
+function _reject_scalar_v_bounds!(net::Dict{String,Any})
+    buses = get(net, "bus", nothing)
+    buses isa Dict || return
+    for (bid, bus) in buses
+        bus isa Dict || continue
+        for field in ("v_min", "v_max")
+            haskey(bus, field) || continue
+            bus[field] isa AbstractVector && continue
+            throw(ArgumentError(
+                "Bus '$bid' field `$field` is a scalar; it must be a per-phase " *
+                "array (one entry per phase terminal, phase-to-ground, in " *
+                "`terminal_names` phase order). Migrate the file by wrapping the " *
+                "scalar in an array of the correct length, e.g. `[$(bus[field]), …]`. " *
+                "The neutral bound is the separate optional `vn_max` (max only)."))
         end
     end
 end

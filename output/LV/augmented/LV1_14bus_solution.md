@@ -1,9 +1,9 @@
 # BMOPF Solution Profile: LV1_14bus
 
-**Generated:** 2026-06-21 16:06:21  
+**Generated:** 2026-06-21 18:37:45  
 **Status:** `LOCALLY_SOLVED`  
 **Objective:** -19500.0349  
-**Solve time:** 0.01 s  
+**Solve time:** 0.012 s  
 **Findings:** 5 errors · 1 warnings · 2 info  
 
 ---
@@ -27,6 +27,34 @@
 | Voltage  | 0 | 0 |
 | Thermal  | 0 | 0 |
 | Generator| 5 | 0 |
+
+## 2. Voltage by Galvanic Zone
+
+Per-unit magnitudes are relative to each zone's own voltage base; volts are not comparable across transformer boundaries.
+
+| St | Zone | V base | Buses | Vm min (pu) | Vm max (pu) | Max imbalance | Max neutral shift |
+|:--:|------|-------:|------:|------------:|------------:|--------------:|------------------:|
+| ✅ | `b179` | 250.0 V | 6 | 1.002 (`b2656`) | 1.004 (`b2656`) | 0.3 % (`b2656`) | 0.26 V (`b2656`) |
+| ✅ | `b2577` | 6.35 kV | 1 | 1.0 (`b2577`) | 1.0 (`b2577`) | 0.0 % | — |
+
+### Per-bus detail
+
+**Zone `b179`** (base 250.0 V):
+
+| St | Bus | Vm min (V) | Vm max (V) | Vm min (pu) | Vm max (pu) | Imbalance | Neutral |
+|:--:|-----|-----------:|-----------:|------------:|------------:|----------:|--------:|
+| ✅ | `b2656` | 250.4 | 251.1 | 1.002 | 1.004 | 0.3 % | 0.26 V |
+| ✅ | `b514` | 250.4 | 251.0 | 1.002 | 1.004 | 0.2 % | 0.05 V |
+| ✅ | `b232` | 250.4 | 251.0 | 1.002 | 1.004 | 0.2 % | 0.05 V |
+| ✅ | `b2734` | 250.4 | 251.0 | 1.002 | 1.004 | 0.2 % | 0.05 V |
+| ✅ | `b179` | 250.4 | 251.0 | 1.002 | 1.004 | 0.2 % | 0.05 V |
+| ✅ | `b3230` | 250.4 | 250.9 | 1.002 | 1.004 | 0.2 % | 0.18 V |
+
+**Zone `b2577`** (base 6.35 kV):
+
+| St | Bus | Vm min (V) | Vm max (V) | Vm min (pu) | Vm max (pu) | Imbalance | Neutral |
+|:--:|-----|-----------:|-----------:|------------:|------------:|----------:|--------:|
+| ✅ | `b2577` | 6350.9 | 6350.9 | 1.0 | 1.0 | 0.0 % | — |
 
 ## 4. Generator Dispatch
 

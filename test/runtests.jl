@@ -29,35 +29,35 @@ const IEEE13_FIXTURE = """
     "sourcebus": {
       "terminal_names": ["1","2","3","n"],
       "perfectly_grounded_terminals": ["n"],
-      "v_min": 2020.0,
-      "v_max": 2540.0
+      "v_min": [2020.0, 2020.0, 2020.0],
+      "v_max": [2540.0, 2540.0, 2540.0]
     },
     "650": {
       "terminal_names": ["1","2","3","n"],
       "perfectly_grounded_terminals": ["n"],
-      "v_min": 2020.0,
-      "v_max": 2540.0
+      "v_min": [2020.0, 2020.0, 2020.0],
+      "v_max": [2540.0, 2540.0, 2540.0]
     },
     "632": {
       "terminal_names": ["1","2","3","n"],
-      "v_min": 2020.0,
-      "v_max": 2540.0
+      "v_min": [2020.0, 2020.0, 2020.0],
+      "v_max": [2540.0, 2540.0, 2540.0]
     },
     "634": {
       "terminal_names": ["1","2","3","n"],
       "perfectly_grounded_terminals": ["n"],
-      "v_min": 100.0,
-      "v_max": 130.0
+      "v_min": [100.0, 100.0, 100.0],
+      "v_max": [130.0, 130.0, 130.0]
     },
     "671": {
       "terminal_names": ["1","2","3","n"],
-      "v_min": 2020.0,
-      "v_max": 2540.0
+      "v_min": [2020.0, 2020.0, 2020.0],
+      "v_max": [2540.0, 2540.0, 2540.0]
     },
     "611": {
       "terminal_names": ["3","n"],
-      "v_min": 2020.0,
-      "v_max": 2540.0
+      "v_min": [2020.0],
+      "v_max": [2540.0]
     },
     "652": {
       "terminal_names": ["1","n"]
@@ -704,7 +704,7 @@ const IEEE13_FIXTURE = """
         # v_min > v_max must produce E.PRE.VBOUND_CONFLICT, including when
         # only one bound is present elsewhere (regression for precedence bug)
         net = parse_bmopf(IEEE13_FIXTURE; from_string=true)
-        net["bus"]["632"]["v_min"] = 2600.0   # > v_max of 2540
+        net["bus"]["632"]["v_min"] = [2600.0, 2600.0, 2600.0]   # > v_max of 2540
         delete!(net["bus"]["671"], "v_max")    # one-bound bus must not crash
         report = analyze(net)
         @test any(f -> f.code == "E.PRE.VBOUND_CONFLICT", report.findings)
@@ -722,6 +722,12 @@ const IEEE13_FIXTURE = """
         report3 = analyze(net3)
         @test any(f -> f.code == "I.SCHEMA.UNKNOWN_FIELDS", report3.findings)
         @test haskey(report3.results[:schema]["unknown_fields_by_type"], "load")
+
+        # Scalar v_min/v_max is rejected at ingest (must be a per-phase array).
+        scalar_vbound = """
+        {"bus":{"b":{"terminal_names":["1","2","3","n"],"v_min":900.0,"v_max":1100.0}}}
+        """
+        @test_throws ArgumentError parse_bmopf(scalar_vbound; from_string=true)
 
         # Line crossing voltage levels must produce E.VOLT.LINE_CROSSING
         net4 = parse_bmopf(IEEE13_FIXTURE; from_string=true)
@@ -749,6 +755,17 @@ const IEEE13_FIXTURE = """
         net = parse_bmopf(IEEE13_FIXTURE; from_string=true)
         net["bus"]["650"]["terminal_names"] = ["x", "y", "z"]
         @test_throws ArgumentError to_pmd(net)
+    end
+
+    @testset "to_pmd — per-phase v bound reduction" begin
+        # Uniform per-phase v_min/v_max reduce to scalar PMD vm_lb/vm_ub.
+        net = parse_bmopf(IEEE13_FIXTURE; from_string=true)
+        eng = to_pmd(net)
+        @test eng["bus"]["sourcebus"]["vm_lb"] ≈ 2020.0 / get(eng, "settings", Dict())["voltage_scale_factor"] rtol=1e-6
+        @test eng["bus"]["sourcebus"]["vm_ub"] ≈ 2540.0 / get(eng, "settings", Dict())["voltage_scale_factor"] rtol=1e-6
+        # A genuinely per-phase (unequal) bound cannot be represented and errors.
+        net["bus"]["632"]["v_max"] = [2500.0, 2540.0, 2540.0]
+        @test_throws ErrorException to_pmd(net)
     end
 
     @testset "from_pmd — slack cost priced on the voltage source" begin
@@ -817,9 +834,9 @@ const IEEE13_FIXTURE = """
           "bus": {
             "src": {"terminal_names":["1","2","3","n"],
                     "perfectly_grounded_terminals":["n"],
-                    "v_min":220.0,"v_max":260.0},
+                    "v_min":[220.0, 220.0, 220.0],"v_max":[260.0, 260.0, 260.0]},
             "b1":  {"terminal_names":["1","2","3","n"],
-                    "v_min":220.0,"v_max":260.0}
+                    "v_min":[220.0, 220.0, 220.0],"v_max":[260.0, 260.0, 260.0]}
           },
           "voltage_source": {
             "vs": {"bus":"src","terminal_map":["1","2","3"],

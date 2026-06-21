@@ -157,7 +157,7 @@ if @isdefined(_HAS_JUMP_IPOPT) && _HAS_JUMP_IPOPT
     _opf_ready_net() = parse_bmopf("""
     {"bus":{
         "sourcebus":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
-        "bus1":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"],"v_min":900.0,"v_max":1100.0}},
+        "bus1":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"],"v_min":[900.0, 900.0, 900.0],"v_max":[1100.0, 1100.0, 1100.0]}},
      "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1","2","3"],
          "v_magnitude":[1000.0,1000.0,1000.0],"v_angle":[0.0,-2.0944,2.0944],"cost":[1.0,1.0,1.0]}},
      "linecode":{"lc":{"R_series_1_1":1.0e-4,"R_series_2_2":1.0e-4,"R_series_3_3":1.0e-4}},

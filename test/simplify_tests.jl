@@ -346,15 +346,15 @@ end
     net = Dict{String,Any}(
         "bus" => Dict(
             "A" => Dict("terminal_names" => ["1","n"],
-                        "v_min" => 200.0, "v_max" => 260.0),
+                        "v_min" => [200.0], "v_max" => [260.0]),
             "B" => Dict("terminal_names" => ["1","n"],
-                        "v_min" => 210.0, "v_max" => 250.0)),
+                        "v_min" => [210.0], "v_max" => [250.0])),
         "switch" => Dict("sw" => _switch("A", "B"; open=false)),
     )
     net′ = collapse_closed_switches(net)
 
-    @test net′["bus"]["A"]["v_min"] ≈ 210.0   # max of 200, 210
-    @test net′["bus"]["A"]["v_max"] ≈ 250.0   # min of 260, 250
+    @test net′["bus"]["A"]["v_min"] ≈ [210.0]   # max of 200, 210
+    @test net′["bus"]["A"]["v_max"] ≈ [250.0]   # min of 260, 250
 end
 
 @testset "collapse_closed_switches — terminal union from both buses" begin

@@ -66,15 +66,16 @@ function _apply_voltage_bounds!(net′::Dict{String,Any},
         is_four_wire = has_neutral && n_phase >= 1
 
         # ── v_min / v_max (solver regularisation) ────────────────────────────
-        if r.apply_v_bounds && r.v_min_pu !== nothing && r.v_max_pu !== nothing
+        # Per-phase arrays, one entry per phase conductor (phase-to-ground).
+        if r.apply_v_bounds && r.v_min_pu !== nothing && r.v_max_pu !== nothing && n_phase >= 1
             for (field, pu) in (("v_min", r.v_min_pu), ("v_max", r.v_max_pu))
                 if !haskey(bus, field)
-                    val = v_dec * pu
+                    val = fill(v_dec * pu, n_phase)
                     bus[field] = val
                     push!(entries, TransformEntry(
                         :bus, bid, field, nothing, val,
                         "solver_regularisation", :heuristic,
-                        "$lvl bus; v_declared=$(round(v_dec, digits=1)) V × $pu"))
+                        "$lvl bus; v_declared=$(round(v_dec, digits=1)) V × $pu × $n_phase phases"))
                 end
             end
         end
