@@ -107,3 +107,110 @@ function _line_pi_shunt(line::Dict{String,Any}, linecodes::Dict{String,Any})
     B_to !== nothing && (B_to = B_to .* len)
     G_fr, B_fr, G_to, B_to
 end
+
+"""
+    _limit_current_box!(cr, ci, ilim)
+
+Tighten a rectangular current variable pair with a box bound implied by the
+magnitude limit `|c| ≤ ilim`. Since `cr² + ci² ≤ ilim²` forces both
+`|cr| ≤ ilim` and `|ci| ≤ ilim`, the box `[-ilim, ilim]` on each component is a
+valid (looser) bound that is redundant with the second-order cone but helps the
+NLP solver by bounding the variables from the start.
+
+Only valid when `ilim` limits the *variable itself*. Do **not** apply it where
+the thermal limit is on a series+shunt expression (lines, and the from-side of a
+transformer with a no-load shunt): there the variable can exceed `ilim` when the
+shunt current opposes it.
+
+`cr`/`ci` must be `VariableRef`s. No-op for a non-finite or negative `ilim`.
+"""
+function _limit_current_box!(cr::JuMP.VariableRef, ci::JuMP.VariableRef, ilim::Real)
+    (isfinite(ilim) && ilim >= 0) || return
+    for v in (cr, ci)
+        JuMP.has_lower_bound(v) ? JuMP.set_lower_bound(v, max(JuMP.lower_bound(v), -ilim)) :
+                                  JuMP.set_lower_bound(v, -ilim)
+        JuMP.has_upper_bound(v) ? JuMP.set_upper_bound(v, min(JuMP.upper_bound(v), ilim)) :
+                                  JuMP.set_upper_bound(v, ilim)
+    end
+    return
+end
+
+"""
+    _terminal_vmax_to_ground(bus, terminal, grounded) -> Union{Float64,Nothing}
+
+Sound upper bound on the **to-ground** voltage magnitude `|V_{bus,terminal}|`,
+or `nothing` when no hard bound can be derived from the bus data. Used to bound
+line shunt-current contributions (which are linear in the to-ground voltage
+variables), so it must never over-tighten.
+
+Sources, in order of preference:
+- a perfectly grounded terminal → `0`;
+- phase-to-ground bound `v_max` → `v_max`;
+- phase-to-neutral bound `vpn_max[k]` with a perfectly grounded neutral
+  (so `|V_n| = 0`) → `vpn_max[k]`;
+- `vpn_max[k]` plus a neutral-to-ground bound `vn_max` (floating neutral) →
+  `vpn_max[k] + vn_max`  (triangle inequality `|V_p| ≤ |V_p − V_n| + |V_n|`);
+- the neutral terminal itself with only `vn_max` → `vn_max`.
+
+Returns `nothing` if none of these apply (e.g. the ENWL benchmark, which carries
+only `vpn_max` on a floating neutral): the caller then leaves the variable free.
+"""
+function _terminal_vmax_to_ground(bus::Dict{String,Any}, terminal::String,
+                                  grounded::Set{Tuple{String,String}}, bid::String)
+    (bid, terminal) in grounded && return 0.0
+
+    v_max = get(bus, "v_max", nothing)
+    v_max !== nothing && return Float64(v_max)
+
+    neutral = BMOPFTools._neutral_terminal(bus)
+    vn_max  = get(bus, "vn_max", nothing)
+
+    # Neutral terminal: only vn_max can bound it to ground.
+    if neutral !== nothing && terminal == neutral
+        return vn_max === nothing ? nothing : Float64(vn_max)
+    end
+
+    # Phase terminal: locate its vpn_max entry (per-phase array in phase-term order).
+    vpn_max = get(bus, "vpn_max", nothing)
+    (vpn_max === nothing || neutral === nothing) && return nothing
+    phase_terms = [t for t in get(bus, "terminal_names", String[]) if t != neutral]
+    k = findfirst(==(terminal), phase_terms)
+    (k === nothing || k > length(vpn_max)) && return nothing
+    vpn = Float64(vpn_max[k])
+
+    if (bid, neutral) in grounded
+        return vpn                       # |V_n| = 0
+    elseif vn_max !== nothing
+        return vpn + Float64(vn_max)     # |V_p| ≤ |V_p − V_n| + |V_n|
+    end
+    return nothing                       # floating neutral, no vn_max → unbounded
+end
+
+"""
+    _line_shunt_row_bound(G, B, vmax, k, n) -> Union{Float64,Nothing}
+
+Upper bound on the magnitude of the π-shunt current injected into conductor `k`,
+`|I_sh,k| = |Σ_j (G_kj + jB_kj)·V_j| ≤ Σ_j √(G_kj² + B_kj²)·V^max_j`.
+
+`vmax[j]` is the to-ground voltage cap for from-terminal `j` (from
+`_terminal_vmax_to_ground`); `nothing` means terminal `j` is unbounded. Returns
+`nothing` if any `j` with a nonzero admittance entry has an unknown cap — then
+the row's shunt contribution is unbounded and no series-current box is sound.
+A row with no shunt (all entries zero) returns `0.0`.
+"""
+function _line_shunt_row_bound(G::Union{Matrix{Float64},Nothing},
+                               B::Union{Matrix{Float64},Nothing},
+                               vmax::Vector{Union{Float64,Nothing}},
+                               k::Int, n::Int)
+    (G === nothing && B === nothing) && return 0.0
+    acc = 0.0
+    for j in 1:n
+        g_kj = (G !== nothing && k <= size(G,1) && j <= size(G,2)) ? G[k,j] : 0.0
+        b_kj = (B !== nothing && k <= size(B,1) && j <= size(B,2)) ? B[k,j] : 0.0
+        (iszero(g_kj) && iszero(b_kj)) && continue
+        vj = vmax[j]
+        vj === nothing && return nothing   # admittance feeds from an unbounded node
+        acc += hypot(g_kj, b_kj) * vj
+    end
+    return acc
+end

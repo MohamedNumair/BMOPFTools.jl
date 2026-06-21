@@ -53,8 +53,10 @@ Shunt conductance (`G_from`, `G_to`) and susceptance (`B_from`, `B_to`) are
 read from the linecode and scaled by line length. Missing or all-zero shunt
 fields are a no-op.
 """
-function _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
+function _add_line_constraints!(model, net, vars, kcl_r, kcl_i;
+                                grounded::Set{Tuple{String,String}}=Set{Tuple{String,String}}())
     linecodes = get(net, "linecode", Dict())
+    buses = get(net, "bus", Dict())
     vr = vars[:vr]; vi = vars[:vi]
     cr_fr = vars[:cr_fr]; ci_fr = vars[:ci_fr]
     cr_to = vars[:cr_to]; ci_to = vars[:ci_to]
@@ -113,6 +115,16 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
         if lc !== nothing
             i_max = get(lc, "i_max", nothing)
             if i_max !== nothing
+                # Sound box bound on the bare series current variable. The cone
+                # limits the *total* current I_tot = c_series + I_shunt, so
+                #   |c_series| ≤ |I_tot| + |I_shunt| ≤ i_max + |I_shunt|^max,
+                # with |I_shunt,k|^max ≤ Σ_j |Y_fr,kj|·V^max_fr,j. The box is added
+                # only when every voltage cap feeding row k is known (else the
+                # row's shunt term is unbounded and we must leave c_fr[k] free).
+                bus_fr = get(buses, b_fr, Dict{String,Any}())
+                vmax_fr = Union{Float64,Nothing}[
+                    _terminal_vmax_to_ground(bus_fr, tmfr[j], grounded, b_fr)
+                    for j in 1:n_map]
                 for k in 1:min(n_map, length(i_max))
                     ilim = Float64(i_max[k])
                     cfr_r = @expression(model, cr_fr[(lid,k)] + ish_fr_r[k])
@@ -123,6 +135,11 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i)
                         cto_i = @expression(model, ci_to[(lid,k)] + ish_to_i[k])
                         @constraint(model, cto_r^2 + cto_i^2 <= ilim^2)
                     end
+
+                    # Series-current variable box (from-side shunt determines it).
+                    ish_bound = _line_shunt_row_bound(G_fr, B_fr, vmax_fr, k, n_map)
+                    ish_bound === nothing && continue
+                    _limit_current_box!(cr_fr[(lid,k)], ci_fr[(lid,k)], ilim + ish_bound)
                 end
             end
         end
@@ -209,6 +226,7 @@ function _add_switch_constraints!(model, net, vars, kcl_r, kcl_i)
             if i_max !== nothing && k <= length(i_max)
                 ilim = Float64(i_max[k])
                 @constraint(model, cr_sw[(sid,k)]^2 + ci_sw[(sid,k)]^2 <= ilim^2)
+                _limit_current_box!(cr_sw[(sid,k)], ci_sw[(sid,k)], ilim)
             end
         end
     end

@@ -130,7 +130,7 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
     _add_source_constraints!(model, working, vars, kcl_r, kcl_i)
 
     # Branch constraints and KCL contributions
-    _add_line_constraints!(model, working, vars, kcl_r, kcl_i)
+    _add_line_constraints!(model, working, vars, kcl_r, kcl_i; grounded=grounded)
     _add_line_angle_constraints!(model, working, vars)
     _add_switch_constraints!(model, working, vars, kcl_r, kcl_i)
     _add_transformer_constraints!(model, working, vars, kcl_r, kcl_i)
