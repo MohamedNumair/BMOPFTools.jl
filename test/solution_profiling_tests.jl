@@ -396,6 +396,68 @@ end
 
 # ── T16: verbose per-bus drill-down table ─────────────────────────────────────
 
+# ── T-BND: bound overshoot within solver tolerance is active, not a violation ─
+# A solved interior-point optimum (especially via the per-unit round-trip) lands
+# a few parts in 1e-6 outside an active bound. That must read as active, not as a
+# violation. Guards the viol_tol relaxation in _bound_status.
+@testset "SOL — tiny bound overshoot is active not violation" begin
+    net    = _base_net()
+    result = _base_result()
+    # p_max = 2000; overshoot by 2e-6 relative (4 mW) — solver-tolerance scale
+    result["generator"]["g1"]["a"]["pg"] = 2000.0 * (1 + 2e-6)
+
+    findings = Finding[]
+    out = solution_check(net, result, findings)
+
+    @test !("E.SOL.GEN_VIOLATION" in codes(findings))
+    @test "W.SOL.GEN_ACTIVE" in codes(findings)
+    @test out["n_gen_violations"] == 0
+
+    # …but a genuine overshoot (relative 1e-3) is still flagged.
+    result2 = _base_result()
+    result2["generator"]["g1"]["a"]["pg"] = 2000.0 * (1 + 1e-3)
+    f2 = Finding[]
+    solution_check(net, result2, f2)
+    @test "E.SOL.GEN_VIOLATION" in codes(f2)
+end
+
+# ── T-BAL: power balance counts ALL injection sources ─────────────────────────
+# p_gen must include inverters and the voltage source, not just generators —
+# otherwise the balance check spuriously fails whenever a DER dispatches or the
+# slack imports/exports.
+@testset "SOL — power balance includes inverter + voltage source" begin
+    # Drop the generator; cover the load (3000 W) + line loss (750 W) with an
+    # inverter (1875 W) and slack import (1875 W) → balance should close.
+    net = _base_net()
+    delete!(net, "generator")
+    net["inverter"] = Dict{String,Any}(
+        "pv1" => Dict{String,Any}(
+            "bus" => "b1", "terminal_map" => ["a","b","c","n"],
+            "topology" => "FOUR_LEG", "prime_mover" => "PV",
+            "s_max" => [3000.0,3000.0,3000.0],
+            "p_min" => [0.0,0.0,0.0], "p_max" => [3000.0,3000.0,3000.0]))
+
+    result = _base_result()
+    delete!(result, "generator")
+    result["inverter"] = Dict{String,Any}(
+        "pv1" => Dict{String,Any}(
+            "a" => Dict("cri"=>0.0,"cii"=>0.0,"pg"=>625.0,"qg"=>0.0),
+            "b" => Dict("cri"=>0.0,"cii"=>0.0,"pg"=>625.0,"qg"=>0.0),
+            "c" => Dict("cri"=>0.0,"cii"=>0.0,"pg"=>625.0,"qg"=>0.0)))
+    result["voltage_source"] = Dict{String,Any}(
+        "src" => Dict{String,Any}(
+            "a" => Dict("ps"=>625.0,"qs"=>0.0),
+            "b" => Dict("ps"=>625.0,"qs"=>0.0),
+            "c" => Dict("ps"=>625.0,"qs"=>0.0)))
+
+    findings = Finding[]
+    out = solution_check(net, result, findings)
+
+    # p_gen = inverter 1875 + slack 1875 = 3750 W; load 3000 + loss 750 = 3750 W.
+    @test out["p_gen"] ≈ 3750.0  atol=1e-6
+    @test !("W.SOL.POWER_BALANCE" in codes(findings))
+end
+
 @testset "SOL — voltage zone per-bus drill-down" begin
     net    = _base_net()
     result = _base_result()
