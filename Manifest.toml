@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "89f9ff6ac0e9e5148558739d275bb5b3261fa70d"
+project_hash = "6356d0172a9934c0ac14e014f5a86b21e4ac32ef"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -19,7 +19,7 @@ uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 version = "1.11.0"
 
 [[deps.BMOPFTools]]
-deps = ["Dates", "Graphs", "JSON3", "LinearAlgebra", "Logging", "PowerModelsDistribution", "Statistics"]
+deps = ["Dates", "Graphs", "JSON3", "JSONSchema", "LinearAlgebra", "Logging", "PowerModelsDistribution", "Statistics", "TOML"]
 path = "."
 uuid = "5f9a3b62-8f63-4a39-b67b-af9b51e6a7c3"
 version = "0.1.0"
