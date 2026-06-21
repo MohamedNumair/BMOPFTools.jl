@@ -152,8 +152,9 @@ function _pu_scale_buses!(net, bases)
                       "vpos_min", "vpos_max", "vneg_max", "vzero_max")
     for (bid, bus) in get(net, "bus", Dict())
         vb = get(v_base, bid, 1.0)
-        # Scale each voltage bound by V_base. vpn_* (per-phase) and vpp_* (per-pair)
-        # are vectors; v_min/v_max and the sequence bounds are scalars.
+        # Scale each voltage bound by V_base. v_min/v_max (per-phase), vpn_*
+        # (per-phase) and vpp_* (per-pair) are vectors; vn_max and the sequence
+        # bounds are scalars. The branch below handles both shapes generically.
         for f in voltage_fields
             haskey(bus, f) || continue
             v = bus[f]

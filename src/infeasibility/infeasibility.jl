@@ -9,6 +9,32 @@
 # ranked, classified diagnosis.
 
 """
+    _phase_vbounds(bus, v_nom) -> (ordered_phase_terminals, lb_of, ub_of)
+
+Resolve per-phase voltage bounds for a bus. `v_min`/`v_max` are per-phase arrays
+(phase-to-ground) ordered by `terminal_names` (neutral excluded). When a bus has
+neither bound, fall back to per-unit defaults [0.85, 1.10]·v_nom on every phase
+(catches networks with no explicit bounds, where voltage collapse still signals
+infeasibility). `lb_of(k)`/`ub_of(k)` return the bound for the k-th phase
+terminal, or `nothing` if unbounded.
+"""
+function _phase_vbounds(bus, v_nom)
+    nt = _neutral_terminal(bus)
+    phase_ts = [t for t in Vector{String}(get(bus, "terminal_names", String[])) if t != nt]
+    v_min = get(bus, "v_min", nothing)
+    v_max = get(bus, "v_max", nothing)
+    if v_min === nothing && v_max === nothing && v_nom !== nothing
+        v_min = fill(v_nom * 0.85, length(phase_ts))
+        v_max = fill(v_nom * 1.10, length(phase_ts))
+    end
+    lb_of(k) = v_min === nothing ? nothing :
+               (v_min isa AbstractVector ? get(v_min, k, nothing) : v_min)
+    ub_of(k) = v_max === nothing ? nothing :
+               (v_max isa AbstractVector ? get(v_max, k, nothing) : v_max)
+    return phase_ts, lb_of, ub_of
+end
+
+"""
     diagnose_infeasibility(fopf_result, net; top_n=10, slack_threshold=1e-3)
         -> Dict{String,Any}
 
@@ -88,29 +114,24 @@ function diagnose_infeasibility(fopf_result::Dict{String,Any},
     for (bid, mag) in first(sorted_buses, top_n)
         bus     = get(bus_net, bid, Dict())
         bus_res = get(bus_result, bid, Dict())
-        v_min   = get(bus, "v_min", nothing)
-        v_max   = get(bus, "v_max", nothing)
-        neutral = _neutral_terminal(bus)
+        v_nom   = get(v_nom_by_bus, bid, nothing)
+        phase_ts, lb_of, ub_of = _phase_vbounds(bus, v_nom)
 
-        v_nom = get(v_nom_by_bus, bid, nothing)
-        if v_min === nothing && v_max === nothing && v_nom !== nothing
-            v_min = v_nom * 0.85
-            v_max = v_nom * 1.10
-        end
-
-        # Check whether the solved voltage at each terminal is near a bound
+        # Check whether the solved voltage at each phase terminal is near a bound
         viol = String[]
-        for (t, tv) in bus_res
-            t == neutral && continue
+        for (k, t) in enumerate(phase_ts)
+            tv = get(bus_res, t, nothing)
+            tv isa Dict || continue
             vm = get(tv, "vm", NaN)
             isnan(vm) && continue
-            if v_min !== nothing && vm < Float64(v_min) * 1.005
+            lb = lb_of(k); ub = ub_of(k)
+            if lb !== nothing && vm < Float64(lb) * 1.005
                 push!(viol, "undervoltage:$t " *
-                            "$(round(vm, digits=1))V < $(round(Float64(v_min), digits=1))V")
+                            "$(round(vm, digits=1))V < $(round(Float64(lb), digits=1))V")
             end
-            if v_max !== nothing && vm > Float64(v_max) * 0.995
+            if ub !== nothing && vm > Float64(ub) * 0.995
                 push!(viol, "overvoltage:$t " *
-                            "$(round(vm, digits=1))V > $(round(Float64(v_max), digits=1))V")
+                            "$(round(vm, digits=1))V > $(round(Float64(ub), digits=1))V")
             end
         end
 
@@ -140,9 +161,11 @@ function diagnose_infeasibility(fopf_result::Dict{String,Any},
     end
 
     # ── Voltage bound violations across ALL buses ─────────────────────────────
-    # The feasibility OPF does not enforce voltage bounds (so it always
-    # converges). Report all buses whose solved voltage violates:
-    #   1. Explicit v_min/v_max on the bus dict (operational limits), OR
+    # The feasibility OPF enforces the same hard voltage bounds as the OPF, so a
+    # converged solution normally respects them — a constrained bus voltage sits
+    # at its bound and the mismatch surfaces as residual current. This pass still
+    # reports any solved voltage that lands outside:
+    #   1. Explicit per-phase v_min/v_max on the bus dict (operational limits), OR
     #   2. Per-unit defaults [0.85, 1.1] of the nominal voltage derived from the
     #      source voltage via BFS propagation (catches networks with no explicit
     #      bounds, where voltage collapse still indicates infeasibility).
@@ -150,34 +173,27 @@ function diagnose_infeasibility(fopf_result::Dict{String,Any},
     volt_violations = Dict{String,Any}[]
     for (bid, bus) in bus_net
         bus_res = get(bus_result, bid, Dict())
-        v_min   = get(bus, "v_min", nothing)
-        v_max   = get(bus, "v_max", nothing)
-        neutral = _neutral_terminal(bus)
+        v_nom   = get(v_nom_by_bus, bid, nothing)
+        phase_ts, lb_of, ub_of = _phase_vbounds(bus, v_nom)
 
-        # Fall back to pu-based bounds when no explicit limits set
-        v_nom = get(v_nom_by_bus, bid, nothing)
-        if v_min === nothing && v_max === nothing && v_nom !== nothing
-            v_min = v_nom * 0.85
-            v_max = v_nom * 1.10
-        end
-        (v_min === nothing && v_max === nothing) && continue
-
-        for (t, tv) in bus_res
-            t == neutral && continue
+        for (k, t) in enumerate(phase_ts)
+            tv = get(bus_res, t, nothing)
+            tv isa Dict || continue
             vm = get(tv, "vm", NaN)
             isnan(vm) && continue
-            if v_min !== nothing && vm < Float64(v_min)
+            lb = lb_of(k); ub = ub_of(k)
+            if lb !== nothing && vm < Float64(lb)
                 push!(volt_violations, Dict{String,Any}(
                     "bus" => bid, "terminal" => t, "type" => "undervoltage",
                     "vm_V" => round(vm, digits=2),
-                    "limit_V" => round(Float64(v_min), digits=2),
-                    "margin_V" => round(vm - Float64(v_min), digits=2)))
-            elseif v_max !== nothing && vm > Float64(v_max)
+                    "limit_V" => round(Float64(lb), digits=2),
+                    "margin_V" => round(vm - Float64(lb), digits=2)))
+            elseif ub !== nothing && vm > Float64(ub)
                 push!(volt_violations, Dict{String,Any}(
                     "bus" => bid, "terminal" => t, "type" => "overvoltage",
                     "vm_V" => round(vm, digits=2),
-                    "limit_V" => round(Float64(v_max), digits=2),
-                    "margin_V" => round(vm - Float64(v_max), digits=2)))
+                    "limit_V" => round(Float64(ub), digits=2),
+                    "margin_V" => round(vm - Float64(ub), digits=2)))
             end
         end
     end

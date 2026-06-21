@@ -223,13 +223,20 @@ function _bus_from_pmd(pmd_bus::Dict{String,Any}, id::String,
         b["v_declared"] = vbase_v
     end
 
-    # voltage bounds: PMD vm_lb/vm_ub are in p.u. → scale to V
+    # voltage bounds: PMD vm_lb/vm_ub are in p.u. → scale to V. BMOPF v_min/v_max
+    # are per-phase arrays (phase-to-ground), so map onto the phase terminals
+    # (neutral excluded). PMD values may be scalar or per-terminal vectors.
     if vbase_v !== nothing
-        if haskey(pmd_bus, "vm_lb")
-            b["v_min"] = Float64(pmd_bus["vm_lb"]) * vbase_v
+        tnames   = b["terminal_names"]
+        nt       = _neutral_terminal(b)
+        phase_ix = [k for k in eachindex(tnames) if tnames[k] != nt]
+        _pmd_v_to_phase(v) =
+            [Float64(v isa AbstractVector ? v[k] : v) * vbase_v for k in phase_ix]
+        if haskey(pmd_bus, "vm_lb") && !isempty(phase_ix)
+            b["v_min"] = _pmd_v_to_phase(pmd_bus["vm_lb"])
         end
-        if haskey(pmd_bus, "vm_ub")
-            b["v_max"] = Float64(pmd_bus["vm_ub"]) * vbase_v
+        if haskey(pmd_bus, "vm_ub") && !isempty(phase_ix)
+            b["v_max"] = _pmd_v_to_phase(pmd_bus["vm_ub"])
         end
     end
 

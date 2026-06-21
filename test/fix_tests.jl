@@ -69,8 +69,8 @@ end
 # Network with source bus voltage bounds (should be stripped)
 function _source_bounds_net()
     net = _fix_lv_net()
-    net["bus"]["src"]["v_min"]   = 100.0
-    net["bus"]["src"]["v_max"]   = 300.0
+    net["bus"]["src"]["v_min"]   = [100.0, 100.0, 100.0]
+    net["bus"]["src"]["v_max"]   = [300.0, 300.0, 300.0]
     net["bus"]["src"]["vpn_min"] = 200.0
     net["bus"]["src"]["vpn_max"] = 260.0
     net["bus"]["src"]["vpp_min"] = 350.0
@@ -314,15 +314,15 @@ end
 
     @testset "T5b: Non-source bus bounds untouched" begin
         net = _fix_lv_net()
-        net["bus"]["b1"]["v_min"] = 195.5
-        net["bus"]["b1"]["v_max"] = 264.5
+        net["bus"]["b1"]["v_min"] = [195.5, 195.5, 195.5]
+        net["bus"]["b1"]["v_max"] = [264.5, 264.5, 264.5]
         recipe = FixRecipe(apply_largest_component=false,
                            apply_simplify_network=false,
                            apply_remove_zero_loads=false,
                            apply_low_impedance_to_switch=false)
         net′, _ = fix_case(net; recipe=recipe)
-        @test net′["bus"]["b1"]["v_min"] ≈ 195.5
-        @test net′["bus"]["b1"]["v_max"] ≈ 264.5
+        @test net′["bus"]["b1"]["v_min"] ≈ [195.5, 195.5, 195.5]
+        @test net′["bus"]["b1"]["v_max"] ≈ [264.5, 264.5, 264.5]
     end
 
     # ── T6: Adjacent current bounds (opt-in) ───────────────────────────────
