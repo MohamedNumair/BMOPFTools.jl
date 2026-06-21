@@ -1375,4 +1375,344 @@
         @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
     end
 
+    # ═════════════════════════════════════════════════════════════════════════
+    # Feasibility-OPF parity guards (refactor safety net).
+    #
+    # These three tests pin the invariants that the planned "shared engine +
+    # per-problem build recipe" refactor is most likely to break — namely that
+    # solve_feasibility_opf carries the *same hard bounds* as solve_opf, returns
+    # the *same physical solution* when the network is feasible, and exposes a
+    # *stable result-dict contract* for its slack outputs. They are written
+    # against the current (pre-refactor) implementation and must pass as-is.
+    # ═════════════════════════════════════════════════════════════════════════
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # A: Feasibility OPF honours the OPF's hard voltage bounds.
+    #
+    # T3 geometry with a tight v_max on bus1 (960–999 V) and NO generator, so the
+    # load forces V toward ~947 V; we instead clamp v_max to a value BELOW the
+    # physical voltage. solve_opf would be infeasible. solve_feasibility_opf must
+    # NOT violate the bound: the voltage sits at the bound and the resulting power
+    # imbalance surfaces as a non-zero slack injection at that terminal. This is
+    # the exact invariant — "identical hard constraints, KCL is the only
+    # relaxation" — that moving the bound calls into a shared builder can break.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "A: feasibility honours hard voltage bounds (residual, no violation)" begin
+        # Force the load-bus voltage into a tight band the load cannot physically
+        # satisfy: at full load the physical voltage is ~947 V, but v_min=985 V
+        # forbids that. solve_opf would be infeasible; solve_feasibility_opf must
+        # keep V within [985,999] and surface the imbalance as a slack residual.
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"],
+                         "v_min":[985.0],"v_max":[999.0]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[100000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_feasibility_opf(net)
+        @test res["is_feasibility_opf"] == true
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+
+        # Hard v_min/v_max must be respected (the only relaxation is nodal current).
+        vm = res["bus"]["bus1"]["1"]["vm"]
+        @test vm >= 985.0 - 1e-2
+        @test vm <= 999.0 + 1e-2
+
+        # The physical solution at full load (~947 V) is below v_min=985, so the
+        # bound is binding and the imbalance must appear as a non-zero residual.
+        @test res["total_slack_magnitude_A"] > 1.0
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # B: OPF and feasibility OPF agree on a feasible bounded network.
+    #
+    # On a network where solve_opf is feasible, the feasibility model's elastic
+    # slack must be driven to ≈0 and its bus voltages must match solve_opf to a
+    # tight tolerance — proving both build paths assemble the same device
+    # constraints over the same feasible set. Uses the T2 balanced fixture.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "B: OPF vs feasibility consistency (slack≈0, voltages match)" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","2","3","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","2","3","n"],
+                         "perfectly_grounded_terminals":["n"],
+                         "v_min":[900.0,900.0,900.0],"v_max":[999.0,999.0,999.0]}},
+         "voltage_source":{"vs":{"bus":"sourcebus",
+             "terminal_map":["1","2","3"],
+             "v_magnitude":[1000.0,1000.0,1000.0],
+             "v_angle":[0.0,-2.0944,2.0944]}},
+         "linecode":{"lc":{
+             "R_series_1_1":0.5,"R_series_2_2":0.5,"R_series_3_3":0.5}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1","2","3"],"terminal_map_to":["1","2","3"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","2","3","n"],
+             "configuration":"WYE",
+             "p_nom":[100000.0,100000.0,100000.0],"q_nom":[0.0,0.0,0.0]}}}
+        """; from_string=true)
+
+        r_opf  = solve_opf(net)
+        r_feas = solve_feasibility_opf(net)
+        @test r_opf["termination_status"]  in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test r_feas["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+
+        # Feasible network → elastic slack collapses to ≈0.
+        @test r_feas["total_slack_magnitude_A"] < 1e-3
+
+        # Bus voltages from both formulations must coincide.
+        for ph in ("1","2","3")
+            @test r_feas["bus"]["bus1"][ph]["vm"] ≈ r_opf["bus"]["bus1"][ph]["vm"] atol=0.05
+            @test r_feas["bus"]["bus1"][ph]["va"] ≈ r_opf["bus"]["bus1"][ph]["va"] atol=1e-4
+        end
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # C: Feasibility-OPF result-dict contract (mirror of T14 for slack outputs).
+    #
+    # Pins the shape of the feasibility-specific result sections so that moving
+    # slack-result extraction into a build recipe cannot silently rename or drop
+    # fields that diagnose_infeasibility consumes.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "C: feasibility result dict structure contract" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"],
+                         "v_min":[985.0],"v_max":[999.0]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[100000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_feasibility_opf(net)
+
+        # ── feasibility-specific top-level keys ───────────────────────────────
+        @test res["is_feasibility_opf"] === true
+        @test haskey(res, "slack_injections")
+        @test haskey(res, "total_slack_magnitude_A")
+        @test res["total_slack_magnitude_A"] isa Float64
+        @test res["total_slack_magnitude_A"] >= 0.0
+
+        # ── it remains a superset of the OPF dict contract ────────────────────
+        for k in ("termination_status","objective","bus","line","load","voltage_source")
+            @test haskey(res, k)
+        end
+
+        # ── slack_injections: bus → terminal → {cs_r, cs_i, cs_mag} ────────────
+        si = res["slack_injections"]
+        @test si isa Dict
+        @test haskey(si, "bus1")            # non-source, ungrounded → has a slack node
+        td = si["bus1"]["1"]
+        for f in ("cs_r","cs_i","cs_mag")
+            @test haskey(td, f)
+            @test td[f] isa Float64
+        end
+        @test td["cs_mag"] >= 0.0
+        @test td["cs_mag"] ≈ sqrt(td["cs_r"]^2 + td["cs_i"]^2) atol=1e-9
+
+        # Grounded terminals carry no elastic slack.
+        @test !(haskey(si, "bus1") && haskey(si["bus1"], "n"))
+
+        # total_slack_magnitude_A equals the L2 norm over all reported nodes.
+        total = sqrt(sum(v["cs_mag"]^2 for bd in values(si) for v in values(bd); init=0.0))
+        @test res["total_slack_magnitude_A"] ≈ total atol=1e-6
+    end
+
+    # ═════════════════════════════════════════════════════════════════════════
+    # Power flow — solve_pf
+    #
+    # A determined power flow: same physics as solve_opf, but no operational
+    # bounds and no objective. Verified against the same analytic fixed points
+    # and cross-checked against solve_opf / solve_feasibility_opf.
+    # ═════════════════════════════════════════════════════════════════════════
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PF1: single-phase resistive — same closed-form voltage as T1.
+    #   V² − V_s·V + R·P = 0  →  V = (V_s + √(V_s² − 4RP)) / 2
+    # No voltage bounds present (PF imposes none), so the source-warm-start lands
+    # on the high-voltage physical root.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "PF1: single-phase resistive — exact voltage" begin
+        V_s = 1000.0;  R = 0.5;  P = 100_000.0
+        V_exp = (V_s + sqrt(V_s^2 - 4*R*P)) / 2   # ≈ 947.214 V
+
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[100000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_pf(net)
+        @test res["is_power_flow"] == true
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["bus"]["bus1"]["1"]["vm"] ≈ V_exp   atol=0.01
+        @test abs(res["bus"]["bus1"]["1"]["vi"]) < 0.01
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PF2: PF agrees with feasibility OPF (slack≈0) on a bound-free load network.
+    # Both solve the same physics; the only difference is the elastic slack and
+    # the objective, neither of which is active on a feasible determined network.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "PF2: solve_pf matches solve_feasibility_opf voltages" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","2","3","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","2","3","n"],
+                         "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus",
+             "terminal_map":["1","2","3"],
+             "v_magnitude":[1000.0,1000.0,1000.0],
+             "v_angle":[0.0,-2.0944,2.0944]}},
+         "linecode":{"lc":{
+             "R_series_1_1":0.5,"R_series_2_2":0.5,"R_series_3_3":0.5}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1","2","3"],"terminal_map_to":["1","2","3"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","2","3","n"],
+             "configuration":"WYE",
+             "p_nom":[100000.0,100000.0,100000.0],"q_nom":[0.0,0.0,0.0]}}}
+        """; from_string=true)
+
+        r_pf   = solve_pf(net)
+        r_feas = solve_feasibility_opf(net)
+        @test r_pf["termination_status"]   in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test r_feas["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test r_feas["total_slack_magnitude_A"] < 1e-3
+        for ph in ("1","2","3")
+            @test r_pf["bus"]["bus1"][ph]["vm"] ≈ r_feas["bus"]["bus1"][ph]["vm"] atol=0.05
+            @test r_pf["bus"]["bus1"][ph]["va"] ≈ r_feas["bus"]["bus1"][ph]["va"] atol=1e-4
+        end
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PF3: fixed-setpoint generator — PF matches solve_opf on the same dispatch.
+    # T3 fixes the generator at p_min == p_max == 50 kW; with that dispatch the
+    # PF and OPF must give the identical bus voltage (no bounds bind in T3's OPF).
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "PF3: fixed-setpoint generator matches solve_opf" begin
+        V_s = 1000.0;  R = 0.5;  P_load = 100_000.0;  P_gen = 50_000.0
+        P_net = P_load - P_gen
+        V_exp = (V_s + sqrt(V_s^2 - 4*R*P_net)) / 2   # ≈ 974.342 V
+
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[100000.0],"q_nom":[0.0]}},
+         "generator":{"gen1":{"bus":"bus1","terminal_map":["1"],
+             "configuration":"WYE",
+             "p_min":[50000.0],"p_max":[50000.0],
+             "q_min":[0.0],"q_max":[0.0],"cost":[0.1]}}}
+        """; from_string=true)
+
+        res = solve_pf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["bus"]["bus1"]["1"]["vm"]        ≈ V_exp   atol=0.01
+        @test res["generator"]["gen1"]["1"]["pg"] ≈ P_gen   atol=1.0
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PF4: a generator with a non-degenerate range is rejected (no objective to
+    # pick a dispatch — solve_pf requires fixed setpoints).
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "PF4: non-degenerate generator range is rejected" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[100000.0],"q_nom":[0.0]}},
+         "generator":{"gen1":{"bus":"bus1","terminal_map":["1"],
+             "configuration":"WYE",
+             "p_min":[0.0],"p_max":[50000.0],
+             "q_min":[0.0],"q_max":[0.0],"cost":[0.1]}}}
+        """; from_string=true)
+
+        @test_throws ArgumentError solve_pf(net)
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PF5: operational limits are ignored — a binding line i_max that would clip
+    # the OPF does not constrain the PF (and does not mutate the caller's net).
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "PF5: device current limits are ignored by solve_pf" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5,"i_max":[1.0e-3]}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[100000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_pf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        # Physical current (~108 A) far exceeds the absurd i_max=1e-3 A, proving
+        # the thermal limit was not enforced.
+        @test res["line"]["l1"]["1"]["cm_fr"] > 1.0
+        # The caller's net must be untouched (limit stripping happens on a copy).
+        @test net["linecode"]["lc"]["i_max"] == [1.0e-3]
+    end
+
 end  # @testset "OPF — solve_opf extension"
