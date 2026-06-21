@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV1_14bus
 
-**Generated:** 2026-06-22 09:28:42  
-**Findings:** 0 errors · 3 warnings · 27 info  
+**Generated:** 2026-06-22 09:26:54  
+**Findings:** 0 errors · 0 warnings · 27 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 4 grounding point(s)
 
 ---
@@ -15,11 +15,11 @@
 | linecode | 22 |  |
 | voltage_source | 1 |  |
 | load | 2 | 20.0 kW, 10.0 kvar |
-| generator | 3 | capacity: 27.0 kW |
+| generator | 2 | capacity: 10.0 kW |
 | shunt | 3 |  |
 | switch | 0 |  |
 | transformer | 1 | Dyn1×1 |
-| inverter | 0 | capacity: 0.0 MVA |
+| inverter | 2 | capacity: 0.016 MVA (PV×2) |
 | control_profile | 0 |  |
 
 ## 2. Voltage Levels
@@ -29,7 +29,7 @@
 | Level | Nominal | Buses | Lines | Loads | Generators |
 |-------|---------|------:|------:|------:|-----------:|
 | MV_6.4kV | 6.35 kV | 1 | 0 | 0 | 0 |
-| LV_250V | 250.0 V | 6 | 5 | 2 | 3 |
+| LV_250V | 250.0 V | 6 | 5 | 2 | 2 |
 
 **Transformer transitions:**
 
@@ -62,7 +62,7 @@
 
 | Parameter | Min | Max | CV | n |
 |-----------|-----|-----|----|---|
-| p_max | 5000.0 | 6000.0 | 0.101 | 5 |
+| p_max | 5000.0 | 5000.0 | 0.0 | 2 |
 
 ### line
 
@@ -84,8 +84,8 @@
 |--|-------|
 | Total load P | 20.0 kW |
 | Total load Q | 10.0 kvar |
-| Total gen capacity | 27.0 kW |
-| Generation/load ratio | 135.0% |
+| Total gen capacity | 10.0 kW |
+| Generation/load ratio | 50.0% |
 
 **Transformer utilisation:**
 
@@ -187,21 +187,12 @@
 
 > 🔵 **[I.INT.UNIFORM_GEN_COST]** 1 group(s) of generators share identical costs — dispatch between them is degenerate (any split is optimal); diversify costs for benchmark use.
 
-> 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_pv_b' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
-> 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_pv_a' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
+> 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_b2656' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
+> 🔵 **[I.SPEC.GEN_CONFIG_FUTURE]** Generator 'der_b3230' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 
 ## 9. Data Quality Summary
 
-**Total findings:** 30 (0 errors, 3 warnings, 27 info)
-
-### 🟡 Warnings
-
-- **[W.DOM.GEN_COST_NEGATIVE]** `der_bat`  
-  Generator 'der_bat' has negative cost -0.5 $/kWh.
-- **[W.DOM.GEN_COST_NEGATIVE]** `der_pv_b`  
-  Generator 'der_pv_b' has negative cost -1.0 $/kWh.
-- **[W.DOM.GEN_COST_NEGATIVE]** `der_pv_a`  
-  Generator 'der_pv_a' has negative cost -1.0 $/kWh.
+**Total findings:** 27 (0 errors, 0 warnings, 27 info)
 
 ### 🔵 Info
 
@@ -248,15 +239,15 @@
 - **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
   bus has field(s) not in the BMOPF schema: v_declared.
 - **[I.RED.MERGEABLE_LINES]** `line`  
-  1 group(s) of series lines (2 lines total) can be merged — intermediate buses have no other connections.
+  2 group(s) of series lines (4 lines total) can be merged — intermediate buses have no other connections.
 - **[I.RED.UNUSED_LINECODES]** `linecode`  
   20 linecode(s) defined but not referenced by any line.
 - **[I.RED.DUPLICATE_LINECODES]** `linecode`  
   4 group(s) of linecodes share identical R_series_1_1/X_series_1_1.
 - **[I.INT.UNIFORM_GEN_COST]** `generator`  
   1 group(s) of generators share identical costs — dispatch between them is degenerate (any split is optimal); diversify costs for benchmark use.
-- **[I.SPEC.GEN_CONFIG_FUTURE]** `der_pv_b`  
-  Generator 'der_pv_b' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
-- **[I.SPEC.GEN_CONFIG_FUTURE]** `der_pv_a`  
-  Generator 'der_pv_a' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
+- **[I.SPEC.GEN_CONFIG_FUTURE]** `der_b2656`  
+  Generator 'der_b2656' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
+- **[I.SPEC.GEN_CONFIG_FUTURE]** `der_b3230`  
+  Generator 'der_b3230' configuration 'SINGLE_PHASE' is marked future-support in the spec (Table 4); only WYE is currently supported.
 

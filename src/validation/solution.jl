@@ -125,6 +125,17 @@ function solution_check(net::Dict{String,Any},
     # Threshold for "active" (near-binding): within this fraction of the bound value.
     active_frac = 0.01
 
+    # Tolerance below which an excursion past a bound is treated as the optimizer
+    # sitting *at* the bound (active), not violating it. A solved interior-point
+    # optimum routinely lands a few parts in 10⁻⁶ outside an active bound, and the
+    # per-unit ⇄ SI round-trip (solve scaled by s_base, then unscale) inflates that
+    # relative slack to ≈2×10⁻⁶; without this the checker would flag every
+    # saturated generator/inverter as a violation. 10⁻⁵ relative comfortably covers
+    # solver convergence tolerance while still catching any genuine violation, which
+    # is orders of magnitude larger. Small absolute floor for bounds near zero.
+    viol_frac = 1e-5
+    viol_tol(bound) = max(viol_frac * abs(bound), 1e-6)
+
     # Returns (violated, active) given value v, lower lb, upper ub (either may be nothing).
     # Uses an absolute fallback of 0.01 × |bound| for bounds near zero.
     function _bound_status(v::Float64, lb, ub)
@@ -133,13 +144,13 @@ function solution_check(net::Dict{String,Any},
         if lb !== nothing
             lb_f = Float64(lb)
             tol  = max(active_frac * abs(lb_f), 1e-6)
-            v < lb_f - 1e-9  && (violated = true)
+            v < lb_f - viol_tol(lb_f) && (violated = true)
             !violated && v < lb_f + tol && (active = true)
         end
         if ub !== nothing
             ub_f = Float64(ub)
             tol  = max(active_frac * abs(ub_f), 1e-6)
-            v > ub_f + 1e-9  && (violated = true)
+            v > ub_f + viol_tol(ub_f) && (violated = true)
             !violated && v > ub_f - tol && (active = true)
         end
         violated, active
@@ -748,11 +759,16 @@ function solution_check(net::Dict{String,Any},
     end
 
     # ── Network-wide power balance ─────────────────────────────────────────────
-    # Σ pg (all generators) - Σ pd (all loads) - Σ p_loss (all lines) ≈ 0
-    p_gen  = sum(get(gvals, "pg", 0.0)
-                 for (_, ph_dict) in get(result, "generator", Dict())
-                 for (_, gvals)   in ph_dict
-                 if gvals isa Dict; init=0.0)
+    # Σ inj (generators + inverters + voltage source) - Σ pd (loads) - Σ p_loss ≈ 0.
+    # All injection sources must be counted: omitting inverters or the slack makes
+    # the balance spuriously fail whenever DERs dispatch or the slack imports/exports.
+    _sum_injection(block, field) = sum(get(vals, field, 0.0)
+                 for (_, ph_dict) in get(result, block, Dict())
+                 for (_, vals)    in ph_dict
+                 if vals isa Dict; init=0.0)
+    p_gen = _sum_injection("generator", "pg") +
+            _sum_injection("inverter",  "pg") +
+            _sum_injection("voltage_source", "ps")
     p_load = sum(get(lvals, "pd", 0.0)
                  for (_, ph_dict) in get(result, "load", Dict())
                  for (_, lvals)   in ph_dict

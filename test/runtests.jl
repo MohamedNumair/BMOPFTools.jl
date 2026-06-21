@@ -2548,6 +2548,10 @@ const IEEE13_FIXTURE = """
         include("der_placement_tests.jl")
     end
 
+    @testset "Inverter placement" begin
+        include("inverter_placement_tests.jl")
+    end
+
     @testset "Load models — validation and analysis" begin
         mk(extra) = parse_bmopf("""
         {"bus":{"src":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
