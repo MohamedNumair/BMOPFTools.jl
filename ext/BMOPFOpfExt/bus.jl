@@ -5,6 +5,16 @@
 # contribution. At the end, _add_kcl_constraints! enforces sum == 0 at
 # every ungrounded terminal.
 
+# Validate that a per-phase (vpn) or per-pair (vpp) voltage bound is an array of
+# the expected length. These bounds are strictly per-phase arrays — a scalar is
+# rejected with a clear message.
+function _check_per_phase_bound(val, n::Int, bid::AbstractString, field::AbstractString)
+    val === nothing && return
+    (val isa AbstractVector && length(val) == n) && return
+    error("Bus '$bid': $field must be a per-phase array of length $n, got " *
+          (val isa AbstractVector ? "length $(length(val))" : "a scalar"))
+end
+
 """
     _init_kcl(bus_terminals, grounded) -> (kcl_r, kcl_i)
 
@@ -121,11 +131,15 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
         end
 
         # ── b. Phase-to-neutral voltage magnitude bounds ─────────────────────
+        # vpn_min/vpn_max are per-phase arrays, one element per phase terminal in
+        # phase_terms order (see src/augmentation/voltage_bounds.jl).
         vpn_min = get(bus, "vpn_min", nothing)
         vpn_max = get(bus, "vpn_max", nothing)
         if neutral !== nothing && (vpn_min !== nothing || vpn_max !== nothing)
+            _check_per_phase_bound(vpn_min, length(phase_terms), bid, "vpn_min")
+            _check_per_phase_bound(vpn_max, length(phase_terms), bid, "vpn_max")
             neutral_grounded = (bid, neutral) in grounded
-            for t in phase_terms
+            for (k, t) in enumerate(phase_terms)
                 vr_t = vr[(bid, t)]; vi_t = vi[(bid, t)]
                 if neutral_grounded
                     v2 = @expression(model, vr_t^2 + vi_t^2)
@@ -134,23 +148,30 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
                     dvi = @expression(model, vi_t - vi[(bid, neutral)])
                     v2  = @expression(model, dvr^2 + dvi^2)
                 end
-                vpn_min !== nothing && @constraint(model, v2 >= Float64(vpn_min)^2)
-                vpn_max !== nothing && @constraint(model, v2 <= Float64(vpn_max)^2)
+                vpn_min !== nothing && @constraint(model, v2 >= Float64(vpn_min[k])^2)
+                vpn_max !== nothing && @constraint(model, v2 <= Float64(vpn_max[k])^2)
             end
         end
 
         # ── c. Phase-to-phase voltage magnitude bounds ────────────────────────
+        # vpp_min/vpp_max are per-pair arrays, one element per unordered phase
+        # pair in (ki<kj) enumeration order.
         vpp_min = get(bus, "vpp_min", nothing)
         vpp_max = get(bus, "vpp_max", nothing)
         if (vpp_min !== nothing || vpp_max !== nothing) && length(phase_terms) >= 2
+            n_pairs = length(phase_terms) * (length(phase_terms) - 1) ÷ 2
+            _check_per_phase_bound(vpp_min, n_pairs, bid, "vpp_min")
+            _check_per_phase_bound(vpp_max, n_pairs, bid, "vpp_max")
+            pair_idx = 0
             for ki in 1:length(phase_terms)-1
                 for kj in ki+1:length(phase_terms)
+                    pair_idx += 1
                     tk = phase_terms[ki]; tj = phase_terms[kj]
                     dvr = @expression(model, vr[(bid,tk)] - vr[(bid,tj)])
                     dvi = @expression(model, vi[(bid,tk)] - vi[(bid,tj)])
                     v2  = @expression(model, dvr^2 + dvi^2)
-                    vpp_min !== nothing && @constraint(model, v2 >= Float64(vpp_min)^2)
-                    vpp_max !== nothing && @constraint(model, v2 <= Float64(vpp_max)^2)
+                    vpp_min !== nothing && @constraint(model, v2 >= Float64(vpp_min[pair_idx])^2)
+                    vpp_max !== nothing && @constraint(model, v2 <= Float64(vpp_max[pair_idx])^2)
                 end
             end
         end

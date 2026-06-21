@@ -202,7 +202,7 @@ const IEEE13_FIXTURE = """
       "p_min": [0.0, 0.0, 0.0],
       "q_max": [50000.0, 50000.0, 50000.0],
       "q_min": [-50000.0, -50000.0, -50000.0],
-      "cost": 0.12
+      "cost": [0.12, 0.12, 0.12]
     }
   }
 }
@@ -988,7 +988,7 @@ const IEEE13_FIXTURE = """
         @testset "E.TMAP.PHASE_TO_NEUTRAL — generator terminal_map=[n]" begin
             net = _tmap_net(""","generator":{"g1":{"bus":"b1",
                 "terminal_map":["n"],
-                "configuration":"WYE","cost":0.05,
+                "configuration":"WYE","cost":[0.05],
                 "p_min":[0.0],"p_max":[1e4],
                 "q_min":[0.0],"q_max":[0.0]}}""")
             findings = Finding[]
@@ -2392,6 +2392,10 @@ const IEEE13_FIXTURE = """
 
     @testset "Fix case" begin
         include("fix_tests.jl")
+    end
+
+    @testset "DER placement" begin
+        include("der_placement_tests.jl")
     end
 
     @testset "Load models — validation and analysis" begin

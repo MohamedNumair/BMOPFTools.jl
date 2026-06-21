@@ -97,7 +97,8 @@ function _check_generator_cost(net, findings, thresh, n_checks)
     for (id, g) in get(net, "generator", Dict())
         haskey(g, "cost") || continue
         n_checks[] += 1
-        # spec: cost is per-phase ($/kWh); scalar shorthand also accepted
+        # cost is a per-phase linear-coefficient vector ($/W); a scalar is
+        # tolerated here for validation only (the OPF requires the vector form)
         c = g["cost"]
         costs = c isa AbstractVector ? Float64.(c) : [Float64(c)]
         if any(<(0), costs)
