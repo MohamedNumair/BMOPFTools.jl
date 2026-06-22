@@ -1952,6 +1952,62 @@
         @test abs(xloss["q_loss"]) < 1e-3                  # X=0 ⇒ no reactive loss
     end
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # NEUTRAL: secondary return must close through the transformer neutral, not
+    # leak to earth. Discriminating case = an UNGROUNDED secondary neutral, which
+    # the balanced/grounded tests above cannot exercise. Before the fix the YY
+    # secondary and the autotransformer to-neutral were left dangling, producing
+    # a slack current = Σ I_to (≈ the load current) at the floating neutral.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "NEUTRAL: YY secondary return closes through floating LV neutral" begin
+        # Single-phase YY transformer, LV neutral NOT grounded. KCL can only close
+        # if the secondary current returns through the transformer's LV neutral.
+        net = parse_bmopf("""
+        {"bus":{
+            "hv":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "lv":{"terminal_names":["1","n"],"perfectly_grounded_terminals":[]}},
+         "voltage_source":{"vs":{"bus":"hv","terminal_map":["1","n"],
+             "v_magnitude":[2400.0],"v_angle":[0.0]}},
+         "transformer":{"single_phase":{"t1":{
+             "bus_from":"hv","bus_to":"lv",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "v_ref_from":2400.0,"v_ref_to":240.0,"s_rating":50000.0,
+             "r_series_from":0.1,"x_series_from":0.0}}},
+         "load":{"ld":{"bus":"lv","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_nom":[20000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_feasibility_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["total_slack_magnitude_A"] < 1e-3        # return closes — no slack
+        @test res["load"]["ld"]["1"]["pd"] ≈ 20000.0  rtol=1e-3
+    end
+
+    @testset "NEUTRAL: autotransformer shared-neutral bond ties floating to-neutral" begin
+        # SVR with an UNGROUNDED secondary neutral. The galvanic neutral bond must
+        # tie reg/n to the (grounded) src/n so the return current closes.
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "reg":{"terminal_names":["1","n"],"perfectly_grounded_terminals":[]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","n"],
+             "v_magnitude":[2400.0],"v_angle":[0.0]}},
+         "transformer":{"single_phase_autotransformer":{"r1":{
+             "bus_from":"src","bus_to":"reg",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "tap_ratio":1.05,"regulator_type":"B","s_rating":500000.0,
+             "r_series_from":0.5,"x_series_from":0.0}}},
+         "load":{"ld":{"bus":"reg","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_nom":[50000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_feasibility_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["total_slack_magnitude_A"] < 1e-3        # return closes via the bond
+        # Bond ties the two neutrals to the same potential (src/n grounded ⇒ 0).
+        @test res["bus"]["reg"]["n"]["vm"] ≈ res["bus"]["src"]["n"]["vm"]  atol=1e-4
+    end
+
     @testset "REG: open-delta regulator ABBC — both line-to-line ratios" begin
         # Lossless open-delta, no load: each regulating winding boosts its
         # line-to-line voltage by its tap. With balanced source phases the

@@ -159,9 +159,20 @@ function _add_transformer_variables!(model, net)
         for (tid, xfmr) in get(xfmr_dict, subtype, Dict())
             tmfr = Vector{String}(get(xfmr, "terminal_map_from", String[]))
             tmto = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
-            if subtype in ("single_phase", "single_phase_autotransformer")
-                # YY / single-phase autotransformer: one current variable per phase
-                # conductor only. Neutral is the return path, not a winding conductor.
+            if subtype == "single_phase_autotransformer"
+                # Single-phase autotransformer: one series current per phase
+                # conductor. A galvanic neutral bond ties the from/to neutral
+                # terminals (one shared SVR bushing); its bond current is the
+                # extra "fr" index (analogous to the open-delta straight-through
+                # wire). Allocated only when both sides carry a neutral terminal.
+                n_ph = length(BMOPFTools._phase_positions(tmfr))
+                has_both_n = BMOPFTools._neutral_pos(tmfr) !== nothing &&
+                             BMOPFTools._neutral_pos(tmto) !== nothing
+                n_fr = has_both_n ? n_ph + 1 : n_ph
+                n_to = length(BMOPFTools._phase_positions(tmto))
+            elseif subtype == "single_phase"
+                # YY single-phase: one current variable per phase conductor only.
+                # Neutral is the return path, not a winding conductor.
                 n_fr = length(BMOPFTools._phase_positions(tmfr))
                 n_to = length(BMOPFTools._phase_positions(tmto))
             elseif subtype == "open_delta_regulator"

@@ -259,14 +259,25 @@ function _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
             kadd(b_fr, t_n_fr, icr_n, ici_n)
         end
 
-        # To-side phase terminal KCL: transformer injects current at the LV phase.
-        # The LV neutral is the load's return path; the transformer model does not
-        # directly connect to it, so no neutral KCL contribution on the to-side.
+        # To-side phase terminal KCL: transformer injects −I_to at the LV phase.
         kadd(b_to, t_to, -cr_xf[(tid,"to",k)], -ci_xf[(tid,"to",k)])
         if length(i_max_to_v) >= k
             @constraint(model,
                 cr_xf[(tid,"to",k)]^2 + ci_xf[(tid,"to",k)]^2 <= i_max_to_v[k]^2)
             _limit_current_box!(cr_xf[(tid,"to",k)], ci_xf[(tid,"to",k)], i_max_to_v[k])
+        end
+
+        # To-side neutral KCL: the secondary windings are wye-connected with their
+        # star point bonded to the LV neutral terminal, so the phase return currents
+        # close through it — the secondary mirror of the from-side neutral (above).
+        # Σ I_to is injected here; combined with the −I_to at each phase the
+        # transformer's to-side injections sum to zero (Kersting / PMD 4-wire /
+        # OpenDSS Yg-Yg). Fires once, after the last phase. Skipped when the to side
+        # has no neutral terminal (3-wire secondary, return via earth/line neutral).
+        if t_n_to !== nothing && k == n_c
+            kadd(b_to, t_n_to,
+                 @expression(model, sum(cr_xf[(tid,"to",kk)] for kk in 1:n_c)),
+                 @expression(model, sum(ci_xf[(tid,"to",kk)] for kk in 1:n_c)))
         end
     end
 end
@@ -840,8 +851,12 @@ end
     _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
 
 Single-phase step voltage regulator (autotransformer). Terminal arity (2,2):
-`terminal_map_from = ["ph","n"]`, `terminal_map_to = ["ph","n"]` sharing the
-neutral node. Uses one series-current variable per side: index 1.
+`terminal_map_from = ["ph","n"]`, `terminal_map_to = ["ph","n"]`. Uses one
+series-current variable per side (index 1). The SVR has a single shared neutral
+bushing; since the data exposes it as two terminals, each coil returns at its own
+neutral (matching the Yprim) and a galvanic neutral bond — V equal + a bond
+current (the extra "fr" index 2) — ties them, the open-delta straight-through
+pattern. Without the bond the secondary return would leak to earth / dangle.
 """
 function _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
                                branch_inj=nothing)
@@ -922,10 +937,36 @@ function _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kc
         _limit_current_box!(Itr, Iti, i_max_to_v[1])
     end
 
-    # Shared-neutral KCL: BOTH returns close here (the galvanic-tie departure
-    # from YY). I_n + I_series_fr + I_to = 0 ⟺ I_n + (1 − n_eff)·I_series_fr = 0,
-    # plus the no-load shunt return if present.
-    if t_fr_n !== nothing
+    # Neutral KCL. The SVR has a single shared neutral bushing, but the data
+    # exposes it as two terminals (t_fr_n, t_to_n) on two buses. We match the
+    # canonical Yprim — each coil returns at its OWN neutral (primary + no-load
+    # shunt at t_fr_n, secondary at t_to_n) — and then impose the shared neutral
+    # as a galvanic bond between the two terminals: a zero-impedance through-
+    # branch (V equal + bond current, the extra "fr" index), exactly the open-
+    # delta common-neutral straight-through pattern. With the bond the four
+    # terminal injections still sum to zero, so the loss identity stays exact.
+    if t_fr_n !== nothing && t_to_n !== nothing
+        # Primary coil return (+ no-load shunt return) at the from neutral.
+        icr_fr = @expression(model, Isr)
+        ici_fr = @expression(model, Isi)
+        if has_shunt
+            vr_pn = @expression(model, vr[(b_fr, t_fr_ph)] - vr[(b_fr, t_fr_n)])
+            vi_pn = @expression(model, vi[(b_fr, t_fr_ph)] - vi[(b_fr, t_fr_n)])
+            icr_fr = @expression(model, icr_fr + G * vr_pn - B * vi_pn)
+            ici_fr = @expression(model, ici_fr + G * vi_pn + B * vr_pn)
+        end
+        # Bond current (extra "fr" index): flows from the from-neutral to the
+        # to-neutral through the shared bushing.
+        Ibnr = cr_xf[(tid,"fr",2)]; Ibni = ci_xf[(tid,"fr",2)]
+        @constraint(model, vr[(b_fr, t_fr_n)] == vr[(b_to, t_to_n)])
+        @constraint(model, vi[(b_fr, t_fr_n)] == vi[(b_to, t_to_n)])
+        kadd(b_fr, t_fr_n, @expression(model, icr_fr - Ibnr),
+                           @expression(model, ici_fr - Ibni))
+        kadd(b_to, t_to_n, @expression(model, Itr + Ibnr),
+                           @expression(model, Iti + Ibni))
+    elseif t_fr_n !== nothing
+        # No to-side neutral terminal: the secondary return folds into the shared
+        # from neutral (galvanic tie), as before. I_n + I_series_fr + I_to = 0.
         icr_n = @expression(model, Isr + Itr)
         ici_n = @expression(model, Isi + Iti)
         if has_shunt
@@ -935,6 +976,10 @@ function _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kc
             ici_n = @expression(model, ici_n + G * vi_pn + B * vr_pn)
         end
         kadd(b_fr, t_fr_n, icr_n, ici_n)
+    elseif t_to_n !== nothing
+        # Only a to-side neutral: the combined return closes there.
+        kadd(b_to, t_to_n, @expression(model, Isr + Itr),
+                           @expression(model, Isi + Iti))
     end
 end
 
