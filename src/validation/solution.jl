@@ -1006,9 +1006,32 @@ function voltage_zone_summary(net::Dict{String,Any}, result::Dict{String,Any})
         zbuses = sort(collect(zone))
 
         # ── Zone voltage base ────────────────────────────────────────────────
+        # Priority:
+        #   1. bus["v_declared"] — the standardised supply nominal (e.g. 230 V),
+        #      so per-unit is reported against the declared voltage rather than
+        #      the actual source magnitude (which may be 240 V). When buses in a
+        #      zone disagree, use the median.
+        #   2. the zone's voltage-source magnitude
+        #   3. midpoint of the buses' v_min/v_max declared bounds
+        #   4. (later) the median solved phase magnitude
         vbase = 0.0
+        declared = Float64[]
         for b in zbuses
-            haskey(src_vbase, b) && (vbase = max(vbase, src_vbase[b]))
+            bus = get(buses, b, Dict())
+            bus isa Dict || continue
+            vd = get(bus, "v_declared", nothing)
+            vd isa Real && push!(declared, Float64(vd))
+        end
+        if !isempty(declared)
+            sort!(declared)
+            n = length(declared)
+            vbase = isodd(n) ? declared[(n+1)÷2] :
+                    (declared[n÷2] + declared[n÷2+1]) / 2
+        end
+        if vbase == 0.0
+            for b in zbuses
+                haskey(src_vbase, b) && (vbase = max(vbase, src_vbase[b]))
+            end
         end
         if vbase == 0.0   # no source in zone: midpoint of declared bounds
             # v_min/v_max are per-phase arrays — flatten every phase entry.
