@@ -212,6 +212,59 @@ function _grounding_analysis(net::Dict{String,Any},
     res
 end
 
+"""
+    _check_ungrounded_wye_neutrals(net, findings)
+
+Info-level note for three-phase wye windings whose neutral (star point) is
+brought out at a bus that has neither a perfect ground nor a grounding impedance
+on it. A wye star point is the natural earthing point of the winding; if its bus
+carries no local ground, the zero-sequence potential is set only by whatever the
+neutral conductor reaches elsewhere (if anything) — easy to overlook and often an
+omission. Single-phase transformers (connected phase-to-neutral or phase-to-phase)
+are exempt: their neutral is a winding terminal, not a three-phase star point, so
+the winding must have ≥3 phase conductors to qualify.
+"""
+function _check_ungrounded_wye_neutrals(net::Dict{String,Any},
+                                         findings::Vector{Finding})
+    xfmr = get(net, "transformer", Dict())
+    isempty(xfmr) && return
+    buses = get(net, "bus", Dict())
+    neutral_of = _bus_neutral_map(buses)
+    # Buses with any neutral-earthing path — perfect ground (|Z|=0), source
+    # neutral bond, or a grounding shunt (finite |Z|). Membership = "grounded".
+    earth = _bus_neutral_earthing(net, neutral_of)
+
+    for subtype in TRANSFORMER_SUBTYPES
+        sub = get(xfmr, subtype, nothing)
+        sub isa Dict || continue
+        for (id, t) in sub
+            t isa Dict || continue
+            for (bk, mk, side) in (("bus_from", "terminal_map_from", "primary"),
+                                    ("bus_to",   "terminal_map_to",   "secondary"))
+                b = get(t, bk, nothing)
+                b isa AbstractString || continue
+                tm = Vector{String}(get(t, mk, String[]))
+                # Three-phase wye winding with the star point brought out: the
+                # neutral is accessible and there are ≥3 phase conductors.
+                (_neutral_terminal(tm) !== nothing &&
+                 length(_phase_positions(tm)) >= 3) || continue
+                haskey(earth, b) && continue   # perfectly or impedance grounded
+                push!(findings, Finding(INFO, "I.PROV.WYE_NEUTRAL_UNGROUNDED",
+                    :provenance, :transformer, id,
+                    "Transformer '$id' ($subtype) brings out a three-phase wye " *
+                    "neutral on its $side side at bus '$b', but that bus has no " *
+                    "local grounding (no perfect ground and no grounding " *
+                    "impedance). The star point's zero-sequence potential is set " *
+                    "only by what the neutral conductor reaches elsewhere — add a " *
+                    "grounding shunt or perfect ground at '$b' if a local earth " *
+                    "was intended.",
+                    Dict{String,Any}("bus" => b, "subtype" => subtype,
+                                     "side" => side)))
+            end
+        end
+    end
+end
+
 # Per-bus neutral terminal name (or nothing), via the convention helper
 function _bus_neutral_map(buses)::Dict{String,Union{String,Nothing}}
     Dict{String,Union{String,Nothing}}(
