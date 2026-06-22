@@ -22,6 +22,8 @@
 #                              (uses exact element losses, result["losses"])
 #   I.SOL.BINDING_SUMMARY    — aggregate count of active / violated bounds
 #   I.SOL.LOSS_FRACTION      — line losses as fraction of total load
+#   W.SOL.NEG_LOSS           — a line/transformer dissipates negative active power
+#                              (non-physical for a passive branch; throughput-scaled)
 #   I.SOL.NEUTRAL_SHIFT      — maximum neutral terminal voltage across non-source buses
 #   W.SOL.INIT_LEVEL_MISMATCH — init voltage differs from solved by > 10× (wrong voltage level)
 #   W.SOL.INIT_LARGE_ERROR   — init voltage error > 20 % of solved value on a phase terminal
@@ -933,6 +935,9 @@ function solution_check(net::Dict{String,Any},
         end
     end
 
+    # ── Negative active loss on passive branches ──────────────────────────────
+    _check_negative_losses(result, findings, out)
+
     # ── Informational: neutral shift ──────────────────────────────────────────
     max_neutral_vm = 0.0
     max_neutral_bus = ""
@@ -955,6 +960,54 @@ function solution_check(net::Dict{String,Any},
             Dict{String,Any}("max_neutral_vm"=>max_neutral_vm,"bus"=>max_neutral_bus)))
     end
 
+    out
+end
+
+# Active power dissipated by a passive branch is ≥ 0 by construction (series
+# R ≥ 0, shunt G ≥ 0). A negative p_loss beyond numerical noise is non-physical —
+# the branch would be a net source of active power — and signals a non-converged
+# or ill-conditioned solution, a sign error, or a negative-resistance input.
+# p_loss is a difference of large near-equal terminal powers, so its cancellation
+# noise scales with the power flowing through the branch; the tolerance is
+# therefore throughput-relative with a small absolute floor. Reactive loss is
+# deliberately excluded: line charging and capacitive shunts make q_loss
+# legitimately negative.
+const _NEG_LOSS_ABS_W    = 1.0    # absolute floor [W] — ignore sub-watt noise
+const _NEG_LOSS_REL_FRAC = 1e-4   # relative floor as a fraction of |s_through|
+
+function _check_negative_losses(result::Dict{String,Any},
+                                findings::Vector{Finding},
+                                out::Dict{String,Any})
+    n_neg = 0
+    worst_p = 0.0; worst_id = ""
+    for (block, csym, label) in (("line", :line, "Line"),
+                                  ("transformer", :transformer, "Transformer"))
+        for (id, eres) in get(result, block, Dict())
+            eres isa Dict || continue
+            loss = get(eres, "loss", nothing)
+            loss isa Dict || continue
+            pl = Float64(get(loss, "p_loss", 0.0))
+            isfinite(pl) || continue
+            s_through = abs(Float64(get(loss, "s_through", 0.0)))
+            tol = max(_NEG_LOSS_ABS_W, _NEG_LOSS_REL_FRAC * s_through)
+            pl < -tol || continue
+            n_neg += 1
+            pl < worst_p && (worst_p = pl; worst_id = id)
+            rel = s_through > 0 ? -pl / s_through : NaN
+            push!(findings, Finding(WARNING, "W.SOL.NEG_LOSS", :solution, csym, id,
+                "$label '$id' dissipates negative active power: p_loss = " *
+                "$(_fmt_mw(pl))" *
+                (isfinite(rel) ? " ($(round(rel*100; digits=2)) % of throughput)" : "") *
+                " — a passive branch cannot generate active power. This points to a " *
+                "non-converged or ill-conditioned solution, a sign error, or a " *
+                "negative-resistance input. (Reactive loss may legitimately be " *
+                "negative; active cannot.)",
+                Dict{String,Any}("p_loss"=>pl, "s_through"=>s_through, "rel"=>rel)))
+        end
+    end
+    out["n_negative_losses"] = n_neg
+    out["worst_negative_loss_w"] = worst_p
+    n_neg > 0 && (out["worst_negative_loss_id"] = worst_id)
     out
 end
 

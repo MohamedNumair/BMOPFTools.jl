@@ -463,6 +463,53 @@ end
     @test !("W.SOL.POWER_BALANCE" in codes(findings))
 end
 
+@testset "SOL — W.SOL.NEG_LOSS negative active branch loss" begin
+    # Clean baseline: no per-element "loss" dicts → check is inert, no flag.
+    net = _base_net()
+    base = _base_result()
+    f0 = Finding[]; out0 = solution_check(net, base, f0)
+    @test !("W.SOL.NEG_LOSS" in codes(f0))
+    @test out0["n_negative_losses"] == 0
+
+    # A line reporting negative active loss beyond the throughput-relative band.
+    neg = _base_result()
+    neg["line"]["l1"]["loss"] =
+        Dict{String,Any}("p_loss" => -500.0, "q_loss" => 0.0, "s_through" => 1.0e5)
+    f1 = Finding[]; out1 = solution_check(net, neg, f1)
+    @test "W.SOL.NEG_LOSS" in codes(f1)
+    @test out1["n_negative_losses"] == 1
+    @test out1["worst_negative_loss_w"] ≈ -500.0
+    @test out1["worst_negative_loss_id"] == "l1"
+    nf = first(x for x in f1 if x.code == "W.SOL.NEG_LOSS")
+    @test nf.severity == WARNING
+    @test nf.component_type == :line
+
+    # Reactive loss is allowed to be negative (capacitive) — must NOT flag.
+    cap = _base_result()
+    cap["line"]["l1"]["loss"] =
+        Dict{String,Any}("p_loss" => 250.0, "q_loss" => -800.0, "s_through" => 1.0e5)
+    f2 = Finding[]; solution_check(net, cap, f2)
+    @test !("W.SOL.NEG_LOSS" in codes(f2))
+
+    # Sub-tolerance negative (numerical noise) — must NOT flag. Throughput 1e5 VA
+    # ⇒ relative floor 1e-4·1e5 = 10 W; a −5 W residual is below it.
+    noise = _base_result()
+    noise["line"]["l1"]["loss"] =
+        Dict{String,Any}("p_loss" => -5.0, "q_loss" => 0.0, "s_through" => 1.0e5)
+    f3 = Finding[]; solution_check(net, noise, f3)
+    @test !("W.SOL.NEG_LOSS" in codes(f3))
+
+    # Transformer path: same rule, component_type :transformer.
+    xf = _base_result()
+    xf["transformer"]["t1"] = Dict{String,Any}(
+        "loss" => Dict{String,Any}("p_loss" => -2000.0, "q_loss" => 0.0,
+                                   "s_through" => 1.0e6))
+    f4 = Finding[]; out4 = solution_check(net, xf, f4)
+    @test "W.SOL.NEG_LOSS" in codes(f4)
+    @test out4["worst_negative_loss_id"] == "t1"
+    @test first(x for x in f4 if x.code == "W.SOL.NEG_LOSS").component_type == :transformer
+end
+
 @testset "SOL — voltage zone per-bus drill-down" begin
     net    = _base_net()
     result = _base_result()
