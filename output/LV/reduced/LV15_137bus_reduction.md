@@ -1,6 +1,6 @@
 # Simplification log: LV15_137bus
 
-**Generated:** 2026-06-21 14:59:29  
+**Generated:** 2026-06-22 14:06:30  
 **Buses:** 138 → 76 (−62)  
 **Lines:** 129 → 74 (−55)  
 **Operations:** 67

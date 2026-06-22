@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV10_223bus
 
-**Generated:** 2026-06-21 14:59:28  
-**Findings:** 0 errors · 4 warnings · 25 info  
+**Generated:** 2026-06-22 14:06:29  
+**Findings:** 0 errors · 5 warnings · 25 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 96 grounding point(s)
 
 ---
@@ -152,6 +152,7 @@
 > 🔵 **[I.PROV.B_OFFDIAG]** Linecode 'uglv_240al_xlpe/nyl/pvc_ug_4w_bundled' B_from_block has positive mutual susceptance — deviates from the Maxwell sign pattern; typical of screen-eliminated/bundled cable reductions, otherwise a sign-convention suspect.
 > 🔵 **[I.PROV.B_OFFDIAG]** Linecode 'uglv_240al_xlpe/nyl/pvc_ug_4w_bundled' B_to_block has positive mutual susceptance — deviates from the Maxwell sign pattern; typical of screen-eliminated/bundled cable reductions, otherwise a sign-convention suspect.
 > 🔵 **[I.PROV.IMPEDANCE_TRANSFORM_KR]** 9 three-wire linecode(s) match the impedance signature of Kron reduction — neutral row/column eliminated from the original four-wire Carson impedance matrix via Schur complement. Exact when every neutral is perfectly grounded; approximate with finite grounding. Zero-sequence behaviour is not captured by the three-wire representation.: moon_hv_oh_3wire, pluto_lv_oh_3wire, ughv_240al_triplex_ug_3w_bundled, ughv_240cu_hdpe/nyl/pvc_ug_3w_bundled, ughv_240cu_xlpe/nyl/pvc_ug_3w_bundled, ughv_400al_triplex_ug_3w_bundled, ughv_400al_xlpe/nyl/pvc_ug_3w_bundled, ughv_95al_xlpe/nyl/pvc_ug_3w_bundled, uglv_240al_xlpe/nyl/pvc_ug_3w_bundled.
+> 🟡 **[W.PROV.I_MAX_ABSENT_SWITCH]** 10 closed switch(es) have no `i_max` — their current is left entirely unconstrained in the OPF, so no thermal limit is enforced on the branch.
 > 🔵 **[I.PROV.LINE_SWITCH_LIKE]** Line 'l_1998' has near-zero series impedance and may be modelled more accurately as a switch: effective impedance (Z·length) < 0.0001 Ω on all diagonals.
 > 🔵 **[I.PROV.LINE_SWITCH_LIKE]** Line 'l_2673' has near-zero series impedance and may be modelled more accurately as a switch: effective impedance (Z·length) < 0.0001 Ω on all diagonals.
 > 🔵 **[I.PROV.LINE_SWITCH_LIKE]** Line 'l_436' has near-zero series impedance and may be modelled more accurately as a switch: effective impedance (Z·length) < 0.0001 Ω on all diagonals.
@@ -194,7 +195,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 29 (0 errors, 4 warnings, 25 info)
+**Total findings:** 30 (0 errors, 5 warnings, 25 info)
 
 ### 🟡 Warnings
 
@@ -206,6 +207,8 @@
   Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.94 MW).
 - **[W.OPS.XFMR_OVERLOADED]** `tx2187`  
   Transformer 'tx2187' is at 210.2% utilisation at nominal load — little OPF headroom.
+- **[W.PROV.I_MAX_ABSENT_SWITCH]** `switch`  
+  10 closed switch(es) have no `i_max` — their current is left entirely unconstrained in the OPF, so no thermal limit is enforced on the branch.
 
 ### 🔵 Info
 

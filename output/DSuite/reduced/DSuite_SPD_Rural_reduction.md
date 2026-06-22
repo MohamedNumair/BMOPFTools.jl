@@ -1,6 +1,6 @@
 # Simplification log: DSuite_SPD_Rural
 
-**Generated:** 2026-06-21 14:51:22  
+**Generated:** 2026-06-22 13:58:30  
 **Buses:** 66 → 55 (−11)  
 **Lines:** 65 → 54 (−11)  
 **Operations:** 21

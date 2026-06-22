@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_5 / Feeder_2
 
-**Generated:** 2026-06-21 14:53:11  
-**Findings:** 0 errors · 1 warnings · 10 info  
+**Generated:** 2026-06-22 14:00:19  
+**Findings:** 0 errors · 2 warnings · 10 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -162,12 +162,14 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 11 (0 errors, 1 warnings, 10 info)
+**Total findings:** 12 (0 errors, 2 warnings, 10 info)
 
 ### 🟡 Warnings
 
 - **[W.OPS.IMPORT_DEPENDENT]** `network`  
   Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.02 MW).
+- **[W.DOM.SHUNT_ON_GROUNDED]** `grounding`  
+  Shunt 'grounding' is connected to terminal 'n' of bus 'sourcebus', which is perfectly grounded (V = 0) — the shunt draws G·V = 0 current and is inert. Drop the redundant shunt, or remove the perfect ground if impedance grounding was intended.
 
 ### 🔵 Info
 

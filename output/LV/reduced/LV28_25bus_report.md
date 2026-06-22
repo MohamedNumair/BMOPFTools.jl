@@ -1,6 +1,6 @@
 # BMOPF Network Summary: LV28_25bus
 
-**Generated:** 2026-06-21 14:59:30  
+**Generated:** 2026-06-22 14:06:31  
 **Findings:** 0 errors · 1 warnings · 23 info  
 **Convention:** MV_6.4kV: 4-wire; LV_240V: 4-wire; 5 grounding point(s)
 

@@ -1,6 +1,6 @@
 # BMOPF Network Summary: Three-wire-phase-to-neutral / Network_14 / Feeder_2
 
-**Generated:** 2026-06-21 14:57:32  
+**Generated:** 2026-06-22 14:04:33  
 **Findings:** 0 errors · 42 warnings · 61 info  
 **Convention:** LV_240V: mixed; implicit (Kron-style) grounding
 

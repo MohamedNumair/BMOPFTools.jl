@@ -1,9 +1,9 @@
 # BMOPF Solution Profile: network_17_Feeder_7
 
-**Generated:** 2026-06-21 16:43:11  
-**Status:** `LOCALLY_INFEASIBLE`  
-**Objective:** -577.8863  
-**Solve time:** 1.072 s  
+**Generated:** 2026-06-22 14:52:41  
+**Status:** `ITERATION_LIMIT`  
+**Objective:** -589.5262  
+**Solve time:** 3.984 s  
 **Findings:** 1 errors · 0 warnings · 0 info  
 
 ---
@@ -12,7 +12,7 @@
 
 | Field | Value |
 |-------|-------|
-| Status | `LOCALLY_INFEASIBLE` |
+| Status | `ITERATION_LIMIT` |
 
 ## 2. Voltage by Galvanic Zone
 
@@ -248,5 +248,5 @@ Per-unit magnitudes are relative to each zone's own voltage base; volts are not 
 ## 6. All Findings
 
 - **ERROR** `E.SOL.INFEASIBLE`  
-  Solver terminated with status 'LOCALLY_INFEASIBLE' — all numeric results are unreliable (NaN). No bound or residual checks are meaningful.
+  Solver terminated with status 'ITERATION_LIMIT' — all numeric results are unreliable (NaN). No bound or residual checks are meaningful.
 

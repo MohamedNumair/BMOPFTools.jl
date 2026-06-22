@@ -5,8 +5,8 @@ Pipeline 2: generate analysis reports, ASCII trees, simplified variants, and
 reduction logs for the ENWLbenchmark cases.
 
 These are enriched OPF-ready BMOPF JSON cases (voltage bounds, cable ampacity,
-DER generators) produced by scripts/generate_enwl_benchmark.py. There are no
-matching OpenDSS source files, so this script reads the existing JSONs directly.
+DER generators). There are no matching OpenDSS source files (the raw source
+data is no longer available), so this script reads the existing JSONs directly.
 
 Input:  output/ENWLbenchmark/*.json  (enriched cases, excluding *_results*)
 Output per case:

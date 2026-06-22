@@ -1,7 +1,7 @@
 # BMOPF Network Summary: DSuite_SPD_Urban
 
-**Generated:** 2026-06-21 14:51:23  
-**Findings:** 1 errors · 49 warnings · 96 info  
+**Generated:** 2026-06-22 13:58:31  
+**Findings:** 1 errors · 50 warnings · 96 info  
 **Convention:** MV_6.4kV: mixed; LV_242V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -169,6 +169,7 @@
 > 🔵 **[I.PROV.NO_PI_SHUNT]** All 63 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
 > 🔵 **[I.PROV.DSS_DEFAULT_LENGTH]** 2 of 1218 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
 > 🔵 **[I.PROV.IMPEDANCE_TRANSFORM_KR]** 63 three-wire linecode(s) match the impedance signature of Kron reduction — neutral row/column eliminated from the original four-wire Carson impedance matrix via Schur complement. Exact when every neutral is perfectly grounded; approximate with finite grounding. Zero-sequence behaviour is not captured by the three-wire representation.: busbar, cable_230v_0.0125_al, cable_230v_0.0125_cu, cable_230v_0.0225_cu, cable_230v_0.025_cu, cable_230v_0.03_al, cable_230v_0.04_al, cable_230v_0.04_cu, cable_230v_0.05_cu, cable_230v_0.06_al, cable_230v_0.06_cu, cable_230v_0.15_al, cable_230v_0.15_cu, cable_230v_0.1_al, cable_230v_0.1_cu, cable_230v_0.25_al, cable_230v_0.25_cu, cable_230v_0.2_al, cable_230v_0.2_cu, cable_230v_0.3_al, cable_230v_0.3_cu, cable_230v_0.5_al, cable_230v_0.5_cu, cable_230v_16_cu, cable_230v_185_al, cable_230v_185_al_wave, cable_230v_185_al_wavef, cable_230v_240_al_consac, cable_230v_25_al, cable_230v_25_al_acs, cable_230v_25_al_act, cable_230v_25_al_ascs, cable_230v_25_al_asct, cable_230v_25_cu, cable_230v_25_cu_cscs, cable_230v_25_cu_csct, cable_230v_300_al_consac, cable_230v_300_al_wave, cable_230v_300_cu, cable_230v_35_al_acs, cable_230v_35_al_act, cable_230v_35_al_ascs, cable_230v_35_al_asct, cable_230v_35_al_hybrid, cable_230v_35_cu_ccs, cable_230v_35_cu_cct, cable_230v_35_cu_cscs, cable_230v_35_cu_csct, cable_230v_4_cu, cable_230v_95_al, cable_230v_95_cu, connector, default, ohl_230v_0.0225_ocu, ohl_230v_0.05_oal, ohl_230v_25_oal, ohl_230v_35_abc, ohl_230v_50_abc, ohl_230v_50_oal, unknown_lv_cable_m, unknown_lv_cable_s, unknown_lv_ohline_m, unknown_lv_ohline_s.
+> 🟡 **[W.PROV.I_MAX_ABSENT]** 1 line(s) have no `i_max` on their linecode (or no linecode at all) — their series current is left entirely unconstrained in the OPF, so no thermal limit is enforced on the branch.
 > 🔵 **[I.PROV.LINE_SWITCH_LIKE]** Line '10006566' has near-zero series impedance and may be modelled more accurately as a switch: effective impedance (Z·length) < 0.0001 Ω on all diagonals.
 > 🔵 **[I.PROV.LINE_SWITCH_LIKE]** Line '11496741' has near-zero series impedance and may be modelled more accurately as a switch: effective impedance (Z·length) < 0.0001 Ω on all diagonals.
 > 🔵 **[I.PROV.LINE_SWITCH_LIKE]** Line '11496742' has near-zero series impedance and may be modelled more accurately as a switch: effective impedance (Z·length) < 0.0001 Ω on all diagonals.
@@ -279,7 +280,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 146 (1 errors, 49 warnings, 96 info)
+**Total findings:** 147 (1 errors, 50 warnings, 96 info)
 
 ### 🔴 Errors
 
@@ -298,6 +299,8 @@
   Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.27 MW).
 - **[W.OPS.LINE_UNCONSTRAINED]** `line`  
   1 of 1218 lines have no thermal limit (i_max or s_max) — OPF thermal constraints will be missing.
+- **[W.PROV.I_MAX_ABSENT]** `line`  
+  1 line(s) have no `i_max` on their linecode (or no linecode at all) — their series current is left entirely unconstrained in the OPF, so no thermal limit is enforced on the branch.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `7381641`  
   Line '7381641' has ||Z||_F = 8.45e-7 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `4335236`  

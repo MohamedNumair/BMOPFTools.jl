@@ -1,7 +1,7 @@
 # BMOPF Network Summary: network_23 / Feeder_4
 
-**Generated:** 2026-06-21 14:52:59  
-**Findings:** 0 errors · 29 warnings · 146 info  
+**Generated:** 2026-06-22 14:00:06  
+**Findings:** 0 errors · 30 warnings · 146 info  
 **Convention:** LV_240V: 4-wire; 1 grounding point(s)
 
 ---
@@ -300,7 +300,7 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 175 (0 errors, 29 warnings, 146 info)
+**Total findings:** 176 (0 errors, 30 warnings, 146 info)
 
 ### 🟡 Warnings
 
@@ -362,6 +362,8 @@
   Line 'line795' has ||Z||_F = 9.79e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line11`  
   Line 'line11' has ||Z||_F = 6.79e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.SHUNT_ON_GROUNDED]** `grounding`  
+  Shunt 'grounding' is connected to terminal 'n' of bus 'sourcebus', which is perfectly grounded (V = 0) — the shunt draws G·V = 0 current and is inert. Drop the redundant shunt, or remove the perfect ground if impedance grounding was intended.
 
 ### 🔵 Info
 
