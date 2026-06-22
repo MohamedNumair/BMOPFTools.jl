@@ -446,3 +446,87 @@ end
     net′, mf = augment_case(net; analysis=analysis_dict)
     @test haskey(net′["bus"]["b1"], "v_min")   # bounds still applied
 end
+
+# ── T0: Voltage-level snapping ───────────────────────────────────────────────
+
+# LV feeder declared at a non-standard 240 V (e.g. an imported 240/415 V model).
+function _lv240_net()
+    parse_bmopf("""
+    {"bus":{
+        "src":{"terminal_names":["1","2","3","n"],
+               "perfectly_grounded_terminals":["n"]},
+        "b1": {"terminal_names":["1","2","3","n"],
+               "perfectly_grounded_terminals":["n"]}},
+     "voltage_source":{"vs":{"bus":"src",
+         "terminal_map":["1","2","3"],
+         "v_magnitude":[240.0,240.0,240.0],
+         "v_angle":[0.0,-2.0944,2.0944]}},
+     "linecode":{"lc":{"R_series_1_1":0.000396,"R_series_2_2":0.000396,
+                       "R_series_3_3":0.000396,"R_series_4_4":0.000396}},
+     "line":{"l1":{"bus_from":"src","bus_to":"b1",
+         "terminal_map_from":["1","2","3","n"],"terminal_map_to":["1","2","3","n"],
+         "linecode":"lc","length":100.0}},
+     "load":{"ld":{"bus":"b1","terminal_map":["1","2","3","n"],
+         "configuration":"WYE",
+         "p_nom":[1000.0,1000.0,1000.0],"q_nom":[0.0,0.0,0.0]}}}
+    """; from_string=true)
+end
+
+@testset "T0: Voltage snap — _snap_voltage rule" begin
+    lv = BMOPFTools._resolve_snap_levels(
+            Dict("preset" => "IEC_50Hz", "levels" => Float64[]))
+    snap(v) = BMOPFTools._snap_voltage(v, lv, 0.10)
+    @test snap(240.0) ≈ 230.0          # within 10 % of 230 → snaps
+    @test snap(250.0) ≈ 230.0          # 250/230 − 1 ≈ 8.7 % → snaps
+    @test snap(230.0) ≈ 230.0          # already standard
+    @test snap(277.0) ≈ 277.0          # >10 % from 230; not a 50 Hz level → kept
+    @test snap(207.0) ≈ 230.0          # lower edge of the band
+    # 11 kV L-L ↔ 6351 V L-N is in the preset; 6600 (≈11.4 kV) snaps to it.
+    @test snap(6600.0) ≈ 11000.0 / sqrt(3)
+    # Empty level list / "none" preset is a no-op.
+    @test BMOPFTools._snap_voltage(240.0, Float64[], 0.10) == 240.0
+end
+
+@testset "T0: Voltage snap — writes v_declared and shifts bounds to 230" begin
+    cfg = BMOPFTools.load_config()
+    cfg["augment"]["voltage_snap"]["enabled"] = true
+    net′, mf = augment_case(_lv240_net(); config=cfg)
+
+    b1 = net′["bus"]["b1"]
+    @test b1["v_declared"] ≈ 230.0
+    # Bounds now reference 230, not 240.
+    @test all(b1["vpn_max"] .≈ 230.0 * 1.10)
+    @test all(b1["v_max"]   .≈ 230.0 * 1.15)
+    # Manifest records the snap.
+    snaps = [e for e in mf.entries
+             if e.field == "v_declared" && e.rule == "IEC60038_snap"]
+    @test !isempty(snaps)
+    @test snaps[1].new_value ≈ 230.0
+end
+
+@testset "T0: Voltage snap — off by default (no change)" begin
+    net′, mf = augment_case(_lv240_net())   # default config: snapping disabled
+    b1 = net′["bus"]["b1"]
+    @test !haskey(b1, "v_declared")
+    @test all(b1["vpn_max"] .≈ 240.0 * 1.10)   # bounds still against 240
+    @test isempty([e for e in mf.entries if e.rule == "IEC60038_snap"])
+end
+
+@testset "T0: Voltage snap — explicit v_declared is respected" begin
+    net = _lv240_net()
+    net["bus"]["b1"]["v_declared"] = 240.0     # user pinned it deliberately
+    cfg = BMOPFTools.load_config()
+    cfg["augment"]["voltage_snap"]["enabled"] = true
+    net′, _ = augment_case(net; config=cfg)
+    @test net′["bus"]["b1"]["v_declared"] ≈ 240.0   # not re-snapped
+    @test all(net′["bus"]["b1"]["vpn_max"] .≈ 240.0 * 1.10)
+end
+
+@testset "T0: Voltage snap — custom levels only" begin
+    cfg = BMOPFTools.load_config()
+    cfg["augment"]["voltage_snap"]["enabled"] = true
+    cfg["augment"]["voltage_snap"]["preset"]  = "none"
+    cfg["augment"]["voltage_snap"]["levels"]  = [230.0]   # only 230 in the table
+    net′, _ = augment_case(_lv240_net(); config=cfg)
+    @test net′["bus"]["b1"]["v_declared"] ≈ 230.0
+end
