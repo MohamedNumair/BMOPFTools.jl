@@ -109,13 +109,17 @@ function _base_result(; vm=230.0)
         ),
         "generator" => Dict{String,Any}(
             "g1" => Dict{String,Any}(
-                # pd=1000 W + R*len*cm² = 0.1*100*5² = 250 W line loss per phase
-                "a" => Dict("crg"=>5.0,"cig"=>0.0,"pg"=>1250.0,"qg"=>0.0),
-                "b" => Dict("crg"=>5.0,"cig"=>0.0,"pg"=>1250.0,"qg"=>0.0),
-                "c" => Dict("crg"=>5.0,"cig"=>0.0,"pg"=>1250.0,"qg"=>0.0),
+                # pd=1000 W + R*len*cm² = 0.1*100*5² = 250 W line loss per phase.
+                # qg = qd (100 var/phase) so the reactive balance closes (q_loss=0).
+                "a" => Dict("crg"=>5.0,"cig"=>0.0,"pg"=>1250.0,"qg"=>100.0),
+                "b" => Dict("crg"=>5.0,"cig"=>0.0,"pg"=>1250.0,"qg"=>100.0),
+                "c" => Dict("crg"=>5.0,"cig"=>0.0,"pg"=>1250.0,"qg"=>100.0),
             ),
         ),
         "transformer" => Dict{String,Any}(),
+        # Exact element losses (terminal-power identity). The checker reads these
+        # directly; here the 3×250 W line copper loss with no reactive component.
+        "losses" => Dict{String,Any}("p_loss" => 750.0, "q_loss" => 0.0),
     )
 end
 
@@ -444,11 +448,12 @@ end
             "a" => Dict("cri"=>0.0,"cii"=>0.0,"pg"=>625.0,"qg"=>0.0),
             "b" => Dict("cri"=>0.0,"cii"=>0.0,"pg"=>625.0,"qg"=>0.0),
             "c" => Dict("cri"=>0.0,"cii"=>0.0,"pg"=>625.0,"qg"=>0.0)))
+    # Slack also supplies the 300 var reactive load (q_loss=0) so Q balances too.
     result["voltage_source"] = Dict{String,Any}(
         "src" => Dict{String,Any}(
-            "a" => Dict("ps"=>625.0,"qs"=>0.0),
-            "b" => Dict("ps"=>625.0,"qs"=>0.0),
-            "c" => Dict("ps"=>625.0,"qs"=>0.0)))
+            "a" => Dict("ps"=>625.0,"qs"=>100.0),
+            "b" => Dict("ps"=>625.0,"qs"=>100.0),
+            "c" => Dict("ps"=>625.0,"qs"=>100.0)))
 
     findings = Finding[]
     out = solution_check(net, result, findings)

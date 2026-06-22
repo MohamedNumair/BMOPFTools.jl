@@ -298,12 +298,22 @@ end
 # ---------------------------------------------------------------------------
 
 """
-    _kcl_add!(kcl_r, kcl_i, bus, terminal, cr_expr, ci_expr)
+    _kcl_add!(kcl_r, kcl_i, bus, terminal, cr_expr, ci_expr;
+              ledger=nothing, entry=nothing)
 
 Add (cr_expr, ci_expr) to the KCL accumulator at (bus, terminal).
 Silently skips grounded terminals (not present in the dict).
+
+When `ledger`/`entry` are supplied (two-port elements), the injection is *also*
+recorded in the per-device ledger via `_ledger_add!`, so the element's complex
+loss can be computed exactly from terminal powers. The ledger record happens
+regardless of whether the terminal is grounded — a grounded terminal still
+carries the element's current (into earth), and its zero voltage simply makes
+that terminal's `V·conj(I)` contribution zero in the loss sum.
 """
-function _kcl_add!(kcl_r, kcl_i, bus, terminal, cr_expr, ci_expr)
+function _kcl_add!(kcl_r, kcl_i, bus, terminal, cr_expr, ci_expr;
+                   ledger=nothing, entry=nothing)
+    _ledger_add!(ledger, entry, bus, terminal, cr_expr, ci_expr)
     key = (bus, terminal)
     haskey(kcl_r, key) || return
     JuMP.add_to_expression!(kcl_r[key], cr_expr)

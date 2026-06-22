@@ -18,7 +18,8 @@
 #   W.SOL.LOAD_RESIDUAL      — |pd - p_nom| or |qd - q_nom| above tolerance (constant-power only)
 #   W.SOL.LOAD_MODEL_RESIDUAL — realised pd/qd inconsistent with load model at solved voltage
 #   I.SOL.LOAD_VD_SUMMARY    — aggregate realised vs nominal P/Q for voltage-dependent loads
-#   W.SOL.POWER_BALANCE      — network-wide active power doesn't balance
+#   W.SOL.POWER_BALANCE      — network-wide active OR reactive power doesn't balance
+#                              (uses exact element losses, result["losses"])
 #   I.SOL.BINDING_SUMMARY    — aggregate count of active / violated bounds
 #   I.SOL.LOSS_FRACTION      — line losses as fraction of total load
 #   I.SOL.NEUTRAL_SHIFT      — maximum neutral terminal voltage across non-source buses
@@ -759,9 +760,16 @@ function solution_check(net::Dict{String,Any},
     end
 
     # ── Network-wide power balance ─────────────────────────────────────────────
-    # Σ inj (generators + inverters + voltage source) - Σ pd (loads) - Σ p_loss ≈ 0.
-    # All injection sources must be counted: omitting inverters or the slack makes
-    # the balance spuriously fail whenever DERs dispatch or the slack imports/exports.
+    # Σ inj (generators + inverters + voltage source) − Σ load − Σ element loss ≈ 0,
+    # checked for BOTH active and reactive power. All injection sources must be
+    # counted: omitting inverters or the slack makes the balance spuriously fail
+    # whenever DERs dispatch or the slack imports/exports.
+    #
+    # Element losses come from the exact terminal-power identity computed by the
+    # solver (result["losses"] = Σ over lines+transformers of S_from + S_to). This
+    # replaces the former R·|I|² approximation, which ignored transformers, mutual
+    # resistance, shunt-G loss, and all reactive losses, and double-counted the
+    # π-shunt current inside cm_fr.
     _sum_injection(block, field) = sum(get(vals, field, 0.0)
                  for (_, ph_dict) in get(result, block, Dict())
                  for (_, vals)    in ph_dict
@@ -769,54 +777,54 @@ function solution_check(net::Dict{String,Any},
     p_gen = _sum_injection("generator", "pg") +
             _sum_injection("inverter",  "pg") +
             _sum_injection("voltage_source", "ps")
+    q_gen = _sum_injection("generator", "qg") +
+            _sum_injection("inverter",  "qg") +
+            _sum_injection("voltage_source", "qs")
     p_load = sum(get(lvals, "pd", 0.0)
                  for (_, ph_dict) in get(result, "load", Dict())
                  for (_, lvals)   in ph_dict
                  if lvals isa Dict; init=0.0)
-    # Line losses: sum of (P_from + P_to) per conductor (both have same sign convention)
-    p_loss = 0.0
-    for (lid, line) in get(net, "line", Dict())
-        line isa Dict || continue
-        cond_res = get(get(result, "line", Dict()), lid, nothing)
-        cond_res isa Dict || continue
-        tm_fr = string.(get(line, "terminal_map_from", String[]))
-        for t in tm_fr
-            cvals = get(cond_res, t, nothing)
-            cvals isa Dict || continue
-            # Loss on this conductor: power leaving from-end minus power entering to-end
-            # P_fr = Re(V_fr · I_fr*)  —  but we only have magnitudes and rectangular currents.
-            # Use: p_loss = Re(Z · I · I*) = R·|I|² (series R from linecode × length)
-            # Fall back to cm_fr² × R when available; otherwise skip.
-            cm_fr = get(cvals, "cm_fr", NaN)
-            isfinite(cm_fr) || continue
-            lcid = get(line, "linecode", nothing)
-            lcid isa String || continue
-            lc = get(linecodes, lcid, nothing)
-            lc isa Dict || continue
-            r_key = "R_series_$(findfirst(==(t), tm_fr))_$(findfirst(==(t), tm_fr))"
-            r = get(lc, r_key, nothing)
-            r isa Number || continue
-            len = get(line, "length", NaN)
-            isfinite(len) || continue
-            p_loss += Float64(r) * len * cm_fr^2
-        end
-    end
+    q_load = sum(get(lvals, "qd", 0.0)
+                 for (_, ph_dict) in get(result, "load", Dict())
+                 for (_, lvals)   in ph_dict
+                 if lvals isa Dict; init=0.0)
 
-    balance_err = abs(p_gen - p_load - p_loss)
-    balance_tol = max(0.01 * abs(p_load), 1.0)   # 1 % of load or 1 W
-    out["p_gen"]          = p_gen
-    out["p_load"]         = p_load
-    out["p_loss"]         = p_loss
-    out["power_balance_err"] = balance_err
+    losses = get(result, "losses", Dict())
+    p_loss = losses isa Dict ? Float64(get(losses, "p_loss", 0.0)) : 0.0
+    q_loss = losses isa Dict ? Float64(get(losses, "q_loss", 0.0)) : 0.0
+
+    balance_err   = abs(p_gen - p_load - p_loss)
+    q_balance_err = abs(q_gen - q_load - q_loss)
+    balance_tol   = max(0.01 * abs(p_load), 1.0)   # 1 % of load or 1 W
+    # Reactive flows can be near zero while loads are unity-PF; floor on |q_load|
+    # plus a small share of |q_gen| keeps the relative test meaningful.
+    q_balance_tol = max(0.01 * abs(q_load), 0.01 * abs(q_gen), 1.0)
+    out["p_gen"]             = p_gen
+    out["q_gen"]             = q_gen
+    out["p_load"]            = p_load
+    out["q_load"]            = q_load
+    out["p_loss"]            = p_loss
+    out["q_loss"]            = q_loss
+    out["power_balance_err"]  = balance_err
+    out["q_power_balance_err"] = q_balance_err
 
     if balance_err > balance_tol
         push!(findings, Finding(WARNING, "W.SOL.POWER_BALANCE", :solution, :network, nothing,
-            "Network power balance error: |pg_total − pd_total − p_loss| = " *
+            "Network active-power balance error: |pg_total − pd_total − p_loss| = " *
             "$(_fmt_mw(balance_err)) (>1 % of load). " *
             "pg=$(round(p_gen/1e3;digits=2)) kW, pd=$(round(p_load/1e3;digits=2)) kW, " *
             "p_loss=$(round(p_loss/1e3;digits=2)) kW.",
             Dict{String,Any}("p_gen"=>p_gen,"p_load"=>p_load,"p_loss"=>p_loss,
                              "balance_err"=>balance_err)))
+    end
+    if q_balance_err > q_balance_tol
+        push!(findings, Finding(WARNING, "W.SOL.POWER_BALANCE", :solution, :network, nothing,
+            "Network reactive-power balance error: |qg_total − qd_total − q_loss| = " *
+            "$(_fmt_mw(q_balance_err)) var (>1 % of reactive load/gen). " *
+            "qg=$(round(q_gen/1e3;digits=2)) kvar, qd=$(round(q_load/1e3;digits=2)) kvar, " *
+            "q_loss=$(round(q_loss/1e3;digits=2)) kvar.",
+            Dict{String,Any}("q_gen"=>q_gen,"q_load"=>q_load,"q_loss"=>q_loss,
+                             "balance_err"=>q_balance_err,"flavour"=>"reactive")))
     end
 
     # ── Initialisation quality ────────────────────────────────────────────────
