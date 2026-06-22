@@ -54,7 +54,8 @@ read from the linecode and scaled by line length. Missing or all-zero shunt
 fields are a no-op.
 """
 function _add_line_constraints!(model, net, vars, kcl_r, kcl_i;
-                                grounded::Set{Tuple{String,String}}=Set{Tuple{String,String}}())
+                                grounded::Set{Tuple{String,String}}=Set{Tuple{String,String}}(),
+                                branch_inj=nothing)
     linecodes = get(net, "linecode", Dict())
     buses = get(net, "bus", Dict())
     vr = vars[:vr]; vi = vars[:vi]
@@ -97,13 +98,14 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i;
         _shunt_current!(ish_to_r, ish_to_i, vr, vi, G_to, B_to, b_to, tmto[1:n_map])
 
         # ── KCL: series currents + π-shunt currents, both leaving their bus ───
+        entry = ("line", lid)
         for k in 1:n_map
             _kcl_add!(kcl_r, kcl_i, b_fr, tmfr[k],
                       -cr_fr[(lid,k)] - ish_fr_r[k],
-                      -ci_fr[(lid,k)] - ish_fr_i[k])
+                      -ci_fr[(lid,k)] - ish_fr_i[k]; ledger=branch_inj, entry=entry)
             _kcl_add!(kcl_r, kcl_i, b_to, tmto[k],
                       -cr_to[(lid,k)] - ish_to_r[k],
-                      -ci_to[(lid,k)] - ish_to_i[k])
+                      -ci_to[(lid,k)] - ish_to_i[k]; ledger=branch_inj, entry=entry)
         end
 
         # ── Thermal current limits on total current at each end ───────────────

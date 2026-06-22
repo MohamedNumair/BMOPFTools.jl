@@ -17,13 +17,27 @@ Returned top-level keys
 - `"objective"`          — objective value (cost units)
 - `"solve_time"`         — solver wall-clock time (s)
 - `"bus"`        — `bus_id => terminal => {vr, vi, vm [V], va [rad]}`
+- `"ground"`     — `bus_id => terminal => {cg_r, cg_i [A], cgm [A]}` for every
+                   perfectly-grounded terminal: the solved earth-return current
+                   (positive = from earth into the node). Shared by all devices
+                   tied to that terminal.
 - `"line"`       — `line_id => terminal_name => {cr_fr, ci_fr, cr_to, ci_to [A], cm_fr, cm_to [A]}`
-                   (total per-end current: series + π-shunt half-section)
+                   (total per-end current: series + π-shunt half-section), plus a
+                   `"ground"` entry `{cg_r, cg_i, cgm [A]}` = the line's net
+                   π-shunt current into earth (positive = into earth).
 - `"switch"`     — `switch_id => terminal_name => {cr, ci [A], cm [A]}`
 - `"load"`       — `load_id => terminal_name => {crd, cid [A], pd [W], qd [var]}`
 - `"generator"`  — `gen_id => terminal_name => {crg, cig [A], pg [W], qg [var]}`
 - `"inverter"`   — `inv_id => terminal_name => {cri, cii [A], pg [W], qg [var]}`
-- `"transformer"`— `xfmr_id => {"fr" => {k => {cr, ci [A]}}, "to" => {k => {cr, ci [A]}}}`
+- `"transformer"`— `xfmr_id => {"fr" => {k => {cr, ci [A]}}, "to" => {k => {cr, ci [A]}},
+                   "ground" => {cg_r, cg_i, cgm [A]}}` where the ground entry is the
+                   no-load-shunt current returning through earth (nonzero only when
+                   the shunt is phase-to-ground; positive = into earth)
+- per-element `"loss"` — `{p_loss [W], q_loss [var]}` on each `"line"` and
+                   `"transformer"`, the complex loss from the terminal-power identity
+                   `S_loss = 1ᵀS_from + 1ᵀS_to` (positive p_loss = dissipated; q_loss
+                   = net reactive absorption, negative when the element is net-capacitive)
+- `"losses"`     — `{p_loss [W], q_loss [var]}` network totals over all lines + transformers
 - `"voltage_source"` — `src_id => terminal => {cr, ci [A], ps [W], qs [var]}`
 - `"initialisation"` — `bus_id => terminal => {vr_init, vi_init, vm_init [V], va_init [rad]}`
   Ipopt start values set before `optimize!`. Always present; used by `profile_solution`
@@ -63,13 +77,113 @@ function _shunt_current_value(vr_v, vi_v, val,
     cr, ci
 end
 
-function _extract_results(model, net, bus_terminals, grounded, vars)
+# Device-level ground current (A), positive = into earth.
+#
+# By KCL a device's current into earth equals minus the sum of all the currents
+# it injects into its bus terminals (phases + neutral). For a device whose only
+# galvanic earth path is a shunt admittance, the series/winding terminal currents
+# telescope to zero and the remainder is exactly the shunt-to-earth current.
+#
+# `_shunt_ground_current` evaluates a wye-connected no-load/π shunt G+jB applied
+# across (phase − ref) and returns the total earth-return current summed over the
+# phase conductors, with the sign convention "into earth" (i.e. the current the
+# shunt pulls out of the phases and pushes to ground). `ref` is the neutral
+# voltage when a neutral conductor exists (return is through the wire — pass the
+# neutral voltage so the earth component is what's left), or zero when the shunt
+# is phase-to-ground.
+#
+# When the shunt return is through a neutral wire the build folds the shunt
+# current into the neutral KCL, so the device's earth current is zero. Callers
+# encode that by only invoking this when the relevant side has no neutral.
+function _shunt_ground_current(vr_v, vi_v, val, G::Float64, B::Float64,
+                               bus::String, phases::Vector{String})
+    cr = 0.0; ci = 0.0
+    (iszero(G) && iszero(B)) && return cr, ci
+    for t in phases
+        vr_t = val(vr_v[(bus, t)]); vi_t = val(vi_v[(bus, t)])
+        cr += G*vr_t - B*vi_t
+        ci += G*vi_t + B*vr_t
+    end
+    cr, ci
+end
+
+# Transformer device ground current (A), positive = into earth.
+#
+# The only galvanic earth path in the transformer models is the no-load
+# (magnetising) shunt G+jB. Whether its return is earth or a neutral wire
+# depends on the subtype — this mirrors the build (`transformer.jl`):
+#
+#   single_phase / single_phase_autotransformer : shunt is phase-to-neutral when
+#       the from side has a neutral terminal (return folded into the neutral KCL
+#       → no earth current); phase-to-ground when it does not (→ earth current).
+#   center_tap / wye_delta / delta_wye : shunt is on the from side referenced
+#       phase-to-ground regardless, so its return is always earth.
+#   open_delta_regulator : ideal, no shunt → zero.
+#
+# Returns (cg_r, cg_i) in A. When the shunt return is a neutral wire, or there
+# is no shunt, both are zero.
+function _xfmr_ground_current(vr_v, vi_v, val, net, subtype, xfmr)
+    G = Float64(get(xfmr, "g_no_load", 0.0))
+    B = Float64(get(xfmr, "b_no_load", 0.0))
+    (iszero(G) && iszero(B)) && return 0.0, 0.0
+
+    b_fr  = string(get(xfmr, "bus_from", ""))
+    tmfr  = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+    ph_fr = [tmfr[p] for p in BMOPFTools._phase_positions(tmfr)]
+    isempty(ph_fr) && return 0.0, 0.0
+    # Build splits the total no-load admittance equally across phase conductors.
+    n_c   = length(ph_fr)
+    g_ph  = G / n_c; b_ph = B / n_c
+
+    if subtype in ("center_tap", "Yd", "Dy")
+        # phase-to-ground shunt → always an earth return
+        return _shunt_ground_current(vr_v, vi_v, val, g_ph, b_ph, b_fr, ph_fr)
+    elseif subtype in ("Yy", "single_phase_autotransformer")
+        # earth return only when the from side has no neutral terminal
+        BMOPFTools._neutral_pos(tmfr) === nothing || return 0.0, 0.0
+        return _shunt_ground_current(vr_v, vi_v, val, g_ph, b_ph, b_fr, ph_fr)
+    else
+        return 0.0, 0.0
+    end
+end
+
+# Complex loss of a two-port element from the terminal-power identity
+#   S_loss = Σ_terminals V · conj(I_into_element)
+# The branch ledger stores, per device, the currents the element injects INTO
+# each bus terminal (KCL "into bus" sign), so I_into_element = −I_into_bus. The
+# sum runs over every conductor the element actually drives (phases AND neutral,
+# both winding sides); because those injected currents sum to zero at the element
+# (Σ I = 0 internally) the result is independent of the ground voltage reference.
+#
+# Returns (p_loss, q_loss) in W / var. Positive p_loss = real power dissipated;
+# q_loss is net reactive absorption (positive) or generation (negative, e.g. line
+# charging or transformer magnetising). Grounded terminals (V = 0) contribute
+# nothing, exactly as the physics requires.
+function _branch_loss(records, vr_v, vi_v, grounded, val)
+    p = 0.0; q = 0.0
+    for (bus, t, cr_e, ci_e) in records
+        if (bus, t) in grounded
+            vr_t = 0.0; vi_t = 0.0
+        else
+            vr_t = val(vr_v[(bus, t)]); vi_t = val(vi_v[(bus, t)])
+        end
+        # I_into_element = −(cr + j ci); S = V · conj(I_into_element)
+        ir = -val(cr_e); ii = -val(ci_e)
+        p += vr_t*ir + vi_t*ii
+        q += vi_t*ir - vr_t*ii
+    end
+    p, q
+end
+
+function _extract_results(model, net, bus_terminals, grounded, vars,
+                          branch_inj=nothing)
     status = string(JuMP.termination_status(model))
     obj    = JuMP.objective_value(model)
     tsolve = JuMP.solve_time(model)
 
     vr_v    = vars[:vr];    vi_v    = vars[:vi]
     crg_v   = vars[:crg];   cig_v   = vars[:cig]
+    cr_gnd_v = vars[:cr_gnd]; ci_gnd_v = vars[:ci_gnd]
     crd_v   = vars[:crd];   cid_v   = vars[:cid]
     cr_fr_v = vars[:cr_fr]; ci_fr_v = vars[:ci_fr]
     cr_to_v = vars[:cr_to]; ci_to_v = vars[:ci_to]
@@ -119,11 +233,17 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
         ish_to_r, ish_to_i = _shunt_current_value(vr_v, vi_v, val, G_to, B_to, b_to, tm_to[1:n_map])
 
         cond = Dict{String,Any}()
+        # Device ground current: the series currents telescope (cr_to = −cr_fr),
+        # so the line's net current into earth is the total π-shunt current at
+        # both ends. Each ish_* leaves its bus into the shunt, i.e. into earth.
+        cg_r = 0.0; cg_i = 0.0
         for k in 1:n_map
             cr_fr = val(cr_fr_v[(lid, k)]) + ish_fr_r[k]
             ci_fr = val(ci_fr_v[(lid, k)]) + ish_fr_i[k]
             cr_to = val(cr_to_v[(lid, k)]) + ish_to_r[k]
             ci_to = val(ci_to_v[(lid, k)]) + ish_to_i[k]
+            cg_r += ish_fr_r[k] + ish_to_r[k]
+            cg_i += ish_fr_i[k] + ish_to_i[k]
             cond[tm_fr[k]] = Dict{String,Any}(
                 "cr_fr" => cr_fr,
                 "ci_fr" => ci_fr,
@@ -133,6 +253,8 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
                 "cm_to" => sqrt(cr_to^2 + ci_to^2),
             )
         end
+        cond["ground"] = Dict{String,Any}(
+            "cg_r" => cg_r, "cg_i" => cg_i, "cgm" => sqrt(cg_r^2 + cg_i^2))
         line_res[lid] = cond
     end
 
@@ -318,8 +440,12 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
             tmfr_r = Vector{String}(get(xfmr, "terminal_map_from", String[]))
             tmto_r = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
             if subtype in ("single_phase", "single_phase_autotransformer")
-                n_fr = length(BMOPFTools._phase_positions(tmfr_r))
-                n_to = length(BMOPFTools._phase_positions(tmto_r))
+                # One reported series current per regulating winding (winding
+                # pairs ⇒ a line-to-line map is one winding, not two). The
+                # autotransformer's neutral-bond current (extra "fr" index) is
+                # internal and intentionally not reported here.
+                n_fr = length(BMOPFTools._xfmr_winding_pairs(tmfr_r))
+                n_to = length(BMOPFTools._xfmr_winding_pairs(tmto_r))
             elseif subtype == "open_delta_regulator"
                 n_fr = 2
                 n_to = 2
@@ -341,7 +467,11 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
                 to_dict[string(k)] = Dict{String,Any}("cr" => cr, "ci" => ci,
                                                        "cm" => sqrt(cr^2 + ci^2))
             end
-            xfmr_res[tid] = Dict{String,Any}("fr" => fr_dict, "to" => to_dict)
+            cg_r, cg_i = _xfmr_ground_current(vr_v, vi_v, val, net, subtype, xfmr)
+            xfmr_res[tid] = Dict{String,Any}(
+                "fr" => fr_dict, "to" => to_dict,
+                "ground" => Dict{String,Any}(
+                    "cg_r" => cg_r, "cg_i" => cg_i, "cgm" => sqrt(cg_r^2 + cg_i^2)))
         end
     end
 
@@ -412,12 +542,46 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
         init_res[bid] = t_dict
     end
 
+    # ── Node-level ground-injection currents ─────────────────────────────────
+    # The solved earth-return current at each perfectly-grounded (bus, terminal):
+    # the current the solid ground sinks/sources to close KCL there. Sign matches
+    # the model (cr_gnd/ci_gnd are added as current INTO the node); positive =
+    # current flowing from earth into the node.
+    ground_res = Dict{String,Any}()
+    for (bid, t) in grounded
+        cr = val(cr_gnd_v[(bid, t)]); ci = val(ci_gnd_v[(bid, t)])
+        get!(ground_res, bid, Dict{String,Any}())[t] = Dict{String,Any}(
+            "cg_r" => cr, "cg_i" => ci, "cgm" => sqrt(cr^2 + ci^2))
+    end
+
+    # ── Per-element complex losses (terminal-power identity) ──────────────────
+    # S_loss = 1ᵀ S_from + 1ᵀ S_to, computed exactly from the per-device ledger of
+    # terminal injections built during model construction. Attaches a "loss"
+    # entry {p_loss [W], q_loss [var]} to each line and transformer, and totals
+    # them into the top-level "losses" summary.
+    total_p_loss = 0.0; total_q_loss = 0.0
+    if branch_inj !== nothing
+        for (lid, recs) in get(branch_inj, "line", Dict())
+            pl, ql = _branch_loss(recs, vr_v, vi_v, grounded, val)
+            total_p_loss += pl; total_q_loss += ql
+            haskey(line_res, lid) &&
+                (line_res[lid]["loss"] = Dict{String,Any}("p_loss" => pl, "q_loss" => ql))
+        end
+        for (tid, recs) in get(branch_inj, "transformer", Dict())
+            pl, ql = _branch_loss(recs, vr_v, vi_v, grounded, val)
+            total_p_loss += pl; total_q_loss += ql
+            haskey(xfmr_res, tid) &&
+                (xfmr_res[tid]["loss"] = Dict{String,Any}("p_loss" => pl, "q_loss" => ql))
+        end
+    end
+
     Dict{String,Any}(
         "termination_status" => status,
         "feasible"           => feasible,
         "objective"          => obj,
         "solve_time"         => tsolve,
         "bus"                => bus_res,
+        "ground"             => ground_res,
         "line"               => line_res,
         "switch"             => switch_res,
         "load"               => load_res,
@@ -426,5 +590,7 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
         "transformer"        => xfmr_res,
         "voltage_source"     => src_res,
         "initialisation"     => init_res,
+        "losses"             => Dict{String,Any}(
+            "p_loss" => total_p_loss, "q_loss" => total_q_loss),
     )
 end

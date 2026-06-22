@@ -1599,6 +1599,103 @@
         @test res["total_slack_magnitude_A"] ≈ total atol=1e-6
     end
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # GND: ground currents — node-level injection + line π-shunt earth return.
+    #
+    # Single-phase line with a from-side shunt susceptance B. The line carries no
+    # series shunt loss (G=0), so its device ground current is purely the shunt
+    # current into earth: cg = (G + jB)·V_fr summed over phases ⇒ cg_i = B·vr_fr,
+    # cg_r = −B·vi_fr. The grounded neutral terminals must appear in the node
+    # "ground" section with finite currents.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "GND: ground currents — node injection + line shunt earth return" begin
+        B = 1e-4
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"],
+                         "v_min":[900.0],"v_max":[1100.0]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5,"B_from_1_1":$B}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[50000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+
+        # Node-level ground section: grounded neutrals present, currents finite.
+        @test haskey(res, "ground")
+        @test haskey(res["ground"], "sourcebus") && haskey(res["ground"]["sourcebus"], "n")
+        @test haskey(res["ground"], "bus1")      && haskey(res["ground"]["bus1"], "n")
+        for bd in values(res["ground"]), v in values(bd)
+            @test isfinite(v["cg_r"]) && isfinite(v["cg_i"]) && isfinite(v["cgm"])
+            @test v["cgm"] ≈ sqrt(v["cg_r"]^2 + v["cg_i"]^2) atol=1e-9
+        end
+
+        # Line device ground current = from-side π-shunt current into earth.
+        vr_fr = res["bus"]["sourcebus"]["1"]["vr"]
+        vi_fr = res["bus"]["sourcebus"]["1"]["vi"]
+        lg = res["line"]["l1"]["ground"]
+        @test lg["cg_r"] ≈ -B * vi_fr atol=1e-9
+        @test lg["cg_i"] ≈  B * vr_fr atol=1e-9
+        @test lg["cgm"]  ≈ sqrt(lg["cg_r"]^2 + lg["cg_i"]^2) atol=1e-12
+        @test lg["cgm"] > 0.0   # shunt present ⇒ nonzero earth current
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # LOSS: complex element losses via the terminal-power identity
+    #   S_loss = 1ᵀ S_from + 1ᵀ S_to
+    # and the network-wide P/Q balance built on them.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "LOSS: complex line loss (R+jX) and exact P/Q balance" begin
+        R = 0.5; X = 0.3; P = 60_000.0; Q = 20_000.0
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
+                         "v_min":[800.0],"v_max":[1100.0]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":$R,"X_series_1_1":$X}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_nom":[$P],"q_nom":[$Q]}}}
+        """; from_string=true)
+
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+
+        # Series current (no shunt ⇒ total = series). Loss must equal Z·|I|².
+        cr = res["line"]["l1"]["1"]["cr_fr"]; ci = res["line"]["l1"]["1"]["ci_fr"]
+        I2 = cr^2 + ci^2
+        ll = res["line"]["l1"]["loss"]
+        @test ll["p_loss"] ≈ R * I2  rtol=1e-6
+        @test ll["q_loss"] ≈ X * I2  rtol=1e-6
+        @test ll["p_loss"] > 0.0 && ll["q_loss"] > 0.0     # inductive line absorbs Q
+        @test res["losses"]["p_loss"] ≈ ll["p_loss"] rtol=1e-9
+        @test res["losses"]["q_loss"] ≈ ll["q_loss"] rtol=1e-9
+
+        # Network balance closes for BOTH P and Q (slack supplies load + loss).
+        f = Finding[]
+        prof = solution_check(net, res, f)
+        @test prof["p_loss"] ≈ R * I2  rtol=1e-6
+        @test prof["q_loss"] ≈ X * I2  rtol=1e-6
+        @test prof["power_balance_err"]   < max(0.01*abs(prof["p_load"]), 1.0)
+        @test prof["q_power_balance_err"] < max(0.01*abs(prof["q_load"]),
+                                                0.01*abs(prof["q_gen"]), 1.0)
+        @test !any(fd -> fd.code == "W.SOL.POWER_BALANCE", f)
+    end
+
     # ═════════════════════════════════════════════════════════════════════════
     # Power flow — solve_pf
     #
@@ -1848,6 +1945,125 @@
         cr = res["transformer"]["r1"]["fr"]["1"]["cr"]
         ci = res["transformer"]["r1"]["fr"]["1"]["ci"]
         @test 0.5 * (cr^2 + ci^2) > 0.0                    # positive loss
+        # The terminal-power identity loss must equal R·|I_s|² (no shunt, no X).
+        xloss = res["transformer"]["r1"]["loss"]
+        @test xloss["p_loss"] ≈ 0.5 * (cr^2 + ci^2)  rtol=1e-6
+        @test xloss["p_loss"] > 0.0                        # dissipative, not generating
+        @test abs(xloss["q_loss"]) < 1e-3                  # X=0 ⇒ no reactive loss
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # NEUTRAL: secondary return must close through the transformer neutral, not
+    # leak to earth. Discriminating case = an UNGROUNDED secondary neutral, which
+    # the balanced/grounded tests above cannot exercise. Before the fix the YY
+    # secondary and the autotransformer to-neutral were left dangling, producing
+    # a slack current = Σ I_to (≈ the load current) at the floating neutral.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "NEUTRAL: YY secondary return closes through floating LV neutral" begin
+        # Single-phase YY transformer, LV neutral NOT grounded. KCL can only close
+        # if the secondary current returns through the transformer's LV neutral.
+        net = parse_bmopf("""
+        {"bus":{
+            "hv":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "lv":{"terminal_names":["1","n"],"perfectly_grounded_terminals":[]}},
+         "voltage_source":{"vs":{"bus":"hv","terminal_map":["1","n"],
+             "v_magnitude":[2400.0],"v_angle":[0.0]}},
+         "transformer":{"single_phase":{"t1":{
+             "bus_from":"hv","bus_to":"lv",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "v_ref_from":2400.0,"v_ref_to":240.0,"s_rating":50000.0,
+             "r_series_from":0.1,"x_series_from":0.0}}},
+         "load":{"ld":{"bus":"lv","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_nom":[20000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_feasibility_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["total_slack_magnitude_A"] < 1e-3        # return closes — no slack
+        @test res["load"]["ld"]["1"]["pd"] ≈ 20000.0  rtol=1e-3
+    end
+
+    @testset "NEUTRAL: autotransformer shared-neutral bond ties floating to-neutral" begin
+        # SVR with an UNGROUNDED secondary neutral. The galvanic neutral bond must
+        # tie reg/n to the (grounded) src/n so the return current closes.
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "reg":{"terminal_names":["1","n"],"perfectly_grounded_terminals":[]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","n"],
+             "v_magnitude":[2400.0],"v_angle":[0.0]}},
+         "transformer":{"single_phase_autotransformer":{"r1":{
+             "bus_from":"src","bus_to":"reg",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "tap_ratio":1.05,"regulator_type":"B","s_rating":500000.0,
+             "r_series_from":0.5,"x_series_from":0.0}}},
+         "load":{"ld":{"bus":"reg","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_nom":[50000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_feasibility_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["total_slack_magnitude_A"] < 1e-3        # return closes via the bond
+        # Bond ties the two neutrals to the same potential (src/n grounded ⇒ 0).
+        @test res["bus"]["reg"]["n"]["vm"] ≈ res["bus"]["src"]["n"]["vm"]  atol=1e-4
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # LINE-TO-LINE: single_phase and autotransformer connected phase-to-phase
+    # (terminal_map = ["1","2"], no neutral). The winding spans V₁−V₂; a 2-phase
+    # map is ONE winding, not two phase-to-ground units.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "LL: single_phase transformer with line-to-line primary" begin
+        # 4160 V L-L primary → 240 V L-N secondary. One winding across HV 1-2.
+        Vs = 2401.0  # phase-to-ground source magnitude (L-L ≈ 4158 V)
+        net = parse_bmopf("""
+        {"bus":{
+            "hv":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
+            "lv":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
+                  "v_min":[210.0],"v_max":[260.0]}},
+         "voltage_source":{"vs":{"bus":"hv","terminal_map":["1","2","3"],
+             "v_magnitude":[$Vs,$Vs,$Vs],"v_angle":[0.0,-2.0943951,2.0943951]}},
+         "transformer":{"single_phase":{"t1":{
+             "bus_from":"hv","bus_to":"lv",
+             "terminal_map_from":["1","2"],"terminal_map_to":["1","n"],
+             "v_ref_from":4160.0,"v_ref_to":240.0,"s_rating":50000.0,
+             "r_series_from":0.1,"x_series_from":0.0}}},
+         "load":{"ld":{"bus":"lv","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_nom":[8000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        # Exactly one reported series winding current (not two).
+        @test sort(collect(keys(res["transformer"]["t1"]["fr"]))) == ["1"]
+        # Secondary L-N voltage ≈ HV L-L voltage / ratio (4160/240).
+        vll = sqrt((res["bus"]["hv"]["1"]["vr"] - res["bus"]["hv"]["2"]["vr"])^2 +
+                   (res["bus"]["hv"]["1"]["vi"] - res["bus"]["hv"]["2"]["vi"])^2)
+        @test res["bus"]["lv"]["1"]["vm"] ≈ vll * 240/4160  rtol=2e-3
+        @test res["transformer"]["t1"]["loss"]["p_loss"] > 0.0   # R·|I|² dissipation
+    end
+
+    @testset "LL: single_phase autotransformer across two phases" begin
+        # Type B regulator across phases 1-2 (no neutral): V_LL boosted by a.
+        a = 1.05
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","2","3"],"perfectly_grounded_terminals":[]},
+            "reg":{"terminal_names":["1","2","3"],"perfectly_grounded_terminals":[]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[2400.0,2400.0,2400.0],
+             "v_angle":[0.0,-2.0943951,2.0943951]}},
+         "transformer":{"single_phase_autotransformer":{"r1":{
+             "bus_from":"src","bus_to":"reg",
+             "terminal_map_from":["1","2"],"terminal_map_to":["1","2"],
+             "tap_ratio":$a,"regulator_type":"B","s_rating":500000.0}}}}
+        """; from_string=true)
+
+        res = solve_pf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        Vll(b) = sqrt((res["bus"][b]["1"]["vr"] - res["bus"][b]["2"]["vr"])^2 +
+                      (res["bus"][b]["1"]["vi"] - res["bus"][b]["2"]["vi"])^2)
+        @test Vll("reg") ≈ a * Vll("src")  rtol=1e-3
     end
 
     @testset "REG: open-delta regulator ABBC — both line-to-line ratios" begin
