@@ -227,6 +227,7 @@ Geth, Heidari & Koirala (ACM e-Energy 2022, doi:[10.1145/3538637.3538844](https:
 | `W.PROV.IMPLICIT_GROUNDING` | W | Neutral terminals exist and are referenced by components, but **no branch carries a neutral conductor** — the dataset uses the implicit "n = local ground" convention. Made explicit so 4-wire consumers don't misread it. |
 | `E.PROV.FLOATING_NEUTRAL` | E | A neutral section (continuity graph over lines/closed switches) with no path to ground **and** loads/generators using it — the zero-sequence path is undefined; 4-wire analysis is ill-posed. |
 | `W.PROV.FLOATING_NEUTRAL` | W | Same, but unused — latent rather than active. |
+| `I.PROV.WYE_NEUTRAL_UNGROUNDED` | I | A three-phase wye winding brings out its star-point neutral at a bus that has no local grounding (no perfect ground and no grounding impedance). The wye star point is the natural earthing point; its zero-sequence potential is then set only by what the neutral conductor reaches elsewhere. Single-phase transformers (phase-to-neutral / phase-to-phase) are exempt. |
 
 ### OpenDSS default fingerprints
 
@@ -328,6 +329,7 @@ its network. See [`SolutionReport`](@ref) and [`render_solution`](@ref).
 | `W.SOL.POWER_BALANCE` | W | Network-wide active power balance error (Σpg − Σpd − Σp_loss) exceeds 1 % of total load — a significant mismatch that may indicate a lossy model, a missing component, or a result extraction issue. |
 | `I.SOL.BINDING_SUMMARY` | I | Summary count of violated and near-active bounds across all categories (voltage, thermal, generator). Always emitted for feasible solutions. |
 | `I.SOL.LOSS_FRACTION` | I | Line losses exceed 20 % of total generation — unusually high; may indicate a high-impedance feeder, a model issue, or an extreme operating point. |
+| `W.SOL.NEG_LOSS` | W | A line or transformer dissipates **negative active power** (`p_loss < 0`) beyond numerical noise — non-physical for a passive branch, which cannot generate active power. Tolerance is throughput-relative (`p_loss < −max(1 W, 1e-4·\|S_through\|)`). Signals a non-converged / ill-conditioned solution, a sign error, or a negative-resistance input. Reactive loss is excluded, as line charging / capacitive shunts make `q_loss` legitimately negative. |
 | `I.SOL.NEUTRAL_SHIFT` | I | Maximum neutral terminal voltage magnitude across all buses, with the bus identifier. Non-zero neutral shift indicates load unbalance or grounding impedance. |
 | `W.SOL.INIT_LEVEL_MISMATCH` | W | One or more terminals have `vm_init / vm_solved` outside [0.1, 10] — the initialisation used the wrong voltage level (e.g. source voltage applied to an LV bus via flat warm-start). Solver may still converge but local-minimum risk is elevated. Only emitted when `result["initialisation"]` is present. |
 | `W.SOL.INIT_LARGE_ERROR` | W | One or more phase terminals have an initialisation error exceeding 20 % of the solved voltage magnitude — the start point was a poor approximation of the solution. |

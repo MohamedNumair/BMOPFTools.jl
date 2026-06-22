@@ -37,6 +37,7 @@ function provenance_analysis(net::Dict{String,Any},
     result["linecodes"]           = _classify_linecodes(net, findings)
     result["wires_by_level"]      = _wires_by_level(net, findings, vl)
     result["grounding"]           = _grounding_analysis(net, findings)
+    _check_ungrounded_wye_neutrals(net, findings)
     result["opendss_defaults"]    = _check_opendss_defaults(net, findings,
                                                               result["linecodes"])
     result["impedance_transform"] = _classify_impedance_transformation(
