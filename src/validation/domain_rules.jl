@@ -618,7 +618,7 @@ end
 function _check_transformer_ratings(net, findings, thresh, n_checks)
     ratio_max = Float64(thresh["xfmr_ratio_max"])
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (id, t) in sub
@@ -751,7 +751,7 @@ function _check_adjacent_line_impedance_spread(net, findings, thresh, n_checks, 
         push!(excluded_buses, get(sw, "bus_to",   ""))
     end
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         for (_, t) in get(xfmr, subtype, Dict())
             t isa Dict || continue
             push!(excluded_buses, get(t, "bus_from", ""))

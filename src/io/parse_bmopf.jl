@@ -144,7 +144,7 @@ function each_terminal_array(f, net::Dict{String,Any})
     end
     xfmr = get(net, "transformer", nothing)
     if xfmr isa Dict
-        for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+        for subtype in TRANSFORMER_SUBTYPES
             sub = get(xfmr, subtype, nothing)
             sub isa Dict || continue
             foreach(visit, values(sub))
@@ -203,7 +203,7 @@ function _any_component_has_ts_ref(net::Dict{String,Any})::Bool
     # also check nested transformer subtypes
     xfmr = get(net, "transformer", nothing)
     if xfmr isa Dict
-        for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+        for subtype in TRANSFORMER_SUBTYPES
             sub = get(xfmr, subtype, nothing)
             sub isa Dict || continue
             for (_, comp) in sub
@@ -258,7 +258,7 @@ function get_snapshot(net::Dict{String,Any}, t_index::Int)::Dict{String,Any}
     # transformer subtypes
     xfmr = get(snap, "transformer", nothing)
     if xfmr isa Dict
-        for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+        for subtype in TRANSFORMER_SUBTYPES
             sub = get(xfmr, subtype, nothing)
             sub isa Dict || continue
             for (_, comp) in sub

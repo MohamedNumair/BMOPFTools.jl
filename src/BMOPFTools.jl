@@ -36,6 +36,17 @@ const _BMOPF_SCHEMA_URI =
 # Package version, read once at load time from the Project.toml.
 const _BMOPFTOOLS_VERSION = string(pkgversion(BMOPFTools))
 
+# Canonical list of transformer subtype keys under `net["transformer"][subtype]`.
+# Generic loops that iterate every subtype should use this constant (visible to
+# the OPF extension as `BMOPFTools.TRANSFORMER_SUBTYPES`) rather than repeating
+# the tuple inline, so new subtypes flow through analysis/validation/IO for free.
+# Sites that are genuinely subtype-specific (constraint dispatch, terminal arity,
+# allowed-field lists, per-unit base selection, vector-group notation, Yprim
+# builders) must still be edited by hand when a subtype is added.
+const TRANSFORMER_SUBTYPES =
+    ("single_phase", "center_tap", "wye_delta", "delta_wye",
+     "single_phase_autotransformer", "open_delta_regulator")
+
 # ---------------------------------------------------------------------------
 # Finding — the one struct in the library.
 # Everything network-related stays as Dict{String,Any}; findings are outputs
@@ -218,6 +229,36 @@ function _xfmr_turns_ratio(xfmr::Dict{String,Any})::Float64
     vf = Float64(get(xfmr, "v_ref_from", 1.0))
     vt = Float64(get(xfmr, "v_ref_to",   1.0))
     iszero(vt) ? 1.0 : vf / vt
+end
+
+"""
+    _autotransformer_neff(a, regulator_type) -> Float64
+
+Effective from→to turns ratio `n_eff` for a step voltage regulator at fixed tap
+ratio `a` (regulated/source, e.g. `a ∈ [0.9, 1.1]`). The OPF uses the wye-wye
+convention `V_fr = n_eff·V_to` (so `V_to = V_fr/n_eff`). To realise a regulated
+voltage `V_to = a·V_fr` for the standard ANSI **Type B** regulator we therefore
+need `n_eff = 1/a`; **Type A** (series winding on the regulated side) is the
+reciprocal connection, `n_eff = a`. See `_add_autotransformer!`.
+"""
+function _autotransformer_neff(a::Real, regulator_type::AbstractString)::Float64
+    af = Float64(a)
+    iszero(af) && return 1.0
+    uppercase(strip(regulator_type)) == "A" ? af : 1.0 / af
+end
+
+"""
+    _autotransformer_ratio(xfmr) -> Float64
+
+Effective `n_eff` for an autotransformer/regulator object, reading `tap_ratio`
+(default 1.0) and `regulator_type` (default "B"). For `open_delta_regulator`,
+`tap_ratio` is a length-2 vector handled per regulator by the OPF; this scalar
+helper is for the single-phase case.
+"""
+function _autotransformer_ratio(xfmr::Dict{String,Any})::Float64
+    a  = Float64(get(xfmr, "tap_ratio", 1.0))
+    rt = string(get(xfmr, "regulator_type", "B"))
+    _autotransformer_neff(a, rt)
 end
 
 # ---------------------------------------------------------------------------

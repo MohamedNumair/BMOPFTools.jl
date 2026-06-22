@@ -13,8 +13,9 @@ exposes as a PD-element `Yprim` (`Export Y` / `DumpYprim`) and what
 PowerModelsDistribution assembles internally, so it is the natural artifact for
 cross-tool validation.
 
-This note derives $Y$ for all four subtypes and lists the checks that gate
-correctness before we write the exporter.
+This note derives $Y$ for the four two-winding subtypes plus the two regulator
+subtypes (§4b) and lists the checks that gate correctness before we write the
+exporter.
 
 ---
 
@@ -211,6 +212,45 @@ holds for any voltage vector.
 
 ---
 
+## 4b. Regulators — `single_phase_autotransformer` and `open_delta_regulator`
+
+Both regulator subtypes replace the nameplate turns ratio $N$ with the
+fixed-tap **effective ratio** $n_\text{eff}$ (`tap_ratio` $a$ with
+`regulator_type`): $n_\text{eff}=1/a$ (Type B, default) or $a$ (Type A).
+
+**`single_phase_autotransformer`.** Structurally the §2 Γ-model block with
+$N:=n_\text{eff}$, but with the shared neutral kept explicit. Nodes
+$[t^\text{ph}_\text{fr},\,t^\text{ph}_\text{to},\,t^\text{n}_\text{fr},\,t^\text{n}_\text{to}]$
+and one winding spanning phase-to-neutral on each side,
+$C=\begin{psmallmatrix}1&-n_\text{eff}&-1&n_\text{eff}\end{psmallmatrix}$
+folded as the $2\times2$ core. The reduced phase block (neutrals at 0) is the
+familiar $\begin{psmallmatrix}y & -n_\text{eff}y\\ -n_\text{eff}y & n_\text{eff}^2 y\end{psmallmatrix}$,
+and every column of the full $4\times4$ sums to zero (current conservation
+through the shared neutral). Type A/B differ only through $n_\text{eff}$.
+
+**`open_delta_regulator`.** Two **line-to-line** cores across the phase pairs of
+`connection` (`ABBC`/`BCAC`/`CABA`), each
+$C_j=\begin{psmallmatrix}1&-1\;(\text{fr }p,q)&\,-n_{\text{eff},j}&n_{\text{eff},j}\;(\text{to }p,q)\end{psmallmatrix}$
+with primitive $y_t[\,1\;-n_{\text{eff},j};\,-n_{\text{eff},j}\;n_{\text{eff},j}^2]$,
+summed: $Y=\sum_j C_j^{\mathsf T}y_{\text{prim},j}C_j$. This is the device's
+natural line-to-line admittance and reproduces **Yan et al. (2018)**, IEEE Trans.
+Smart Grid 9(3):2224, Eq. (11) (the "unspecified neutral" matrix) *term-by-term*
+in per unit, where the paper's effective ratio $r=1-n_R$ maps to our
+$n_\text{eff}$. The shared-phase diagonal carries $2y_t$ (both regulators) and
+the from↔to coupling scales as $n_\text{eff}$ and $n_\text{eff}^2$ — the
+autotransformer factor, not an isolated-transformer ratio.
+
+The galvanic **straight-through** of the shared phase (the paper's
+*common-neutral* model, Eq. 14: $V_\text{shared,fr}=V_\text{shared,to}$) is the
+physically-correct connection but is **not** folded into the exported $Y$ — it is
+a topological constraint imposed in the OPF (`_add_open_delta_regulator!`). The
+paper's Eq. (15) is one particular elimination of the shared node and is *not*
+the device primitive; conflating the two would misrepresent the exported
+admittance. So the export keeps the Eq. (11) primitive, and the common-neutral
+behaviour is validated by power flow rather than by the $Y$ block (see §7).
+
+---
+
 ## 5. OPF current-variable convention (informational)
 
 During the derivation it was found that the OPF winding-current variables for
@@ -278,3 +318,9 @@ into core so both share one definition.
    from $I=YV$ (i.e., the transformer equations are satisfied), verify that the
    OPF voltage and current coupling constraints in `transformer.jl` hold to
    numerical tolerance.
+6. **Open-delta vs published model:** the `open_delta_regulator` $Y$ block
+   matches Yan et al. (2018) Eq. (11) term-by-term in per unit ($r=1-n_R\equiv
+   n_\text{eff}$). The galvanic straight-through (common-neutral, Eq. 14/15) is
+   not in the $Y$ block; it is validated by a power-flow test asserting
+   $V_\text{shared,fr}=V_\text{shared,to}$ with the two regulated phases boosted
+   ([`powerflow_comparison_tests.jl`](../test/powerflow_comparison_tests.jl)).

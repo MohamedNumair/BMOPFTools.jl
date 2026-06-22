@@ -138,7 +138,7 @@ function _build_voltage_adjacency(net::Dict{String,Any})
     # over line edges. When both a transformer and a line connect the same two
     # buses, the transformer must win to detect line-crossing violations correctly.
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (id, t) in sub
@@ -209,7 +209,7 @@ function _transformer_transitions(net::Dict{String,Any},
                                    assigned::Dict{String,Float64})
     transitions = Dict{String,Any}[]
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (id, t) in sub
@@ -255,7 +255,7 @@ function _check_transformer_ratio_consistency(net::Dict{String,Any},
                                                assigned::Dict{String,Float64},
                                                findings::Vector{Finding})
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (id, t) in sub

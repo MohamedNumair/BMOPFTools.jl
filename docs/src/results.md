@@ -202,6 +202,14 @@ To map position back to terminal: position `k` corresponds to
 `terminal_map_from[k]` (from-side) or `terminal_map_to[k]` (to-side) in the
 input network.
 
+!!! note "Regulator subtypes index by winding, not terminal"
+    For `single_phase` and `single_phase_autotransformer` the neutral is the
+    return path, so positions index only the **phase** conductors. For
+    `open_delta_regulator` the positions index the **two regulators** (`"1"`,
+    `"2"`), not the four bus terminals — the shared-phase straight-through wire
+    current is internal and not reported. In these cases position `k` does not
+    align with `terminal_map[k]`.
+
 | Field | Unit | Description |
 |---|---|---|
 | `cr` | A | Real part of winding current |

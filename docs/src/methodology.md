@@ -150,6 +150,17 @@ restricted to wye-wye-derived subtypes, since regulators are never
 delta-coupled — which keeps genuine 1:1 phase-shifting interconnectors
 silent.
 
+This heuristic concerns *imported* data where a regulator was hacked into a
+transformer + shunt. The data model itself has **dedicated** regulator objects —
+`single_phase_autotransformer` (a fixed-tap step voltage regulator with the
+autotransformer shared-neutral coupling) and `open_delta_regulator` (monolithic
+open-delta with the galvanic straight-through of the shared phase) — so a
+regulator authored natively needs no such pattern-matching. See the
+[OPF reference](opf.md) for their constraints and the
+[conventions](conventions.md) for the field set. The `from_dss`/`from_pmd`
+converters do not yet emit these subtypes (regulators arriving from OpenDSS are
+still detected via the pattern above rather than converted).
+
 ## Benchmark readiness
 
 Raw utility-derived feeders are power-flow cases, not OPF benchmarks: they

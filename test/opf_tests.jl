@@ -1775,4 +1775,113 @@
         @test net["linecode"]["lc"]["i_max"] == [1.0e-3]
     end
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # Single-phase autotransformer / step voltage regulator
+    #
+    # Lossless ideal regulator collapses to V_to = n_eff·V_fr_pn.
+    # Type B (default): n_eff = a.  Type A: n_eff = 1/a.
+    # No load → no current → V_to is exactly the boosted source voltage.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "REG: single-phase autotransformer Type B — boosted ratio" begin
+        V_s = 2400.0;  a = 1.05
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "reg":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[2400.0],"v_angle":[0.0]}},
+         "transformer":{"single_phase_autotransformer":{"r1":{
+             "bus_from":"src","bus_to":"reg",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "tap_ratio":1.05,"regulator_type":"B","s_rating":500000.0}}}}
+        """; from_string=true)
+
+        res = solve_pf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["bus"]["reg"]["1"]["vm"] ≈ a * V_s   atol=0.01
+        @test abs(res["bus"]["reg"]["1"]["vi"]) < 0.01
+    end
+
+    @testset "REG: single-phase autotransformer Type A — reciprocal ratio" begin
+        V_s = 2400.0;  a = 1.05   # Type A: n_eff = 1/a → V_to = V_s / a
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "reg":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[2400.0],"v_angle":[0.0]}},
+         "transformer":{"single_phase_autotransformer":{"r1":{
+             "bus_from":"src","bus_to":"reg",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "tap_ratio":1.05,"regulator_type":"A","s_rating":500000.0}}}}
+        """; from_string=true)
+
+        res = solve_pf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["bus"]["reg"]["1"]["vm"] ≈ V_s / a   atol=0.01
+    end
+
+    @testset "REG: autotransformer under load — positive loss, KCL closes" begin
+        # A lossy regulator feeding a load. The shared-neutral KCL sign is correct
+        # iff the series resistance dissipates POSITIVE power (negative loss is the
+        # classic sign-error symptom). Feasibility OPF must close KCL (slack ≈ 0).
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "reg":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
+                   "v_min":[2200.0],"v_max":[2800.0]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[2400.0],"v_angle":[0.0]}},
+         "transformer":{"single_phase_autotransformer":{"r1":{
+             "bus_from":"src","bus_to":"reg",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "tap_ratio":1.05,"regulator_type":"B","s_rating":500000.0,
+             "r_series_from":0.5,"x_series_from":0.0}}},
+         "load":{"ld":{"bus":"reg","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_nom":[50000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_feasibility_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["total_slack_magnitude_A"] < 1e-3        # KCL closes
+        # Series current → from terminal; copper loss = R·|I_s|².
+        cr = res["transformer"]["r1"]["fr"]["1"]["cr"]
+        ci = res["transformer"]["r1"]["fr"]["1"]["ci"]
+        @test 0.5 * (cr^2 + ci^2) > 0.0                    # positive loss
+    end
+
+    @testset "REG: open-delta regulator ABBC — both line-to-line ratios" begin
+        # Lossless open-delta, no load: each regulating winding boosts its
+        # line-to-line voltage by its tap. With balanced source phases the
+        # regulated phase-pair magnitudes equal a_j · |V_LL_source|.
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","2","3","n"],
+                   "perfectly_grounded_terminals":["n"]},
+            "reg":{"terminal_names":["1","2","3","n"],
+                   "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[2400.0,2400.0,2400.0],
+             "v_angle":[0.0,-2.0943951,2.0943951]}},
+         "transformer":{"open_delta_regulator":{"od":{
+             "bus_from":"src","bus_to":"reg",
+             "terminal_map_from":["1","2","3","n"],
+             "terminal_map_to":["1","2","3","n"],
+             "connection":"ABBC","tap_ratio":[1.05,1.025],"regulator_type":"B",
+             "s_rating":500000.0}}}}
+        """; from_string=true)
+
+        res = solve_pf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        Vll(b, p, q) = begin
+            vr = res["bus"][b][p]["vr"] - res["bus"][b][q]["vr"]
+            vi = res["bus"][b][p]["vi"] - res["bus"][b][q]["vi"]
+            sqrt(vr^2 + vi^2)
+        end
+        Vll_src_12 = Vll("src", "1", "2")
+        Vll_src_23 = Vll("src", "2", "3")
+        @test Vll("reg", "1", "2") ≈ 1.05  * Vll_src_12   rtol=1e-3
+        @test Vll("reg", "2", "3") ≈ 1.025 * Vll_src_23   rtol=1e-3
+    end
+
 end  # @testset "OPF — solve_opf extension"

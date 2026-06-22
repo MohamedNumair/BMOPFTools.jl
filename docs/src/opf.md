@@ -379,8 +379,12 @@ current is also added to the neutral terminal.
 
 #### Transformers
 
-All transformer constraints are **linear**.  The turns ratio for all subtypes
-is $N = V^\text{ref}_\text{fr} / V^\text{ref}_\text{to}$ (SI volts).
+All transformer constraints are **linear**.  The turns ratio for the four
+two-winding subtypes is $N = V^\text{ref}_\text{fr} / V^\text{ref}_\text{to}$
+(SI volts).  The two regulator subtypes
+(`single_phase_autotransformer`, `open_delta_regulator`) instead use a
+**fixed-tap effective ratio** $n_\text{eff}$ derived from `tap_ratio` and
+`regulator_type` (see below).
 
 ---
 
@@ -508,6 +512,81 @@ Star-point KCL at the wye neutral:
 ```math
 c^{r,x}_{x,\text{wye},n} + \sum_{k} c^{r,x}_{x,\text{wye},k} = 0
 ```
+
+---
+
+**`single_phase_autotransformer` — step voltage regulator**
+
+A fixed-tap regulator modelled as an autotransformer: the series and common
+windings share a node, so from and to are galvanically tied (not isolated).
+With fixed tap ratio $a$ (`tap_ratio`, regulated/source) the effective from→to
+ratio is
+
+```math
+n_\text{eff} = \begin{cases} 1/a & \text{Type B (standard SVR, default)} \\ a & \text{Type A} \end{cases}
+```
+
+The voltage and current-coupling constraints are the `single_phase` YY form
+with $N := n_\text{eff}$ and a series impedance $R_x = R_1 + n_\text{eff}^2 R_2$,
+$X_x = X_1 + n_\text{eff}^2 X_2$:
+
+```math
+\bigl(v^r_{b^\text{fr},t^\text{ph}} - v^r_{b^\text{fr},t^\text{n}}\bigr)
+- n_\text{eff}\bigl(v^r_{b^\text{to},t^\text{ph}} - v^r_{b^\text{to},t^\text{n}}\bigr)
+= R_x\,c^{r,x}_{x,\text{fr}} - X_x\,c^{i,x}_{x,\text{fr}}
+```
+
+```math
+n_\text{eff}\,c^{r,x}_{x,\text{fr}} + c^{r,x}_{x,\text{to}} = 0 \quad\text{(and imaginary)}
+```
+
+The galvanic tie shows up in the **shared-neutral KCL** — both the series and
+the to-side return close at the common neutral (unlike the isolated YY, whose
+from-neutral carries only the from-side return):
+
+```math
+I_n + c^{r,x}_{x,\text{fr}} + c^{r,x}_{x,\text{to}} = 0
+\;\;\Longleftrightarrow\;\;
+I_n + (1 - n_\text{eff})\,c^{r,x}_{x,\text{fr}} = 0
+```
+
+A sign error here would produce negative transformer losses. A lossless ideal
+regulator ($R=X=G=B=0$) collapses to $v_\text{to} = n_\text{eff}\,v_\text{fr}$.
+
+---
+
+**`open_delta_regulator` — monolithic open-delta**
+
+Two single-phase autotransformer windings connected **line-to-line** across the
+phase pairs implied by `connection` (`ABBC`/`BCAC`/`CABA`); per-regulator taps
+`tap_ratio = [a_1, a_2]` give $n_{\text{eff},j}$ as above. For each regulator
+$j$ spanning from-phase pair $(p, q)$ and the matching to-phase pair:
+
+```math
+\bigl(v^r_{b^\text{fr},t_p} - v^r_{b^\text{fr},t_q}\bigr)
+- n_{\text{eff},j}\bigl(v^r_{b^\text{to},t_p} - v^r_{b^\text{to},t_q}\bigr)
+= R_{x,j}\,c^{r,x}_{x,\text{fr},j} - X_{x,j}\,c^{i,x}_{x,\text{fr},j}
+```
+
+```math
+n_{\text{eff},j}\,c^{r,x}_{x,\text{fr},j} + c^{r,x}_{x,\text{to},j} = 0
+```
+
+KCL injects each regulator's line current at the two phases it spans
+($+I$ at one, $-I$ at the other). The phase **common to both regulators** (B in
+the ABBC arrangement) is a **galvanic straight-through** — a zero-impedance wire
+with its own current variable, enforcing
+
+```math
+v_{b^\text{fr},t_\text{shared}} = v_{b^\text{to},t_\text{shared}}
+```
+
+This is the physically-correct "common neutral" model of Yan et al. (2018): the
+shared phase passes through unchanged while the two regulated line-to-line
+voltages are boosted by their taps. Without it the line-to-line voltages are
+still correct but the per-phase reference floats (the unphysical
+"unspecified neutral" model). See the derivation note
+`docs/transformer_admittance_derivation.md` for the matching bus-admittance form.
 
 #### Kirchhoff's Current Law
 

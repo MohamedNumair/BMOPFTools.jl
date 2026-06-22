@@ -155,15 +155,23 @@ function _add_transformer_variables!(model, net)
     ci_xf = Dict{Tuple{String,String,Int}, JuMP.VariableRef}()
 
     xfmr_dict = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "wye_delta", "delta_wye", "center_tap")
+    for subtype in BMOPFTools.TRANSFORMER_SUBTYPES
         for (tid, xfmr) in get(xfmr_dict, subtype, Dict())
             tmfr = Vector{String}(get(xfmr, "terminal_map_from", String[]))
             tmto = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
-            if subtype in ("single_phase",)
-                # YY transformer: one current variable per phase conductor only.
-                # Neutral is the return path, not an independent winding conductor.
+            if subtype in ("single_phase", "single_phase_autotransformer")
+                # YY / single-phase autotransformer: one current variable per phase
+                # conductor only. Neutral is the return path, not a winding conductor.
                 n_fr = length(BMOPFTools._phase_positions(tmfr))
                 n_to = length(BMOPFTools._phase_positions(tmto))
+            elseif subtype == "open_delta_regulator"
+                # Two line-to-line regulating windings → one series current per
+                # regulator on each side (indices 1,2). A 3rd "fr" current models
+                # the galvanic straight-through wire on the shared phase (the
+                # common-neutral connection, V_shared_fr = V_shared_to). The "to"
+                # side needs only the two regulator currents.
+                n_fr = 3
+                n_to = 2
             else
                 n_fr = length(tmfr)
                 n_to = length(tmto)
