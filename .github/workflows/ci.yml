@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ['1.12']
+        version: ['lts', '1']   # 'lts' = declared compat floor; '1' = latest stable
         os: [ubuntu-latest]
         arch: [default]
     steps:
