@@ -372,6 +372,43 @@ Reactive power is governed in one of two mutually exclusive ways:
 
   with $\mathrm{pf} > 0$ lagging (absorbing VAr) and $\mathrm{pf} < 0$ leading
   (injecting VAr).
+- **Volt-var droop**: when the `control_profile` declares a `volt_var`
+  sub-object, $Q$ is pinned to a piecewise-linear function of the phase
+  voltage magnitude $U_{n,k} = |\Delta v_k|$,
+  $Q_{n,k} = Q^{\text{base}}_{n,k}\, f^{\mathrm{VV}}(U_{n,k})$ (an equality — the
+  inverter follows the curve).
+
+Active power follows either the box upper bound above or, when the
+`control_profile` declares a `volt_watt` sub-object, a **Volt-watt** curtailment
+cap $P_{n,k} \leq P^{\text{base}}_{n,k}\, f^{\mathrm{VW}}(U_{n,k})$.
+
+##### Piecewise-linear droop encoding
+
+Each characteristic $f$ through non-decreasing breakpoints
+$(\bar x_i, \bar y_i)$, clamped flat outside the range, is written as a sum of
+shifted/scaled rectified-linear (ReLU) terms,
+
+```math
+f(U) = \bar y_1 + \sum_i a_i \,\operatorname{ReLU}(U - \bar x_i),
+```
+
+where each interior segment contributes a $(+a_i, \bar x_i)$ / $(-a_i, \bar
+x_{i+1})$ pair so the slope telescopes. For a gradient-based solver the kinked
+ReLU is replaced by the smooth softplus surrogate
+$\operatorname{ReLU}^{\varepsilon}(x) = \varepsilon\,\log(1+e^{x/\varepsilon})$,
+evaluated with the numerically stable `log1pexp`/`logistic` from
+[StatsFuns.jl](https://github.com/JuliaStats/StatsFuns.jl) and registered as a
+JuMP nonlinear operator (analytic derivatives) so Ipopt differentiates it
+exactly. $\varepsilon \to 0$ recovers the exact ReLU; the relative smoothing is
+the `volt_var_watt_eps` keyword of [`solve_opf`](@ref).
+
+Breakpoint voltages are SI volts (phase-to-neutral) and are scaled into model
+units at build time, so the droop is identical in SI and per-unit mode. Droop is
+applied for `SINGLE_PHASE` and `FOUR_LEG` only; a `THREE_LEG` (delta) inverter
+has too few degrees of freedom for a per-phase droop, so a profile on it is
+ignored (box bounds retained) with a warning. Regional default characteristics
+(e.g. AS/NZS 4777.2:2020 "Australia A" for Queensland) are injected by
+[`augment_case`](@ref) from the `[augment.smart_inverter]` config section.
 
 The inverter current variables enter KCL with the same sign convention as
 generators (injection positive into the bus); for `FOUR_LEG` the negated phase

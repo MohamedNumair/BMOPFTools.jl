@@ -116,6 +116,12 @@ function integrity_check(net::Dict{String,Any},
         end
     end
 
+    # --- control_profile droop-law consistency ---
+    for (cp_id, cp) in profiles
+        cp isa Dict || continue
+        _check_droop_profile!(findings, cp_id, cp)
+    end
+
     # --- linecode references + dimension consistency ---
     linecodes = get(net, "linecode", Dict())
     lc_dims = Dict{String,Int}()
@@ -474,4 +480,88 @@ function integrity_check(net::Dict{String,Any},
     result["n_reference_issues"] = n_ref_issues
     result["n_dimension_issues"] = n_dim_issues
     result
+end
+
+# Validate a control_profile's Volt-var / Volt-watt droop sub-objects: shape and
+# monotonicity of the breakpoint encoding, sign conventions, mutual exclusivity
+# with constant-PF, and the option subset the OPF builder currently supports.
+function _check_droop_profile!(findings::Vector{Finding}, cp_id, cp::Dict)
+    has_pf = get(cp, "power_factor", nothing) isa Dict
+    vv = get(cp, "volt_var",  nothing)
+    vw = get(cp, "volt_watt", nothing)
+
+    if has_pf && (vv isa Dict || vw isa Dict)
+        push!(findings, Finding(ERROR, "E.INT.CONTROL_PROFILE_CONFLICT", :integrity,
+            :control_profile, cp_id,
+            "control_profile '$cp_id' declares both power_factor and Volt-var/" *
+            "Volt-watt; these are mutually exclusive.",
+            Dict{String,Any}()))
+    end
+
+    _strictly_increasing(xs) =
+        length(xs) >= 2 && all(xs[i+1] > xs[i] for i in 1:length(xs)-1)
+
+    if vv isa Dict
+        bps = Float64.(get(vv, "breakpoints", Float64[]))
+        ql  = Float64.(get(vv, "q_limits",    Float64[]))
+        if length(bps) != 4 || length(ql) != 2
+            push!(findings, Finding(ERROR, "E.INT.VOLT_VAR_SHAPE", :integrity,
+                :control_profile, cp_id,
+                "volt_var in '$cp_id' needs 4 breakpoints and 2 q_limits; got " *
+                "$(length(bps)) and $(length(ql)).", Dict{String,Any}()))
+        else
+            _strictly_increasing(bps) || push!(findings, Finding(ERROR,
+                "E.INT.VOLT_VAR_BREAKPOINTS", :integrity, :control_profile, cp_id,
+                "volt_var breakpoints in '$cp_id' must be strictly increasing.",
+                Dict{String,Any}()))
+            (ql[1] <= 0 <= ql[2]) || push!(findings, Finding(WARNING,
+                "W.INT.VOLT_VAR_QLIMITS", :integrity, :control_profile, cp_id,
+                "volt_var q_limits in '$cp_id' expected [absorb≤0, inject≥0]; " *
+                "got $(ql).", Dict{String,Any}()))
+        end
+        _check_droop_options!(findings, cp_id, "volt_var", vv,
+            "q_unit", "VA_FRACTION", "q_ref", "VAR_MAX")
+    end
+
+    if vw isa Dict
+        bps = Float64.(get(vw, "breakpoints", Float64[]))
+        pl  = Float64.(get(vw, "p_limits",    Float64[]))
+        if length(bps) != 2 || length(pl) != 2
+            push!(findings, Finding(ERROR, "E.INT.VOLT_WATT_SHAPE", :integrity,
+                :control_profile, cp_id,
+                "volt_watt in '$cp_id' needs 2 breakpoints and 2 p_limits; got " *
+                "$(length(bps)) and $(length(pl)).", Dict{String,Any}()))
+        else
+            _strictly_increasing(bps) || push!(findings, Finding(ERROR,
+                "E.INT.VOLT_WATT_BREAKPOINTS", :integrity, :control_profile, cp_id,
+                "volt_watt breakpoints in '$cp_id' must be strictly increasing.",
+                Dict{String,Any}()))
+        end
+        _check_droop_options!(findings, cp_id, "volt_watt", vw,
+            "p_unit", "VA_FRACTION", "p_ref", nothing)
+    end
+end
+
+# Reject option values outside the subset the OPF builder currently supports, so
+# unsupported configs fail loudly rather than silently mis-solving. `ref_ok`
+# being `nothing` means any value of the ref field is accepted (volt_watt p_ref).
+function _check_droop_options!(findings, cp_id, law, obj,
+                               unit_field, unit_ok, ref_field, ref_ok)
+    vref = get(obj, "voltage_reference", "PN_PER_PHASE")
+    vref == "PN_PER_PHASE" || push!(findings, Finding(ERROR,
+        "E.INT.DROOP_UNSUPPORTED", :integrity, :control_profile, cp_id,
+        "$law in '$cp_id': voltage_reference '$vref' not yet supported " *
+        "(only PN_PER_PHASE).", Dict{String,Any}()))
+    unit = get(obj, unit_field, unit_ok)
+    unit == unit_ok || push!(findings, Finding(ERROR,
+        "E.INT.DROOP_UNSUPPORTED", :integrity, :control_profile, cp_id,
+        "$law in '$cp_id': $unit_field '$unit' not yet supported (only $unit_ok).",
+        Dict{String,Any}()))
+    if ref_ok !== nothing
+        rv = get(obj, ref_field, ref_ok)
+        rv == ref_ok || push!(findings, Finding(ERROR,
+            "E.INT.DROOP_UNSUPPORTED", :integrity, :control_profile, cp_id,
+            "$law in '$cp_id': $ref_field '$rv' not yet supported (only $ref_ok).",
+            Dict{String,Any}()))
+    end
 end

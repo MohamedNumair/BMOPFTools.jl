@@ -39,12 +39,13 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
                                            optimizer=Ipopt.Optimizer,
                                            t_index::Int=1,
                                            per_unit::Bool=false,
-                                           s_base::Float64=1e6)
+                                           s_base::Float64=1e6,
+                                           volt_var_watt_eps::Float64=2e-3)
     # cs_r/cs_i are created inside build! and read again in extract!; share them
     # across the two hooks via this closed-over scratch dict.
     slack = Dict{Symbol,Any}()
     _build_and_solve(net; optimizer=optimizer, t_index=t_index,
-                     per_unit=per_unit, s_base=s_base,
+                     per_unit=per_unit, s_base=s_base, relu_eps=volt_var_watt_eps,
                      configure! = _configure_feasibility!,
                      build! = ctx -> build_feasibility!(ctx, slack),
                      extract! = (ctx, result) -> extract_feasibility!(ctx, result, slack))

@@ -86,6 +86,9 @@ function augment_case(net::Dict{String,Any};
     # ── Pass 4: inverter dispatch bounds ─────────────────────────────────────
     recipe.apply_inverter && _apply_inverter_augmentation!(net′, entries, recipe)
 
+    # ── Pass 5: smart-inverter Volt-var/Volt-watt defaults (config-driven) ───
+    _apply_smart_inverter_augmentation!(net′, entries, _smart_inverter_cfg(config))
+
     # ── Snapshot findings_after ───────────────────────────────────────────────
     fa = Finding[]
     benchmark_readiness_check(net′, fa)

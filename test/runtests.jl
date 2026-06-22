@@ -2586,6 +2586,7 @@ const IEEE13_FIXTURE = """
         else
             include("opf_tests.jl")
             include("pmd_opf_port_tests.jl")
+            include("volt_var_watt_tests.jl")
         end
     end
 

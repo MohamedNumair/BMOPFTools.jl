@@ -59,8 +59,10 @@ module BMOPFOpfExt
 using BMOPFTools
 using JuMP
 using Ipopt
+using StatsFuns: log1pexp, logistic
 
 include("data_utils.jl")
+include("control_curves.jl")
 include("variables.jl")
 include("bus.jl")
 include("shunt.jl")
@@ -99,9 +101,11 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
                                optimizer=Ipopt.Optimizer,
                                t_index::Int=1,
                                per_unit::Bool=false,
-                               s_base::Float64=1e6)
+                               s_base::Float64=1e6,
+                               volt_var_watt_eps::Float64=2e-3)
     _build_and_solve(net; optimizer=optimizer, t_index=t_index,
-                     per_unit=per_unit, s_base=s_base, build! = build_opf!)
+                     per_unit=per_unit, s_base=s_base, build! = build_opf!,
+                     relu_eps=volt_var_watt_eps)
 end
 
 """

@@ -101,3 +101,41 @@ function _apply_inverter_augmentation!(net′::Dict{String,Any},
         end
     end
 end
+
+# Smart-inverter (Volt-var / Volt-watt) default-characteristic augmentation.
+#
+# Config-driven (mirrors the voltage-snap pass): when [augment.smart_inverter] is
+# enabled, any volt_var/volt_watt sub-object that a control_profile declares but
+# leaves blank is filled from the selected regional preset (e.g. AS/NZS 4777.2:2020
+# "Aus_A" for Queensland). Fields already present are never overwritten, so a
+# study can pin individual breakpoints and let the rest default.
+function _apply_smart_inverter_augmentation!(net′::Dict{String,Any},
+                                              entries::Vector{TransformEntry},
+                                              cfg::Dict)
+    get(cfg, "enabled", false) === true || return
+    region  = String(get(cfg, "region", "Aus_A"))
+    regions = get(cfg, "regions", Dict())
+    rdef    = get(regions, region, nothing)
+    rdef isa Dict || (@warn "smart_inverter: region '$region' not found in config — skipping"; return)
+
+    profiles = get(net′, "control_profile", Dict())
+    profiles isa Dict || return
+
+    for (cp_id, cp) in profiles
+        cp isa Dict || continue
+        for law in ("volt_var", "volt_watt")
+            sub = get(cp, law, nothing)
+            sub isa Dict || continue            # only fill a declared sub-object
+            rlaw = get(rdef, law, nothing)
+            rlaw isa Dict || continue
+            for (field, val) in rlaw
+                haskey(sub, field) && continue  # respect explicit values
+                sub[field] = deepcopy(val)
+                push!(entries, TransformEntry(
+                    :control_profile, cp_id, "$(law).$(field)", nothing, val,
+                    "AS_NZS_4777.2:2020_$(region)_$(law)_default", :standard,
+                    "$(law) $(field) defaulted from region $(region)"))
+            end
+        end
+    end
+end
