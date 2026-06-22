@@ -904,6 +904,119 @@ function _net_pv_1ph(p::Float64, q, pf)
     return net
 end
 
+# ── Smart-inverter droop (Volt-var / Volt-watt) validation vs OpenDSS InvControl ─
+#
+# A single-phase, phase-to-perfectly-grounded-neutral PVSystem with a meaningful
+# single-phase load on the same bus. OpenDSS drives the droop with an InvControl
+# element (iterated to a fixed point); BMOPF's smooth-ReLU droop must reproduce
+# the same converged operating point and node voltages, across all three regimes
+# of each characteristic (deadband, slope, saturation).
+#
+# AS/NZS 4777.2:2020 "Australia A" curves on a 240 V (phase-to-neutral) base.
+# Breakpoints below are SI volts (BMOPF) / pu-of-rated (OpenDSS XYcurve x-axis).
+const _AUSA_VV_X = [207.0, 220.0, 240.0, 258.0]   # volt-var breakpoints [V]
+const _AUSA_VV_Q = [-0.60, 0.44]                  # [absorb≤0, inject≥0] frac of s_max
+const _AUSA_VW_X = [253.0, 260.0]                 # volt-watt breakpoints [V]
+const _AUSA_VW_P = [0.20, 1.00]                   # [p_low, p_high] frac of Pmpp
+const _PV_VRATED = 240.0
+
+# Non-obvious OpenDSS settings (validated empirically — see commit message):
+#   · Circuit source model=ideal (stiff slack)
+#   · PVSystem & Load Vminpu=0.1 Vmaxpu=2.0 — keep constant-P/Q across the sweep;
+#     the default Vmaxpu≈1.1 silently rescales power above ~1.1 pu.
+#   · kvarMax=kvarMaxAbs=kVA with RefReactivePower=VARMAX → VV y-axis is a
+#     fraction of kVA (matches BMOPF q_ref=VAR_MAX, q_base=s_max).
+#   · voltwattyaxis=PMPPPU → VW y-axis is a fraction of Pmpp (matches p_ref=P_MAX).
+#   · XYcurves carry flat guard points outside [x1,xn] so OpenDSS CLAMPS instead
+#     of extrapolating the end slope (BMOPF's ReLU-sum clamps).
+#   · WattPriority=No → var priority on the kVA circle (Q held, P curtailed).
+#   · Earth return (PV/load wye point → ground node .0): this is OpenDSS's
+#     phase-to-perfectly-grounded-neutral, matching the BMOPF grounded "n"
+#     terminal. (An explicit, separately-grounded neutral node instead shorts the
+#     return around the line, zeroing the line drop.)
+function _ods_pv_droop(; vsrc, kVA, Pmpp, load_kw, load_kvar, mode::Symbol)
+    vvx = join(vcat(0.5, _AUSA_VV_X ./ _PV_VRATED, 2.0), ",")
+    vvy = "0.44,0.44,0,0,-0.60,-0.60"
+    vwx = join(vcat(0.5, _AUSA_VW_X ./ _PV_VRATED, 2.0), ",")
+    vwy = "1.0,1.0,0.2,0.2"
+    cmds = String[
+        "Clear",
+        "New Circuit.c basekv=0.240 pu=$(vsrc/_PV_VRATED) angle=0 phases=1 bus1=src.1 model=ideal",
+        "New Line.l1 bus1=src.1 bus2=lb.1 phases=1 length=0.5 units=km r1=0.5 x1=0.2",
+        "New Load.ld bus1=lb.1 phases=1 kv=0.240 kW=$load_kw kvar=$load_kvar model=1 Vminpu=0.1 Vmaxpu=2.0",
+        "New PVSystem.pv phases=1 conn=wye bus1=lb.1 kv=0.240 kVA=$kVA Pmpp=$Pmpp irradiance=1.0 " *
+            "pf=1 %cutin=0 %cutout=0 VarFollowInverter=yes WattPriority=No " *
+            "kvarMax=$kVA kvarMaxAbs=$kVA Vminpu=0.1 Vmaxpu=2.0",
+        "New XYcurve.vv npts=6 Xarray=[$vvx] Yarray=[$vvy]",
+        "New XYcurve.vw npts=4 Xarray=[$vwx] Yarray=[$vwy]"]
+    ic = mode === :vv ?
+        "New InvControl.ic mode=VOLTVAR vvc_curve1=vv voltage_curvex_ref=rated " *
+            "RefReactivePower=VARMAX VarChangeTolerance=0.0005 VoltageChangeTolerance=1e-5" :
+        mode === :vw ?
+        "New InvControl.ic mode=VOLTWATT voltwatt_curve=vw voltage_curvex_ref=rated " *
+            "voltwattyaxis=PMPPPU ActivePChangeTolerance=0.0005 VoltageChangeTolerance=1e-5" :
+        "New InvControl.ic combimode=VV_VW vvc_curve1=vv voltwatt_curve=vw voltage_curvex_ref=rated " *
+            "RefReactivePower=VARMAX voltwattyaxis=PMPPPU VarChangeTolerance=0.0005 " *
+            "ActivePChangeTolerance=0.0005 VoltageChangeTolerance=1e-5"
+    push!(cmds, ic)
+    append!(cmds, ["Set VoltageBases=[0.240]", "CalcVoltageBases",
+                   "Set ControlMode=Static", "Set MaxControlIter=100", "Solve"])
+    OpenDSSDirect.dss("Clear")
+    for c in cmds
+        OpenDSSDirect.dss(c)
+    end
+    volts = Dict(n => v for (n, v) in
+                 zip(OpenDSSDirect.Circuit.AllNodeNames(), OpenDSSDirect.Circuit.AllBusVolts()))
+    OpenDSSDirect.Circuit.SetActiveElement("PVSystem.pv")
+    pw = OpenDSSDirect.CktElement.Powers()
+    P = -real(pw[1]) * 1e3
+    Q = -imag(pw[1]) * 1e3
+    return volts, P, Q
+end
+
+# Matching BMOPF network: single-phase PV (phase "1" to perfectly-grounded "n")
+# plus a single-phase load on bus lb, with the Aus A droop control_profile.
+function _net_pv_1ph_droop(; vsrc, kVA, Pmpp, load_kw, load_kvar, mode::Symbol)
+    net = _net_1ph_line()
+    delete!(net, "load")
+    net["voltage_source"]["source"]["v_magnitude"] = [vsrc]
+    net["voltage_source"]["source"]["cost"] = [1.0]
+    net["bus"]["lb"]["terminal_names"] = ["1", "n"]
+    net["bus"]["lb"]["perfectly_grounded_terminals"] = ["n"]
+
+    net["load"] = Dict{String,Any}(
+        "ld" => Dict{String,Any}(
+            "bus" => "lb", "terminal_map" => ["1", "n"],
+            "configuration" => "SINGLE_PHASE",
+            "p_nom" => [load_kw * 1e3], "q_nom" => [load_kvar * 1e3]))
+
+    cp = Dict{String,Any}()
+    if mode === :vv || mode === :vvvw
+        cp["volt_var"] = Dict{String,Any}(
+            "voltage_reference" => "PN_PER_PHASE", "breakpoints" => copy(_AUSA_VV_X),
+            "q_limits" => copy(_AUSA_VV_Q), "q_unit" => "VA_FRACTION", "q_ref" => "VAR_MAX")
+    end
+    if mode === :vw || mode === :vvvw
+        cp["volt_watt"] = Dict{String,Any}(
+            "voltage_reference" => "PN_PER_PHASE", "breakpoints" => copy(_AUSA_VW_X),
+            "p_limits" => copy(_AUSA_VW_P), "p_unit" => "VA_FRACTION", "p_ref" => "P_MAX")
+    end
+    net["control_profile"] = Dict{String,Any}("cp" => cp)
+    inv = Dict{String,Any}(
+        "bus" => "lb", "terminal_map" => ["1", "n"],
+        "topology" => "SINGLE_PHASE", "prime_mover" => "PV",
+        "s_max" => [kVA * 1e3], "p_min" => [0.0], "p_max" => [Pmpp * 1e3],
+        "control_profile" => "cp", "cost" => [0.1])
+    # Volt-watt-only: no volt_var, so pin Q=0 to mirror OpenDSS pf=1 (otherwise the
+    # box-bounded reactive power is unconstrained and the OPF picks an arbitrary Q).
+    if mode === :vw
+        inv["q_min"] = [0.0]
+        inv["q_max"] = [0.0]
+    end
+    net["inverter"] = Dict{String,Any}("pv" => inv)
+    return net
+end
+
 # ── Test cases ────────────────────────────────────────────────────────────────
 
 @testset "PF comparison — single-phase 2-wire line" begin
@@ -1129,6 +1242,75 @@ end
     @test rf["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
     _cmp_volts(V_ods, Vf; label="pv-1ph-pf: ")
     @test rf["inverter"]["pv"]["1"]["qg"] ≈ Q  atol=1.0
+end
+
+# ── Smart-inverter droop: BMOPF smooth-ReLU vs OpenDSS InvControl ───────────────
+# For each scenario: OpenDSS solves its InvControl to a fixed point; BMOPF
+# solve_opf with the matching droop must reproduce the node voltages and the
+# injected P/Q, and the operating point must sit in the intended regime.
+# A small smoothing ε keeps the BMOPF kinks close to OpenDSS's exact piecewise
+# curve; scenarios target regime interiors so the softplus rounding is negligible.
+
+# Shared assertions: node voltages match, and BMOPF reproduces OpenDSS P/Q.
+function _check_pv_droop(params, label; atolV=1.0, atolPQ=60.0)
+    V_ods, P, Q = _ods_pv_droop(; params...)
+    Vbm, res = _bmopf_volts_opf(_net_pv_1ph_droop(; params...))
+    @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+    _cmp_volts(V_ods, Vbm; label=label, atol=atolV)
+    @test res["inverter"]["pv"]["1"]["pg"] ≈ P   atol=atolPQ
+    @test res["inverter"]["pv"]["1"]["qg"] ≈ Q   atol=atolPQ
+    return res, P, Q
+end
+
+@testset "PV droop vs OpenDSS — Volt-var only" begin
+    # Deadband (220–240 V): Q ≈ 0.
+    res, _, Q = _check_pv_droop((vsrc=235.0, kVA=20.0, Pmpp=5.0, load_kw=3.0,
+                                 load_kvar=1.0, mode=:vv), "vv-deadband: ")
+    @test abs(Q) < 50.0
+    @test abs(res["inverter"]["pv"]["1"]["qg"]) < 50.0
+
+    # Slope (240–258 V): partial absorption, strictly inside (0, Q_sat).
+    res, _, Q = _check_pv_droop((vsrc=252.0, kVA=20.0, Pmpp=5.0, load_kw=3.0,
+                                 load_kvar=1.0, mode=:vv), "vv-slope: ")
+    @test -12_000.0 < Q < -2_000.0   # on the ramp, not saturated
+
+    # Saturation (> 258 V): Q clamped at -0.60·s_max = -12 kvar.
+    res, _, Q = _check_pv_droop((vsrc=275.0, kVA=20.0, Pmpp=5.0, load_kw=3.0,
+                                 load_kvar=1.0, mode=:vv), "vv-saturation: ")
+    @test Q ≈ -12_000.0   atol=150.0
+end
+
+@testset "PV droop vs OpenDSS — Volt-watt only" begin
+    # Below threshold (converged V < 253 V): uncurtailed, P ≈ Pmpp.
+    res, P, _ = _check_pv_droop((vsrc=242.0, kVA=14.0, Pmpp=10.0, load_kw=3.0,
+                                 load_kvar=1.0, mode=:vw), "vw-uncurtailed: ")
+    @test P ≈ 10_000.0   atol=100.0
+
+    # Slope (253–260 V): partial curtailment, strictly inside (P_floor, Pmpp).
+    res, P, _ = _check_pv_droop((vsrc=258.0, kVA=14.0, Pmpp=10.0, load_kw=3.0,
+                                 load_kvar=1.0, mode=:vw), "vw-slope: ")
+    @test 2_000.0 < P < 10_000.0
+
+    # Saturation (> 260 V): P clamped at 0.20·Pmpp = 2 kW.
+    res, P, _ = _check_pv_droop((vsrc=272.0, kVA=14.0, Pmpp=10.0, load_kw=3.0,
+                                 load_kvar=1.0, mode=:vw), "vw-saturation: ")
+    @test P ≈ 2_000.0   atol=150.0
+end
+
+@testset "PV droop vs OpenDSS — combined VV+VW (var priority)" begin
+    # Both active, kVA circle slack: VV and VW satisfied independently.
+    res, P, Q = _check_pv_droop((vsrc=255.0, kVA=14.0, Pmpp=10.0, load_kw=3.0,
+                                 load_kvar=1.0, mode=:vvvw), "vvvw-slack: ")
+    @test sqrt(P^2 + Q^2) < 14_000.0 - 100.0   # circle not binding
+    @test Q < -2_000.0 && P < 10_000.0          # both curves engaged
+
+    # kVA circle binds: var priority holds Q on the curve and curtails P below
+    # the volt-watt cap (P² + Q² = s_max²).
+    res, P, Q = _check_pv_droop((vsrc=250.0, kVA=6.0, Pmpp=10.0, load_kw=3.0,
+                                 load_kvar=1.0, mode=:vvvw), "vvvw-varpriority: ")
+    @test sqrt(P^2 + Q^2) ≈ 6_000.0   atol=80.0   # on the apparent-power circle
+    @test Q < -1_000.0                            # vars held (priority)
+    @test P < 5_900.0                             # watts curtailed below kVA
 end
 
 @testset "feasibility OPF honours inverters (regression)" begin
