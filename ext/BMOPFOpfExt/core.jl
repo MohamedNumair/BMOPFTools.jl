@@ -31,6 +31,12 @@ local variables the helpers already expect.
 - `grounded`      — `Set{Tuple{String,String}}` perfectly-grounded (bus, terminal)
 - `vars`          — variable dict returned by `_build_vars`
 - `kcl_r`/`kcl_i` — per-terminal KCL accumulator expressions
+- `branch_inj`    — per two-port-device injection ledger (see `_new_branch_ledger`),
+  populated as side effect of `_kcl_add!` so element complex losses can be
+  computed exactly from terminal powers: `branch_inj[block][id]` is a vector of
+  `(bus, terminal, cr_expr, ci_expr)`, each the current the element injects INTO
+  that bus terminal (KCL "into bus" sign). The element's complex loss is then
+  `S_loss = Σ V·conj(I_into_element) = −Σ V·conj(I_into_bus)`.
 """
 struct OpfContext
     model
@@ -40,6 +46,25 @@ struct OpfContext
     vars::Dict
     kcl_r::Dict
     kcl_i::Dict
+    branch_inj::Dict{String,Any}
+end
+
+# Fresh per-device injection ledger. Keyed block ("line"/"switch"/"transformer")
+# → device id → Vector of (bus, terminal, cr_expr, ci_expr) injected into bus.
+_new_branch_ledger() = Dict{String,Any}(
+    "line" => Dict{String,Any}(),
+    "switch" => Dict{String,Any}(),
+    "transformer" => Dict{String,Any}())
+
+# Record one terminal injection for a two-port device into the ledger. `entry`
+# is the (block, id) pair identifying the device; nothing disables recording.
+function _ledger_add!(branch_inj, entry, bus, terminal, cr_expr, ci_expr)
+    branch_inj === nothing && return
+    entry === nothing && return
+    block, id = entry
+    dev = get!(get!(branch_inj, block, Dict{String,Any}()), id, Vector{Any}())
+    push!(dev, (bus, terminal, cr_expr, ci_expr))
+    return
 end
 
 """
@@ -55,11 +80,13 @@ function _add_device_constraints!(ctx::OpfContext)
     model = ctx.model; net = ctx.net; vars = ctx.vars
     kcl_r = ctx.kcl_r; kcl_i = ctx.kcl_i
 
+    branch_inj = ctx.branch_inj
     _add_source_constraints!(model, net, vars, kcl_r, kcl_i)
-    _add_line_constraints!(model, net, vars, kcl_r, kcl_i; grounded=ctx.grounded)
+    _add_line_constraints!(model, net, vars, kcl_r, kcl_i;
+                           grounded=ctx.grounded, branch_inj=branch_inj)
     _add_line_angle_constraints!(model, net, vars)
     _add_switch_constraints!(model, net, vars, kcl_r, kcl_i)
-    _add_transformer_constraints!(model, net, vars, kcl_r, kcl_i)
+    _add_transformer_constraints!(model, net, vars, kcl_r, kcl_i; branch_inj=branch_inj)
     _add_shunt_constraints!(net, vars, kcl_r, kcl_i)
     _add_load_constraints!(model, net, vars, kcl_r, kcl_i)
     _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
@@ -130,8 +157,10 @@ function _build_and_solve(net::Dict{String,Any};
     vars = _build_vars(model, working, bus_terminals, grounded)
 
     kcl_r, kcl_i = _init_kcl(bus_terminals, grounded)
+    branch_inj = _new_branch_ledger()
 
-    ctx = OpfContext(model, working, bus_terminals, grounded, vars, kcl_r, kcl_i)
+    ctx = OpfContext(model, working, bus_terminals, grounded, vars,
+                     kcl_r, kcl_i, branch_inj)
 
     build!(ctx)
 
@@ -139,7 +168,7 @@ function _build_and_solve(net::Dict{String,Any};
 
     JuMP.optimize!(model)
 
-    result = _extract_results(model, working, bus_terminals, grounded, vars)
+    result = _extract_results(model, working, bus_terminals, grounded, vars, branch_inj)
     extract! === nothing || extract!(ctx, result)
 
     bases !== nothing ? _from_per_unit(result, bases, net) : result

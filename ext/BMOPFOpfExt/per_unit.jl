@@ -357,10 +357,33 @@ function _from_per_unit(result_pu::Dict{String,Any}, bases, net::Dict{String,Any
         line = get(lines, lid, Dict())
         bf   = get(line, "bus_from", "")
         ib   = get(bases.i_base, bf, 1.0)
-        for (_, cvals) in cond_dict
+        for (tk, cvals) in cond_dict
             cvals isa Dict || continue
+            if tk == "ground"          # device ground current (A): × I_base
+                for f in ("cg_r", "cg_i", "cgm")
+                    haskey(cvals, f) && (cvals[f] = cvals[f] * ib)
+                end
+                continue
+            elseif tk == "loss"        # complex loss (W/var): × s_base
+                for f in ("p_loss", "q_loss")
+                    haskey(cvals, f) && (cvals[f] = cvals[f] * sb)
+                end
+                continue
+            end
             for f in ("cr_fr", "ci_fr", "cr_to", "ci_to", "cm_fr", "cm_to")
                 haskey(cvals, f) && (cvals[f] = cvals[f] * ib)
+            end
+        end
+    end
+
+    # Node-level ground-injection currents: ← × I_base[bus]
+    for (bid, t_dict) in get(result, "ground", Dict())
+        t_dict isa Dict || continue
+        ib = get(bases.i_base, bid, 1.0)
+        for (_, gvals) in t_dict
+            gvals isa Dict || continue
+            for f in ("cg_r", "cg_i", "cgm")
+                haskey(gvals, f) && (gvals[f] = gvals[f] * ib)
             end
         end
     end
@@ -467,6 +490,23 @@ function _from_per_unit(result_pu::Dict{String,Any}, bases, net::Dict{String,Any
         for (_, cvals) in get(winding_dict, "to", Dict())
             cvals isa Dict || continue
             for f in ("cr", "ci", "cm"); haskey(cvals, f) && (cvals[f] = cvals[f] * ib_to); end
+        end
+        # Device ground current (A): the no-load shunt is on the from side → I_base[bus_from]
+        if haskey(winding_dict, "ground") && winding_dict["ground"] isa Dict
+            g = winding_dict["ground"]
+            for f in ("cg_r", "cg_i", "cgm"); haskey(g, f) && (g[f] = g[f] * ib_fr); end
+        end
+        # Complex loss (W/var): × s_base
+        if haskey(winding_dict, "loss") && winding_dict["loss"] isa Dict
+            l = winding_dict["loss"]
+            for f in ("p_loss", "q_loss"); haskey(l, f) && (l[f] = l[f] * sb); end
+        end
+    end
+
+    # Network-wide loss totals (W/var): × s_base
+    if haskey(result, "losses") && result["losses"] isa Dict
+        for f in ("p_loss", "q_loss")
+            haskey(result["losses"], f) && (result["losses"][f] = result["losses"][f] * sb)
         end
     end
 
