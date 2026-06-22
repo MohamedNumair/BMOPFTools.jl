@@ -1,5 +1,5 @@
 """
-    augment_case(net; recipe=default_recipe(), analysis=nothing)
+    augment_case(net; recipe=default_recipe(), analysis=nothing, config=_DEFAULT_CONFIG)
         -> (net′::Dict{String,Any}, manifest::TransformationManifest)
 
 Derive a benchmark-ready version of `net` by injecting standards-grounded
@@ -15,6 +15,10 @@ default bounds and constraints for any fields that are absent.
 - `analysis` — output of [`analyze`](@ref) or a dict containing at least
                `"voltage_levels"` and `"provenance"` sub-results; if `nothing`
                the relevant sub-analyses are run internally
+- `config`   — tunable thresholds (see `load_config`); currently drives
+               optional voltage-level snapping (`[augment.voltage_snap]`), which
+               snaps each bus's derived nominal to a standard IEC/ANSI level and
+               writes `v_declared` before the bounds pass. Off by default.
 
 # Returns
 A 2-tuple `(net′, manifest)` where:
@@ -24,6 +28,9 @@ A 2-tuple `(net′, manifest)` where:
   findings before and after augmentation
 
 # Passes (in order)
+0. **Voltage snapping** *(optional)* — snap each bus's derived nominal to a
+   standard IEC 60038 / ANSI C84.1 level and write `v_declared`
+   (`[augment.voltage_snap]` in `config`; off by default)
 1. **Voltage bounds** — `v_min`/`v_max`, `vpn_min`/`vpn_max`,
    `vpp_min`/`vpp_max`, `vneg_max` on buses (EN 50160, DSO planning practice)
 2. **Thermal limits** — `i_max` on linecodes inferred from R₁₁ via IEC 60228
@@ -43,7 +50,8 @@ result = solve_opf(net′)
 """
 function augment_case(net::Dict{String,Any};
                        recipe::AugmentationRecipe = default_recipe(),
-                       analysis = nothing)::Tuple{Dict{String,Any}, TransformationManifest}
+                       analysis = nothing,
+                       config::Dict = _DEFAULT_CONFIG)::Tuple{Dict{String,Any}, TransformationManifest}
 
     net′   = deepcopy(net)
     entries = TransformEntry[]
@@ -60,6 +68,11 @@ function augment_case(net::Dict{String,Any};
 
     # linecode id => classification string ("distinct", "near_balanced", ...)
     lc_classifications = _extract_lc_classifications(prov_result)
+
+    # ── Pass 0: voltage-level snapping (optional, config-driven) ──────────────
+    # Snap each bus's derived nominal to a standard IEC/ANSI level and write
+    # v_declared, so the bounds pass references the standardised voltage.
+    _apply_voltage_snap!(net′, entries, _voltage_snap_cfg(config), bus_voltage_map)
 
     # ── Pass 1: voltage bounds ────────────────────────────────────────────────
     _apply_voltage_bounds!(net′, entries, recipe, bus_voltage_map)

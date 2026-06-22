@@ -26,6 +26,18 @@ directly; phase-to-phase (line-to-line) bounds derive their nominal as
 the deployment region, e.g. `v_declared_lv = 230.0` for Europe/Australia
 (230 V L-N → 400 V L-L); for an 11 kV (L-L) MV system use
 `v_declared_mv = 11000 / √3 ≈ 6350.0`.
+
+Full precedence for the declared voltage, highest first:
+
+1. `bus["v_declared"]` — explicit, set at import time
+2. the optional **voltage-snap** pass (`[augment.voltage_snap]` in the TOML
+   `config`) — snaps `v_nom` to a standard IEC/ANSI level and writes
+   `v_declared`; never overrides an explicit `v_declared`
+3. these recipe fallbacks (`v_declared_lv/mv/hv`)
+4. `v_nom` from voltage-level analysis
+
+Snapping (off by default) is the recommended way to pull imported 240/250 V
+transformers onto the standard 230 V without per-bus editing.
 """
 Base.@kwdef struct AugmentationRecipe
     # ── Declared supply voltage fallbacks (V) ────────────────────────────────
