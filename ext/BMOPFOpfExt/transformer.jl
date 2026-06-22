@@ -55,34 +55,47 @@ Dispatch transformer constraints for all subtypes in the network:
 - `wye_delta`    → `_add_yd_transformer!` with `wye_is_from=true`
 - `delta_wye`    → `_add_yd_transformer!` with `wye_is_from=false`
 """
-function _add_transformer_constraints!(model, net, vars, kcl_r, kcl_i)
+function _add_transformer_constraints!(model, net, vars, kcl_r, kcl_i; branch_inj=nothing)
     vr = vars[:vr]; vi = vars[:vi]
     cr_xf = vars[:cr_xf]; ci_xf = vars[:ci_xf]
     xfmr_dict = get(net, "transformer", Dict())
 
     for (tid, xfmr) in get(xfmr_dict, "single_phase", Dict())
-        _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+        _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
+                              branch_inj=branch_inj)
     end
     for (tid, xfmr) in get(xfmr_dict, "center_tap", Dict())
-        _add_center_tap_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+        _add_center_tap_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
+                              branch_inj=branch_inj)
     end
 
     for (tid, xfmr) in get(xfmr_dict, "wye_delta", Dict())
         _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
-                              wye_is_from=true)
+                              wye_is_from=true, branch_inj=branch_inj)
     end
     for (tid, xfmr) in get(xfmr_dict, "delta_wye", Dict())
         _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
-                              wye_is_from=false)
+                              wye_is_from=false, branch_inj=branch_inj)
     end
 
     for (tid, xfmr) in get(xfmr_dict, "single_phase_autotransformer", Dict())
-        _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+        _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
+                              branch_inj=branch_inj)
     end
     for (tid, xfmr) in get(xfmr_dict, "open_delta_regulator", Dict())
-        _add_open_delta_regulator!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+        _add_open_delta_regulator!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
+                              branch_inj=branch_inj)
     end
 end
+
+# Per-transformer KCL-add closure: records into the branch-loss ledger under
+# ("transformer", tid) while forwarding to the shared accumulator. Each subtype
+# builder binds `kadd = _xf_kadd(kcl_r, kcl_i, branch_inj, tid)` and uses it in
+# place of `_kcl_add!(kcl_r, kcl_i, ...)` so every terminal injection (phases and
+# neutral, both winding sides) is captured for the S_from+S_to loss identity.
+_xf_kadd(kcl_r, kcl_i, branch_inj, tid) =
+    (bus, terminal, cr, ci) -> _kcl_add!(kcl_r, kcl_i, bus, terminal, cr, ci;
+                                         ledger=branch_inj, entry=("transformer", tid))
 
 # ── YY (per-phase) ──────────────────────────────────────────────────────────
 
@@ -121,7 +134,9 @@ previous ideal transformer.
 
 Used for both `single_phase` and `center_tap` transformer subtypes.
 """
-function _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+function _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
+                              branch_inj=nothing)
+    kadd = _xf_kadd(kcl_r, kcl_i, branch_inj, tid)
     b_fr       = get(xfmr, "bus_from", "")
     b_to       = get(xfmr, "bus_to",   "")
     tmfr       = Vector{String}(get(xfmr, "terminal_map_from", String[]))
@@ -213,12 +228,12 @@ function _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
             icr_term = @expression(model, cr_xf[(tid,"fr",k)] + icr_mag)
             ici_term = @expression(model, ci_xf[(tid,"fr",k)] + ici_mag)
 
-            _kcl_add!(kcl_r, kcl_i, b_fr, t_fr, -icr_term, -ici_term)
+            kadd(b_fr, t_fr, -icr_term, -ici_term)
             if length(i_max_fr) >= k
                 @constraint(model, icr_term^2 + ici_term^2 <= i_max_fr[k]^2)
             end
         else
-            _kcl_add!(kcl_r, kcl_i, b_fr, t_fr, -cr_xf[(tid,"fr",k)], -ci_xf[(tid,"fr",k)])
+            kadd(b_fr, t_fr, -cr_xf[(tid,"fr",k)], -ci_xf[(tid,"fr",k)])
             if length(i_max_fr) >= k
                 @constraint(model,
                     cr_xf[(tid,"fr",k)]^2 + ci_xf[(tid,"fr",k)]^2 <= i_max_fr[k]^2)
@@ -241,13 +256,13 @@ function _add_yy_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
                 icr_n = @expression(model, icr_n + G * vr_ph_n_sum - B * vi_ph_n_sum)
                 ici_n = @expression(model, ici_n + G * vi_ph_n_sum + B * vr_ph_n_sum)
             end
-            _kcl_add!(kcl_r, kcl_i, b_fr, t_n_fr, icr_n, ici_n)
+            kadd(b_fr, t_n_fr, icr_n, ici_n)
         end
 
         # To-side phase terminal KCL: transformer injects current at the LV phase.
         # The LV neutral is the load's return path; the transformer model does not
         # directly connect to it, so no neutral KCL contribution on the to-side.
-        _kcl_add!(kcl_r, kcl_i, b_to, t_to, -cr_xf[(tid,"to",k)], -ci_xf[(tid,"to",k)])
+        kadd(b_to, t_to, -cr_xf[(tid,"to",k)], -ci_xf[(tid,"to",k)])
         if length(i_max_to_v) >= k
             @constraint(model,
                 cr_xf[(tid,"to",k)]^2 + ci_xf[(tid,"to",k)]^2 <= i_max_to_v[k]^2)
@@ -330,7 +345,9 @@ Physics (T-model: primary impedance on HV side, per-leg impedance on each LV bra
 
   No-load shunt (G+jB) at HV terminals (placed on winding-1 from side).
 """
-function _add_center_tap_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+function _add_center_tap_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
+                                      branch_inj=nothing)
+    kadd = _xf_kadd(kcl_r, kcl_i, branch_inj, tid)
     b_fr       = get(xfmr, "bus_from", "")
     b_to       = get(xfmr, "bus_to",   "")
     tmfr       = Vector{String}(get(xfmr, "terminal_map_from", String[]))
@@ -462,22 +479,22 @@ function _add_center_tap_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kc
         JuMP.add_to_expression!(icr_ph, -B,   vi[(b_fr, t_fr_ph)])
         JuMP.add_to_expression!(ici_ph,  G,   vi[(b_fr, t_fr_ph)])
         JuMP.add_to_expression!(ici_ph,  B,   vr[(b_fr, t_fr_ph)])
-        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_ph, -icr_ph, -ici_ph)
+        kadd(b_fr, t_fr_ph, -icr_ph, -ici_ph)
         length(i_max_fr) >= 1 && @constraint(model, icr_ph^2 + ici_ph^2 <= i_max_fr[1]^2)
     else
-        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_ph, -Isr, -Isi)
+        kadd(b_fr, t_fr_ph, -Isr, -Isi)
         if length(i_max_fr) >= 1
             @constraint(model, Isr^2 + Isi^2 <= i_max_fr[1]^2)
             _limit_current_box!(Isr, Isi, i_max_fr[1])  # bare HV series-current variable
         end
     end
     # HV neutral: series current returns here (shunt is phase-to-ground, not phase-to-neutral).
-    _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_n, Isr, Isi)
+    kadd(b_fr, t_fr_n, Isr, Isi)
 
     # ── LV side KCL contributions ─────────────────────────────────────────────
-    _kcl_add!(kcl_r, kcl_i, b_to, t_lv_1, -Il1r, -Il1i)
-    _kcl_add!(kcl_r, kcl_i, b_to, t_lv_n, -Inr,  -Ini)
-    _kcl_add!(kcl_r, kcl_i, b_to, t_lv_2, -Il2r, -Il2i)
+    kadd(b_to, t_lv_1, -Il1r, -Il1i)
+    kadd(b_to, t_lv_n, -Inr,  -Ini)
+    kadd(b_to, t_lv_2, -Il2r, -Il2i)
 
     # ── Current magnitude limits (Il1/In/Il2 are bare LV winding-current
     #    variables, so the limit also tightens each component's box bound) ───────
@@ -538,7 +555,8 @@ the model collapses to the previous ideal transform.  A legacy single
 (wye side) with the to-side branch zero.
 """
 function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
-                               wye_is_from::Bool)
+                               wye_is_from::Bool, branch_inj=nothing)
+    kadd = _xf_kadd(kcl_r, kcl_i, branch_inj, tid)
     N = _xfmr_turns_ratio(xfmr)   # v_ref_from / v_ref_to
     i_max_fr   = Float64.(get(xfmr, "i_max_from", Float64[]))
     i_max_to_v = Float64.(get(xfmr, "i_max_to",   Float64[]))
@@ -714,10 +732,9 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
             JuMP.add_to_expression!(icr, -Bph, vi[(b_wye, t)])
             JuMP.add_to_expression!(ici,  Gph, vi[(b_wye, t)])
             JuMP.add_to_expression!(ici,  Bph, vr[(b_wye, t)])
-            _kcl_add!(kcl_r, kcl_i, b_wye, t, -icr, -ici)
+            kadd(b_wye, t, -icr, -ici)
         else
-            _kcl_add!(kcl_r, kcl_i, b_wye, t,
-                      -cr_xf[(tid, side_wye, k)], -ci_xf[(tid, side_wye, k)])
+            kadd(b_wye, t, -cr_xf[(tid, side_wye, k)], -ci_xf[(tid, side_wye, k)])
         end
     end
     for k in 1:n_ph
@@ -730,10 +747,9 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
             JuMP.add_to_expression!(icr, -Bph, vi[(b_del, t)])
             JuMP.add_to_expression!(ici,  Gph, vi[(b_del, t)])
             JuMP.add_to_expression!(ici,  Bph, vr[(b_del, t)])
-            _kcl_add!(kcl_r, kcl_i, b_del, t, -icr, -ici)
+            kadd(b_del, t, -icr, -ici)
         else
-            _kcl_add!(kcl_r, kcl_i, b_del, t,
-                      -cr_xf[(tid, side_del, k)], -ci_xf[(tid, side_del, k)])
+            kadd(b_del, t, -cr_xf[(tid, side_del, k)], -ci_xf[(tid, side_del, k)])
         end
     end
 
@@ -827,7 +843,9 @@ Single-phase step voltage regulator (autotransformer). Terminal arity (2,2):
 `terminal_map_from = ["ph","n"]`, `terminal_map_to = ["ph","n"]` sharing the
 neutral node. Uses one series-current variable per side: index 1.
 """
-function _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+function _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
+                               branch_inj=nothing)
+    kadd = _xf_kadd(kcl_r, kcl_i, branch_inj, tid)
     b_fr  = get(xfmr, "bus_from", "")
     b_to  = get(xfmr, "bus_to",   "")
     tmfr  = Vector{String}(get(xfmr, "terminal_map_from", String[]))
@@ -887,10 +905,10 @@ function _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kc
             @expression(model, vi[(b_fr, t_fr_ph)] - vi[(b_fr, t_fr_n)]) : vi[(b_fr, t_fr_ph)]
         icr = @expression(model, Isr + G * vr_pn - B * vi_pn)
         ici = @expression(model, Isi + G * vi_pn + B * vr_pn)
-        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_ph, -icr, -ici)
+        kadd(b_fr, t_fr_ph, -icr, -ici)
         length(i_max_fr) >= 1 && @constraint(model, icr^2 + ici^2 <= i_max_fr[1]^2)
     else
-        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_ph, -Isr, -Isi)
+        kadd(b_fr, t_fr_ph, -Isr, -Isi)
         if length(i_max_fr) >= 1
             @constraint(model, Isr^2 + Isi^2 <= i_max_fr[1]^2)
             _limit_current_box!(Isr, Isi, i_max_fr[1])
@@ -898,7 +916,7 @@ function _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kc
     end
 
     # To-side phase terminal: transformer injects I_to.
-    _kcl_add!(kcl_r, kcl_i, b_to, t_to_ph, -Itr, -Iti)
+    kadd(b_to, t_to_ph, -Itr, -Iti)
     if length(i_max_to_v) >= 1
         @constraint(model, Itr^2 + Iti^2 <= i_max_to_v[1]^2)
         _limit_current_box!(Itr, Iti, i_max_to_v[1])
@@ -916,7 +934,7 @@ function _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kc
             icr_n = @expression(model, icr_n + G * vr_pn - B * vi_pn)
             ici_n = @expression(model, ici_n + G * vi_pn + B * vr_pn)
         end
-        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_n, icr_n, ici_n)
+        kadd(b_fr, t_fr_n, icr_n, ici_n)
     end
 end
 
@@ -947,7 +965,9 @@ Monolithic open-delta regulator: two line-to-line regulating windings. Terminal
 arity (4,4): `["1","2","3","n"]` on both sides; the neutral carries no winding
 current. `tap_ratio` is `[a1, a2]` (per regulator); `regulator_type` shared.
 """
-function _add_open_delta_regulator!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+function _add_open_delta_regulator!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
+                                    branch_inj=nothing)
+    kadd = _xf_kadd(kcl_r, kcl_i, branch_inj, tid)
     b_fr = get(xfmr, "bus_from", "")
     b_to = get(xfmr, "bus_to",   "")
     tmfr = Vector{String}(get(xfmr, "terminal_map_from", String[]))
@@ -1004,10 +1024,10 @@ function _add_open_delta_regulator!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_
 
         # KCL: the from-side series current enters at phase p and returns at q;
         # the to-side current is injected at p and returned at q (line-to-line).
-        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_p, -Isr, -Isi)
-        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_q,  Isr,  Isi)
-        _kcl_add!(kcl_r, kcl_i, b_to, t_to_p, -Itr, -Iti)
-        _kcl_add!(kcl_r, kcl_i, b_to, t_to_q,  Itr,  Iti)
+        kadd(b_fr, t_fr_p, -Isr, -Isi)
+        kadd(b_fr, t_fr_q,  Isr,  Isi)
+        kadd(b_to, t_to_p, -Itr, -Iti)
+        kadd(b_to, t_to_q,  Itr,  Iti)
 
         if length(i_max_fr) >= j
             @constraint(model, Isr^2 + Isi^2 <= i_max_fr[j]^2)
@@ -1041,7 +1061,7 @@ function _add_open_delta_regulator!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_
         @constraint(model, vi[(b_fr, t_fr_s)] == vi[(b_to, t_to_s)])
         # Wire current: leaves src.shared, enters reg.shared (through-branch).
         Iwr = cr_xf[(tid,"fr",3)]; Iwi = ci_xf[(tid,"fr",3)]
-        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_s, -Iwr, -Iwi)
-        _kcl_add!(kcl_r, kcl_i, b_to, t_to_s,  Iwr,  Iwi)
+        kadd(b_fr, t_fr_s, -Iwr, -Iwi)
+        kadd(b_to, t_to_s,  Iwr,  Iwi)
     end
 end
