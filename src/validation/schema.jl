@@ -179,7 +179,25 @@ const _KNOWN_TRANSFORMER_FIELDS = Dict{String,Set{String}}(
                            "bus_from", "bus_to",
                            "terminal_map_from", "terminal_map_to",
                            "v_ref_from", "v_ref_to",
-                           "i_max_from", "i_max_to"])
+                           "i_max_from", "i_max_to"]),
+    # Single-phase step voltage regulator / autotransformer. The ratio is the
+    # fixed `tap_ratio` (not v_ref_from/v_ref_to); `regulator_type` picks ANSI A/B.
+    "single_phase_autotransformer" =>
+                      Set(["s_rating", "r_series_from", "x_series_from",
+                           "r_series_to", "x_series_to", "bus_from", "bus_to",
+                           "terminal_map_from", "terminal_map_to",
+                           "tap_ratio", "regulator_type",
+                           "i_max_from", "i_max_to",
+                           "g_no_load", "b_no_load"]),
+    # Monolithic open-delta regulator: two single-phase autotransformer windings
+    # connected line-to-line across the phase pairs implied by `connection`.
+    "open_delta_regulator" =>
+                      Set(["s_rating", "r_series_from", "x_series_from",
+                           "r_series_to", "x_series_to", "bus_from", "bus_to",
+                           "terminal_map_from", "terminal_map_to",
+                           "tap_ratio", "regulator_type", "connection",
+                           "i_max_from", "i_max_to",
+                           "g_no_load", "b_no_load"])
 )
 
 const _KNOWN_PATTERNS = Dict{String,Vector{Regex}}(

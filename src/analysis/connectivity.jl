@@ -67,7 +67,7 @@ function connectivity_analysis(net::Dict{String,Any},
 
     # Transformers (each winding pair is an edge)
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (id, t) in sub
@@ -316,7 +316,7 @@ function _classify_zones(net::Dict{String,Any})
 
     # Map each transformer's to-bus → [(subtype, id)]
     feed_by_bus = Dict{String,Vector{Tuple{String,String}}}()
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(get(net, "transformer", Dict()), subtype, nothing)
         sub isa Dict || continue
         for (id, t) in sub

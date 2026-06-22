@@ -174,3 +174,9 @@ per-winding fields back to PMD `rw`/`xsc`.
   BMOPFTools.
 - **RegControl / tap controllers** do not convert; see the
   regulator-pattern detection in the [methodology notes](methodology.md).
+- **Regulator subtypes** (`single_phase_autotransformer`, `open_delta_regulator`)
+  are OPF-native data-model objects but are **not produced by the converters** —
+  `from_dss`/`from_pmd` do not recognise OpenDSS `AutoTrans`/`RegControl` or
+  open-delta banks as these objects, and `to_pmd` does not emit them. They are
+  authored directly in BMOPF JSON. See [conventions](conventions.md) and the
+  [OPF reference](opf.md).

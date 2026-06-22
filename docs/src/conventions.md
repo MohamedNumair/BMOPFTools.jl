@@ -123,7 +123,7 @@ check (`W.PRE.SOURCE_BUS_GENERATOR`).
 
 ## Transformer subtypes
 
-Four subtypes, each its own sub-dict under `transformer`.  All impedance
+Six subtypes, each its own sub-dict under `transformer`.  All impedance
 fields are in SI units (Ω or S); `v_ref_*` in V; `s_rating` in VA.
 
 | Subtype | map arity (from, to) | OPF model | impedance fields |
@@ -132,6 +132,8 @@ fields are in SI units (Ω or S); `v_ref_*` in V; `s_rating` in VA.
 | `center_tap` | (2, 3) | T-model, per-leg secondary Z | same field names — see note below |
 | `wye_delta` | (4, 3) | per-winding T behind ideal Yd transform | `r/x_series_from` (wye), `r/x_series_to` (delta), `g/b_no_load` (S) |
 | `delta_wye` | (3, 4) | per-winding T behind ideal Dy transform | `r/x_series_from` (delta), `r/x_series_to` (wye), `g/b_no_load` (S) |
+| `single_phase_autotransformer` | (2, 2) | step voltage regulator: YY core at fixed-tap effective ratio `n_eff`, **shared neutral** | `r/x_series_from`, `r/x_series_to`, `g/b_no_load`; ratio from `tap_ratio` + `regulator_type` |
+| `open_delta_regulator` | (4, 4) | monolithic open-delta: two line-to-line regulating windings + galvanic straight-through | per-regulator `r/x_series_*`; `connection`, `tap_ratio` (len 2), `regulator_type` |
 
 **`single_phase`**: the series impedance $R = R_1 + N^2 R_2$, $X = X_1 + N^2 X_2$
 is lumped onto the HV side (Γ convention).  `r_series_from`/`x_series_from`
@@ -165,6 +167,27 @@ the effective turns ratio `n_eff`).  The older single `r_series`/`x_series`
 (wye-side lumped, delta ideal) is accepted as legacy shorthand and migrated
 onto `r_series_from`/`x_series_from` with the secondary branch zero — see the
 [conversion guide](conversion.md) and feedback item 21.
+
+**`single_phase_autotransformer`**: a single-phase step voltage regulator
+modelled as an autotransformer (series + common winding sharing a node), so the
+from and to sides are galvanically tied — not isolated.  The ratio is the
+**fixed** `tap_ratio` $a$ (regulated/source); `regulator_type` selects the ANSI
+connection, giving the effective from→to ratio $n_\text{eff}=1/a$ (Type B,
+default) or $n_\text{eff}=a$ (Type A).  The OPF voltage/current constraints are
+the `single_phase` YY form with $N:=n_\text{eff}$, plus a **shared-neutral KCL**
+($I_n + I_\text{series} + I_\text{to}=0$) that closes the common-winding return.
+`v_ref_*` are not used (the ratio is `tap_ratio`); per-unit propagates the same
+base across the galvanic tie (no voltage-level change).
+
+**`open_delta_regulator`**: a monolithic three-phase open-delta regulator — two
+single-phase autotransformer windings connected line-to-line across the phase
+pairs implied by `connection` (`ABBC`/`BCAC`/`CABA`, GridLAB-D convention),
+with per-regulator taps `tap_ratio = [a1, a2]`.  The phase common to both
+regulators is a **galvanic straight-through** (`V_shared,from = V_shared,to`),
+the physically-correct "common neutral" model of Yan et al. (2018); the two
+regulated line-to-line voltages are boosted by their taps while the shared phase
+passes through unchanged.  See the [OPF reference](opf.md) and the derivation
+note `docs/transformer_admittance_derivation.md`.
 
 There is **no wye-wye three-phase type**: three-phase wye-wye units must be
 decomposed into three `single_phase` transformers.  The converter currently

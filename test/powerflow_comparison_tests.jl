@@ -618,6 +618,115 @@ function _net_dy_xfmr()
                 "q_nom"         => [40_000.0])))
 end
 
+function _net_autotransformer()
+    # pf_autotransformer.dss: src ──[1-ph regulator, 2.4 kV, 500 kVA, tap 1.05]── reg
+    # ANSI Type B at tap a=1.05 → n_eff = 1/a; lossless boost V_reg = a·V_src.
+    # %r=0.5 per winding, xhl=1.0 (both kv equal → same z_base both sides).
+    #   z_base = 2400² / 500000 = 11.52 Ω
+    #   r_series_from = r_series_to = 0.005 × 11.52   (winding %r on own base)
+    #   x_series_from = 0.01 × 11.52  (all xhl on winding 1, Γ-model)
+    s   = 500_000.0
+    v   = 2400.0
+    zb  = v^2 / s
+    Dict{String,Any}(
+        "bus" => Dict{String,Any}(
+            "src" => Dict{String,Any}(
+                "terminal_names"  => ["1", "n"],
+                "neutral_terminal"=> "n"),
+            "reg" => Dict{String,Any}(
+                "terminal_names"  => ["1", "n"],
+                "neutral_terminal"=> "n")),
+        "voltage_source" => Dict{String,Any}(
+            "vs" => Dict{String,Any}(
+                "bus"          => "src",
+                "terminal_map" => ["1"],
+                "v_magnitude"  => [2400.0],
+                "v_angle"      => [0.0])),
+        "shunt" => Dict{String,Any}(
+            "g_src" => Dict{String,Any}(
+                "bus" => "src", "terminal_map" => ["n"],
+                "G_1_1" => 1000.0, "B_1_1" => 0.0),
+            "g_reg" => Dict{String,Any}(
+                "bus" => "reg", "terminal_map" => ["n"],
+                "G_1_1" => 1000.0, "B_1_1" => 0.0)),
+        "transformer" => Dict{String,Any}(
+            "single_phase_autotransformer" => Dict{String,Any}(
+                "reg" => Dict{String,Any}(
+                    "bus_from"         => "src",
+                    "bus_to"           => "reg",
+                    "terminal_map_from"=> ["1", "n"],
+                    "terminal_map_to"  => ["1", "n"],
+                    "tap_ratio"        => 1.05,
+                    "regulator_type"   => "B",
+                    "s_rating"         => s,
+                    "r_series_from"    => 0.005 * zb,
+                    "r_series_to"      => 0.005 * zb,
+                    "x_series_from"    => 0.01  * zb))),
+        "load" => Dict{String,Any}(
+            "ld" => Dict{String,Any}(
+                "bus"           => "reg",
+                "terminal_map"  => ["1", "n"],
+                "configuration" => "SINGLE_PHASE",
+                "p_nom"         => [50_000.0],
+                "q_nom"         => [0.0])))
+end
+
+function _net_open_delta_reg()
+    # pf_open_delta_reg.dss: src ──[open-delta regulator, ABBC]── reg
+    # Two single-phase line-to-line regulators (reg1 across A-B tap 1.05,
+    # reg2 across B-C tap 1.025), 500 kVA each, 4.157 kV L-L, %r=0.5, xhl=1.0.
+    # The monolithic BMOPF open_delta_regulator reproduces this with two cores.
+    #   v_LL = 2400·√3 = 4156.9 V; z_base = v_LL² / S referred to the L-L coil.
+    s    = 500_000.0
+    vll  = 2400.0 * sqrt(3)
+    zb   = vll^2 / s
+    Dict{String,Any}(
+        "bus" => Dict{String,Any}(
+            "src" => Dict{String,Any}(
+                "terminal_names"  => ["1", "2", "3", "n"],
+                "neutral_terminal"=> "n"),
+            "reg" => Dict{String,Any}(
+                "terminal_names"  => ["1", "2", "3", "n"],
+                "neutral_terminal"=> "n")),
+        "voltage_source" => Dict{String,Any}(
+            "vs" => Dict{String,Any}(
+                "bus"          => "src",
+                "terminal_map" => ["1", "2", "3"],
+                "v_magnitude"  => [2400.0, 2400.0, 2400.0],
+                "v_angle"      => [0.0, -2π/3, 2π/3])),
+        "shunt" => Dict{String,Any}(
+            "g_src" => Dict{String,Any}(
+                "bus" => "src", "terminal_map" => ["n"],
+                "G_1_1" => 1000.0, "B_1_1" => 0.0),
+            "g_reg" => Dict{String,Any}(
+                "bus" => "reg", "terminal_map" => ["n"],
+                "G_1_1" => 1000.0, "B_1_1" => 0.0)),
+        "transformer" => Dict{String,Any}(
+            "open_delta_regulator" => Dict{String,Any}(
+                "od" => Dict{String,Any}(
+                    "bus_from"         => "src",
+                    "bus_to"           => "reg",
+                    "terminal_map_from"=> ["1", "2", "3", "n"],
+                    "terminal_map_to"  => ["1", "2", "3", "n"],
+                    "connection"       => "ABBC",
+                    "tap_ratio"        => [1.05, 1.025],
+                    "regulator_type"   => "B",
+                    "s_rating"         => s,
+                    "r_series_from"    => 0.005 * zb,
+                    "r_series_to"      => 0.005 * zb,
+                    "x_series_from"    => 0.01  * zb))),
+        "load" => Dict{String,Any}(
+            "lda" => Dict{String,Any}(
+                "bus" => "reg", "terminal_map" => ["1", "n"],
+                "configuration" => "SINGLE_PHASE", "p_nom" => [20_000.0], "q_nom" => [0.0]),
+            "ldb" => Dict{String,Any}(
+                "bus" => "reg", "terminal_map" => ["2", "n"],
+                "configuration" => "SINGLE_PHASE", "p_nom" => [20_000.0], "q_nom" => [0.0]),
+            "ldc" => Dict{String,Any}(
+                "bus" => "reg", "terminal_map" => ["3", "n"],
+                "configuration" => "SINGLE_PHASE", "p_nom" => [20_000.0], "q_nom" => [0.0])))
+end
+
 function _net_delta_load()
     # pf_delta_load.dss: src ──[4-wire line, 0.5 km]── lb
     # Same source, grounding, and 4-wire linecode as _net_3ph_line, but the load
@@ -1099,6 +1208,77 @@ end
     # rtol relaxed to 0.15: see the Yd testset above — the ~13% gap is the known
     # magnetising-shunt base bug, not the series-impedance model (voltages exact).
     @test isapprox(P_bm, P_ods; rtol=0.15)
+end
+
+# Step voltage regulator (single_phase_autotransformer) vs OpenDSS. A fixed-tap
+# regulator is a low-impedance two-winding transformer with the secondary turns
+# scaled by Tap; the BMOPF autotransformer reproduces V_reg = a·V_src (Type B,
+# n_eff = 1/a) plus the series drop. Defined neutral both sides → node voltages
+# compare directly.
+@testset "PF comparison — single-phase autotransformer (Type B regulator)" begin
+    path  = joinpath(_PF_CMP_DIR, "pf_autotransformer.dss")
+    net   = _net_autotransformer()
+    V_ods = _ods_volts(path)
+    V_bm, slack_A = _bmopf_volts(net)
+
+    @test slack_A < 1e-3
+    @test haskey(get(net, "transformer", Dict()), "single_phase_autotransformer")
+
+    _cmp_volts(V_ods, V_bm; label="autotrafo: ")
+end
+
+# Open-delta regulator (open_delta_regulator) vs OpenDSS. OpenDSS builds the bank
+# from two single-phase line-to-line transformers. Only the two regulated
+# line-to-line voltages are physically pinned (the third floats — open-delta), so
+# the comparison is on line-to-line magnitudes, not raw node voltages.
+@testset "PF comparison — open-delta regulator (ABBC)" begin
+    path  = joinpath(_PF_CMP_DIR, "pf_open_delta_reg.dss")
+    net   = _net_open_delta_reg()
+    V_ods = _ods_volts(path)
+
+    res     = solve_feasibility_opf(net; optimizer=Ipopt.Optimizer)
+    slack_A = res["total_slack_magnitude_A"]
+    @test slack_A < 1e-3
+    @test haskey(get(net, "transformer", Dict()), "open_delta_regulator")
+
+    # Line-to-line magnitudes from each solver.
+    rv = res["bus"]["reg"]
+    Vll_bm(p, q) = abs((rv[p]["vr"] - rv[q]["vr"]) + im*(rv[p]["vi"] - rv[q]["vi"]))
+    Vll_ods(p, q) = abs(V_ods["reg.$p"] - V_ods["reg.$q"])
+
+    # reg1 across A-B (tap 1.05), reg2 across B-C (tap 1.025).
+    @test Vll_bm("1", "2") ≈ Vll_ods("1", "2")   rtol=2e-3
+    @test Vll_bm("2", "3") ≈ Vll_ods("2", "3")   rtol=2e-3
+    # Boost ratios match the taps (source LL ≈ 4156.9 V).
+    @test Vll_bm("1", "2") / (2400*sqrt(3)) ≈ 1.05   rtol=5e-3
+    @test Vll_bm("2", "3") / (2400*sqrt(3)) ≈ 1.025  rtol=5e-3
+end
+
+# Galvanic straight-through (common-neutral model, Yan et al. 2018 Eq. 14/15).
+# The open-delta SVR is two single-phase autotransformers sharing the middle
+# phase (B in the ABBC arrangement), which is a copper wire straight through the
+# bank — NOT galvanically isolated. The physically-correct "common neutral" model
+# requires V_shared,from = V_shared,to, while the two regulated phases are boosted
+# by their taps. (The line-to-line voltages alone cannot detect this — they are
+# identical for the unspecified-neutral, neutral-shift, and common-neutral models;
+# this test exercises the per-phase reference that the galvanic tie pins.)
+@testset "open-delta regulator — galvanic straight-through (common neutral)" begin
+    net = _net_open_delta_reg()
+    res = solve_feasibility_opf(net; optimizer=Ipopt.Optimizer)
+    @test res["total_slack_magnitude_A"] < 1e-3
+
+    sv = res["bus"]["src"]; rv = res["bus"]["reg"]
+    vm(d, t) = sqrt(d[t]["vr"]^2 + d[t]["vi"]^2)
+    # ABBC → shared phase is "2" (in both regulator pairs (1,2) and (2,3)).
+    # Common-neutral: the shared phase passes straight through unchanged.
+    @test rv["2"]["vr"] ≈ sv["2"]["vr"]   atol=1e-3
+    @test rv["2"]["vi"] ≈ sv["2"]["vi"]   atol=1e-3
+    @test vm(rv, "2") ≈ vm(sv, "2")       rtol=1e-4
+    # The two regulated phases are boosted above the (preserved) shared phase —
+    # the hallmark of the common-neutral model (paper Fig. 6, Table III), not the
+    # balanced result of the neutral-shift model.
+    @test vm(rv, "1") > vm(rv, "2") + 1.0
+    @test vm(rv, "3") > vm(rv, "2") + 1.0
 end
 
 # ── solve_pf cross-checks vs OpenDSS ────────────────────────────────────────────

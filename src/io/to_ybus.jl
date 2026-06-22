@@ -29,6 +29,10 @@ Return the nodal admittance block for a single transformer data dict.
 `subtype` must be one of `"single_phase"`, `"center_tap"`, `"wye_delta"`,
 `"delta_wye"`.
 
+The regulator subtypes `"single_phase_autotransformer"` and
+`"open_delta_regulator"` use the fixed-tap effective ratio `n_eff`
+(`BMOPFTools._autotransformer_ratio`) in place of the nameplate turns ratio.
+
 Raises an `ArgumentError` for unknown subtypes. Returns `([], zeros(0,0))` when
 the transformer is degenerate (zero `v_ref_to`, missing terminal maps).
 """
@@ -37,6 +41,8 @@ function transformer_yprim(xfmr::Dict{String,Any}, subtype::AbstractString)
     subtype == "center_tap"   && return _yprim_center_tap(xfmr)
     subtype == "wye_delta"    && return _yprim_yd(xfmr; wye_is_from=true)
     subtype == "delta_wye"    && return _yprim_yd(xfmr; wye_is_from=false)
+    subtype == "single_phase_autotransformer" && return _yprim_autotransformer(xfmr)
+    subtype == "open_delta_regulator"          && return _yprim_open_delta(xfmr)
     throw(ArgumentError("unknown transformer subtype: $(repr(subtype))"))
 end
 
@@ -60,7 +66,7 @@ Each `"nodes"` entry is a `Vector` of `[bus_id, terminal_name]` pairs.
 function export_yprim(net::Dict{String,Any})::Dict{String,Any}
     result = Dict{String,Any}()
     xfmr_dict = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr_dict, subtype, Dict())
         isempty(sub) && continue
         result[subtype] = Dict{String,Any}()
@@ -309,5 +315,143 @@ function _yprim_yd(xfmr::Dict{String,Any}; wye_is_from::Bool)
         end
     end
 
+    nodes, Y
+end
+
+# ── single_phase_autotransformer ──────────────────────────────────────────────
+
+# Step voltage regulator / autotransformer. Structurally a YY core with the
+# fixed-tap effective ratio n_eff (= 1/tap_ratio for Type B, tap_ratio for
+# Type A) and a SHARED neutral: the from and to windings reference their own
+# neutral terminal, and KCL at each neutral closes the common-winding return.
+#
+# Nodes: [fr_ph, to_ph, (fr_n), (to_n)]. One core spanning (V_fr_ph − V_fr_n)
+# and (V_to_ph − V_to_n), primitive yt·[1 −n_eff; −n_eff n_eff²] via Y = Cᵀ·yprim·C.
+function _yprim_autotransformer(xfmr::Dict{String,Any})
+    b_fr  = get(xfmr, "bus_from", "")
+    b_to  = get(xfmr, "bus_to",   "")
+    tm_fr = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+    tm_to = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+
+    ph_fr = _phase_positions(tm_fr); ph_to = _phase_positions(tm_to)
+    if isempty(ph_fr) || isempty(ph_to)
+        @warn "single_phase_autotransformer: needs a phase conductor on each side."
+        return (Tuple{String,String}[], zeros(ComplexF64, 0, 0))
+    end
+    n_eff = _autotransformer_ratio(xfmr)
+
+    r1 = Float64(get(xfmr, "r_series_from", 0.0))
+    x1 = Float64(get(xfmr, "x_series_from", 0.0))
+    r2 = Float64(get(xfmr, "r_series_to",   0.0))
+    x2 = Float64(get(xfmr, "x_series_to",   0.0))
+    Z  = (r1 + n_eff^2 * r2) + im*(x1 + n_eff^2 * x2)
+    G0 = Float64(get(xfmr, "g_no_load", 0.0))
+    B0 = Float64(get(xfmr, "b_no_load", 0.0))
+
+    t_fr_ph = tm_fr[ph_fr[1]]; t_to_ph = tm_to[ph_to[1]]
+    n_pos_fr = _neutral_pos(tm_fr); n_pos_to = _neutral_pos(tm_to)
+    t_fr_n = n_pos_fr !== nothing ? tm_fr[n_pos_fr] : nothing
+    t_to_n = n_pos_to !== nothing ? tm_to[n_pos_to] : nothing
+
+    # Node order: phase-from, phase-to, [neutral-from], [neutral-to].
+    nodes = Tuple{String,String}[(b_fr, t_fr_ph), (b_to, t_to_ph)]
+    idx_fr_n = idx_to_n = 0
+    t_fr_n !== nothing && (push!(nodes, (b_fr, t_fr_n)); idx_fr_n = length(nodes))
+    t_to_n !== nothing && (push!(nodes, (b_to, t_to_n)); idx_to_n = length(nodes))
+    n_tot = length(nodes)
+
+    Y = zeros(ComplexF64, n_tot, n_tot)
+    if iszero(Z)
+        # Ideal regulator: Yprim singular. Only the no-load shunt (if any) is finite.
+        if !iszero(G0) || !iszero(B0)
+            Y[1,1] += G0 + im*B0
+        else
+            @warn "single_phase_autotransformer has zero series impedance; Yprim is singular."
+        end
+        return nodes, Y
+    end
+
+    yt = 1.0 / Z
+    # C (2 winding-voltage rows × n_tot): row 1 = from coil (ph_fr − n_fr),
+    # row 2 = to coil (ph_to − n_to).
+    C = zeros(ComplexF64, 2, n_tot)
+    C[1, 1] = 1.0;  idx_fr_n != 0 && (C[1, idx_fr_n] = -1.0)
+    C[2, 2] = 1.0;  idx_to_n != 0 && (C[2, idx_to_n] = -1.0)
+    prim = yt * [1.0 -n_eff; -n_eff n_eff^2]
+    Y .= transpose(C) * prim * C
+
+    (!iszero(G0) || !iszero(B0)) && (Y[1,1] += G0 + im*B0)
+    nodes, Y
+end
+
+# ── open_delta_regulator ──────────────────────────────────────────────────────
+
+# Phase-pair index map for the open-delta Yprim (mirrors the OPF dispatch in
+# ext/BMOPFOpfExt/transformer.jl _OPEN_DELTA_PAIRS).
+const _OPEN_DELTA_YPRIM_PAIRS = Dict{String,Tuple{Tuple{Int,Int},Tuple{Int,Int}}}(
+    "ABBC" => ((1, 2), (2, 3)),
+    "BCAC" => ((2, 3), (1, 3)),
+    "CABA" => ((3, 1), (2, 1)),
+)
+
+# Monolithic open-delta regulator: two line-to-line regulating cores across the
+# phase pairs implied by `connection`, each with its own tap. No neutral winding
+# path. Nodes: [fr_1,fr_2,fr_3,(fr_n), to_1,to_2,to_3,(to_n)].
+function _yprim_open_delta(xfmr::Dict{String,Any})
+    b_fr  = get(xfmr, "bus_from", "")
+    b_to  = get(xfmr, "bus_to",   "")
+    tm_fr = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+    tm_to = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+
+    pairs = get(_OPEN_DELTA_YPRIM_PAIRS,
+                uppercase(strip(string(get(xfmr, "connection", "")))), nothing)
+    ph_fr = _phase_positions(tm_fr); ph_to = _phase_positions(tm_to)
+    if pairs === nothing || length(ph_fr) < 3 || length(ph_to) < 3
+        @warn "open_delta_regulator: bad connection or <3 phase conductors."
+        return (Tuple{String,String}[], zeros(ComplexF64, 0, 0))
+    end
+
+    taps = Float64.(get(xfmr, "tap_ratio", Float64[]))
+    rt   = string(get(xfmr, "regulator_type", "B"))
+    a1 = length(taps) >= 1 ? taps[1] : 1.0
+    a2 = length(taps) >= 2 ? taps[2] : a1
+    n_eff = (_autotransformer_neff(a1, rt), _autotransformer_neff(a2, rt))
+
+    r1 = Float64(get(xfmr, "r_series_from", 0.0))
+    x1 = Float64(get(xfmr, "x_series_from", 0.0))
+    r2 = Float64(get(xfmr, "r_series_to",   0.0))
+    x2 = Float64(get(xfmr, "x_series_to",   0.0))
+
+    # Node order: all from terminals (terminal_map order), then all to terminals.
+    nodes = vcat([(b_fr, t) for t in tm_fr], [(b_to, t) for t in tm_to])
+    n_fr  = length(tm_fr)
+    fr_pos(p) = ph_fr[p]            # node index within the from block
+    to_pos(p) = n_fr + ph_to[p]    # node index within the to block
+    n_tot = length(nodes)
+    Y = zeros(ComplexF64, n_tot, n_tot)
+
+    for (j, (p, q)) in enumerate(pairs)
+        ne = n_eff[j]
+        Z  = (r1 + ne^2 * r2) + im*(x1 + ne^2 * x2)
+        iszero(Z) && continue
+        yt = 1.0 / Z
+        C = zeros(ComplexF64, 2, n_tot)
+        C[1, fr_pos(p)] = 1.0;  C[1, fr_pos(q)] = -1.0
+        C[2, to_pos(p)] = 1.0;  C[2, to_pos(q)] = -1.0
+        prim = yt * [1.0 -ne; -ne ne^2]
+        Y .+= transpose(C) * prim * C
+    end
+
+    # This is the device's natural line-to-line primitive admittance — exactly
+    # the "unspecified neutral" matrix of Yan et al. 2018 (IEEE TSG 9(3):2224),
+    # Eq. (11): the self/mutual terms are yr, the shared phase gets 2·yr on its
+    # diagonal (both regulators), and the from↔to coupling scales as the
+    # autotransformer factor r (= our n_eff) and r² — NOT an isolated-transformer
+    # ratio. The galvanic straight-through of the shared phase (the paper's
+    # physically-correct "common neutral" model, Eq. 14: V_shared_fr = V_shared_to)
+    # is NOT folded into this primitive — it is a topological constraint imposed
+    # in the OPF (_add_open_delta_regulator!). Folding it here (the paper's Eq. 15)
+    # would conflate the device admittance with a particular elimination of the
+    # shared node, so the export keeps the Eq. (11) device primitive.
     nodes, Y
 end

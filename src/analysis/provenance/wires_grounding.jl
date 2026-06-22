@@ -331,7 +331,7 @@ function _earthing_zones(net::Dict{String,Any},
             b isa AbstractString && b in islset && push!(star_buses, b)
         end
         xfmr = get(net, "transformer", Dict())
-        for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+        for subtype in TRANSFORMER_SUBTYPES
             sub = get(xfmr, subtype, nothing)
             sub isa Dict || continue
             for (_, t) in sub
