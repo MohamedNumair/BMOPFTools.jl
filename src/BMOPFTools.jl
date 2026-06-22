@@ -478,7 +478,8 @@ end
 
 """
     solve_opf(net::Dict{String,Any}; optimizer=Ipopt.Optimizer, t_index::Int=1,
-              per_unit::Bool=false, s_base::Float64=1e6) -> Dict{String,Any}
+              per_unit::Bool=false, s_base::Float64=1e6,
+              volt_var_watt_eps::Float64=2e-3) -> Dict{String,Any}
 
 Solve the four-wire rectangular current-voltage (IVR-EN) optimal power flow
 on a BMOPF network dict. Requires JuMP and Ipopt to be loaded in the calling
@@ -487,6 +488,21 @@ environment before calling this function.
 When `per_unit=true` the model is built and solved in per-unit (V_base
 propagated from the source bus through transformers; S_base = `s_base` VA,
 default 1 MVA). All results are returned in SI units regardless.
+
+## Smart-inverter Volt-var / Volt-watt
+
+An inverter whose `control_profile` declares a `volt_var` and/or `volt_watt`
+sub-object follows a voltage-dependent droop: Volt-watt caps active power,
+`P_k ≤ p_base · f^VW(|U_k|)`, and Volt-var pins reactive power to the curve,
+`Q_k = q_base · f^VV(|U_k|)`. Each piecewise-linear characteristic is encoded as
+a sum of shifted/scaled smooth-ReLU (softplus) terms so the model stays
+differentiable for Ipopt; `volt_var_watt_eps` is the relative corner-smoothing
+(smaller → sharper kinks, larger → smoother). Breakpoint voltages are SI volts
+(phase-to-neutral) regardless of `per_unit`. Supported for SINGLE_PHASE and
+FOUR_LEG inverters; for THREE_LEG (delta) the droop is ignored (box bounds
+retained) with a warning. Default characteristics for a region (e.g. AS/NZS
+4777.2:2020 "Australia A" for Queensland) can be injected by `augment_case`
+via the `[augment.smart_inverter]` config section.
 
 Returns a results dict with keys:
 - `"termination_status"` — JuMP termination status string

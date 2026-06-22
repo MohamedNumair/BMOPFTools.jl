@@ -47,6 +47,13 @@ struct OpfContext
     kcl_r::Dict
     kcl_i::Dict
     branch_inj::Dict{String,Any}
+    # Per-unit bases (`nothing` when the model is built in SI units), used by the
+    # inverter Volt-var/Volt-watt droop to scale SI breakpoint voltages into model
+    # units. `relu_eps` is the relative smoothing for the smooth-ReLU droop and
+    # `relu_ops` caches the registered operators by (model-unit) ε.
+    bases
+    relu_eps::Float64
+    relu_ops::Dict{Float64,Any}
 end
 
 # Fresh per-device injection ledger. Keyed block ("line"/"switch"/"transformer")
@@ -90,7 +97,9 @@ function _add_device_constraints!(ctx::OpfContext)
     _add_shunt_constraints!(net, vars, kcl_r, kcl_i)
     _add_load_constraints!(model, net, vars, kcl_r, kcl_i)
     _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
-    _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i)
+    _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i;
+                               bases=ctx.bases, relu_eps=ctx.relu_eps,
+                               relu_ops=ctx.relu_ops)
     _add_ground_injections!(vars, kcl_r, kcl_i, ctx.grounded)
 end
 
@@ -137,7 +146,8 @@ function _build_and_solve(net::Dict{String,Any};
                           s_base::Float64,
                           build!::Function,
                           extract!::Union{Function,Nothing}=nothing,
-                          configure!::Union{Function,Nothing}=nothing)
+                          configure!::Union{Function,Nothing}=nothing,
+                          relu_eps::Float64=2e-3)
 
     working = BMOPFTools.is_timeseries(net) ?
               BMOPFTools.get_snapshot(net, t_index) : deepcopy(net)
@@ -160,7 +170,7 @@ function _build_and_solve(net::Dict{String,Any};
     branch_inj = _new_branch_ledger()
 
     ctx = OpfContext(model, working, bus_terminals, grounded, vars,
-                     kcl_r, kcl_i, branch_inj)
+                     kcl_r, kcl_i, branch_inj, bases, relu_eps, Dict{Float64,Any}())
 
     build!(ctx)
 

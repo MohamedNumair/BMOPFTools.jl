@@ -29,6 +29,7 @@ function domain_rules_check(net::Dict{String,Any},
     _check_low_impedance_lines(net, findings, thresholds, n_checks)
     _check_adjacent_line_impedance_spread(net, findings, thresholds, n_checks, result)
     _check_inverter_capability(net, findings, n_checks)
+    _check_droop_breakpoint_band(net, findings, n_checks)
     _check_cost_phase_uniformity(net, findings, n_checks)
     _check_source_voltage_margin(net, findings, thresholds, n_checks)
     _check_shunt_on_grounded_terminal(net, findings, n_checks)
@@ -67,6 +68,46 @@ function _check_bus_voltage_bounds(net, findings, n_checks)
             push!(findings, Finding(ERROR, "E.DOM.VNMAX_NEGATIVE", :domain_rules, :bus, id,
                 "Bus '$id': vn_max = $(vnmax) V is negative.",
                 Dict{String,Any}("vn_max" => vnmax)))
+        end
+    end
+end
+
+# Warn when a Volt-var/Volt-watt breakpoint (SI phase-to-neutral volts) lies
+# outside the operational voltage band of the inverter's bus — the droop would
+# then never engage (or always saturate) within the feasible voltage range.
+function _check_droop_breakpoint_band(net, findings, n_checks)
+    profiles = get(net, "control_profile", Dict())
+    profiles isa Dict && !isempty(profiles) || return
+    buses = get(net, "bus", Dict())
+
+    for (inv_id, inv) in get(net, "inverter", Dict())
+        inv isa Dict || continue
+        cp_id = get(inv, "control_profile", nothing)
+        cp_id isa AbstractString || continue
+        cp = get(profiles, cp_id, nothing)
+        cp isa Dict || continue
+
+        bus = get(buses, get(inv, "bus", ""), nothing)
+        bus isa Dict || continue
+        vmin = get(bus, "v_min", nothing)
+        vmax = get(bus, "v_max", nothing)
+        (vmin isa AbstractVector && !isempty(vmin)) || continue
+        (vmax isa AbstractVector && !isempty(vmax)) || continue
+        lo = minimum(Float64.(vmin)); hi = maximum(Float64.(vmax))
+
+        for law in ("volt_var", "volt_watt")
+            sub = get(cp, law, nothing)
+            sub isa Dict || continue
+            bps = get(sub, "breakpoints", nothing)
+            bps isa AbstractVector || continue
+            n_checks[] += 1
+            outside = [Float64(b) for b in bps if Float64(b) < lo || Float64(b) > hi]
+            isempty(outside) || push!(findings, Finding(WARNING,
+                "W.DOM.DROOP_BREAKPOINT_OUTSIDE_BAND", :domain_rules, :inverter, inv_id,
+                "Inverter '$inv_id': $law breakpoint(s) $(outside) V lie outside the " *
+                "bus voltage band [$(round(lo,digits=1)), $(round(hi,digits=1))] V; " *
+                "the droop may never engage within the feasible range.",
+                Dict{String,Any}("breakpoints" => outside)))
         end
     end
 end

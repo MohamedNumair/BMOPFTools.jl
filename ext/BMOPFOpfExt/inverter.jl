@@ -42,8 +42,78 @@ function _add_inverter_variables!(model, net)
     cri, cii
 end
 
+# Resolved Volt-var / Volt-watt droop curve, ready to stamp into the model.
+# `triples`/`eps` are in model voltage units (SI volts, or per-unit when the
+# model is solved per-unit); `ref` selects the per-phase normalisation base.
+struct DroopCurve
+    baseline::Float64
+    triples::Vector{Tuple{Float64,Float64}}
+    eps::Float64
+    ref::Symbol           # :S_MAX | :P_MAX | :P_AVAILABLE | :VAR_MAX
+end
+
+# Map SI breakpoints into model units and pick a smoothing ε proportional to the
+# voltage scale (so the corner rounding tracks SI/per-unit automatically).
+function _curve_from_points(xs_si, ys, Uscale::Float64, relu_eps::Float64, ref::Symbol)
+    xs = Float64.(xs_si) ./ Uscale
+    base, triples = breakpoints_to_triples(xs, ys)
+    ε = relu_eps * (sum(xs) / length(xs))
+    return DroopCurve(base, triples, ε, ref)
+end
+
 """
-    _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i)
+    _resolve_volt_var(vv, Uscale, relu_eps) -> DroopCurve | nothing
+
+Build the reactive-power droop curve Q/Q_base = f(U) from a `volt_var` sub-object.
+Only the Queensland default option space is supported (PN_PER_PHASE voltage
+reference, VA_FRACTION q_unit, VAR_MAX q_ref); unsupported variants warn and skip
+so the inverter falls back to its box bounds.
+"""
+function _resolve_volt_var(vv, Uscale::Float64, relu_eps::Float64)
+    vv isa Dict || return nothing
+    bps = Float64.(get(vv, "breakpoints", Float64[]))
+    ql  = Float64.(get(vv, "q_limits",    Float64[]))
+    length(bps) == 4 && length(ql) == 2 || (@warn "volt_var needs 4 breakpoints and 2 q_limits — skipping"; return nothing)
+    get(vv, "q_unit", "VA_FRACTION") == "VA_FRACTION" || (@warn "volt_var q_unit ≠ VA_FRACTION not yet supported — skipping"; return nothing)
+    get(vv, "q_ref",  "VAR_MAX")     == "VAR_MAX"     || (@warn "volt_var q_ref ≠ VAR_MAX not yet supported — skipping"; return nothing)
+    # ys: [inject (≥0) at U1, 0 at U2, 0 at U3, absorb (≤0) at U4]
+    q_absorb, q_inject = ql[1], ql[2]
+    ys = [q_inject, 0.0, 0.0, q_absorb]
+    return _curve_from_points(bps, ys, Uscale, relu_eps, :VAR_MAX)
+end
+
+"""
+    _resolve_volt_watt(vw, Uscale, relu_eps) -> DroopCurve | nothing
+
+Build the active-power cap curve P/P_base = f(U) from a `volt_watt` sub-object.
+Supports VA_FRACTION p_unit with p_ref ∈ {S_MAX, P_MAX, P_AVAILABLE}; other
+variants warn and skip.
+"""
+function _resolve_volt_watt(vw, Uscale::Float64, relu_eps::Float64)
+    vw isa Dict || return nothing
+    bps = Float64.(get(vw, "breakpoints", Float64[]))
+    pl  = Float64.(get(vw, "p_limits",    Float64[]))
+    length(bps) == 2 && length(pl) == 2 || (@warn "volt_watt needs 2 breakpoints and 2 p_limits — skipping"; return nothing)
+    get(vw, "p_unit", "VA_FRACTION") == "VA_FRACTION" || (@warn "volt_watt p_unit ≠ VA_FRACTION not yet supported — skipping"; return nothing)
+    ref = get(vw, "p_ref", "S_MAX")
+    ref in ("S_MAX", "P_MAX", "P_AVAILABLE") || (@warn "volt_watt p_ref '$ref' not supported — skipping"; return nothing)
+    # ys: [p_high at U5, p_low at U6]  (p_limits given as [p_low, p_high])
+    p_low, p_high = pl[1], pl[2]
+    ys = [p_high, p_low]
+    return _curve_from_points(bps, ys, Uscale, relu_eps, Symbol(ref))
+end
+
+# Per-phase normalisation base for a resolved curve, in model units.
+function _droop_base(c::DroopCurve, idx::Int, smax, p_max, p_avail_per)
+    c.ref === :VAR_MAX     && return idx <= length(smax)  ? smax[idx]  : 0.0
+    c.ref === :S_MAX       && return idx <= length(smax)  ? smax[idx]  : 0.0
+    c.ref === :P_MAX       && return idx <= length(p_max) ? p_max[idx] : 0.0
+    c.ref === :P_AVAILABLE && return p_avail_per
+    return 0.0
+end
+
+"""
+    _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i; bases, relu_eps, relu_ops)
 
 Add P/Q power constraints and KCL contributions for all inverter objects.
 
@@ -55,12 +125,20 @@ current variables (cri, cii):
     Q_k = dvi·cri[k] − dvr·cii[k]
 
 Constraints applied per phase:
-- `p_min[k] ≤ P_k ≤ p_max[k]`
+- `p_min[k] ≤ P_k`; upper bound is `P_k ≤ p_max[k]`, or — under a `volt_watt`
+  profile — the curtailment cap `P_k ≤ p_base · f^VW(|U_k|)`.
 - `P_k² + Q_k² ≤ s_max[k]²`  (apparent-power circle)
-- If constant-PF profile present: `sign(pf)·Q_k + tan_phi·P_k = 0` (equality)
-- Otherwise: `q_min[k] ≤ Q_k ≤ q_max[k]`
+- Reactive power: constant-PF equality `sign(pf)·Q_k + tan_phi·P_k = 0`, or —
+  under a `volt_var` profile — the droop equality `Q_k = q_base · f^VV(|U_k|)`,
+  otherwise the box bounds `q_min[k] ≤ Q_k ≤ q_max[k]`.
+
+Volt-var/Volt-watt droop is applied for SINGLE_PHASE and FOUR_LEG inverters only;
+for THREE_LEG (delta) there are too few degrees of freedom for a per-phase droop,
+so a profile is ignored (box bounds retained) with a warning.
 """
-function _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i)
+function _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i;
+                                    bases=nothing, relu_eps::Float64=2e-3,
+                                    relu_ops::Dict{Float64,Any}=Dict{Float64,Any}())
     vr  = vars[:vr];  vi  = vars[:vi]
     cri = vars[:cri]; cii = vars[:cii]
     profiles = get(net, "control_profile", Dict())
@@ -76,8 +154,10 @@ function _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i)
         q_min = Float64.(get(inv, "q_min",  Float64[]))
         q_max = Float64.(get(inv, "q_max",  Float64[]))
 
-        # Resolve constant-PF coupling from control_profile
+        # Resolve control_profile sub-objects (constant-PF and droop laws).
         pf_val = nothing
+        vv_obj = nothing
+        vw_obj = nothing
         cp_id  = get(inv, "control_profile", nothing)
         if cp_id isa String
             cp = get(profiles, cp_id, nothing)
@@ -89,7 +169,33 @@ function _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i)
                         pf_val = Float64(raw)
                     end
                 end
+                vv_obj = get(cp, "volt_var",  nothing)
+                vw_obj = get(cp, "volt_watt", nothing)
             end
+        end
+
+        # Voltage scale for SI→model-unit conversion of breakpoints.
+        Uscale = bases === nothing ? 1.0 : Float64(get(bases.v_base, bus, 1.0))
+
+        # Resolve droop curves (only for the supported topologies).
+        vv = nothing
+        vw = nothing
+        if vv_obj !== nothing || vw_obj !== nothing
+            if topo == "THREE_LEG"
+                @warn "Inverter '$inv_id': Volt-var/Volt-watt not supported for THREE_LEG — using box bounds."
+            elseif pf_val !== nothing
+                @warn "Inverter '$inv_id': control_profile has both power_factor and Volt-var/Volt-watt — using power_factor."
+            else
+                vv = _resolve_volt_var(vv_obj, Uscale, relu_eps)
+                vw = _resolve_volt_watt(vw_obj, Uscale, relu_eps)
+            end
+        end
+
+        # Per-phase available active power (model units) for p_ref=P_AVAILABLE.
+        p_avail_per = let pa = get(inv, "p_avail", nothing)
+            n = max(length(_phase_positions(tm)), 1)
+            pa isa Number ?
+                Float64(pa) / n / (bases === nothing ? 1.0 : Float64(bases.s_base)) : 0.0
         end
 
         tan_phi  = pf_val !== nothing ? tan(acos(abs(pf_val))) : nothing
@@ -107,23 +213,9 @@ function _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i)
             p_expr = @expression(model, dvr*cri[(inv_id,1)] + dvi*cii[(inv_id,1)])
             q_expr = @expression(model, dvi*cri[(inv_id,1)] - dvr*cii[(inv_id,1)])
 
-            !isempty(p_min) && @constraint(model, p_expr >= p_min[1])
-            !isempty(p_max) && @constraint(model, p_expr <= p_max[1])
-
-            if tan_phi !== nothing
-                @constraint(model, pf_sign * q_expr + tan_phi * p_expr == 0)
-            else
-                !isempty(q_min) && @constraint(model, q_expr >= q_min[1])
-                !isempty(q_max) && @constraint(model, q_expr <= q_max[1])
-            end
-
-            if !isempty(smax)
-                p_aux = @variable(model, base_name = "pi_$(inv_id)_1")
-                q_aux = @variable(model, base_name = "qi_$(inv_id)_1")
-                @constraint(model, p_aux == p_expr)
-                @constraint(model, q_aux == q_expr)
-                @constraint(model, p_aux^2 + q_aux^2 <= smax[1]^2)
-            end
+            _apply_inverter_phase!(model, inv_id, 1, p_expr, q_expr, dvr, dvi,
+                p_min, p_max, q_min, q_max, smax, tan_phi, pf_sign,
+                vv, vw, p_avail_per, relu_ops)
 
             _kcl_add!(kcl_r, kcl_i, bus, t_ph,   cri[(inv_id,1)],  cii[(inv_id,1)])
             _kcl_add!(kcl_r, kcl_i, bus, t_ref,  -cri[(inv_id,1)], -cii[(inv_id,1)])
@@ -145,23 +237,9 @@ function _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i)
                 p_expr = @expression(model, dvr*cri[(inv_id,idx)] + dvi*cii[(inv_id,idx)])
                 q_expr = @expression(model, dvi*cri[(inv_id,idx)] - dvr*cii[(inv_id,idx)])
 
-                length(p_min) >= idx && @constraint(model, p_expr >= p_min[idx])
-                length(p_max) >= idx && @constraint(model, p_expr <= p_max[idx])
-
-                if tan_phi !== nothing
-                    @constraint(model, pf_sign * q_expr + tan_phi * p_expr == 0)
-                else
-                    length(q_min) >= idx && @constraint(model, q_expr >= q_min[idx])
-                    length(q_max) >= idx && @constraint(model, q_expr <= q_max[idx])
-                end
-
-                if length(smax) >= idx
-                    p_aux = @variable(model, base_name = "pi_$(inv_id)_$(idx)")
-                    q_aux = @variable(model, base_name = "qi_$(inv_id)_$(idx)")
-                    @constraint(model, p_aux == p_expr)
-                    @constraint(model, q_aux == q_expr)
-                    @constraint(model, p_aux^2 + q_aux^2 <= smax[idx]^2)
-                end
+                _apply_inverter_phase!(model, inv_id, idx, p_expr, q_expr, dvr, dvi,
+                    p_min, p_max, q_min, q_max, smax, tan_phi, pf_sign,
+                    vv, vw, p_avail_per, relu_ops)
 
                 _kcl_add!(kcl_r, kcl_i, bus, t_ph,  cri[(inv_id,idx)],  cii[(inv_id,idx)])
                 t_n !== nothing &&
@@ -179,23 +257,10 @@ function _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i)
                 p_expr = @expression(model, dvr*cri[(inv_id,k)] + dvi*cii[(inv_id,k)])
                 q_expr = @expression(model, dvi*cri[(inv_id,k)] - dvr*cii[(inv_id,k)])
 
-                length(p_min) >= k && @constraint(model, p_expr >= p_min[k])
-                length(p_max) >= k && @constraint(model, p_expr <= p_max[k])
-
-                if tan_phi !== nothing
-                    @constraint(model, pf_sign * q_expr + tan_phi * p_expr == 0)
-                else
-                    length(q_min) >= k && @constraint(model, q_expr >= q_min[k])
-                    length(q_max) >= k && @constraint(model, q_expr <= q_max[k])
-                end
-
-                if length(smax) >= k
-                    p_aux = @variable(model, base_name = "pi_$(inv_id)_$(k)")
-                    q_aux = @variable(model, base_name = "qi_$(inv_id)_$(k)")
-                    @constraint(model, p_aux == p_expr)
-                    @constraint(model, q_aux == q_expr)
-                    @constraint(model, p_aux^2 + q_aux^2 <= smax[k]^2)
-                end
+                # THREE_LEG never carries droop (vv = vw = nothing).
+                _apply_inverter_phase!(model, inv_id, k, p_expr, q_expr, dvr, dvi,
+                    p_min, p_max, q_min, q_max, smax, tan_phi, pf_sign,
+                    nothing, nothing, p_avail_per, relu_ops)
 
                 _kcl_add!(kcl_r, kcl_i, bus, t_pos,  cri[(inv_id,k)],  cii[(inv_id,k)])
                 _kcl_add!(kcl_r, kcl_i, bus, t_neg, -cri[(inv_id,k)], -cii[(inv_id,k)])
@@ -204,5 +269,49 @@ function _add_inverter_constraints!(model, net, vars, kcl_r, kcl_i)
         else
             @warn "Inverter '$inv_id': unknown topology '$topo' — skipping."
         end
+    end
+end
+
+# Stamp the per-phase active/reactive constraints and apparent-power circle for a
+# single inverter phase `idx`, given the bilinear P/Q expressions and (optionally)
+# resolved Volt-var (`vv`) / Volt-watt (`vw`) droop curves.
+function _apply_inverter_phase!(model, inv_id, idx, p_expr, q_expr, dvr, dvi,
+                                p_min, p_max, q_min, q_max, smax, tan_phi, pf_sign,
+                                vv, vw, p_avail_per, relu_ops)
+    # P lower bound (always a box bound).
+    length(p_min) >= idx && @constraint(model, p_expr >= p_min[idx])
+
+    # P upper bound: Volt-watt curtailment cap, else box.
+    if vw !== nothing
+        U    = umag_expr(dvr, dvi)
+        op   = relu_operator_for!(relu_ops, model, vw.eps)
+        base = _droop_base(vw, idx, smax, p_max, p_avail_per)
+        @constraint(model, p_expr <= curve_expr(op, U, base * vw.baseline,
+                                                 [(base*a, x̄) for (a, x̄) in vw.triples]))
+    else
+        length(p_max) >= idx && @constraint(model, p_expr <= p_max[idx])
+    end
+
+    # Reactive power: constant-PF equality, Volt-var droop equality, or box.
+    if tan_phi !== nothing
+        @constraint(model, pf_sign * q_expr + tan_phi * p_expr == 0)
+    elseif vv !== nothing
+        U    = umag_expr(dvr, dvi)
+        op   = relu_operator_for!(relu_ops, model, vv.eps)
+        base = _droop_base(vv, idx, smax, p_max, p_avail_per)
+        @constraint(model, q_expr == curve_expr(op, U, base * vv.baseline,
+                                                [(base*a, x̄) for (a, x̄) in vv.triples]))
+    else
+        length(q_min) >= idx && @constraint(model, q_expr >= q_min[idx])
+        length(q_max) >= idx && @constraint(model, q_expr <= q_max[idx])
+    end
+
+    # Apparent-power circle.
+    if length(smax) >= idx
+        p_aux = @variable(model, base_name = "pi_$(inv_id)_$(idx)")
+        q_aux = @variable(model, base_name = "qi_$(inv_id)_$(idx)")
+        @constraint(model, p_aux == p_expr)
+        @constraint(model, q_aux == q_expr)
+        @constraint(model, p_aux^2 + q_aux^2 <= smax[idx]^2)
     end
 end
