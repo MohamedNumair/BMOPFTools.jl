@@ -7,9 +7,117 @@
 # (their voltages are fixed by the voltage source, not constrained by bounds).
 #
 # Declared supply voltage priority:
-#   1. bus["v_declared"]          — explicit field set at import time
+#   1. bus["v_declared"]          — explicit field set at import time, OR the
+#                                   value written by the voltage-snap pass below
 #   2. recipe.v_declared_lv/mv/hv — recipe-level regional fallback
 #   3. v_nom from voltage_level_analysis — last resort
+
+# ── Voltage-level snapping ───────────────────────────────────────────────────
+#
+# Standardised nominal voltages (IEC 60038 / ANSI C84.1), stored PHASE-TO-NEUTRAL
+# (per-conductor) to match how v_nom is reported by voltage_level_analysis. The
+# familiar line-to-line name is given alongside. Used by the optional snap pass
+# to pull imported 240/250 V transformers onto the standard 230 V (etc.).
+
+const _VOLTAGE_PRESETS = Dict{String,Vector{Float64}}(
+    # IEC 60038, 50 Hz (Europe / Australia / UK). L-N values.
+    "IEC_50Hz" => [
+        230.0,                 # 230 V L-N  (400 V L-L)  LV
+        400.0,                 # 400 V L-N  (690 V L-L)  LV
+        3300.0   / sqrt(3),    # 3.3 kV L-L  MV
+        6600.0   / sqrt(3),    # 6.6 kV L-L
+        11000.0  / sqrt(3),    # 11 kV  L-L
+        22000.0  / sqrt(3),    # 22 kV  L-L
+        33000.0  / sqrt(3),    # 33 kV  L-L
+        66000.0  / sqrt(3),    # 66 kV  L-L  HV
+        132000.0 / sqrt(3),    # 132 kV L-L
+        220000.0 / sqrt(3),    # 220 kV L-L
+        275000.0 / sqrt(3),    # 275 kV L-L
+        400000.0 / sqrt(3),    # 400 kV L-L  EHV
+    ],
+    # ANSI C84.1, 60 Hz (North America). L-N / per-leg values.
+    "ANSI_60Hz" => [
+        120.0,                 # 120 V  (split-phase leg / 208Y L-N)
+        277.0,                 # 277 V L-N  (480 V L-L)
+        7200.0,                # 7.2 kV L-N (12.47 kV L-L)
+        7620.0,                # 7.62 kV L-N (13.2 kV L-L)
+        14400.0,               # 14.4 kV L-N (24.9 kV L-L)
+        19920.0,               # 19.92 kV L-N (34.5 kV L-L)
+    ],
+    "none" => Float64[],
+)
+
+"""
+    _resolve_snap_levels(snap_cfg) -> Vector{Float64}
+
+Merge the named-preset level list with any user `levels` (custom phase-to-neutral
+volts), de-duplicated and sorted. Unknown presets fall back to an empty list
+(custom `levels` only).
+"""
+function _resolve_snap_levels(snap_cfg::Dict)::Vector{Float64}
+    preset  = string(get(snap_cfg, "preset", "IEC_50Hz"))
+    base    = get(_VOLTAGE_PRESETS, preset, Float64[])
+    custom  = Float64.(get(snap_cfg, "levels", Float64[]))
+    sort(unique(vcat(base, custom)))
+end
+
+"""
+    _snap_voltage(v, levels, tol) -> Float64
+
+Snap `v` to the nearest standard level in `levels` whose relative distance
+`|v/std − 1|` is within `tol`; if no level qualifies (or `levels` is empty),
+return `v` unchanged.
+"""
+function _snap_voltage(v::Float64, levels::AbstractVector{<:Real}, tol::Float64)::Float64
+    isempty(levels) && return v
+    best     = v
+    best_rel = tol
+    for std in levels
+        std <= 0 && continue
+        rel = abs(v / std - 1.0)
+        if rel <= best_rel
+            best_rel = rel
+            best     = Float64(std)
+        end
+    end
+    best
+end
+
+"""
+    _apply_voltage_snap!(net′, entries, snap_cfg, bus_voltage_map)
+
+Optional augment pass: when `snap_cfg["enabled"]`, snap each bus's derived
+nominal (`v_nom`) to the nearest standard level (within tolerance) and write the
+result as `bus["v_declared"]`, so the downstream bounds passes reference the
+standardised voltage. Buses that already carry an explicit `v_declared`, or
+whose `v_nom` does not move under snapping, are left untouched. Each write is
+recorded as a `TransformEntry`.
+"""
+function _apply_voltage_snap!(net′::Dict{String,Any},
+                               entries::Vector{TransformEntry},
+                               snap_cfg::Dict,
+                               bus_voltage_map::Dict{String,Float64})
+    get(snap_cfg, "enabled", false) === true || return
+    levels = _resolve_snap_levels(snap_cfg)
+    isempty(levels) && return
+    tol = Float64(get(snap_cfg, "tolerance", 0.10))
+
+    for (bid, bus) in get(net′, "bus", Dict())
+        bus isa Dict || continue
+        haskey(bus, "v_declared") && continue        # respect explicit value
+        v_nom = get(bus_voltage_map, bid, nothing)
+        v_nom === nothing && continue                 # islanded bus
+        snapped = _snap_voltage(Float64(v_nom), levels, tol)
+        snapped == v_nom && continue                  # no standard within band
+
+        bus["v_declared"] = snapped
+        push!(entries, TransformEntry(
+            :bus, bid, "v_declared", nothing, snapped,
+            "IEC60038_snap", :heuristic,
+            "v_nom=$(round(v_nom, digits=1)) V snapped to standard " *
+            "$(round(snapped, digits=1)) V (tol $(round(Int, tol*100))%)"))
+    end
+end
 
 # Return the declared supply voltage (phase-to-ground, V) for a bus.
 function _v_declared(bus::Dict{String,Any}, v_nom::Float64,

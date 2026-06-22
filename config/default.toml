@@ -70,3 +70,27 @@ kv_v = 12470.0          # kv default (V, line-to-line)
 [provenance.switch_like]
 z_per_m = 1e-6          # Ω/m on all diagonals
 z_total = 1e-4          # Ω effective (Z·length) on all diagonals
+
+# ---------------------------------------------------------------------------
+# Augmentation: voltage-level snapping  (augmentation/voltage_bounds.jl)
+#
+# When enabled, augment_case snaps each bus's derived nominal voltage to the
+# nearest standardised level (IEC 60038 / ANSI C84.1) before computing voltage
+# bounds, and writes the snapped value back as bus["v_declared"]. This fixes
+# imported cases whose LV transformers are rated 240/250 V but whose bounds
+# should be referenced to the standard 230 V. A bus that already carries an
+# explicit v_declared is never re-snapped.
+#
+# Snap rule: nearest standard level within the relative `tolerance` band; a
+# value outside every band is left unchanged (so genuinely non-standard buses
+# are preserved). Off by default — no behaviour change unless enabled.
+#
+# Levels are PHASE-TO-NEUTRAL (per-conductor) volts, matching how v_nom is
+# reported. The familiar line-to-line name is given in a comment in the preset
+# table; custom `levels` must also be phase-to-neutral (L-L ÷ √3).
+# ---------------------------------------------------------------------------
+[augment.voltage_snap]
+enabled = false         # opt-in
+preset = "IEC_50Hz"     # "IEC_50Hz" | "ANSI_60Hz" | "none" (use only `levels`)
+tolerance = 0.10        # snap only if |v / std − 1| ≤ tolerance
+levels = []             # extra phase-to-neutral volts, merged with the preset

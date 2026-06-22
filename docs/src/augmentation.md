@@ -126,11 +126,41 @@ is resolved per bus in priority order:
 
 1. `bus["v_declared"]` — explicit field set at import time (e.g. by
    `from_pmd` from the PMD voltage base)
-2. `AugmentationRecipe` fields `v_declared_lv` / `v_declared_mv` /
+2. the optional **voltage-snap** pass (see below) — writes `v_declared` by
+   snapping `v_nom` to a standard level; never overrides an explicit value
+3. `AugmentationRecipe` fields `v_declared_lv` / `v_declared_mv` /
    `v_declared_hv` — regional fallback (e.g. `v_declared_lv = 230.0` for
    Europe/Australia)
-3. `v_nom` from `voltage_level_analysis` — last resort when neither of
+4. `v_nom` from `voltage_level_analysis` — last resort when none of
    the above is set
+
+#### Pass 0 — Voltage-level snapping (optional)
+
+Imported cases frequently carry LV transformers rated 240 or 250 V, so the
+derived `v_nom` is non-standard and the bounds would be referenced to it. When
+enabled, `augment_case` first snaps each bus's `v_nom` to the nearest
+standardised level (IEC 60038 / ANSI C84.1) and writes the result as
+`v_declared`, so the bounds below reference the standard voltage (e.g. 230 V).
+
+Configured in the TOML `config` (off by default — no behaviour change unless
+opted in):
+
+```toml
+[augment.voltage_snap]
+enabled   = true        # opt-in
+preset    = "IEC_50Hz"  # "IEC_50Hz" | "ANSI_60Hz" | "none"
+tolerance = 0.10        # snap only if |v_nom / std − 1| ≤ tolerance
+levels    = []          # extra phase-to-neutral volts, merged with the preset
+```
+
+A value outside every tolerance band is left unchanged, so genuinely
+non-standard buses (e.g. a real 277 V LV) are preserved. Levels are
+phase-to-neutral (per-conductor) volts — the same basis as `v_nom`; custom
+`levels` follow the same convention (line-to-line ÷ √3). A bus that already
+carries an explicit `v_declared` is never re-snapped. Each snap is recorded in
+the manifest as a `v_declared` entry with rule
+`IEC60038_snap`. Pass the config via
+`augment_case(net; config=load_config("my.toml"))`.
 
 #### Solver regularisation bounds (`v_min` / `v_max`)
 
