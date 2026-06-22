@@ -33,10 +33,12 @@ Returned top-level keys
                    "ground" => {cg_r, cg_i, cgm [A]}}` where the ground entry is the
                    no-load-shunt current returning through earth (nonzero only when
                    the shunt is phase-to-ground; positive = into earth)
-- per-element `"loss"` — `{p_loss [W], q_loss [var]}` on each `"line"` and
-                   `"transformer"`, the complex loss from the terminal-power identity
-                   `S_loss = 1ᵀS_from + 1ᵀS_to` (positive p_loss = dissipated; q_loss
-                   = net reactive absorption, negative when the element is net-capacitive)
+- per-element `"loss"` — `{p_loss [W], q_loss [var], s_through [VA]}` on each
+                   `"line"` and `"transformer"`, the complex loss from the terminal-
+                   power identity `S_loss = 1ᵀS_from + 1ᵀS_to` (positive p_loss =
+                   dissipated; q_loss = net reactive absorption, negative when the
+                   element is net-capacitive). `s_through = Σ|V_t||I_t|` is a
+                   throughput scale for sizing numerical tolerances.
 - `"losses"`     — `{p_loss [W], q_loss [var]}` network totals over all lines + transformers
 - `"voltage_source"` — `src_id => terminal => {cr, ci [A], ps [W], qs [var]}`
 - `"initialisation"` — `bus_id => terminal => {vr_init, vi_init, vm_init [V], va_init [rad]}`
@@ -155,12 +157,15 @@ end
 # both winding sides); because those injected currents sum to zero at the element
 # (Σ I = 0 internally) the result is independent of the ground voltage reference.
 #
-# Returns (p_loss, q_loss) in W / var. Positive p_loss = real power dissipated;
-# q_loss is net reactive absorption (positive) or generation (negative, e.g. line
-# charging or transformer magnetising). Grounded terminals (V = 0) contribute
-# nothing, exactly as the physics requires.
+# Returns (p_loss, q_loss, s_through) in W / var / VA. Positive p_loss = real
+# power dissipated; q_loss is net reactive absorption (positive) or generation
+# (negative, e.g. line charging or transformer magnetising). Grounded terminals
+# (V = 0) contribute nothing, exactly as the physics requires. s_through is the
+# sum of per-terminal apparent powers Σ|V_t||I_t| — a throughput scale used to
+# size numerical tolerances downstream (p_loss is a difference of large near-
+# equal terminal powers, so its cancellation noise scales with this).
 function _branch_loss(records, vr_v, vi_v, grounded, val)
-    p = 0.0; q = 0.0
+    p = 0.0; q = 0.0; s = 0.0
     for (bus, t, cr_e, ci_e) in records
         if (bus, t) in grounded
             vr_t = 0.0; vi_t = 0.0
@@ -171,8 +176,9 @@ function _branch_loss(records, vr_v, vi_v, grounded, val)
         ir = -val(cr_e); ii = -val(ci_e)
         p += vr_t*ir + vi_t*ii
         q += vi_t*ir - vr_t*ii
+        s += sqrt(vr_t^2 + vi_t^2) * sqrt(ir^2 + ii^2)
     end
-    p, q
+    p, q, s
 end
 
 function _extract_results(model, net, bus_terminals, grounded, vars,
@@ -562,16 +568,18 @@ function _extract_results(model, net, bus_terminals, grounded, vars,
     total_p_loss = 0.0; total_q_loss = 0.0
     if branch_inj !== nothing
         for (lid, recs) in get(branch_inj, "line", Dict())
-            pl, ql = _branch_loss(recs, vr_v, vi_v, grounded, val)
+            pl, ql, sl = _branch_loss(recs, vr_v, vi_v, grounded, val)
             total_p_loss += pl; total_q_loss += ql
             haskey(line_res, lid) &&
-                (line_res[lid]["loss"] = Dict{String,Any}("p_loss" => pl, "q_loss" => ql))
+                (line_res[lid]["loss"] = Dict{String,Any}(
+                    "p_loss" => pl, "q_loss" => ql, "s_through" => sl))
         end
         for (tid, recs) in get(branch_inj, "transformer", Dict())
-            pl, ql = _branch_loss(recs, vr_v, vi_v, grounded, val)
+            pl, ql, sl = _branch_loss(recs, vr_v, vi_v, grounded, val)
             total_p_loss += pl; total_q_loss += ql
             haskey(xfmr_res, tid) &&
-                (xfmr_res[tid]["loss"] = Dict{String,Any}("p_loss" => pl, "q_loss" => ql))
+                (xfmr_res[tid]["loss"] = Dict{String,Any}(
+                    "p_loss" => pl, "q_loss" => ql, "s_through" => sl))
         end
     end
 

@@ -40,6 +40,7 @@ The `termination_status` and `solve_time` fields are always valid.
 | `transformer` | Dict | Per-transformer, per-winding-side currents |
 | `voltage_source` | Dict | Per-source, per-phase slack current and imported power |
 | `initialisation` | Dict | Per-bus, per-terminal Ipopt start values (see below) |
+| `losses` | Dict | Network-total active/reactive losses; per-element losses live under each `line`/`transformer` (see below) |
 
 ## `bus` — voltages
 
@@ -97,6 +98,11 @@ and are added here to form the totals.
 `cm_fr ≠ cm_to` when the linecode has a nonzero shunt admittance (π model),
 because the two ends draw different shunt currents. For purely series lines (no
 shunt) the totals reduce to the series current and `cm_fr = cm_to`.
+
+Besides the per-conductor terminal keys, the line dict carries two reserved
+keys: `"ground"` — the device's net current into earth (`cg_r`, `cg_i`, `cgm`
+[A]), nonzero only with a phase-to-ground π-shunt — and `"loss"`, the element's
+active/reactive losses (see [`losses`](@ref results-losses)).
 
 ## `switch` — switch currents
 
@@ -219,6 +225,45 @@ input network.
 For ideal transformers the apparent power `S = V·I*` is conserved across
 windings (up to the ideal turns ratio). Series winding impedances
 (`r_series_from`, `x_series_from`, etc.) cause a small difference.
+
+Alongside the `"fr"`/`"to"` winding keys, the transformer dict carries a
+`"ground"` entry (net current into earth: `cg_r`, `cg_i`, `cgm` [A]) and a
+`"loss"` entry (see [`losses`](@ref results-losses)).
+
+## [`losses` — active/reactive losses](@id results-losses)
+
+Losses are computed exactly from the **terminal-power identity**
+`S_loss = 1ᵀ S_from + 1ᵀ S_to`, summed over every conductor the element drives
+(phases and neutral, both winding sides), using the per-device ledger of
+terminal-current injections built during model construction. Because the
+injected currents sum to zero internally, the result is independent of the
+ground voltage reference.
+
+The top-level `losses` dict holds the network totals over all lines and
+transformers:
+
+| Field | Unit | Description |
+|---|---|---|
+| `p_loss` | W | Total active power dissipated (≥ 0 for a passive network) |
+| `q_loss` | var | Net reactive absorption; **negative** when the network is net-capacitive (line charging, capacitor shunts) |
+
+The same identity is attached **per element** under each line and transformer as
+a `"loss"` sub-dict:
+
+```
+result["line"][line_id]["loss"]         => Dict
+result["transformer"][xfmr_id]["loss"]  => Dict
+```
+
+| Field | Unit | Description |
+|---|---|---|
+| `p_loss` | W | Active power dissipated by this element (≥ 0; a negative value is non-physical and is flagged by `W.SOL.NEG_LOSS`) |
+| `q_loss` | var | Net reactive absorption (negative = element is net-capacitive, e.g. line charging or transformer magnetising) |
+| `s_through` | VA | Throughput scale `Σ|V_t||I_t|` over the element's terminals, used to size numerical tolerances (`p_loss` is a difference of large near-equal terminal powers, so its cancellation noise scales with this) |
+
+Switches are ideal (lossless) and carry no `"loss"` entry. The per-element
+sub-dicts are present only when the result was produced with the loss ledger
+(i.e. by `solve_opf`); they may be absent in results from other solvers.
 
 ## `voltage_source` — slack current and grid injection
 

@@ -1857,6 +1857,62 @@ const IEEE13_FIXTURE = """
         @test haskey(report.results[:provenance], "convention")
     end
 
+    @testset "I.PROV.WYE_NEUTRAL_UNGROUNDED — wye star point without local earth" begin
+        # delta_wye xf: wye (LV) star point brought out at bus 'b', no ground.
+        mk = (; ground=nothing) -> begin
+            bus_b = Dict{String,Any}("terminal_names" => ["1","2","3","n"])
+            ground === :perfect && (bus_b["perfectly_grounded_terminals"] = ["n"])
+            net = Dict{String,Any}(
+                "bus" => Dict{String,Any}(
+                    "a" => Dict{String,Any}("terminal_names" => ["1","2","3"]),
+                    "b" => bus_b),
+                "transformer" => Dict{String,Any}(
+                    "delta_wye" => Dict{String,Any}(
+                        "t1" => Dict{String,Any}(
+                            "bus_from" => "a", "bus_to" => "b",
+                            "terminal_map_from" => ["1","2","3"],
+                            "terminal_map_to"   => ["1","2","3","n"],
+                            "v_ref_from" => 11000.0, "v_ref_to" => 433.0))))
+            ground === :shunt && (net["shunt"] = Dict{String,Any}(
+                "gnd" => Dict{String,Any}("bus" => "b", "terminal_map" => ["n"],
+                    "G_1_1" => 0.1, "B_1_1" => 0.0)))
+            net
+        end
+
+        has(f) = any(x -> x.code == "I.PROV.WYE_NEUTRAL_UNGROUNDED", f)
+
+        # ungrounded star point → info
+        f1 = Finding[]; provenance_analysis(mk(), f1)
+        @test has(f1)
+        info = first(x for x in f1 if x.code == "I.PROV.WYE_NEUTRAL_UNGROUNDED")
+        @test info.severity == INFO
+        @test info.detail["bus"] == "b"
+        @test info.detail["side"] == "secondary"
+
+        # perfect ground on the star-point bus resolves it
+        f2 = Finding[]; provenance_analysis(mk(ground=:perfect), f2)
+        @test !has(f2)
+
+        # grounding impedance (shunt on neutral) also resolves it
+        f3 = Finding[]; provenance_analysis(mk(ground=:shunt), f3)
+        @test !has(f3)
+
+        # single-phase phase-to-neutral xf is exempt (only 1 phase conductor)
+        sp = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "a" => Dict{String,Any}("terminal_names" => ["1","n"]),
+                "b" => Dict{String,Any}("terminal_names" => ["1","n"])),
+            "transformer" => Dict{String,Any}(
+                "single_phase" => Dict{String,Any}(
+                    "t1" => Dict{String,Any}(
+                        "bus_from" => "a", "bus_to" => "b",
+                        "terminal_map_from" => ["1","n"],
+                        "terminal_map_to"   => ["1","n"],
+                        "v_ref_from" => 11000.0, "v_ref_to" => 230.0))))
+        f4 = Finding[]; provenance_analysis(sp, f4)
+        @test !has(f4)
+    end
+
     @testset "I.PROV.LINE_SWITCH_LIKE — near-zero impedance detection" begin
         mk_net(R, X, length) = parse_bmopf("""
         {"bus":{
