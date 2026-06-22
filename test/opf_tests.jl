@@ -2008,6 +2008,64 @@
         @test res["bus"]["reg"]["n"]["vm"] ≈ res["bus"]["src"]["n"]["vm"]  atol=1e-4
     end
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # LINE-TO-LINE: single_phase and autotransformer connected phase-to-phase
+    # (terminal_map = ["1","2"], no neutral). The winding spans V₁−V₂; a 2-phase
+    # map is ONE winding, not two phase-to-ground units.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "LL: single_phase transformer with line-to-line primary" begin
+        # 4160 V L-L primary → 240 V L-N secondary. One winding across HV 1-2.
+        Vs = 2401.0  # phase-to-ground source magnitude (L-L ≈ 4158 V)
+        net = parse_bmopf("""
+        {"bus":{
+            "hv":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
+            "lv":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
+                  "v_min":[210.0],"v_max":[260.0]}},
+         "voltage_source":{"vs":{"bus":"hv","terminal_map":["1","2","3"],
+             "v_magnitude":[$Vs,$Vs,$Vs],"v_angle":[0.0,-2.0943951,2.0943951]}},
+         "transformer":{"single_phase":{"t1":{
+             "bus_from":"hv","bus_to":"lv",
+             "terminal_map_from":["1","2"],"terminal_map_to":["1","n"],
+             "v_ref_from":4160.0,"v_ref_to":240.0,"s_rating":50000.0,
+             "r_series_from":0.1,"x_series_from":0.0}}},
+         "load":{"ld":{"bus":"lv","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_nom":[8000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        # Exactly one reported series winding current (not two).
+        @test sort(collect(keys(res["transformer"]["t1"]["fr"]))) == ["1"]
+        # Secondary L-N voltage ≈ HV L-L voltage / ratio (4160/240).
+        vll = sqrt((res["bus"]["hv"]["1"]["vr"] - res["bus"]["hv"]["2"]["vr"])^2 +
+                   (res["bus"]["hv"]["1"]["vi"] - res["bus"]["hv"]["2"]["vi"])^2)
+        @test res["bus"]["lv"]["1"]["vm"] ≈ vll * 240/4160  rtol=2e-3
+        @test res["transformer"]["t1"]["loss"]["p_loss"] > 0.0   # R·|I|² dissipation
+    end
+
+    @testset "LL: single_phase autotransformer across two phases" begin
+        # Type B regulator across phases 1-2 (no neutral): V_LL boosted by a.
+        a = 1.05
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","2","3"],"perfectly_grounded_terminals":[]},
+            "reg":{"terminal_names":["1","2","3"],"perfectly_grounded_terminals":[]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3"],
+             "v_magnitude":[2400.0,2400.0,2400.0],
+             "v_angle":[0.0,-2.0943951,2.0943951]}},
+         "transformer":{"single_phase_autotransformer":{"r1":{
+             "bus_from":"src","bus_to":"reg",
+             "terminal_map_from":["1","2"],"terminal_map_to":["1","2"],
+             "tap_ratio":$a,"regulator_type":"B","s_rating":500000.0}}}}
+        """; from_string=true)
+
+        res = solve_pf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        Vll(b) = sqrt((res["bus"][b]["1"]["vr"] - res["bus"][b]["2"]["vr"])^2 +
+                      (res["bus"][b]["1"]["vi"] - res["bus"][b]["2"]["vi"])^2)
+        @test Vll("reg") ≈ a * Vll("src")  rtol=1e-3
+    end
+
     @testset "REG: open-delta regulator ABBC — both line-to-line ratios" begin
         # Lossless open-delta, no load: each regulating winding boosts its
         # line-to-line voltage by its tap. With balanced source phases the

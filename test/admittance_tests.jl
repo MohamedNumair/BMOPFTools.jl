@@ -96,6 +96,36 @@
         check_symmetry(Y)
     end
 
+    @testset "single_phase — line-to-line winding" begin
+        # Primary connected across phases 1-2 (no neutral): ONE winding V₁−V₂.
+        # Nodes [hv/1, lv/1, hv/2] with the YY core referenced to hv/2.
+        xfmr = Dict{String,Any}(
+            "bus_from"          => "hv",
+            "bus_to"            => "lv",
+            "terminal_map_from" => ["1","2"],
+            "terminal_map_to"   => ["1","n"],
+            "v_ref_from"        => 4160.0,
+            "v_ref_to"          => 240.0,
+            "r_series_from"     => 0.1,
+            "x_series_from"     => 0.4,
+        )
+        N = 4160.0 / 240.0
+        nodes, Y = transformer_yprim(xfmr, "single_phase")
+        # One winding ⇒ 3 distinct nodes (hv/1, lv/1, hv/2); lv/n == lv/1? no:
+        # to-side is L-N so its reference is lv/n.
+        @test ("hv","1") in nodes && ("hv","2") in nodes
+        @test ("lv","1") in nodes && ("lv","n") in nodes
+        check_symmetry(Y)
+        # Current conservation: every column sums to ~0 (incl. the reference rows).
+        for j in 1:size(Y,2)
+            @test abs(sum(Y[:, j])) < 1e-9
+        end
+        # The 2-port between the winding terminals is the YY core with this N.
+        ip = findfirst(==(("hv","1")), nodes)
+        Z  = 0.1 + im*0.4; y = 1.0/Z
+        @test abs(Y[ip, ip] - y) < 1e-9
+    end
+
     # ─── center_tap ───────────────────────────────────────────────────────────
 
     @testset "center_tap" begin
@@ -420,6 +450,36 @@
         _, YA = transformer_yprim(xfmrA, "single_phase_autotransformer")
         @test abs(YA[2,2] - a^2*y) < 1e-10
         @test abs(YA[1,2] + a*y)   < 1e-10
+    end
+
+    @testset "single_phase_autotransformer — line-to-line" begin
+        # Regulator across phases 1-2 (no neutral): the winding reference q is the
+        # second phase, so nodes are [src/1, reg/1, src/2, reg/2].
+        a  = 1.05
+        ne = 1.0 / a
+        xfmr = Dict{String,Any}(
+            "bus_from"          => "src",
+            "bus_to"            => "reg",
+            "terminal_map_from" => ["1","2"],
+            "terminal_map_to"   => ["1","2"],
+            "tap_ratio"         => a,
+            "regulator_type"    => "B",
+            "r_series_from"     => 0.5,
+            "x_series_from"     => 2.0,
+        )
+        nodes, Y = transformer_yprim(xfmr, "single_phase_autotransformer")
+        @test length(nodes) == 4
+        @test nodes[1] == ("src","1") && nodes[2] == ("reg","1")
+        @test ("src","2") in nodes && ("reg","2") in nodes
+        check_symmetry(Y)
+        # 2-port between the phase nodes (refs at 0) is the YY core with N := ne.
+        Z = 0.5 + im*2.0; y = 1.0/Z
+        @test abs(Y[1,1] - y)      < 1e-10
+        @test abs(Y[1,2] + ne*y)   < 1e-10
+        @test abs(Y[2,2] - ne^2*y) < 1e-10
+        for j in 1:size(Y,2)              # current conservation incl. ref rows
+            @test abs(sum(Y[:, j])) < 1e-9
+        end
     end
 
     # ─── open_delta_regulator ─────────────────────────────────────────────────

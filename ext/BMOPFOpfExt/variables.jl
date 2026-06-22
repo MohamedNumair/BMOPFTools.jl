@@ -160,21 +160,24 @@ function _add_transformer_variables!(model, net)
             tmfr = Vector{String}(get(xfmr, "terminal_map_from", String[]))
             tmto = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
             if subtype == "single_phase_autotransformer"
-                # Single-phase autotransformer: one series current per phase
-                # conductor. A galvanic neutral bond ties the from/to neutral
-                # terminals (one shared SVR bushing); its bond current is the
-                # extra "fr" index (analogous to the open-delta straight-through
-                # wire). Allocated only when both sides carry a neutral terminal.
-                n_ph = length(BMOPFTools._phase_positions(tmfr))
-                has_both_n = BMOPFTools._neutral_pos(tmfr) !== nothing &&
-                             BMOPFTools._neutral_pos(tmto) !== nothing
-                n_fr = has_both_n ? n_ph + 1 : n_ph
-                n_to = length(BMOPFTools._phase_positions(tmto))
+                # Single-phase autotransformer: one series current per regulating
+                # winding (winding pairs, so a line-to-line map is ONE winding, not
+                # two). A galvanic bond ties the from/to reference terminals (the
+                # shared SVR bushing — the neutral for L-N, the common phase for
+                # L-L); its bond current is the extra "fr" index (analogous to the
+                # open-delta straight-through wire). Allocated only when both sides
+                # have a winding reference q (a neutral or a second phase).
+                pf = BMOPFTools._xfmr_winding_pairs(tmfr)
+                pt = BMOPFTools._xfmr_winding_pairs(tmto)
+                has_both_q = !isempty(pf) && !isempty(pt) &&
+                             pf[1][2] !== nothing && pt[1][2] !== nothing
+                n_fr = length(pf) + (has_both_q ? 1 : 0)
+                n_to = length(pt)
             elseif subtype == "single_phase"
-                # YY single-phase: one current variable per phase conductor only.
-                # Neutral is the return path, not a winding conductor.
-                n_fr = length(BMOPFTools._phase_positions(tmfr))
-                n_to = length(BMOPFTools._phase_positions(tmto))
+                # YY single-phase: one current variable per winding pair. A
+                # line-to-neutral and a line-to-line map are both ONE winding.
+                n_fr = length(BMOPFTools._xfmr_winding_pairs(tmfr))
+                n_to = length(BMOPFTools._xfmr_winding_pairs(tmto))
             elseif subtype == "open_delta_regulator"
                 # Two line-to-line regulating windings → one series current per
                 # regulator on each side (indices 1,2). A 3rd "fr" current models

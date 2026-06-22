@@ -220,6 +220,33 @@ function _phase_positions(terminal_map::AbstractVector)::Vector{Int}
 end
 
 """
+    _xfmr_winding_pairs(terminal_map) -> Vector{Tuple{Int,Union{Int,Nothing}}}
+
+Winding terminal pairs `(p, q)` for one side of a single-phase transformer /
+autotransformer, where each winding spans the terminal voltage `V_p − V_q`:
+
+- **line-to-neutral** (a terminal named `"n"` is present): one phase→neutral
+  winding per phase conductor, all sharing the neutral position `q`;
+- **line-to-line** (no neutral, exactly two terminals): a single winding across
+  the pair, `q` = the second terminal;
+- otherwise (no neutral, ≠ 2 terminals): phase→ground windings (`q = nothing`,
+  the implicit zero reference).
+
+This lets the builders treat both `["1","n"]` (L-N) and `["1","2"]` (L-L) maps
+uniformly — the return current always closes at `q`.
+"""
+function _xfmr_winding_pairs(terminal_map::AbstractVector)::Vector{Tuple{Int,Union{Int,Nothing}}}
+    np = _neutral_pos(terminal_map)
+    if np !== nothing
+        return [(p, np) for p in _phase_positions(terminal_map)]
+    elseif length(terminal_map) == 2
+        return [(1, 2)]
+    else
+        return [(p, nothing) for p in _phase_positions(terminal_map)]
+    end
+end
+
+"""
     _xfmr_turns_ratio(xfmr) -> Float64
 
 Return N = v_ref_from / v_ref_to, defaulting to 1.0 if either field is missing
