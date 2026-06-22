@@ -404,7 +404,7 @@ end
 function _xfmr_downstream(net, loads)
     bus_info = Dict{String,NamedTuple}()
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (id, t) in sub
@@ -438,7 +438,7 @@ function _downstream_buses(net, xfmr_id::String, t_bus::String)::Set{String}
         (f isa AbstractString && t isa AbstractString) && add!(string(f), string(t))
     end
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (oid, ot) in sub

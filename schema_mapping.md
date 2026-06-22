@@ -101,6 +101,8 @@ JSON schema and the PowerModelsDistribution (PMD) ENGINEERING data model.
 | `center_tap` | `["WYE","WYE","WYE"]`, nwinding=3 | |
 | `wye_delta` | `["WYE","DELTA"]` | Series Z on wye side |
 | `delta_wye` | `["DELTA","WYE"]` | Series Z on wye side |
+| `single_phase_autotransformer` | — | Step voltage regulator (autotransformer). Fixed `tap_ratio` + `regulator_type` (A/B). OPF-native; PMD/DSS converters not yet implemented |
+| `open_delta_regulator` | — | Monolithic open-delta regulator (`connection` ABBC/BCAC/CABA). OPF-native; converters not yet implemented |
 
 | BMOPF | PMD | Notes |
 |-------|-----|-------|

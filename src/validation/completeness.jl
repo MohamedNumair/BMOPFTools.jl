@@ -84,7 +84,7 @@ function completeness_check(net::Dict{String,Any},
     if xfmr isa Dict
         n_xfmr = 0
         n_xfmr_missing = 0
-        for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+        for subtype in TRANSFORMER_SUBTYPES
             sub = get(xfmr, subtype, nothing)
             sub isa Dict || continue
             for (id, comp) in sub

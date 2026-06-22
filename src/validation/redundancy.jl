@@ -168,7 +168,7 @@ function _check_mergeable_lines(net, findings)
         end
     end
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (_, t) in sub

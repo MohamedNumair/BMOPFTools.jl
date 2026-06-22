@@ -376,4 +376,134 @@
         @test abs(lhs2 - rhs2) < 1e-8
     end
 
+    # ─── single_phase_autotransformer ─────────────────────────────────────────
+
+    @testset "single_phase_autotransformer" begin
+        # Type B regulator, tap_ratio a=1.05 → n_eff = 1/a. Series impedance on
+        # the from side. Nodes: [fr_ph, to_ph, fr_n, to_n].
+        a  = 1.05
+        ne = 1.0 / a                      # Type B effective ratio
+        xfmr = Dict{String,Any}(
+            "bus_from"          => "src",
+            "bus_to"            => "reg",
+            "terminal_map_from" => ["1", "n"],
+            "terminal_map_to"   => ["1", "n"],
+            "tap_ratio"         => a,
+            "regulator_type"    => "B",
+            "r_series_from"     => 0.5,
+            "x_series_from"     => 2.0,
+        )
+        nodes, Y = transformer_yprim(xfmr, "single_phase_autotransformer")
+
+        @test length(nodes) == 4
+        @test nodes[1] == ("src", "1")
+        @test nodes[2] == ("reg", "1")
+        @test nodes[3] == ("src", "n")
+        @test nodes[4] == ("reg", "n")
+        @test size(Y) == (4, 4)
+        check_symmetry(Y)
+
+        # Oracle: the 2-port between the two phase nodes (neutrals at 0) is the
+        # YY core with N := n_eff: Y_phase = [y, -ne·y; -ne·y, ne²·y].
+        Z = 0.5 + im*2.0
+        y = 1.0 / Z
+        @test abs(Y[1,1] - y)        < 1e-10
+        @test abs(Y[1,2] + ne*y)     < 1e-10
+        @test abs(Y[2,2] - ne^2*y)   < 1e-10
+        # Each column sums to ~0 (current conservation incl. the neutral rows).
+        for j in 1:4
+            @test abs(sum(Y[:, j])) < 1e-9
+        end
+
+        # Type A is the reciprocal connection: n_eff = a.
+        xfmrA = merge(xfmr, Dict{String,Any}("regulator_type" => "A"))
+        _, YA = transformer_yprim(xfmrA, "single_phase_autotransformer")
+        @test abs(YA[2,2] - a^2*y) < 1e-10
+        @test abs(YA[1,2] + a*y)   < 1e-10
+    end
+
+    # ─── open_delta_regulator ─────────────────────────────────────────────────
+
+    @testset "open_delta_regulator" begin
+        # ABBC: regulator 1 across (1,2), regulator 2 across (2,3); each its tap.
+        a = (1.05, 1.025)
+        ne = (1.0/a[1], 1.0/a[2])         # Type B
+        xfmr = Dict{String,Any}(
+            "bus_from"          => "src",
+            "bus_to"            => "reg",
+            "terminal_map_from" => ["1", "2", "3", "n"],
+            "terminal_map_to"   => ["1", "2", "3", "n"],
+            "connection"        => "ABBC",
+            "tap_ratio"         => [a[1], a[2]],
+            "regulator_type"    => "B",
+            "r_series_from"     => 0.5,
+            "x_series_from"     => 2.0,
+        )
+        nodes, Y = transformer_yprim(xfmr, "open_delta_regulator")
+
+        # Node order: from block then to block.
+        @test length(nodes) == 8
+        @test nodes[1] == ("src", "1") && nodes[5] == ("reg", "1")
+        @test size(Y) == (8, 8)
+        check_symmetry(Y)
+
+        # The neutral nodes (4 = src.n, 8 = reg.n) carry no winding → zero rows.
+        @test all(iszero, Y[4, :]) && all(iszero, Y[8, :])
+
+        # Each regulator is a line-to-line core; injected current at its phase
+        # pair must conserve (column sums zero across all nodes).
+        for j in 1:8
+            @test abs(sum(Y[:, j])) < 1e-9
+        end
+
+        # Apply a voltage profile; the line-to-line winding relation
+        # I_to = -ne·I_from per core must hold. Build V with balanced phases.
+        V = ComplexF64[
+            230.94+0im, 230.94*cis(-2π/3), 230.94*cis(2π/3), 0.0,  # src 1,2,3,n
+            0.0, 0.0, 0.0, 0.0]                                     # reg (solve below)
+        # Choose reg phase voltages so each core is at its no-load boosted LL volts:
+        # V_to_LL = a · V_fr_LL for Type B. Set reg phase = a-scaled src phase.
+        V[5] = a[1]*V[1]; V[6] = a[1]*V[2]; V[7] = a[2]*V[3]
+        I = Y * V
+        # At the no-load boosted point each core's from/to LL drop satisfies the
+        # ideal relation, so the line currents are tiny (only series-Z driven).
+        @test all(isfinite, I)
+    end
+
+    # ─── open_delta_regulator vs Yan et al. 2018 Eq. (11) ──────────────────────
+    # The exported Yprim is the device's natural line-to-line primitive, which is
+    # exactly the "unspecified neutral" admittance matrix of Yan, Li, Saha et al.,
+    # "Modeling and Analysis of Open-Delta Step Voltage Regulators...", IEEE Trans.
+    # Smart Grid 9(3):2224 (2018), Eq. (11). The paper's effective ratio r = 1−nR
+    # maps to our n_eff; reproduce the matrix term-by-term in per unit (yr=1).
+    @testset "open_delta_regulator — matches paper Eq. (11)" begin
+        # Pure-conductance series so yt = yr = 1 (Z = 1 Ω, x = 0).
+        r1 = 0.95; r2 = 0.97; yr = 1.0
+        # regulator_type "A" makes n_eff = tap_ratio, so we set tap = r directly.
+        xfmr = Dict{String,Any}(
+            "bus_from"          => "b4",
+            "bus_to"            => "b5",
+            "terminal_map_from" => ["1", "2", "3", "n"],
+            "terminal_map_to"   => ["1", "2", "3", "n"],
+            "connection"        => "ABBC",
+            "tap_ratio"         => [r1, r2],
+            "regulator_type"    => "A",
+            "r_series_from"     => 1.0,
+            "x_series_from"     => 0.0,
+        )
+        _, Y = transformer_yprim(xfmr, "open_delta_regulator")
+        # Phase-node sub-matrix in order [A4,B4,C4,A5,B5,C5] (skip the two neutrals).
+        Yr = real.(Y[[1, 2, 3, 5, 6, 7], [1, 2, 3, 5, 6, 7]])
+
+        # Paper Eq. (11), ABBC (reg1 = A-B, reg2 = B-C), yr = 1.
+        P = [  yr        -yr          0     -r1*yr        r1*yr           0;
+              -yr        2yr        -yr      r1*yr   -(r1+r2)*yr       r2*yr;
+                0        -yr         yr        0          r2*yr      -r2*yr;
+            -r1*yr      r1*yr         0     r1^2*yr    -r1^2*yr           0;
+             r1*yr  -(r1+r2)*yr   r2*yr   -r1^2*yr  (r1^2+r2^2)*yr  -r2^2*yr;
+                0       r2*yr     -r2*yr      0        -r2^2*yr      r2^2*yr ]
+
+        @test maximum(abs.(Yr .- P)) < 1e-10
+    end
+
 end

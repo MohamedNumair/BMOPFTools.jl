@@ -75,6 +75,13 @@ function _add_transformer_constraints!(model, net, vars, kcl_r, kcl_i)
         _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i;
                               wye_is_from=false)
     end
+
+    for (tid, xfmr) in get(xfmr_dict, "single_phase_autotransformer", Dict())
+        _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+    end
+    for (tid, xfmr) in get(xfmr_dict, "open_delta_regulator", Dict())
+        _add_open_delta_regulator!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+    end
 end
 
 # ── YY (per-phase) ──────────────────────────────────────────────────────────
@@ -745,5 +752,296 @@ function _add_yd_transformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl
             _limit_xf_current!(cr_xf[(tid,"fr",k)], ci_xf[(tid,"fr",k)], i_max_fr[k])
         length(i_max_to_v) >= k && side_del == "to" &&
             _limit_xf_current!(cr_xf[(tid,"to",k)], ci_xf[(tid,"to",k)], i_max_to_v[k])
+    end
+end
+
+# ── Autotransformer / step voltage regulator ──────────────────────────────────
+#
+# A step voltage regulator is an autotransformer: a SERIES winding and a COMMON
+# (shunt) winding share a node, so the from (source) and to (regulated) sides are
+# galvanically tied — NOT isolated like a two-winding transformer. With a FIXED
+# tap ratio `a` (regulated/source) and ANSI connection type, define the effective
+# from→to ratio (BMOPFTools._autotransformer_neff):
+#
+#   Type B (standard SVR, default):  n_eff = a
+#   Type A:                          n_eff = 1/a
+#
+# The voltage and current-coupling constraints are then IDENTICAL in form to the
+# wye-wye transformer with N := n_eff and series impedance Z = R + jX referred to
+# the from side (R = r_series_from + n_eff²·r_series_to, etc.):
+#
+#   Voltage : ΔV_fr − n_eff·ΔV_to = R·cr_series − X·ci_series   (+ conjugate for imag)
+#   Current : n_eff·I_series_fr + I_to = 0
+#
+# where ΔV is phase-to-neutral (single-phase) or line-to-line (open-delta).
+#
+# The DEPARTURE from the isolated YY model is at the shared node. For the single-
+# phase regulator the from and to share the neutral, and the common-winding return
+# flows there, so the neutral KCL closes BOTH returns:
+#
+#   I_n + I_series_fr + I_to = 0       (= I_n + (1 − n_eff)·I_series_fr = 0)
+#
+# Getting this sign wrong yields negative transformer losses (cf. the Yd notes).
+# A lossless ideal regulator (R=X=G=B=0) collapses to V_to = n_eff·V_fr_pn.
+
+"""
+    _add_regulating_winding!(model, refs, n_eff, R, X) -> nothing
+
+Apply the per-winding autotransformer voltage and current-coupling constraints
+for one regulating winding spanning a `from` terminal pair (p_fr, q_fr) and a
+`to` terminal pair (p_to, q_to), driven by series-current variables
+`(Isr, Isi)` on the from side and `(Itr, Iti)` on the to side.
+
+`refs` is a NamedTuple with fields `vr_fr_p, vr_fr_q, vi_fr_p, vi_fr_q` and the
+matching `*_to_*` voltage variable refs, plus `Isr, Isi, Itr, Iti`. The voltage
+drop is taken across (p − q) on each side, so a phase-to-neutral pair gives the
+single-phase regulator and a phase-to-phase pair gives an open-delta winding.
+
+Voltage : (V_fr_p − V_fr_q) − n_eff·(V_to_p − V_to_q) = R·Isr − X·Isi  (+ imag)
+Current : n_eff·Isr + Itr = 0  (+ imag)
+"""
+function _add_regulating_winding!(model, refs, n_eff::Float64, R::Float64, X::Float64)
+    dvr_fr = @expression(model, refs.vr_fr_p - refs.vr_fr_q)
+    dvi_fr = @expression(model, refs.vi_fr_p - refs.vi_fr_q)
+    dvr_to = @expression(model, refs.vr_to_p - refs.vr_to_q)
+    dvi_to = @expression(model, refs.vi_to_p - refs.vi_to_q)
+
+    if R != 0.0 || X != 0.0
+        @constraint(model, dvr_fr - n_eff * dvr_to == R * refs.Isr - X * refs.Isi)
+        @constraint(model, dvi_fr - n_eff * dvi_to == R * refs.Isi + X * refs.Isr)
+    else
+        @constraint(model, dvr_fr == n_eff * dvr_to)
+        @constraint(model, dvi_fr == n_eff * dvi_to)
+    end
+
+    # Ideal-core current coupling (power-conservative): n_eff·I_series_fr + I_to = 0
+    @constraint(model, n_eff * refs.Isr + refs.Itr == 0)
+    @constraint(model, n_eff * refs.Isi + refs.Iti == 0)
+    return nothing
+end
+
+"""
+    _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+
+Single-phase step voltage regulator (autotransformer). Terminal arity (2,2):
+`terminal_map_from = ["ph","n"]`, `terminal_map_to = ["ph","n"]` sharing the
+neutral node. Uses one series-current variable per side: index 1.
+"""
+function _add_autotransformer!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+    b_fr  = get(xfmr, "bus_from", "")
+    b_to  = get(xfmr, "bus_to",   "")
+    tmfr  = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+    tmto  = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+    n_eff = BMOPFTools._autotransformer_ratio(xfmr)
+
+    ph_fr = BMOPFTools._phase_positions(tmfr)
+    ph_to = BMOPFTools._phase_positions(tmto)
+    if isempty(ph_fr) || isempty(ph_to)
+        @warn "single_phase_autotransformer '$tid': needs a phase conductor on " *
+              "each side; got from=$(tmfr) to=$(tmto). Skipping."
+        return
+    end
+    t_fr_ph = tmfr[ph_fr[1]]
+    t_to_ph = tmto[ph_to[1]]
+    n_pos_fr = BMOPFTools._neutral_pos(tmfr)
+    n_pos_to = BMOPFTools._neutral_pos(tmto)
+    t_fr_n = n_pos_fr !== nothing ? tmfr[n_pos_fr] : nothing
+    t_to_n = n_pos_to !== nothing ? tmto[n_pos_to] : nothing
+
+    # Series impedance referred to from (Γ convention, identical to YY).
+    r_fr = Float64(get(xfmr, "r_series_from", 0.0))
+    x_fr = Float64(get(xfmr, "x_series_from", 0.0))
+    r_to = Float64(get(xfmr, "r_series_to",   0.0))
+    x_to = Float64(get(xfmr, "x_series_to",   0.0))
+    R = r_fr + n_eff^2 * r_to
+    X = x_fr + n_eff^2 * x_to
+
+    G = Float64(get(xfmr, "g_no_load", 0.0))
+    B = Float64(get(xfmr, "b_no_load", 0.0))
+    has_shunt = (G != 0.0 || B != 0.0)
+
+    i_max_fr   = Float64.(get(xfmr, "i_max_from", Float64[]))
+    i_max_to_v = Float64.(get(xfmr, "i_max_to",   Float64[]))
+
+    Isr = cr_xf[(tid,"fr",1)]; Isi = ci_xf[(tid,"fr",1)]
+    Itr = cr_xf[(tid,"to",1)]; Iti = ci_xf[(tid,"to",1)]
+
+    # Phase-to-neutral voltage refs (neutral implicitly 0 if absent on a side).
+    vr_fr_q = t_fr_n !== nothing ? vr[(b_fr, t_fr_n)] : JuMP.AffExpr(0.0)
+    vi_fr_q = t_fr_n !== nothing ? vi[(b_fr, t_fr_n)] : JuMP.AffExpr(0.0)
+    vr_to_q = t_to_n !== nothing ? vr[(b_to, t_to_n)] : JuMP.AffExpr(0.0)
+    vi_to_q = t_to_n !== nothing ? vi[(b_to, t_to_n)] : JuMP.AffExpr(0.0)
+
+    refs = (vr_fr_p = vr[(b_fr, t_fr_ph)], vr_fr_q = vr_fr_q,
+            vi_fr_p = vi[(b_fr, t_fr_ph)], vi_fr_q = vi_fr_q,
+            vr_to_p = vr[(b_to, t_to_ph)], vr_to_q = vr_to_q,
+            vi_to_p = vi[(b_to, t_to_ph)], vi_to_q = vi_to_q,
+            Isr = Isr, Isi = Isi, Itr = Itr, Iti = Iti)
+    _add_regulating_winding!(model, refs, n_eff, R, X)
+
+    # From-side phase terminal current = series + magnetising shunt (V_ph − V_n).
+    if has_shunt
+        vr_pn = t_fr_n !== nothing ?
+            @expression(model, vr[(b_fr, t_fr_ph)] - vr[(b_fr, t_fr_n)]) : vr[(b_fr, t_fr_ph)]
+        vi_pn = t_fr_n !== nothing ?
+            @expression(model, vi[(b_fr, t_fr_ph)] - vi[(b_fr, t_fr_n)]) : vi[(b_fr, t_fr_ph)]
+        icr = @expression(model, Isr + G * vr_pn - B * vi_pn)
+        ici = @expression(model, Isi + G * vi_pn + B * vr_pn)
+        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_ph, -icr, -ici)
+        length(i_max_fr) >= 1 && @constraint(model, icr^2 + ici^2 <= i_max_fr[1]^2)
+    else
+        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_ph, -Isr, -Isi)
+        if length(i_max_fr) >= 1
+            @constraint(model, Isr^2 + Isi^2 <= i_max_fr[1]^2)
+            _limit_current_box!(Isr, Isi, i_max_fr[1])
+        end
+    end
+
+    # To-side phase terminal: transformer injects I_to.
+    _kcl_add!(kcl_r, kcl_i, b_to, t_to_ph, -Itr, -Iti)
+    if length(i_max_to_v) >= 1
+        @constraint(model, Itr^2 + Iti^2 <= i_max_to_v[1]^2)
+        _limit_current_box!(Itr, Iti, i_max_to_v[1])
+    end
+
+    # Shared-neutral KCL: BOTH returns close here (the galvanic-tie departure
+    # from YY). I_n + I_series_fr + I_to = 0 ⟺ I_n + (1 − n_eff)·I_series_fr = 0,
+    # plus the no-load shunt return if present.
+    if t_fr_n !== nothing
+        icr_n = @expression(model, Isr + Itr)
+        ici_n = @expression(model, Isi + Iti)
+        if has_shunt
+            vr_pn = @expression(model, vr[(b_fr, t_fr_ph)] - vr[(b_fr, t_fr_n)])
+            vi_pn = @expression(model, vi[(b_fr, t_fr_ph)] - vi[(b_fr, t_fr_n)])
+            icr_n = @expression(model, icr_n + G * vr_pn - B * vi_pn)
+            ici_n = @expression(model, ici_n + G * vi_pn + B * vr_pn)
+        end
+        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_n, icr_n, ici_n)
+    end
+end
+
+# ── Open-delta regulator (monolithic three-phase) ─────────────────────────────
+#
+# Two single-phase autotransformer windings connected LINE-TO-LINE across the
+# phase pairs implied by `connection` (GridLAB-D convention). Each winding uses
+# the same line-to-line regulating constraint as the single-phase case, but with
+# the voltage drop taken across two PHASE terminals (no neutral path). The third
+# phase and the neutral are determined by KCL.
+#
+#   "ABBC" => regulator 1 across (1,2), regulator 2 across (2,3)
+#   "BCAC" => regulator 1 across (2,3), regulator 2 across (1,3)
+#   "CABA" => regulator 1 across (3,1), regulator 2 across (2,1)
+#
+# Variable indices: series current per regulator on each side — index 1 and 2.
+
+const _OPEN_DELTA_PAIRS = Dict{String,Tuple{Tuple{Int,Int},Tuple{Int,Int}}}(
+    "ABBC" => ((1, 2), (2, 3)),
+    "BCAC" => ((2, 3), (1, 3)),
+    "CABA" => ((3, 1), (2, 1)),
+)
+
+"""
+    _add_open_delta_regulator!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+
+Monolithic open-delta regulator: two line-to-line regulating windings. Terminal
+arity (4,4): `["1","2","3","n"]` on both sides; the neutral carries no winding
+current. `tap_ratio` is `[a1, a2]` (per regulator); `regulator_type` shared.
+"""
+function _add_open_delta_regulator!(model, tid, xfmr, vr, vi, cr_xf, ci_xf, kcl_r, kcl_i)
+    b_fr = get(xfmr, "bus_from", "")
+    b_to = get(xfmr, "bus_to",   "")
+    tmfr = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+    tmto = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+
+    conn = uppercase(strip(string(get(xfmr, "connection", ""))))
+    pairs = get(_OPEN_DELTA_PAIRS, conn, nothing)
+    if pairs === nothing
+        @warn "open_delta_regulator '$tid': unknown connection '$conn' " *
+              "(expected ABBC/BCAC/CABA). Skipping."
+        return
+    end
+    ph_fr = BMOPFTools._phase_positions(tmfr)
+    ph_to = BMOPFTools._phase_positions(tmto)
+    if length(ph_fr) < 3 || length(ph_to) < 3
+        @warn "open_delta_regulator '$tid': needs 3 phase conductors on each " *
+              "side; got from=$(tmfr) to=$(tmto). Skipping."
+        return
+    end
+
+    # Per-regulator tap ratios → effective ratios.
+    taps = Float64.(get(xfmr, "tap_ratio", Float64[]))
+    rt   = string(get(xfmr, "regulator_type", "B"))
+    a1   = length(taps) >= 1 ? taps[1] : 1.0
+    a2   = length(taps) >= 2 ? taps[2] : a1
+    n_eff = (BMOPFTools._autotransformer_neff(a1, rt),
+             BMOPFTools._autotransformer_neff(a2, rt))
+
+    r_fr = Float64(get(xfmr, "r_series_from", 0.0))
+    x_fr = Float64(get(xfmr, "x_series_from", 0.0))
+    r_to = Float64(get(xfmr, "r_series_to",   0.0))
+    x_to = Float64(get(xfmr, "x_series_to",   0.0))
+
+    i_max_fr   = Float64.(get(xfmr, "i_max_from", Float64[]))
+    i_max_to_v = Float64.(get(xfmr, "i_max_to",   Float64[]))
+
+    for (j, (pj, qj)) in enumerate(pairs)
+        ne = n_eff[j]
+        R = r_fr + ne^2 * r_to
+        X = x_fr + ne^2 * x_to
+        # Phase terminals spanned by this regulator (line-to-line).
+        t_fr_p = tmfr[ph_fr[pj]]; t_fr_q = tmfr[ph_fr[qj]]
+        t_to_p = tmto[ph_to[pj]]; t_to_q = tmto[ph_to[qj]]
+
+        Isr = cr_xf[(tid,"fr",j)]; Isi = ci_xf[(tid,"fr",j)]
+        Itr = cr_xf[(tid,"to",j)]; Iti = ci_xf[(tid,"to",j)]
+
+        refs = (vr_fr_p = vr[(b_fr, t_fr_p)], vr_fr_q = vr[(b_fr, t_fr_q)],
+                vi_fr_p = vi[(b_fr, t_fr_p)], vi_fr_q = vi[(b_fr, t_fr_q)],
+                vr_to_p = vr[(b_to, t_to_p)], vr_to_q = vr[(b_to, t_to_q)],
+                vi_to_p = vi[(b_to, t_to_p)], vi_to_q = vi[(b_to, t_to_q)],
+                Isr = Isr, Isi = Isi, Itr = Itr, Iti = Iti)
+        _add_regulating_winding!(model, refs, ne, R, X)
+
+        # KCL: the from-side series current enters at phase p and returns at q;
+        # the to-side current is injected at p and returned at q (line-to-line).
+        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_p, -Isr, -Isi)
+        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_q,  Isr,  Isi)
+        _kcl_add!(kcl_r, kcl_i, b_to, t_to_p, -Itr, -Iti)
+        _kcl_add!(kcl_r, kcl_i, b_to, t_to_q,  Itr,  Iti)
+
+        if length(i_max_fr) >= j
+            @constraint(model, Isr^2 + Isi^2 <= i_max_fr[j]^2)
+            _limit_current_box!(Isr, Isi, i_max_fr[j])
+        end
+        if length(i_max_to_v) >= j
+            @constraint(model, Itr^2 + Iti^2 <= i_max_to_v[j]^2)
+            _limit_current_box!(Itr, Iti, i_max_to_v[j])
+        end
+    end
+
+    # ── Galvanic straight-through of the shared phase (common-neutral model) ───
+    # In a real open-delta SVR the phase common to both regulators (B in the
+    # AB-CB / ABBC arrangement) is a copper wire straight through the bank, so
+    # V_shared_from = V_shared_to (Yan et al. 2018, Eq. 14 — the "common neutral"
+    # model that matches OpenDSS and field measurement). Without this the
+    # line-to-line voltages are still correct but the per-phase/neutral reference
+    # floats (the unphysical "unspecified neutral" model, 4.9–6.5 pu in the paper).
+    #
+    # The shared phase is the terminal appearing in BOTH regulator pairs. We tie
+    # its from/to voltages and inject the wire current (a free variable, index 3
+    # on the "fr" side) as a zero-impedance through-branch so KCL stays balanced.
+    (p1, q1), (p2, q2) = pairs
+    shared = intersect((p1, q1), (p2, q2))
+    if length(shared) == 1
+        sp = first(shared)
+        t_fr_s = tmfr[ph_fr[sp]]
+        t_to_s = tmto[ph_to[sp]]
+        # Straight-through: equal voltage on both sides of the shared phase.
+        @constraint(model, vr[(b_fr, t_fr_s)] == vr[(b_to, t_to_s)])
+        @constraint(model, vi[(b_fr, t_fr_s)] == vi[(b_to, t_to_s)])
+        # Wire current: leaves src.shared, enters reg.shared (through-branch).
+        Iwr = cr_xf[(tid,"fr",3)]; Iwi = ci_xf[(tid,"fr",3)]
+        _kcl_add!(kcl_r, kcl_i, b_fr, t_fr_s, -Iwr, -Iwi)
+        _kcl_add!(kcl_r, kcl_i, b_to, t_to_s,  Iwr,  Iwi)
     end
 end

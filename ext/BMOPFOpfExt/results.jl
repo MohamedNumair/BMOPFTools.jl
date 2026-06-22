@@ -311,15 +311,18 @@ function _extract_results(model, net, bus_terminals, grounded, vars)
     # so these are indexed by position string rather than terminal name.
     xfmr_res = Dict{String,Any}()
     xfmr_dict = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in BMOPFTools.TRANSFORMER_SUBTYPES
         sub = get(xfmr_dict, subtype, nothing)
         sub isa Dict || continue
         for (tid, xfmr) in sub
             tmfr_r = Vector{String}(get(xfmr, "terminal_map_from", String[]))
             tmto_r = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
-            if subtype == "single_phase"
+            if subtype in ("single_phase", "single_phase_autotransformer")
                 n_fr = length(BMOPFTools._phase_positions(tmfr_r))
                 n_to = length(BMOPFTools._phase_positions(tmto_r))
+            elseif subtype == "open_delta_regulator"
+                n_fr = 2
+                n_to = 2
             else
                 n_fr = length(tmfr_r)
                 n_to = length(tmto_r)

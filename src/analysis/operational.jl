@@ -65,7 +65,7 @@ function operational_analysis(net::Dict{String,Any},
     xfmr = get(net, "transformer", Dict())
     xfmr_util = Dict{String,Any}[]
 
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (id, t) in sub
@@ -203,7 +203,7 @@ function _downstream_load(net::Dict{String,Any}, xfmr_id::String,
         (f isa AbstractString && t isa AbstractString) && add!(f, t)
     end
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (oid, ot) in sub

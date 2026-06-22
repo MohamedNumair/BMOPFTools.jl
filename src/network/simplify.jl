@@ -75,7 +75,7 @@ function _bus_connectivity(net)
         end
     end
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (_, t) in sub
@@ -104,7 +104,7 @@ function _bus_has_connections(net, bus_id)
          get(sw, "bus_to",   nothing) == bus_id) && return true
     end
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (_, t) in sub
@@ -131,7 +131,7 @@ function _redirect_bus!(net, old_bus, new_bus)
         get(sw, "bus_to",   nothing) == old_bus && (sw["bus_to"]   = new_bus)
     end
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (_, t) in sub
