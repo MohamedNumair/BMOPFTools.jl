@@ -1,6 +1,6 @@
 # Simplification log: LV9_258bus
 
-**Generated:** 2026-06-21 14:59:31  
+**Generated:** 2026-06-22 14:06:32  
 **Buses:** 259 → 189 (−70)  
 **Lines:** 250 → 187 (−63)  
 **Operations:** 76

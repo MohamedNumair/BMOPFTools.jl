@@ -1,6 +1,6 @@
 # BMOPF Network Summary: LV19_13bus
 
-**Generated:** 2026-06-21 14:59:29  
+**Generated:** 2026-06-22 14:06:30  
 **Findings:** 0 errors · 0 warnings · 20 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; implicit (Kron-style) grounding
 

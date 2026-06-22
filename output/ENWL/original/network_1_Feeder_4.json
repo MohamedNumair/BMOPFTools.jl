@@ -22208,7 +22208,7 @@
   },
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-21T04:52:51Z",
+    "created": "2026-06-22T03:59:59Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"

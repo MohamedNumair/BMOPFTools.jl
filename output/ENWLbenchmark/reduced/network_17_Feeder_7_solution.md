@@ -1,9 +1,9 @@
 # BMOPF Solution Profile: network_17_Feeder_7
 
-**Generated:** 2026-06-21 16:43:11  
-**Status:** `LOCALLY_INFEASIBLE`  
-**Objective:** -577.8863  
-**Solve time:** 1.072 s  
+**Generated:** 2026-06-22 15:16:28  
+**Status:** `ITERATION_LIMIT`  
+**Objective:** -471.9228  
+**Solve time:** 5.983 s  
 **Findings:** 1 errors · 0 warnings · 0 info  
 
 ---
@@ -12,7 +12,7 @@
 
 | Field | Value |
 |-------|-------|
-| Status | `LOCALLY_INFEASIBLE` |
+| Status | `ITERATION_LIMIT` |
 
 ## 2. Voltage by Galvanic Zone
 
@@ -20,11 +20,11 @@ Per-unit magnitudes are relative to each zone's own voltage base; volts are not 
 
 | St | Zone | V base | Buses | Vm min (pu) | Vm max (pu) | Max imbalance | Max neutral shift |
 |:--:|------|-------:|------:|------------:|------------:|--------------:|------------------:|
-| ✅ | `1006` | 240.0 V | 216 | ? | ? | 0.0 % | — |
+| ✅ | `1006` | 230.0 V | 216 | ? | ? | 0.0 % | — |
 
 ### Per-bus detail
 
-**Zone `1006`** (base 240.0 V):
+**Zone `1006`** (base 230.0 V):
 
 | St | Bus | Vm min (V) | Vm max (V) | Vm min (pu) | Vm max (pu) | Imbalance | Neutral |
 |:--:|-----|-----------:|-----------:|------------:|------------:|----------:|--------:|
@@ -248,5 +248,5 @@ Per-unit magnitudes are relative to each zone's own voltage base; volts are not 
 ## 6. All Findings
 
 - **ERROR** `E.SOL.INFEASIBLE`  
-  Solver terminated with status 'LOCALLY_INFEASIBLE' — all numeric results are unreliable (NaN). No bound or residual checks are meaningful.
+  Solver terminated with status 'ITERATION_LIMIT' — all numeric results are unreliable (NaN). No bound or residual checks are meaningful.
 

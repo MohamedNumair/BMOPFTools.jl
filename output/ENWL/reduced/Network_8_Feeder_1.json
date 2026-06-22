@@ -2331,7 +2331,7 @@
   },
   "meta": {
     "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-21T04:51:34Z",
+    "created": "2026-06-22T03:58:42Z",
     "generator": {
       "version": "0.1.0",
       "tool": "BMOPFTools.jl"

@@ -1,6 +1,6 @@
 # Simplification log: LV10_223bus
 
-**Generated:** 2026-06-21 14:59:28  
+**Generated:** 2026-06-22 14:06:29  
 **Buses:** 224 → 147 (−77)  
 **Lines:** 212 → 145 (−67)  
 **Operations:** 84

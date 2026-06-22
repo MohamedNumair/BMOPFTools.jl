@@ -1,7 +1,7 @@
 # BMOPF Network Summary: LV14_13bus
 
-**Generated:** 2026-06-21 14:59:29  
-**Findings:** 0 errors · 1 warnings · 21 info  
+**Generated:** 2026-06-22 14:06:29  
+**Findings:** 0 errors · 2 warnings · 21 info  
 **Convention:** MV_6.4kV: 4-wire; LV_250V: 4-wire; 2 grounding point(s)
 
 ---
@@ -142,6 +142,7 @@
 > 🔵 **[I.PROV.B_OFFDIAG]** Linecode 'uglv_240al_xlpe/nyl/pvc_ug_4w_bundled' B_from_block has positive mutual susceptance — deviates from the Maxwell sign pattern; typical of screen-eliminated/bundled cable reductions, otherwise a sign-convention suspect.
 > 🔵 **[I.PROV.B_OFFDIAG]** Linecode 'uglv_240al_xlpe/nyl/pvc_ug_4w_bundled' B_to_block has positive mutual susceptance — deviates from the Maxwell sign pattern; typical of screen-eliminated/bundled cable reductions, otherwise a sign-convention suspect.
 > 🔵 **[I.PROV.IMPEDANCE_TRANSFORM_KR]** 9 three-wire linecode(s) match the impedance signature of Kron reduction — neutral row/column eliminated from the original four-wire Carson impedance matrix via Schur complement. Exact when every neutral is perfectly grounded; approximate with finite grounding. Zero-sequence behaviour is not captured by the three-wire representation.: moon_hv_oh_3wire, pluto_lv_oh_3wire, ughv_240al_triplex_ug_3w_bundled, ughv_240cu_hdpe/nyl/pvc_ug_3w_bundled, ughv_240cu_xlpe/nyl/pvc_ug_3w_bundled, ughv_400al_triplex_ug_3w_bundled, ughv_400al_xlpe/nyl/pvc_ug_3w_bundled, ughv_95al_xlpe/nyl/pvc_ug_3w_bundled, uglv_240al_xlpe/nyl/pvc_ug_3w_bundled.
+> 🟡 **[W.PROV.I_MAX_ABSENT_SWITCH]** 5 closed switch(es) have no `i_max` — their current is left entirely unconstrained in the OPF, so no thermal limit is enforced on the branch.
 
 ## 8. Spec Conformance & Benchmark Readiness
 
@@ -180,12 +181,14 @@
 
 ## 9. Data Quality Summary
 
-**Total findings:** 22 (0 errors, 1 warnings, 21 info)
+**Total findings:** 23 (0 errors, 2 warnings, 21 info)
 
 ### 🟡 Warnings
 
 - **[W.CONN.DANGLING]** `bus`  
   5 bus(es) are degree-1 with no attached load, generator, or shunt.
+- **[W.PROV.I_MAX_ABSENT_SWITCH]** `switch`  
+  5 closed switch(es) have no `i_max` — their current is left entirely unconstrained in the OPF, so no thermal limit is enforced on the branch.
 
 ### 🔵 Info
 

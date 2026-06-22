@@ -1,10 +1,10 @@
 # BMOPF Solution Profile: network_20_Feeder_1
 
-**Generated:** 2026-06-21 16:43:24  
+**Generated:** 2026-06-22 15:16:42  
 **Status:** `LOCALLY_SOLVED`  
 **Objective:** -133.9374  
-**Solve time:** 0.156 s  
-**Findings:** 3 errors · 1 warnings · 2 info  
+**Solve time:** 0.13 s  
+**Findings:** 0 errors · 3 warnings · 2 info  
 
 ---
 
@@ -13,12 +13,12 @@
 | Field | Value |
 |-------|-------|
 | Status | `LOCALLY_SOLVED` |
-| Total generation | -140.184 kW |
+| Total generation | 23.404 kW |
 | Total load | 23.364 kW |
-| Total line losses | 62.55 W |
+| Total line losses | 75.18 W |
 | Loss fraction | 0.3% |
-| Power balance error | 163.61 kW |
-| Max neutral shift | 0.201 V (bus `58`) |
+| Power balance error | 35.13 W |
+| Max neutral shift | 0.211 V (bus `58`) |
 
 ### Bound status
 
@@ -26,7 +26,7 @@
 |----------|:--------:|:-------------:|
 | Voltage  | 0 | 0 |
 | Thermal  | 0 | 0 |
-| Generator| 3 | 0 |
+| Generator| 0 | 3 |
 
 ## 2. Voltage by Galvanic Zone
 
@@ -34,66 +34,60 @@ Per-unit magnitudes are relative to each zone's own voltage base; volts are not 
 
 | St | Zone | V base | Buses | Vm min (pu) | Vm max (pu) | Max imbalance | Max neutral shift |
 |:--:|------|-------:|------:|------------:|------------:|--------------:|------------------:|
-| ✅ | `52` | 240.0 V | 27 | 0.999 (`58`) | 1.0 (`sourcebus`) | 0.1 % (`58`) | 0.2 V (`58`) |
+| ✅ | `52` | 230.0 V | 27 | 1.043 (`58`) | 1.044 (`sourcebus`) | 0.1 % (`58`) | 0.21 V (`58`) |
 
 ### Per-bus detail
 
-**Zone `52`** (base 240.0 V):
+**Zone `52`** (base 230.0 V):
 
 | St | Bus | Vm min (V) | Vm max (V) | Vm min (pu) | Vm max (pu) | Imbalance | Neutral |
 |:--:|-----|-----------:|-----------:|------------:|------------:|----------:|--------:|
-| ✅ | `58` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.2 V |
-| ✅ | `55` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.2 V |
-| ✅ | `59` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.1 V |
-| ✅ | `53` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.1 V |
-| ✅ | `71` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.09 V |
-| ✅ | `76` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.14 V |
-| ✅ | `74` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.1 V |
-| ✅ | `56` | 240.0 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.07 V |
-| ✅ | `65` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.07 V |
-| ✅ | `62` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.07 V |
-| ✅ | `77` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.11 V |
-| ✅ | `68` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.07 V |
-| ✅ | `67` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.11 V |
-| ✅ | `73` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.09 V |
-| ✅ | `64` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.09 V |
-| ✅ | `61` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.09 V |
-| ✅ | `52` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.07 V |
-| ✅ | `75` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.07 V |
-| ✅ | `72` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.07 V |
-| ✅ | `54` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.06 V |
-| ✅ | `63` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.06 V |
-| ✅ | `60` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.06 V |
-| ✅ | `69` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.06 V |
-| ✅ | `57` | 240.0 | 240.0 | 0.999 | 0.999 | 0.0 % | 0.05 V |
-| ✅ | `66` | 240.0 | 240.0 | 0.999 | 0.999 | 0.0 % | 0.03 V |
-| ✅ | `70` | 240.0 | 240.1 | 0.999 | 1.0 | 0.0 % | 0.08 V |
-| ✅ | `sourcebus` | 240.2 | 240.2 | 1.0 | 1.0 | 0.0 % | — |
+| ✅ | `sourcebus` | 240.2 | 240.2 | 1.044 | 1.044 | 0.0 % | — |
+| ✅ | `59` | 239.8 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.07 V |
+| ✅ | `53` | 239.8 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.07 V |
+| ✅ | `71` | 239.8 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.07 V |
+| ✅ | `74` | 239.9 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.05 V |
+| ✅ | `77` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.05 V |
+| ✅ | `56` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.07 V |
+| ✅ | `65` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.08 V |
+| ✅ | `62` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.08 V |
+| ✅ | `70` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.11 V |
+| ✅ | `68` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.08 V |
+| ✅ | `52` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.08 V |
+| ✅ | `61` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.09 V |
+| ✅ | `64` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.1 V |
+| ✅ | `73` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.1 V |
+| ✅ | `67` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.12 V |
+| ✅ | `76` | 239.9 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.17 V |
+| ✅ | `55` | 239.8 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.21 V |
+| ✅ | `58` | 239.8 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.21 V |
+| ✅ | `75` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.08 V |
+| ✅ | `72` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.08 V |
+| ✅ | `54` | 239.9 | 240.0 | 1.043 | 1.044 | 0.0 % | 0.08 V |
+| ✅ | `63` | 239.9 | 240.0 | 1.043 | 1.043 | 0.0 % | 0.08 V |
+| ✅ | `69` | 239.9 | 240.0 | 1.043 | 1.043 | 0.0 % | 0.11 V |
+| ✅ | `60` | 239.9 | 240.0 | 1.043 | 1.043 | 0.0 % | 0.11 V |
+| ✅ | `57` | 239.9 | 240.0 | 1.043 | 1.043 | 0.0 % | 0.08 V |
+| ✅ | `66` | 239.9 | 239.9 | 1.043 | 1.043 | 0.0 % | 0.11 V |
 
 ## 4. Generator Dispatch
 
 | Sev | Generator | Terminal | Field | Value | Bound |
 |-----|-----------|----------|-------|-------|-------|
-| **E** | `grid` | `1` | pg | -46.728 kW | [-46.728 kW, 46.728 kW] |
-| **E** | `grid` | `2` | pg | -46.728 kW | [-46.728 kW, 46.728 kW] |
-| **E** | `grid` | `3` | pg | -46.728 kW | [-46.728 kW, 46.728 kW] |
-
-## 5. Constraint Residuals
-
-> ⚠ Network power balance error: |pg_total − pd_total − p_loss| = 163.61 kW (>1 % of load). pg=-140.18 kW, pd=23.36 kW, p_loss=0.06 kW.
+| W | `grid` | `1` | pg | -46.728 kW | [-46.728 kW, 46.728 kW] |
+| W | `grid` | `2` | pg | -46.728 kW | [-46.728 kW, 46.728 kW] |
+| W | `grid` | `3` | pg | -46.728 kW | [-46.728 kW, 46.728 kW] |
 
 ## 6. All Findings
 
-- **ERROR** `E.SOL.GEN_VIOLATION` — generator/`grid`  
-  Generator 'grid' phase '1': pg=-46.728 kW violates [-46.728 kW, 46.728 kW].
-- **ERROR** `E.SOL.GEN_VIOLATION` — generator/`grid`  
-  Generator 'grid' phase '2': pg=-46.728 kW violates [-46.728 kW, 46.728 kW].
-- **ERROR** `E.SOL.GEN_VIOLATION` — generator/`grid`  
-  Generator 'grid' phase '3': pg=-46.728 kW violates [-46.728 kW, 46.728 kW].
-- **WARN** `W.SOL.POWER_BALANCE`  
-  Network power balance error: |pg_total − pd_total − p_loss| = 163.61 kW (>1 % of load). pg=-140.18 kW, pd=23.36 kW, p_loss=0.06 kW.
+- **WARN** `W.SOL.GEN_ACTIVE` — generator/`grid`  
+  Generator 'grid' phase '1': pg=-46.728 kW is within 1 % of its bound (active).
+- **WARN** `W.SOL.GEN_ACTIVE` — generator/`grid`  
+  Generator 'grid' phase '2': pg=-46.728 kW is within 1 % of its bound (active).
+- **WARN** `W.SOL.GEN_ACTIVE` — generator/`grid`  
+  Generator 'grid' phase '3': pg=-46.728 kW is within 1 % of its bound (active).
 - INFO `I.SOL.BINDING_SUMMARY`  
-  Solution bound summary: 3 violation(s), 0 active constraint(s). Voltage: 0V / 0A. Thermal: 0V / 0A. Generator: 3V / 0A.
+  Solution bound summary: 0 violation(s), 3 active constraint(s). Voltage: 0V / 0A. Thermal: 0V / 0A. Generator: 0V / 3A.
 - INFO `I.SOL.NEUTRAL_SHIFT`  
-  Maximum neutral terminal voltage: 0.2 V at bus '58' — reflects the neutral shift under unbalanced loading.
+  Maximum neutral terminal voltage: 0.21 V at bus '58' — reflects the neutral shift under unbalanced loading.
 

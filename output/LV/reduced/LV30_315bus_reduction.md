@@ -1,6 +1,6 @@
 # Simplification log: LV30_315bus
 
-**Generated:** 2026-06-21 14:59:30  
+**Generated:** 2026-06-22 14:06:31  
 **Buses:** 316 → 234 (−82)  
 **Lines:** 307 → 232 (−75)  
 **Operations:** 89

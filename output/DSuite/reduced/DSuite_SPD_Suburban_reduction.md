@@ -1,6 +1,6 @@
 # Simplification log: DSuite_SPD_Suburban
 
-**Generated:** 2026-06-21 14:51:22  
+**Generated:** 2026-06-22 13:58:30  
 **Buses:** 265 → 178 (−87)  
 **Lines:** 264 → 177 (−87)  
 **Operations:** 125

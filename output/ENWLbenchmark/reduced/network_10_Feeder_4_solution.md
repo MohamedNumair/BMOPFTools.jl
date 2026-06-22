@@ -1,10 +1,10 @@
 # BMOPF Solution Profile: network_10_Feeder_4
 
-**Generated:** 2026-06-21 16:42:39  
+**Generated:** 2026-06-22 15:15:39  
 **Status:** `LOCALLY_SOLVED`  
 **Objective:** -33.5295  
-**Solve time:** 0.022 s  
-**Findings:** 0 errors · 4 warnings · 2 info  
+**Solve time:** 0.032 s  
+**Findings:** 0 errors · 3 warnings · 2 info  
 
 ---
 
@@ -13,12 +13,12 @@
 | Field | Value |
 |-------|-------|
 | Status | `LOCALLY_SOLVED` |
-| Total generation | -71.892 kW |
+| Total generation | 12.018 kW |
 | Total load | 11.982 kW |
-| Total line losses | 62.45 W |
-| Loss fraction | 0.5% |
-| Power balance error | 83.936 kW |
-| Max neutral shift | 0.384 V (bus `496`) |
+| Total line losses | 74.31 W |
+| Loss fraction | 0.6% |
+| Power balance error | 38.11 W |
+| Max neutral shift | 0.432 V (bus `496`) |
 
 ### Bound status
 
@@ -34,31 +34,31 @@ Per-unit magnitudes are relative to each zone's own voltage base; volts are not 
 
 | St | Zone | V base | Buses | Vm min (pu) | Vm max (pu) | Max imbalance | Max neutral shift |
 |:--:|------|-------:|------:|------------:|------------:|--------------:|------------------:|
-| ✅ | `165` | 240.0 V | 17 | 0.997 (`497`) | 1.0 (`sourcebus`) | 0.2 % (`497`) | 0.38 V (`496`) |
+| ✅ | `165` | 230.0 V | 17 | 1.042 (`497`) | 1.044 (`sourcebus`) | 0.2 % (`273`) | 0.43 V (`496`) |
 
 ### Per-bus detail
 
-**Zone `165`** (base 240.0 V):
+**Zone `165`** (base 230.0 V):
 
 | St | Bus | Vm min (V) | Vm max (V) | Vm min (pu) | Vm max (pu) | Imbalance | Neutral |
 |:--:|-----|-----------:|-----------:|------------:|------------:|----------:|--------:|
-| ✅ | `497` | 239.6 | 240.1 | 0.997 | 0.999 | 0.2 % | 0.31 V |
-| ✅ | `496` | 239.6 | 240.0 | 0.998 | 0.999 | 0.2 % | 0.38 V |
-| ✅ | `490` | 239.6 | 240.1 | 0.998 | 0.999 | 0.2 % | 0.29 V |
-| ✅ | `495` | 239.6 | 240.0 | 0.998 | 0.999 | 0.2 % | 0.25 V |
-| ✅ | `462` | 239.6 | 240.1 | 0.998 | 0.999 | 0.2 % | 0.29 V |
-| ✅ | `169` | 239.7 | 240.1 | 0.998 | 1.0 | 0.2 % | 0.23 V |
-| ✅ | `273` | 239.7 | 240.1 | 0.998 | 1.0 | 0.2 % | 0.31 V |
-| ✅ | `165` | 239.8 | 240.1 | 0.998 | 1.0 | 0.1 % | 0.21 V |
-| ✅ | `264` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.18 V |
-| ✅ | `289` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.17 V |
-| ✅ | `256` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.18 V |
-| ✅ | `280` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.18 V |
-| ✅ | `179` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.14 V |
-| ✅ | `85` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.15 V |
-| ✅ | `185` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.11 V |
-| ✅ | `83` | 239.9 | 240.1 | 0.999 | 1.0 | 0.1 % | 0.15 V |
-| ✅ | `sourcebus` | 240.2 | 240.2 | 1.0 | 1.0 | 0.0 % | — |
+| ✅ | `sourcebus` | 240.2 | 240.2 | 1.044 | 1.044 | 0.0 % | — |
+| ✅ | `83` | 239.9 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.2 V |
+| ✅ | `85` | 239.9 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.2 V |
+| ✅ | `289` | 239.8 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.25 V |
+| ✅ | `280` | 239.8 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.26 V |
+| ✅ | `256` | 239.8 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.26 V |
+| ✅ | `264` | 239.8 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.26 V |
+| ✅ | `273` | 239.7 | 240.0 | 1.042 | 1.044 | 0.2 % | 0.41 V |
+| ✅ | `179` | 239.9 | 240.0 | 1.043 | 1.044 | 0.1 % | 0.19 V |
+| ✅ | `185` | 239.9 | 240.0 | 1.043 | 1.043 | 0.0 % | 0.18 V |
+| ✅ | `169` | 239.7 | 240.0 | 1.042 | 1.043 | 0.1 % | 0.21 V |
+| ✅ | `165` | 239.8 | 240.0 | 1.042 | 1.043 | 0.1 % | 0.24 V |
+| ✅ | `462` | 239.6 | 239.9 | 1.042 | 1.043 | 0.1 % | 0.32 V |
+| ✅ | `497` | 239.6 | 239.9 | 1.042 | 1.043 | 0.1 % | 0.28 V |
+| ✅ | `490` | 239.6 | 239.9 | 1.042 | 1.043 | 0.1 % | 0.32 V |
+| ✅ | `496` | 239.6 | 239.9 | 1.042 | 1.043 | 0.1 % | 0.43 V |
+| ✅ | `495` | 239.6 | 239.8 | 1.042 | 1.043 | 0.1 % | 0.34 V |
 
 ## 4. Generator Dispatch
 
@@ -68,10 +68,6 @@ Per-unit magnitudes are relative to each zone's own voltage base; volts are not 
 | W | `grid` | `2` | pg | -23.964 kW | [-23.964 kW, 23.964 kW] |
 | W | `grid` | `3` | pg | -23.964 kW | [-23.964 kW, 23.964 kW] |
 
-## 5. Constraint Residuals
-
-> ⚠ Network power balance error: |pg_total − pd_total − p_loss| = 83.936 kW (>1 % of load). pg=-71.89 kW, pd=11.98 kW, p_loss=0.06 kW.
-
 ## 6. All Findings
 
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`grid`  
@@ -80,10 +76,8 @@ Per-unit magnitudes are relative to each zone's own voltage base; volts are not 
   Generator 'grid' phase '2': pg=-23.964 kW is within 1 % of its bound (active).
 - **WARN** `W.SOL.GEN_ACTIVE` — generator/`grid`  
   Generator 'grid' phase '3': pg=-23.964 kW is within 1 % of its bound (active).
-- **WARN** `W.SOL.POWER_BALANCE`  
-  Network power balance error: |pg_total − pd_total − p_loss| = 83.936 kW (>1 % of load). pg=-71.89 kW, pd=11.98 kW, p_loss=0.06 kW.
 - INFO `I.SOL.BINDING_SUMMARY`  
   Solution bound summary: 0 violation(s), 3 active constraint(s). Voltage: 0V / 0A. Thermal: 0V / 0A. Generator: 0V / 3A.
 - INFO `I.SOL.NEUTRAL_SHIFT`  
-  Maximum neutral terminal voltage: 0.38 V at bus '496' — reflects the neutral shift under unbalanced loading.
+  Maximum neutral terminal voltage: 0.43 V at bus '496' — reflects the neutral shift under unbalanced loading.
 

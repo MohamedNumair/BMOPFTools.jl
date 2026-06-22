@@ -1,9 +1,9 @@
 # BMOPF Solution Profile: Network_8_Feeder_2
 
-**Generated:** 2026-06-21 16:42:39  
+**Generated:** 2026-06-22 15:15:39  
 **Status:** `ITERATION_LIMIT`  
-**Objective:** -1465.6311  
-**Solve time:** 16.386 s  
+**Objective:** -1466.2037  
+**Solve time:** 31.198 s  
 **Findings:** 1 errors · 0 warnings · 0 info  
 
 ---
@@ -20,11 +20,11 @@ Per-unit magnitudes are relative to each zone's own voltage base; volts are not 
 
 | St | Zone | V base | Buses | Vm min (pu) | Vm max (pu) | Max imbalance | Max neutral shift |
 |:--:|------|-------:|------:|------------:|------------:|--------------:|------------------:|
-| ✅ | `1025` | 240.0 V | 538 | ? | ? | 0.0 % | — |
+| ✅ | `1025` | 230.0 V | 538 | ? | ? | 0.0 % | — |
 
 ### Per-bus detail
 
-**Zone `1025`** (base 240.0 V):
+**Zone `1025`** (base 230.0 V):
 
 | St | Bus | Vm min (V) | Vm max (V) | Vm min (pu) | Vm max (pu) | Imbalance | Neutral |
 |:--:|-----|-----------:|-----------:|------------:|------------:|----------:|--------:|

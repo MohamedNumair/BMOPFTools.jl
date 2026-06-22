@@ -1,6 +1,6 @@
 # BMOPF Network Summary: LV33_1bus
 
-**Generated:** 2026-06-21 14:59:31  
+**Generated:** 2026-06-22 14:06:31  
 **Findings:** 2 errors · 2 warnings · 23 info  
 **Convention:** MV_6.4kV: 4-wire; implicit (Kron-style) grounding
 
