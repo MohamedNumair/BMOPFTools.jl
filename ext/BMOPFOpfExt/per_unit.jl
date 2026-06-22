@@ -56,7 +56,7 @@ function _compute_bases(net::Dict{String,Any}, s_base::Float64)
     # Build adjacency: bus -> [(neighbour_bus, v_ref_from, v_ref_to, from_is_from)]
     xfmr_adj = Dict{String,Vector{Tuple{String,Float64,Float64}}}()
     xfmr_dict = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in BMOPFTools.TRANSFORMER_SUBTYPES
         for (_, xfmr) in get(xfmr_dict, subtype, Dict())
             bf = get(xfmr, "bus_from", "")
             bt = get(xfmr, "bus_to",   "")
@@ -267,7 +267,7 @@ end
 function _pu_scale_transformers!(net, bases)
     sb = bases.s_base
     xfmr_dict = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in BMOPFTools.TRANSFORMER_SUBTYPES
         for (_, xfmr) in get(xfmr_dict, subtype, Dict())
             bf = get(xfmr, "bus_from", "")
             bt = get(xfmr, "bus_to",   "")
@@ -452,7 +452,7 @@ function _from_per_unit(result_pu::Dict{String,Any}, bases, net::Dict{String,Any
     for (tid, winding_dict) in get(result, "transformer", Dict())
         # Find which subtype this transformer belongs to
         xfmr = nothing
-        for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+        for subtype in BMOPFTools.TRANSFORMER_SUBTYPES
             sub = get(xfmr_dict, subtype, nothing)
             sub isa Dict && haskey(sub, tid) && (xfmr = sub[tid]; break)
         end

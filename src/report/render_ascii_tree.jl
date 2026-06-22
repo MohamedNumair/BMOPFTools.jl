@@ -72,7 +72,7 @@ function render_ascii_tree(net::Dict{String,Any}, io::IO;
         is_open = get(sw, "open_switch", false)
         add_edge!(get(sw,"bus_from",""), get(sw,"bus_to",""), :switch, sid, is_open, "")
     end
-    for subtype in ("single_phase","center_tap","wye_delta","delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         for (tid, tx) in get(xfmr_dict, subtype, Dict())
             vg    = _derive_vector_group(subtype, tx)
             vf    = get(tx, "v_ref_from", nothing)
@@ -110,7 +110,7 @@ function render_ascii_tree(net::Dict{String,Any}, io::IO;
     # ── 3. Identify level-crossing transformers ───────────────────────────────
     level_xfmr_tids = Set{String}()
     if split_by_level
-        for subtype in ("single_phase","center_tap","wye_delta","delta_wye")
+        for subtype in TRANSFORMER_SUBTYPES
             for (tid, tx) in get(xfmr_dict, subtype, Dict())
                 vf = get(tx, "v_ref_from", nothing)
                 vt = get(tx, "v_ref_to",   nothing)

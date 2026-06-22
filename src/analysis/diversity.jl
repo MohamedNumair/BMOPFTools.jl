@@ -294,7 +294,7 @@ function _transformer_diversity(net::Dict{String,Any},
     r = Dict{String,Any}("analysed" => false)
 
     all_xfmrs = Dict{String,Any}()
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         merge!(all_xfmrs, sub)

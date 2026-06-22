@@ -144,7 +144,7 @@ function _check_i_max_completeness(net::Dict{String,Any},
     # Transformers: i_max_from / i_max_to are per-winding, indexed by conductor.
     # Expected lengths: len(terminal_map_from) and len(terminal_map_to) respectively.
     incomplete_xfmr = String[]
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(get(net, "transformer", Dict()), subtype, nothing)
         sub isa Dict || continue
         for (tid, xfmr) in sub
@@ -410,7 +410,7 @@ function _check_opendss_defaults(net::Dict{String,Any},
 
     # --- transformer defaults (xhl = 7 %, %r = 0.2/winding) ---
     xfmr_hits = String[]
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(get(net, "transformer", Dict()), subtype, nothing)
         sub isa Dict || continue
         for (id, t) in sub
@@ -464,7 +464,7 @@ function _check_opendss_defaults(net::Dict{String,Any},
         any(isapprox(vmax, kv / sqrt(3); rtol=1e-4) for kv in _DSS_KV_LL) &&
             push!(kv_hits, "voltage_source/$id")
     end
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(get(net, "transformer", Dict()), subtype, nothing)
         sub isa Dict || continue
         for (id, t) in sub
@@ -632,7 +632,7 @@ function _check_regulator_patterns(net::Dict{String,Any},
                                     vl::Dict{String,Any})
     vmap = get(vl, "bus_voltage_map", Dict())
     xfmr = get(net, "transformer", Dict())
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         for (id, t) in sub

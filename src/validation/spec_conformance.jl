@@ -26,7 +26,9 @@ const _XFMR_ARITY = Dict{String,Tuple{Int,Int}}(
     "single_phase" => (2, 2),
     "center_tap"   => (2, 3),
     "wye_delta"    => (4, 3),
-    "delta_wye"    => (3, 4)
+    "delta_wye"    => (3, 4),
+    "single_phase_autotransformer" => (2, 2),  # phase + shared neutral, both sides
+    "open_delta_regulator"         => (4, 4)   # 3 phases + neutral, both sides
 )
 
 """

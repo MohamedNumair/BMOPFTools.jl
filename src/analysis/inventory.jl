@@ -69,6 +69,14 @@ function _derive_vector_group(subtype::String, xfmr::Dict{String,Any})::String
     elseif subtype == "center_tap"
         return "Ii0"
 
+    elseif subtype == "single_phase_autotransformer"
+        # Single-phase autotransformer / step voltage regulator (in-phase).
+        return "Ia0"
+
+    elseif subtype == "open_delta_regulator"
+        conn = uppercase(strip(string(get(xfmr, "connection", ""))))
+        return isempty(conn) ? "OD" : "OD-$(conn)"
+
     else
         return "—"
     end
@@ -169,7 +177,7 @@ function inventory_analysis(net::Dict{String,Any},
     by_type       = Dict{String,Int}()
     by_vg         = Dict{String,Int}()
     total_xfmr    = 0
-    for subtype in ("single_phase", "center_tap", "wye_delta", "delta_wye")
+    for subtype in TRANSFORMER_SUBTYPES
         sub = get(xfmr, subtype, nothing)
         sub isa Dict || continue
         n = length(sub)
