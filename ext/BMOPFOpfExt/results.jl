@@ -440,8 +440,12 @@ function _extract_results(model, net, bus_terminals, grounded, vars,
             tmfr_r = Vector{String}(get(xfmr, "terminal_map_from", String[]))
             tmto_r = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
             if subtype in ("single_phase", "single_phase_autotransformer")
-                n_fr = length(BMOPFTools._phase_positions(tmfr_r))
-                n_to = length(BMOPFTools._phase_positions(tmto_r))
+                # One reported series current per regulating winding (winding
+                # pairs ⇒ a line-to-line map is one winding, not two). The
+                # autotransformer's neutral-bond current (extra "fr" index) is
+                # internal and intentionally not reported here.
+                n_fr = length(BMOPFTools._xfmr_winding_pairs(tmfr_r))
+                n_to = length(BMOPFTools._xfmr_winding_pairs(tmto_r))
             elseif subtype == "open_delta_regulator"
                 n_fr = 2
                 n_to = 2

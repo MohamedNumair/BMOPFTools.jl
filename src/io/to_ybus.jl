@@ -110,10 +110,15 @@ function _yprim_single_phase(xfmr::Dict{String,Any})
     b_to  = get(xfmr, "bus_to",   "")
     tm_fr = Vector{String}(get(xfmr, "terminal_map_from", String[]))
     tm_to = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
-    isempty(tm_fr) || isempty(tm_to) && return (Tuple{String,String}[], zeros(ComplexF64,0,0))
+    (isempty(tm_fr) || isempty(tm_to)) && return (Tuple{String,String}[], zeros(ComplexF64,0,0))
 
-    N   = _xfmr_turns_ratio(xfmr)
-    n_c = min(length(tm_fr), length(tm_to))
+    N        = _xfmr_turns_ratio(xfmr)
+    # One coupled winding per terminal pair (p, q): line-to-neutral (q = neutral),
+    # line-to-line (q = second phase), or phase-to-ground (q absent). The winding
+    # voltage and the no-load shunt are taken across (V_p − V_q) via Y = Cᵀ·prim·C.
+    pairs_fr = _xfmr_winding_pairs(tm_fr)
+    pairs_to = _xfmr_winding_pairs(tm_to)
+    n_c = min(length(pairs_fr), length(pairs_to))
 
     r1 = Float64(get(xfmr, "r_series_from", 0.0))
     x1 = Float64(get(xfmr, "x_series_from", 0.0))
@@ -125,27 +130,39 @@ function _yprim_single_phase(xfmr::Dict{String,Any})
     B0 = Float64(get(xfmr, "b_no_load", 0.0))
     Y0_per = n_c > 0 ? (G0 + im*B0) / n_c : 0.0 + 0.0im
 
-    n_tot = 2 * n_c
-    Y     = zeros(ComplexF64, n_tot, n_tot)
-    nodes = Tuple{String,String}[]
-
-    for k in 1:n_c
-        push!(nodes, (b_fr, tm_fr[k]))
-        push!(nodes, (b_to, tm_to[k]))
+    nodes    = Tuple{String,String}[]
+    node_idx = Dict{Tuple{String,String},Int}()
+    nidx!(b, t) = get!(node_idx, (b, t)) do
+        push!(nodes, (b, t)); length(nodes)
     end
+    # Register nodes in a deterministic order (from-phase, to-phase, then refs).
+    for k in 1:n_c
+        (p_fr, q_fr) = pairs_fr[k]; (p_to, q_to) = pairs_to[k]
+        nidx!(b_fr, tm_fr[p_fr]); nidx!(b_to, tm_to[p_to])
+        q_fr !== nothing && nidx!(b_fr, tm_fr[q_fr])
+        q_to !== nothing && nidx!(b_to, tm_to[q_to])
+    end
+    n_tot = length(nodes)
+    Y = zeros(ComplexF64, n_tot, n_tot)
 
     for k in 1:n_c
-        p = 2k - 1   # HV node index (1-based)
-        q = 2k       # LV node index
+        (p_fr, q_fr) = pairs_fr[k]; (p_to, q_to) = pairs_to[k]
+        ifp = nidx!(b_fr, tm_fr[p_fr]); itp = nidx!(b_to, tm_to[p_to])
+        ifq = q_fr === nothing ? 0 : nidx!(b_fr, tm_fr[q_fr])
+        itq = q_to === nothing ? 0 : nidx!(b_to, tm_to[q_to])
+
+        # C rows: from coil (p_fr − q_fr), to coil (p_to − q_to).
+        C = zeros(ComplexF64, 2, n_tot)
+        C[1, ifp] = 1.0; ifq != 0 && (C[1, ifq] = -1.0)
+        C[2, itp] = 1.0; itq != 0 && (C[2, itq] = -1.0)
 
         if !iszero(Z)
-            y = 1.0 / Z
-            Y[p,p] += y + Y0_per
-            Y[p,q] += -N * y
-            Y[q,p] += -N * y
-            Y[q,q] += N^2 * y
-        else
-            Y[p,p] += Y0_per
+            Y .+= transpose(C) * ((1.0/Z) * [1.0 -N; -N N^2]) * C
+        end
+        # No-load shunt on the from coil (across p_fr − q_fr).
+        if !iszero(Y0_per)
+            Cf = reshape(C[1, :], 1, n_tot)
+            Y .+= transpose(Cf) * Y0_per * Cf
         end
     end
 
@@ -325,16 +342,18 @@ end
 # Type A) and a SHARED neutral: the from and to windings reference their own
 # neutral terminal, and KCL at each neutral closes the common-winding return.
 #
-# Nodes: [fr_ph, to_ph, (fr_n), (to_n)]. One core spanning (V_fr_ph − V_fr_n)
-# and (V_to_ph − V_to_n), primitive yt·[1 −n_eff; −n_eff n_eff²] via Y = Cᵀ·yprim·C.
+# Nodes: [fr_ph, to_ph, (fr_q), (to_q)]. One core spanning (V_fr_ph − V_fr_q)
+# and (V_to_ph − V_to_q), primitive yt·[1 −n_eff; −n_eff n_eff²] via Y = Cᵀ·yprim·C.
+# The winding reference q is the neutral (line-to-neutral SVR) or the second phase
+# (line-to-line SVR); the shared bushing tie is an OPF topological constraint.
 function _yprim_autotransformer(xfmr::Dict{String,Any})
     b_fr  = get(xfmr, "bus_from", "")
     b_to  = get(xfmr, "bus_to",   "")
     tm_fr = Vector{String}(get(xfmr, "terminal_map_from", String[]))
     tm_to = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
 
-    ph_fr = _phase_positions(tm_fr); ph_to = _phase_positions(tm_to)
-    if isempty(ph_fr) || isempty(ph_to)
+    pairs_fr = _xfmr_winding_pairs(tm_fr); pairs_to = _xfmr_winding_pairs(tm_to)
+    if isempty(pairs_fr) || isempty(pairs_to)
         @warn "single_phase_autotransformer: needs a phase conductor on each side."
         return (Tuple{String,String}[], zeros(ComplexF64, 0, 0))
     end
@@ -348,12 +367,11 @@ function _yprim_autotransformer(xfmr::Dict{String,Any})
     G0 = Float64(get(xfmr, "g_no_load", 0.0))
     B0 = Float64(get(xfmr, "b_no_load", 0.0))
 
-    t_fr_ph = tm_fr[ph_fr[1]]; t_to_ph = tm_to[ph_to[1]]
-    n_pos_fr = _neutral_pos(tm_fr); n_pos_to = _neutral_pos(tm_to)
-    t_fr_n = n_pos_fr !== nothing ? tm_fr[n_pos_fr] : nothing
-    t_to_n = n_pos_to !== nothing ? tm_to[n_pos_to] : nothing
+    (p_fr, q_fr) = pairs_fr[1]; (p_to, q_to) = pairs_to[1]
+    t_fr_ph = tm_fr[p_fr]; t_fr_n = q_fr === nothing ? nothing : tm_fr[q_fr]
+    t_to_ph = tm_to[p_to]; t_to_n = q_to === nothing ? nothing : tm_to[q_to]
 
-    # Node order: phase-from, phase-to, [neutral-from], [neutral-to].
+    # Node order: phase-from, phase-to, [ref-from], [ref-to].
     nodes = Tuple{String,String}[(b_fr, t_fr_ph), (b_to, t_to_ph)]
     idx_fr_n = idx_to_n = 0
     t_fr_n !== nothing && (push!(nodes, (b_fr, t_fr_n)); idx_fr_n = length(nodes))
