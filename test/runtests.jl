@@ -2,11 +2,6 @@ using Test
 using BMOPFTools
 using Dates
 
-const _HAS_PMD = !isnothing(Base.identify_package("PowerModelsDistribution"))
-if _HAS_PMD
-    @eval using PowerModelsDistribution
-end
-
 const _HAS_ODS = !isnothing(Base.identify_package("OpenDSSDirect"))
 if _HAS_ODS
     @eval using OpenDSSDirect
@@ -766,29 +761,6 @@ const IEEE13_FIXTURE = """
         # A genuinely per-phase (unequal) bound cannot be represented and errors.
         net["bus"]["632"]["v_max"] = [2500.0, 2540.0, 2540.0]
         @test_throws ErrorException to_pmd(net)
-    end
-
-    @testset "from_pmd — slack cost priced on the voltage source" begin
-        eng = Dict{String,Any}(
-            "settings" => Dict{String,Any}("voltage_scale_factor" => 1000.0),
-            "bus" => Dict{String,Any}(
-                "src" => Dict{String,Any}("terminals" => [1,2,3,4])),
-            "voltage_source" => Dict{String,Any}(
-                "source" => Dict{String,Any}(
-                    "bus" => "src", "connections" => [1,2,3,4],
-                    "vm" => [0.23, 0.23, 0.23, 0.0],
-                    "va" => [0.0, -120.0, 120.0, 0.0])))
-
-        net = from_pmd(eng; slack_cost=0.25)
-        @test !haskey(net, "generator")
-        vs = net["voltage_source"]["source"]
-        @test vs["bus"] == "src"
-        @test vs["cost"] ≈ [0.25, 0.25, 0.25]   # one per phase (neutral excluded)
-        @test !haskey(vs, "p_min") && !haskey(vs, "p_max")
-
-        # opt-out
-        net2 = from_pmd(eng; add_slack_generator=false)
-        @test !haskey(net2["voltage_source"]["source"], "cost")
     end
 
     @testset "Spec conformance checks" begin
@@ -1945,32 +1917,6 @@ const IEEE13_FIXTURE = """
         @test res3["switch_like_lines"]["n"] == 0
     end
 
-    @testset "from_pmd — earth-bonded voltage source" begin
-        # ENWL-style source: neutral bonded to earth via a grounding reactor,
-        # so PMD reports connections [1,2,3,5] with vm/va aligned to them.
-        # Terminal 5 (earth) must be dropped with its vm/va entries.
-        eng = Dict{String,Any}(
-            "settings" => Dict{String,Any}("voltage_scale_factor" => 1000.0),
-            "bus" => Dict{String,Any}(
-                "sourcebus" => Dict{String,Any}(
-                    "terminals" => [1,2,3,4,5], "grounded" => [5])),
-            "voltage_source" => Dict{String,Any}(
-                "source" => Dict{String,Any}(
-                    "bus" => "sourcebus",
-                    "connections" => [1,2,3,5],
-                    "vm" => [0.24, 0.24, 0.24, 0.0],
-                    "va" => [0.0, -120.0, 120.0, 0.0])))
-
-        net = from_pmd(eng)
-        vs  = net["voltage_source"]["source"]
-        @test vs["terminal_map"] == ["1","2","3"]
-        @test vs["v_magnitude"] ≈ [240.0, 240.0, 240.0]
-        @test length(vs["v_angle"]) == 3
-        # earth terminal must not appear on the bus either
-        @test net["bus"]["sourcebus"]["terminal_names"] == ["1","2","3","n"]
-        @test !haskey(net["bus"]["sourcebus"], "perfectly_grounded_terminals")
-    end
-
     @testset "to_pmd — impedance matrix reconstruction" begin
         # Pattern keys (R_series_1_2 …) must rebuild PMD rs/xs matrices,
         # mirroring upper-triangular storage onto the symmetric lower half.
@@ -1999,6 +1945,39 @@ const IEEE13_FIXTURE = """
         eng2 = to_pmd(net2)
         @test eng2["shunt"]["sh1"]["gs"][1,1] ≈ 0.5
         @test eng2["shunt"]["sh1"]["bs"][1,1] ≈ -0.1
+    end
+
+    @testset "Migration — lumped transformer series fields → per-winding" begin
+        # A nested delta_wye transformer carrying the lumped r_series/x_series
+        # form (as emitted by from_dss/PowerIO) must be normalised on parse to
+        # the per-winding fields the OPF/Ybus builders read — otherwise they
+        # default to zero and the leakage impedance silently vanishes.
+        json = """
+        {"bus":{"hv":{"terminal_names":["a","b","c"]},
+                "lv":{"terminal_names":["a","b","c","n"]}},
+         "transformer":{"delta_wye":{"t1":{
+            "bus_from":"hv","bus_to":"lv",
+            "terminal_map_from":["a","b","c"],"terminal_map_to":["a","b","c","n"],
+            "v_ref_from":11000.0,"v_ref_to":433.0,"s_rating":100000.0,
+            "r_series":0.015,"x_series":0.0007}}}}
+        """
+        net = parse_bmopf(json; from_string=true)
+        tx  = net["transformer"]["delta_wye"]["t1"]
+        @test !haskey(tx, "r_series") && !haskey(tx, "x_series")
+        @test tx["r_series_from"] ≈ 0.015
+        @test tx["x_series_from"] ≈ 0.0007
+        @test tx["r_series_to"] == 0.0 && tx["x_series_to"] == 0.0
+        @test any(n -> n["code"] == "W.MIGRATE.XFMR_SERIES_FIELDS",
+                  net["_meta"]["migration_notes"])
+
+        # Per-winding input is left untouched (no spurious migration note).
+        json2 = replace(json,
+            "\"r_series\":0.015,\"x_series\":0.0007" =>
+            "\"r_series_from\":0.015,\"r_series_to\":0.0,\"x_series_from\":0.0007,\"x_series_to\":0.0")
+        net2  = parse_bmopf(json2; from_string=true)
+        notes = get(get(net2, "_meta", Dict()), "migration_notes", [])
+        @test !any(n -> n["code"] == "W.MIGRATE.XFMR_SERIES_FIELDS", notes)
+        @test net2["transformer"]["delta_wye"]["t1"]["r_series_from"] ≈ 0.015
     end
 
     @testset "Completeness — transformer required fields" begin
@@ -2482,132 +2461,136 @@ const IEEE13_FIXTURE = """
     end
 
     # --------------------------------------------------------------------------
-    # LV1_14bus — real OpenDSS network integration test
-    # Requires PowerModelsDistribution; skipped if not in the active load path.
-    # To run with PMD: cd .. && julia --project=. -e '
-    #   using Pkg; Pkg.develop(path="BMOPFTools"); include("BMOPFTools/test/runtests.jl")'
+    # LV1_14bus — real OpenDSS network integration test, parsed via from_dss
+    # (PowerIO.jl). PowerIO is a hard dependency, so this always runs.
     # --------------------------------------------------------------------------
     @testset "LV1_14bus — OpenDSS integration" begin
-        if !_HAS_PMD
-            @test_skip "PowerModelsDistribution not in load path"
-        else
-            dss_master = joinpath(@__DIR__, "data", "LV", "LV1_14bus", "Master.dss")
+        dss_master = joinpath(@__DIR__, "data", "LV", "LV1_14bus", "Master.dss")
 
-            # Parse OpenDSS in 4-wire (un-reduced) mode and convert to BMOPF
-            eng = parse_file(dss_master; kron_reduce=false)
-            net = from_pmd(eng)
-            @test net isa Dict{String,Any}
+        # Parse OpenDSS directly to BMOPF via PowerIO.jl
+        net = from_dss(dss_master)
+        @test net isa Dict{String,Any}
 
-            @testset "Network structure" begin
-                # Single 11 kV voltage source at B2577
-                @test length(get(net, "voltage_source", Dict())) == 1
+        @testset "Network structure" begin
+            # Single 11 kV voltage source at B2577
+            @test length(get(net, "voltage_source", Dict())) == 1
 
-                # Single delta-wye transformer (11 kV → 433 V, Tx3170)
-                xfmr = get(net, "transformer", Dict())
-                @test haskey(xfmr, "delta_wye")
-                @test length(xfmr["delta_wye"]) == 1
-                tx = first(values(xfmr["delta_wye"]))
-                @test tx["v_ref_from"] > tx["v_ref_to"]               # step-down
-                @test tx["v_ref_from"] / tx["v_ref_to"] ≈ 11.0/0.433  rtol=0.02
-                # per-winding T: from_pmd writes r/x_series_from/to; no legacy lumped fields
-                @test haskey(tx, "r_series_from") && tx["r_series_from"] > 0
-                @test haskey(tx, "x_series_from") && tx["x_series_from"] > 0
-                @test !haskey(tx, "r_series") && !haskey(tx, "x_series")
-                # spec arity: delta side 3 terminals, wye side 4 (incl. neutral)
-                @test length(tx["terminal_map_from"]) == 3
-                @test length(tx["terminal_map_to"])   == 4
-                @test "n" in tx["terminal_map_to"]
+            # Single delta-wye transformer (11 kV → 433 V, Tx3170)
+            xfmr = get(net, "transformer", Dict())
+            @test haskey(xfmr, "delta_wye")
+            @test length(xfmr["delta_wye"]) == 1
+            tx = first(values(xfmr["delta_wye"]))
+            @test tx["v_ref_from"] > tx["v_ref_to"]               # step-down
+            @test tx["v_ref_from"] / tx["v_ref_to"] ≈ 11.0/0.433  rtol=0.02
+            # PowerIO emits a lumped Γ-model; the parse-time migration normalises
+            # it to the per-winding fields the OPF/Ybus builders consume, so a
+            # nonzero leakage impedance reaches them (not silently zero).
+            @test haskey(tx, "r_series_from") && tx["r_series_from"] > 0
+            @test haskey(tx, "x_series_from") && tx["x_series_from"] > 0
+            @test !haskey(tx, "r_series") && !haskey(tx, "x_series")
+            # spec arity: delta side 3 terminals, wye side 4 (incl. neutral)
+            @test length(tx["terminal_map_from"]) == 3
+            @test length(tx["terminal_map_to"])   == 4
+            # OpenDSS earth terminal "5" is routed to the bus neutral, so the
+            # earthed star point lands on "n" rather than a phantom terminal.
+            @test "n" in tx["terminal_map_to"]
+            @test !("5" in string.(tx["terminal_map_to"]))
 
-                # slack cost priced on the voltage source (no phantom generator)
-                @test !any(get(g, "_slack", false) for g in values(get(net, "generator", Dict())))
-                vs = first(values(net["voltage_source"]))
-                @test haskey(vs, "cost")
-                @test length(vs["cost"]) == 3        # one per phase (neutral excluded)
-                @test !haskey(vs, "p_max")           # unbounded slack
+            # No phantom slack generator; from_dss does not price slack cost.
+            @test !any(get(g, "_slack", false) for g in values(get(net, "generator", Dict())))
+            vs = first(values(net["voltage_source"]))
+            @test !haskey(vs, "p_max")           # unbounded slack
 
-                # 2-terminal loads are SINGLE_PHASE per spec
-                @test all(l["configuration"] == "SINGLE_PHASE"
-                          for (_, l) in net["load"]
-                          if length(l["terminal_map"]) == 2)
+            # 2-terminal loads are SINGLE_PHASE per spec
+            @test all(l["configuration"] == "SINGLE_PHASE"
+                      for (_, l) in net["load"]
+                      if length(l["terminal_map"]) == 2)
 
-                # 9 cable segments (lines.dss), each with a 4-wire linecode
-                @test length(get(net, "line", Dict())) == 9
+            # 9 cable segments (lines.dss)
+            @test length(get(net, "line", Dict())) == 9
 
-                # 4 closed switches (Switch_4072_OPEN is commented out)
-                switches = get(net, "switch", Dict())
-                @test length(switches) == 4
-                @test all(!get(sw, "open_switch", true) for sw in values(switches))
+            # 4 closed switches (Switch_4072_OPEN is commented out)
+            switches = get(net, "switch", Dict())
+            @test length(switches) == 4
+            @test all(!get(sw, "open_switch", true) for sw in values(switches))
 
-                # 2 single-phase loads (Ld3313 at B3230.1.4 and Ld3433 at B2656.2.4)
-                @test length(get(net, "load", Dict())) == 2
+            # 2 single-phase loads (Ld3313 at B3230.1.4 and Ld3433 at B2656.2.4)
+            @test length(get(net, "load", Dict())) == 2
 
-                # 3 neutral-to-earth reactors from Groundings.dss → BMOPF shunts
-                shunts = get(net, "shunt", Dict())
-                @test length(shunts) == 3
-                # Each grounding shunt must have G (conductance) and B (susceptance)
-                @test all(haskey(sh, "G_1_1") && haskey(sh, "B_1_1")
-                          for sh in values(shunts))
+            # 3 neutral-to-earth reactors from Groundings.dss → BMOPF shunts
+            shunts = get(net, "shunt", Dict())
+            @test length(shunts) == 3
+            # Each grounding shunt must have G (conductance) and B (susceptance)
+            @test all(haskey(sh, "G_1_1") && haskey(sh, "B_1_1")
+                      for sh in values(shunts))
 
-                # Linecodes derived from 4×4 R/X/C matrices
-                lcs = get(net, "linecode", Dict())
-                @test !isempty(lcs)
-                lc = first(values(lcs))
-                @test haskey(lc, "R_series_1_1")
-                @test haskey(lc, "X_series_1_1")
-            end
+            # Linecodes derived from 4×4 R/X/C matrices
+            lcs = get(net, "linecode", Dict())
+            @test !isempty(lcs)
+            lc = first(values(lcs))
+            @test haskey(lc, "R_series_1_1")
+            @test haskey(lc, "X_series_1_1")
 
-            @testset "Analysis" begin
-                report = analyze(net)
-                @test report isa SummaryReport
+            # Terminal naming is consistent: every bus uses a/b/c/n and no bus
+            # retains the OpenDSS earth terminal "5" (B179 carries the earthed
+            # transformer star point). The routing is recorded in _meta.
+            @test all(!("5" in string.(get(b, "terminal_names", [])))
+                      for b in values(net["bus"]))
+            @test net["bus"]["B179"]["terminal_names"] == ["a", "b", "c", "n"]
+            @test get(net["bus"]["B179"], "neutral_terminal", nothing) == "n"
+            @test "B179" in net["_meta"]["earth_terminal_routing"]["buses"]
+        end
 
-                # Two voltage levels: HV (~11 kV or per-phase equivalent) and LV (~433 V)
-                @test report.results[:voltage_levels]["n_levels"] == 2
+        @testset "Analysis" begin
+            report = analyze(net)
+            @test report isa SummaryReport
 
-                # Fully connected radial topology (15 buses, 14 edges: 1 xfmr + 9 lines + 4 switches)
-                conn = report.results[:connectivity]
-                @test conn["is_connected"] == true
-                @test conn["is_radial"]    == true
+            # Two voltage levels: HV (~11 kV or per-phase equivalent) and LV (~433 V)
+            @test report.results[:voltage_levels]["n_levels"] == 2
 
-                # Inventory counts
-                inv = report.results[:inventory]
-                @test inv["load"]["total"]        == 2
-                @test inv["transformer"]["total"] == 1
-                @test inv["switch"]["total"]      == 4
-                @test inv["shunt"]["total"]       == 3
+            # Fully connected radial topology (15 buses, 14 edges: 1 xfmr + 9 lines + 4 switches)
+            conn = report.results[:connectivity]
+            @test conn["is_connected"] == true
+            @test conn["is_radial"]    == true
 
-                # Clean network: no ERRORs from completeness, schema, or voltage checks
-                @test isempty(errors(report))
+            # Inventory counts
+            inv = report.results[:inventory]
+            @test inv["load"]["total"]        == 2
+            @test inv["transformer"]["total"] == 1
+            @test inv["switch"]["total"]      == 4
+            @test inv["shunt"]["total"]       == 3
 
-                # Regression: switch tee points must not be reported as mergeable
-                # line groups (b1133/b2327 carry switches)
-                @test !any(f -> f.code == "I.RED.MERGEABLE_LINES", report.findings)
+            # Clean network: no ERRORs from completeness, schema, or voltage checks.
+            # (Requires the grounding reactors to be mapped — PowerIO ≥ 0.2.2.)
+            @test isempty(errors(report))
 
-                # Regression: a standard 11kV/433V step-down must not trip the
-                # transformer ratio plausibility check
-                @test !any(f -> f.code == "W.DOM.XFMR_RATIO_OOB", report.findings)
+            # Regression: switch tee points must not be reported as mergeable
+            # line groups (b1133/b2327 carry switches)
+            @test !any(f -> f.code == "I.RED.MERGEABLE_LINES", report.findings)
 
-                # Regression: converter output must conform to the BMOPF schema
-                @test !any(f -> f.code == "I.SCHEMA.UNKNOWN_FIELDS" &&
-                                startswith(string(f.component_type), "transformer"),
-                           report.findings)
+            # Regression: a standard 11kV/433V step-down must not trip the
+            # transformer ratio plausibility check
+            @test !any(f -> f.code == "W.DOM.XFMR_RATIO_OOB", report.findings)
 
-                # Integrity: all references resolve; both galvanic islands
-                # (MV source side, LV side behind the transformer) referenced
-                integ = report.results[:integrity]
-                @test integ["n_reference_issues"] == 0
-                @test integ["n_galvanic_islands"] == 2
-                @test integ["n_without_reference"] == 0
+            # Regression: converter output must conform to the BMOPF schema
+            @test !any(f -> f.code == "I.SCHEMA.UNKNOWN_FIELDS" &&
+                            startswith(string(f.component_type), "transformer"),
+                       report.findings)
 
-                # Provenance: real 4-wire data with explicit groundings —
-                # no Kron flag, no floating neutrals, LV level is 4-wire
-                prov = report.results[:provenance]
-                @test prov["grounding"]["convention"] == "explicit"
-                @test prov["grounding"]["n_floating"] == 0
-                @test !any(f -> f.code == "I.PROV.KRON_LIKELY", report.findings)
-                lv_levels = [info for (_, info) in prov["wires_by_level"]
-                             if info["is_lv"]]
-                @test !isempty(lv_levels) && all(l -> l["wires"] == "4-wire", lv_levels)
-            end
+            # Integrity: all references resolve; both galvanic islands
+            # (MV source side, LV side behind the transformer) referenced
+            integ = report.results[:integrity]
+            @test integ["n_reference_issues"] == 0
+            @test integ["n_galvanic_islands"] == 2
+            @test integ["n_without_reference"] == 0
+
+            # Provenance: real data with explicit groundings — no Kron flag.
+            prov = report.results[:provenance]
+            @test prov["grounding"]["convention"] == "explicit"
+            @test !any(f -> f.code == "I.PROV.KRON_LIKELY", report.findings)
+            lv_levels = [info for (_, info) in prov["wires_by_level"]
+                         if info["is_lv"]]
+            @test !isempty(lv_levels)
         end
     end
 

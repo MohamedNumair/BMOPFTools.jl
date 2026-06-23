@@ -6,13 +6,12 @@ BMOPF-format distribution network datasets.
 
 The network data model is a plain `Dict{String,Any}` that mirrors the
 BMOPF JSON schema exactly. No custom wrapper types are used for network
-data, so data flows naturally to and from PowerModelsDistribution and
-JSON without conversion.
+data, so data flows naturally to and from JSON without conversion.
 
 # Public API
 
     net    = parse_bmopf(path)          # load from BMOPF JSON file
-    net    = from_pmd(eng)              # convert PMD ENGINEERING dict
+    net    = from_dss("Master.dss")     # parse OpenDSS (via PowerIO.jl)
     report = analyze(net)               # run all analyses
     render(report, stdout)              # terminal output
     render(report, "report.md")         # markdown file
@@ -27,6 +26,7 @@ using Logging
 using Statistics
 using Graphs
 using JSON3
+import PowerIO
 
 # Stable URI for the BMOPF JSON schema. Will become a versioned path once the
 # spec is frozen (e.g. /schema/v1/bmopf.json).
@@ -307,7 +307,6 @@ include("config.jl")
 include("io/migrate.jl")
 include("io/parse_bmopf.jl")
 include("io/write_bmopf.jl")
-include("io/from_pmd.jl")
 include("io/to_pmd.jl")
 include("io/from_dss.jl")
 include("io/sideload_coordinates.jl")
@@ -574,7 +573,7 @@ export Finding, SummaryReport, SolutionReport
 export errors, warnings, infos
 export profile_solution, render_solution, solution_check, voltage_zone_summary
 export parse_bmopf, write_bmopf, migrate
-export from_pmd, to_pmd
+export to_pmd
 export from_dss
 export sideload_coordinates!
 export analyze, render
