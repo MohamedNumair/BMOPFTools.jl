@@ -176,6 +176,32 @@ droop curve in every regime:
   tutorial's appendix shows), plus the exact-vs-smooth encoding agreement as the
   corner-smoothing `ε → 0` (`atol = 2e-3`).
 
+### Tier 4 — operating-bound optima
+
+Source: [`test/pmd_opf_bounds_tests.jl`](https://github.com/frederikgeth/BMOPFTools.jl/blob/main/test/pmd_opf_bounds_tests.jl).
+Where Tier 2 leaves the operating bounds slack, these fixtures make exactly *one*
+bound the binding (active) constraint at the optimum — a stable, non-degenerate
+boundary solution. A DER (generator) at the feeder end is driven by a per-phase
+linear `cost` until a single limit stops it, and the dispatch and binding value
+are pinned. Each target is reproduced in PMD's explicit-neutral IVR formulation
+`IVRENPowerModel` — whose wye power equations are identical to BMOPF's IVR-EN
+engine — and hardcoded, so no PMD dependency is needed at test time.
+
+**Locked-in baseline** (dispatch `atol = 1e-2 kW`, binding bound `atol = 1e-2 V/A`):
+
+| Case | Binding bound | Bound value | Σ pg (kW) |
+|---|---|---:|---:|
+| A | bus voltage upper to ground `v_max` | 235 V | 11.7642 |
+| B | line current `i_max` (no shunt) | 25 A | 17.6243 |
+| C | bus voltage lower to ground `v_min` | 218 V | 106.958 |
+| D | switch current `i_max` | 18 A | 12.6142 |
+| E | generator reactive `q_max` | 8 kvar/phase | — (pg ≈ 0) |
+
+These cover the line-current (no-shunt) and voltage-to-ground bounds, plus the
+switch-current and generator-reactive limits; line-with-shunt, line-to-line and
+phase-to-neutral voltage, transformer thermal and angle-difference bounds are
+natural follow-ups.
+
 ## Reusing this for your own tool
 
 | You want to … | Use | What it proves |
@@ -195,7 +221,8 @@ The OPF and OpenDSS tests are optional dependencies, guarded in
 [`test/runtests.jl`](https://github.com/frederikgeth/BMOPFTools.jl/blob/main/test/runtests.jl):
 
 - the optimality tests (`opf_tests.jl`, `pmd_opf_port_tests.jl`,
-  `volt_var_watt_tests.jl`) run when JuMP + Ipopt are present (`_HAS_JUMP_IPOPT`);
+  `pmd_opf_bounds_tests.jl`, `volt_var_watt_tests.jl`) run when JuMP + Ipopt are
+  present (`_HAS_JUMP_IPOPT`);
 - the feasibility comparison (`powerflow_comparison_tests.jl`) additionally needs
   OpenDSSDirect.jl (`_HAS_ODS`).
 
