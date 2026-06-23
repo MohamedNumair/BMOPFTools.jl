@@ -1,50 +1,6 @@
 {
   "voltage_source": {
     "source": {
-      "cost": [
-        1,
-        1,
-        1
-      ],
-      "_pmd": {
-        "rs": [
-          0.0006420118386135532,
-          5.949532365790109e-5,
-          5.949532365790109e-5,
-          5.949532365790109e-5,
-          5.949532365790109e-5,
-          0.0006420118386135532,
-          5.949532365790109e-5,
-          5.949532365790109e-5,
-          5.949532365790109e-5,
-          5.949532365790109e-5,
-          0.0006420118386135532,
-          5.949532365790109e-5,
-          5.949532365790109e-5,
-          5.949532365790109e-5,
-          5.949532365790109e-5,
-          0.0006420118386135532
-        ],
-        "xs": [
-          0.002314379859144428,
-          -1.5686200678180814e-5,
-          -1.5686200678180814e-5,
-          -1.5686200678180814e-5,
-          -1.5686200678180814e-5,
-          0.002314379859144428,
-          -1.5686200678180814e-5,
-          -1.5686200678180814e-5,
-          -1.5686200678180814e-5,
-          -1.5686200678180814e-5,
-          0.002314379859144428,
-          -1.5686200678180814e-5,
-          -1.5686200678180814e-5,
-          -1.5686200678180814e-5,
-          -1.5686200678180814e-5,
-          0.002314379859144428
-        ],
-        "configuration": "WYE"
-      },
       "v_magnitude": [
         240.17771198288432,
         240.17771198288432,
@@ -52,9 +8,9 @@
         0.0
       ],
       "terminal_map": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
       "bus": "sourcebus",
@@ -66,7 +22,6 @@
       ]
     }
   },
-  "name": "Three-wire-phase-to-neutral / network_5 / Feeder_5",
   "line": {
     "line617": {
       "length": 13.358792,
@@ -80,14 +35,14 @@
       "bus_from": "707",
       "bus_to": "345",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc1"
     },
@@ -102,14 +57,14 @@
       "bus_from": "963",
       "bus_to": "1066",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -126,16 +81,61 @@
       "bus_from": "912",
       "bus_to": "449",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc2"
+    },
+    "line330": {
+      "length": 27.037377999999997,
+      "_merged_from": [
+        "line320",
+        "line423",
+        "line453",
+        "line299",
+        "line117"
+      ],
+      "bus_from": "663",
+      "bus_to": "111",
+      "terminal_map_from": [
+        "a",
+        "b",
+        "c"
+      ],
+      "terminal_map_to": [
+        "a",
+        "b",
+        "c"
+      ],
+      "linecode": "lc2"
+    },
+    "line902": {
+      "length": 15.067694,
+      "_merged_from": [
+        "line895",
+        "line853",
+        "line846",
+        "line947"
+      ],
+      "bus_from": "794",
+      "bus_to": "963",
+      "terminal_map_from": [
+        "a",
+        "b",
+        "c"
+      ],
+      "terminal_map_to": [
+        "a",
+        "b",
+        "c"
+      ],
+      "linecode": "lc6"
     },
     "line120": {
       "length": 59.594266000000005,
@@ -154,61 +154,16 @@
       "bus_from": "724",
       "bus_to": "54",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc9"
-    },
-    "line330": {
-      "length": 27.037377999999997,
-      "_merged_from": [
-        "line320",
-        "line423",
-        "line453",
-        "line299",
-        "line117"
-      ],
-      "bus_from": "663",
-      "bus_to": "111",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3"
-      ],
-      "linecode": "lc2"
-    },
-    "line902": {
-      "length": 15.067694,
-      "_merged_from": [
-        "line895",
-        "line853",
-        "line846",
-        "line947"
-      ],
-      "bus_from": "794",
-      "bus_to": "963",
-      "terminal_map_from": [
-        "1",
-        "2",
-        "3"
-      ],
-      "terminal_map_to": [
-        "1",
-        "2",
-        "3"
-      ],
-      "linecode": "lc6"
     },
     "line535": {
       "length": 12.46985,
@@ -218,14 +173,14 @@
       "bus_from": "514",
       "bus_to": "676",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc1"
     },
@@ -244,14 +199,14 @@
       "bus_from": "1087",
       "bus_to": "977",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -267,14 +222,14 @@
       "bus_from": "935",
       "bus_to": "724",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -288,21 +243,21 @@
       "bus_from": "458",
       "bus_to": "597",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
     "line1083": {
       "length": 21.003271,
       "_merged_from": [
-        "line1087",
+        "line1092",
         "line1096",
         "line1079",
         "line1075",
@@ -317,14 +272,14 @@
       "bus_from": "988",
       "bus_to": "1130",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -337,14 +292,14 @@
       "bus_from": "538",
       "bus_to": "399",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc1"
     },
@@ -357,14 +312,14 @@
       "bus_from": "413",
       "bus_to": "516",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc1"
     },
@@ -382,14 +337,14 @@
       "bus_from": "1098",
       "bus_to": "977",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -403,14 +358,14 @@
       "bus_from": "734",
       "bus_to": "558",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -427,14 +382,14 @@
       "bus_from": "25",
       "bus_to": "sourcebus",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc4"
     },
@@ -448,14 +403,14 @@
       "bus_from": "604",
       "bus_to": "743",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -476,14 +431,14 @@
       "bus_from": "356",
       "bus_to": "741",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc1"
     },
@@ -503,14 +458,14 @@
       "bus_from": "794",
       "bus_to": "1012",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -525,14 +480,14 @@
       "bus_from": "93",
       "bus_to": "351",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -551,14 +506,14 @@
       "bus_from": "794",
       "bus_to": "977",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc9"
     },
@@ -575,14 +530,14 @@
       "bus_from": "615",
       "bus_to": "351",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -597,14 +552,14 @@
       "bus_from": "93",
       "bus_to": "54",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -620,14 +575,14 @@
       "bus_from": "449",
       "bus_to": "771",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc2"
     },
@@ -636,14 +591,14 @@
       "bus_from": "293",
       "bus_to": "302",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -655,14 +610,14 @@
       "bus_from": "262",
       "bus_to": "241",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -678,14 +633,14 @@
       "bus_from": "285",
       "bus_to": "372",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc9"
     },
@@ -701,14 +656,14 @@
       "bus_from": "742",
       "bus_to": "580",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc1"
     },
@@ -723,14 +678,14 @@
       "bus_from": "1173",
       "bus_to": "1130",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -747,14 +702,14 @@
       "bus_from": "364",
       "bus_to": "111",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc2"
     },
@@ -771,14 +726,14 @@
       "bus_from": "1108",
       "bus_to": "935",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -793,14 +748,14 @@
       "bus_from": "41",
       "bus_to": "25",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -814,14 +769,14 @@
       "bus_from": "372",
       "bus_to": "449",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc2"
     },
@@ -834,14 +789,14 @@
       "bus_from": "93",
       "bus_to": "111",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -850,14 +805,14 @@
       "bus_from": "513",
       "bus_to": "534",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -871,14 +826,14 @@
       "bus_from": "111",
       "bus_to": "230",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -887,14 +842,14 @@
       "bus_from": "912",
       "bus_to": "919",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc2"
     },
@@ -908,14 +863,14 @@
       "bus_from": "551",
       "bus_to": "356",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc1"
     },
@@ -927,14 +882,14 @@
       "bus_from": "413",
       "bus_to": "382",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -946,14 +901,14 @@
       "bus_from": "604",
       "bus_to": "650",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -965,14 +920,14 @@
       "bus_from": "356",
       "bus_to": "382",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -988,14 +943,14 @@
       "bus_from": "1087",
       "bus_to": "1160",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1007,14 +962,14 @@
       "bus_from": "315",
       "bus_to": "293",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1029,14 +984,14 @@
       "bus_from": "645",
       "bus_to": "493",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1045,14 +1000,14 @@
       "bus_from": "912",
       "bus_to": "918",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc2"
     },
@@ -1067,14 +1022,14 @@
       "bus_from": "820",
       "bus_to": "729",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1089,14 +1044,14 @@
       "bus_from": "534",
       "bus_to": "667",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1114,14 +1069,14 @@
       "bus_from": "93",
       "bus_to": "280",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1130,14 +1085,14 @@
       "bus_from": "312",
       "bus_to": "324",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1152,14 +1107,14 @@
       "bus_from": "475",
       "bus_to": "621",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc1"
     },
@@ -1168,14 +1123,14 @@
       "bus_from": "41",
       "bus_to": "45",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1189,14 +1144,14 @@
       "bus_from": "776",
       "bus_to": "673",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1209,14 +1164,14 @@
       "bus_from": "413",
       "bus_to": "458",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1230,14 +1185,14 @@
       "bus_from": "724",
       "bus_to": "794",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc9"
     },
@@ -1249,14 +1204,14 @@
       "bus_from": "264",
       "bus_to": "284",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1268,14 +1223,14 @@
       "bus_from": "54",
       "bus_to": "45",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1284,14 +1239,14 @@
       "bus_from": "580",
       "bus_to": "604",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1300,14 +1255,14 @@
       "bus_from": "535",
       "bus_to": "558",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1316,14 +1271,14 @@
       "bus_from": "302",
       "bus_to": "312",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1335,14 +1290,14 @@
       "bus_from": "364",
       "bus_to": "394",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc2"
     },
@@ -1354,14 +1309,14 @@
       "bus_from": "273",
       "bus_to": "253",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1374,14 +1329,14 @@
       "bus_from": "312",
       "bus_to": "345",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1393,14 +1348,14 @@
       "bus_from": "48",
       "bus_to": "41",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1409,14 +1364,14 @@
       "bus_from": "771",
       "bus_to": "779",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc2"
     },
@@ -1425,14 +1380,14 @@
       "bus_from": "364",
       "bus_to": "377",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc2"
     },
@@ -1441,14 +1396,14 @@
       "bus_from": "382",
       "bus_to": "399",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1457,14 +1412,14 @@
       "bus_from": "771",
       "bus_to": "780",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc2"
     },
@@ -1473,14 +1428,14 @@
       "bus_from": "1012",
       "bus_to": "1019",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1492,14 +1447,14 @@
       "bus_from": "53",
       "bus_to": "45",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1511,14 +1466,14 @@
       "bus_from": "535",
       "bus_to": "688",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc1"
     },
@@ -1527,14 +1482,14 @@
       "bus_from": "345",
       "bus_to": "356",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1543,14 +1498,14 @@
       "bus_from": "650",
       "bus_to": "673",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1559,14 +1514,14 @@
       "bus_from": "963",
       "bus_to": "967",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1575,14 +1530,14 @@
       "bus_from": "729",
       "bus_to": "744",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1591,14 +1546,14 @@
       "bus_from": "1087",
       "bus_to": "1091",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1610,14 +1565,14 @@
       "bus_from": "324",
       "bus_to": "347",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1626,14 +1581,14 @@
       "bus_from": "935",
       "bus_to": "940",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1645,14 +1600,14 @@
       "bus_from": "264",
       "bus_to": "285",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1665,14 +1620,14 @@
       "bus_from": "759",
       "bus_to": "605",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc1"
     },
@@ -1681,14 +1636,14 @@
       "bus_from": "351",
       "bus_to": "360",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1697,14 +1652,14 @@
       "bus_from": "475",
       "bus_to": "493",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1713,14 +1668,14 @@
       "bus_from": "712",
       "bus_to": "729",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1729,14 +1684,14 @@
       "bus_from": "513",
       "bus_to": "535",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1748,14 +1703,14 @@
       "bus_from": "251",
       "bus_to": "230",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1767,14 +1722,14 @@
       "bus_from": "988",
       "bus_to": "977",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc9"
     },
@@ -1783,14 +1738,14 @@
       "bus_from": "241",
       "bus_to": "253",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1799,14 +1754,14 @@
       "bus_from": "580",
       "bus_to": "605",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1819,14 +1774,14 @@
       "bus_from": "747",
       "bus_to": "694",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc1"
     },
@@ -1835,14 +1790,14 @@
       "bus_from": "493",
       "bus_to": "513",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1854,14 +1809,14 @@
       "bus_from": "325",
       "bus_to": "302",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1870,14 +1825,14 @@
       "bus_from": "253",
       "bus_to": "264",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1886,14 +1841,14 @@
       "bus_from": "650",
       "bus_to": "672",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1905,14 +1860,14 @@
       "bus_from": "1012",
       "bus_to": "1027",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1921,14 +1876,14 @@
       "bus_from": "458",
       "bus_to": "475",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1937,14 +1892,14 @@
       "bus_from": "230",
       "bus_to": "241",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1956,14 +1911,14 @@
       "bus_from": "712",
       "bus_to": "672",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -1972,14 +1927,14 @@
       "bus_from": "1130",
       "bus_to": "1132",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc6"
     },
@@ -1988,14 +1943,14 @@
       "bus_from": "285",
       "bus_to": "293",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -2004,14 +1959,14 @@
       "bus_from": "672",
       "bus_to": "694",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -2020,14 +1975,14 @@
       "bus_from": "493",
       "bus_to": "514",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     },
@@ -2036,24 +1991,25 @@
       "bus_from": "558",
       "bus_to": "580",
       "terminal_map_from": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "terminal_map_to": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ],
       "linecode": "lc3"
     }
   },
+  "name": "Three-wire-phase-to-neutral / network_5 / Feeder_5",
   "meta": {
-    "$schema": "https://raw.githubusercontent.com/frederikgeth/bmopf-report/main/schema/bmopf.json",
-    "created": "2026-06-22T04:06:14Z",
+    "$schema": "https://github.com/frederikgeth/bmopf-report/draft_schema_and_networks",
+    "created": "2026-06-23T11:33:47Z",
     "generator": {
-      "version": "0.1.0",
-      "tool": "BMOPFTools.jl"
+      "version": "0.3.2",
+      "tool": "powerio"
     }
   },
   "load": {
@@ -2061,16 +2017,11 @@
       "p_nom": [
         2748
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         903.2239210315162
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "779",
@@ -2080,16 +2031,11 @@
       "p_nom": [
         288.00000000000006
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         94.66102229151262
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "776",
@@ -2099,16 +2045,11 @@
       "p_nom": [
         306
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         100.57733618473213
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "53",
@@ -2118,16 +2059,11 @@
       "p_nom": [
         354
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         116.35417323331757
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "1132",
@@ -2137,16 +2073,11 @@
       "p_nom": [
         294.00000000000006
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         96.6331269225858
       ],
       "terminal_map": [
-        "3",
+        "c",
         "n"
       ],
       "bus": "315",
@@ -2156,16 +2087,11 @@
       "p_nom": [
         276
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         90.71681302936625
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "742",
@@ -2175,16 +2101,11 @@
       "p_nom": [
         336
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         110.43785934009804
       ],
       "terminal_map": [
-        "3",
+        "c",
         "n"
       ],
       "bus": "1108",
@@ -2194,16 +2115,11 @@
       "p_nom": [
         264
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         86.77260376721989
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "645",
@@ -2213,16 +2129,11 @@
       "p_nom": [
         1968
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         646.8503189920027
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "48",
@@ -2232,16 +2143,11 @@
       "p_nom": [
         150.00000000000003
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         49.30261577682949
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "1027",
@@ -2251,16 +2157,11 @@
       "p_nom": [
         3054.0000000000005
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         1003.8012572162482
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "280",
@@ -2270,16 +2171,11 @@
       "p_nom": [
         264
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         86.77260376721989
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "744",
@@ -2289,16 +2185,11 @@
       "p_nom": [
         961.2
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         315.9311618979233
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "780",
@@ -2308,149 +2199,109 @@
       "p_nom": [
         330
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         108.46575470902486
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "360",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load3": {
-      "p_nom": [
-        2940
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        966.3312692258578
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "251",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load31": {
-      "p_nom": [
-        282
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        92.68891766043943
-      ],
-      "terminal_map": [
-        "1",
-        "n"
-      ],
-      "bus": "747",
       "configuration": "SINGLE_PHASE"
     },
     "load44": {
       "p_nom": [
         1872
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         615.296644894832
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "1091",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load31": {
+      "p_nom": [
+        282
+      ],
+      "q_nom": [
+        92.68891766043943
+      ],
+      "terminal_map": [
+        "a",
+        "n"
+      ],
+      "bus": "747",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load3": {
+      "p_nom": [
+        2940
+      ],
+      "q_nom": [
+        966.3312692258578
+      ],
+      "terminal_map": [
+        "c",
+        "n"
+      ],
+      "bus": "251",
       "configuration": "SINGLE_PHASE"
     },
     "load13": {
       "p_nom": [
         246
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         80.85628987400034
       ],
       "terminal_map": [
-        "3",
+        "c",
         "n"
       ],
       "bus": "394",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load12": {
-      "p_nom": [
-        330
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        108.46575470902486
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "377",
       "configuration": "SINGLE_PHASE"
     },
     "load29": {
       "p_nom": [
         348.00000000000006
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         114.38206860224442
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "743",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load12": {
+      "p_nom": [
+        330
+      ],
+      "q_nom": [
+        108.46575470902486
+      ],
+      "terminal_map": [
+        "c",
+        "n"
+      ],
+      "bus": "377",
       "configuration": "SINGLE_PHASE"
     },
     "load43": {
       "p_nom": [
         318
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         104.5215454468785
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "1066",
@@ -2460,16 +2311,11 @@
       "p_nom": [
         2058.0000000000005
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         676.4318884581005
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "284",
@@ -2479,16 +2325,11 @@
       "p_nom": [
         828.0000000000001
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         272.1504390880988
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "538",
@@ -2498,16 +2339,11 @@
       "p_nom": [
         270
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         88.74470839829307
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "741",
@@ -2517,16 +2353,11 @@
       "p_nom": [
         1944
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         638.96190046771
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "621",
@@ -2536,16 +2367,11 @@
       "p_nom": [
         294.00000000000006
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         96.6331269225858
       ],
       "terminal_map": [
-        "3",
+        "c",
         "n"
       ],
       "bus": "707",
@@ -2555,16 +2381,11 @@
       "p_nom": [
         342
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         112.40996397117122
       ],
       "terminal_map": [
-        "3",
+        "c",
         "n"
       ],
       "bus": "759",
@@ -2574,16 +2395,11 @@
       "p_nom": [
         1956
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         642.9061097298564
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "688",
@@ -2593,16 +2409,11 @@
       "p_nom": [
         215.99999999999997
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         70.99576671863444
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "1160",
@@ -2612,16 +2423,11 @@
       "p_nom": [
         336
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         110.43785934009804
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "663",
@@ -2631,16 +2437,11 @@
       "p_nom": [
         270
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         88.74470839829307
       ],
       "terminal_map": [
-        "3",
+        "c",
         "n"
       ],
       "bus": "347",
@@ -2650,16 +2451,11 @@
       "p_nom": [
         324
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         106.49365007795168
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "1173",
@@ -2669,16 +2465,11 @@
       "p_nom": [
         318
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         104.5215454468785
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "820",
@@ -2688,16 +2479,11 @@
       "p_nom": [
         1332
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         437.8072280982458
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "273",
@@ -2707,16 +2493,11 @@
       "p_nom": [
         2040
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         670.515574564881
       ],
       "terminal_map": [
-        "3",
+        "c",
         "n"
       ],
       "bus": "516",
@@ -2726,16 +2507,11 @@
       "p_nom": [
         288.00000000000006
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         94.66102229151262
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "967",
@@ -2745,16 +2521,11 @@
       "p_nom": [
         288.00000000000006
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         94.66102229151262
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "597",
@@ -2764,16 +2535,11 @@
       "p_nom": [
         288.00000000000006
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         94.66102229151262
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "1019",
@@ -2783,16 +2549,11 @@
       "p_nom": [
         276
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         90.71681302936625
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "919",
@@ -2802,16 +2563,11 @@
       "p_nom": [
         5586
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         1836.0294115291301
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "1098",
@@ -2821,16 +2577,11 @@
       "p_nom": [
         336
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         110.43785934009804
       ],
       "terminal_map": [
-        "3",
+        "c",
         "n"
       ],
       "bus": "734",
@@ -2840,16 +2591,11 @@
       "p_nom": [
         966
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         317.5088456027819
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "667",
@@ -2859,16 +2605,11 @@
       "p_nom": [
         9738
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         3200.7258162317694
       ],
       "terminal_map": [
-        "3",
+        "c",
         "n"
       ],
       "bus": "940",
@@ -2878,16 +2619,11 @@
       "p_nom": [
         282
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         92.68891766043943
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "918",
@@ -2897,16 +2633,11 @@
       "p_nom": [
         324
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         106.49365007795168
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "615",
@@ -2916,16 +2647,11 @@
       "p_nom": [
         324
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         106.49365007795168
       ],
       "terminal_map": [
-        "1",
+        "a",
         "n"
       ],
       "bus": "262",
@@ -2935,57 +2661,42 @@
       "p_nom": [
         246
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         80.85628987400034
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "676",
-      "configuration": "SINGLE_PHASE"
-    },
-    "load9": {
-      "p_nom": [
-        312
-      ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
-      "q_nom": [
-        102.54944081580531
-      ],
-      "terminal_map": [
-        "3",
-        "n"
-      ],
-      "bus": "325",
       "configuration": "SINGLE_PHASE"
     },
     "load16": {
       "p_nom": [
         113.99999999999999
       ],
-      "_pmd": {
-        "model": "POWER",
-        "vm_nom": 0.23,
-        "dispatchable": "NO"
-      },
       "q_nom": [
         37.46998799039041
       ],
       "terminal_map": [
-        "2",
+        "b",
         "n"
       ],
       "bus": "551",
+      "configuration": "SINGLE_PHASE"
+    },
+    "load9": {
+      "p_nom": [
+        312
+      ],
+      "q_nom": [
+        102.54944081580531
+      ],
+      "terminal_map": [
+        "c",
+        "n"
+      ],
+      "bus": "325",
       "configuration": "SINGLE_PHASE"
     }
   },
@@ -6546,19 +6257,6 @@
       "element_id": "line203"
     },
     {
-      "message": "Merged line line168 (0.044721 m) into line159 at pass-through bus 160; new length 0.107967 m.",
-      "detail": {
-        "new_length": 0.107967,
-        "absorbed_line": "line168",
-        "removed_bus": "160"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line159"
-    },
-    {
       "message": "Merged line line430 (0.2508 m) into line415 at pass-through bus 416; new length 0.54283 m.",
       "detail": {
         "new_length": 0.54283,
@@ -6585,17 +6283,17 @@
       "element_id": "line22"
     },
     {
-      "message": "Merged line line980 (0.23345 m) into line986 at pass-through bus 981; new length 0.32564499999999996 m.",
+      "message": "Merged line line168 (0.044721 m) into line159 at pass-through bus 160; new length 0.107967 m.",
       "detail": {
-        "new_length": 0.32564499999999996,
-        "absorbed_line": "line980",
-        "removed_bus": "981"
+        "new_length": 0.107967,
+        "absorbed_line": "line168",
+        "removed_bus": "160"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line986"
+      "element_id": "line159"
     },
     {
       "message": "Merged line line822 (0.12207 m) into line814 at pass-through bus 815; new length 0.212623 m.",
@@ -6609,6 +6307,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line814"
+    },
+    {
+      "message": "Merged line line980 (0.23345 m) into line986 at pass-through bus 981; new length 0.32564499999999996 m.",
+      "detail": {
+        "new_length": 0.32564499999999996,
+        "absorbed_line": "line980",
+        "removed_bus": "981"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line986"
     },
     {
       "message": "Merged line line922 (0.16279 m) into line915 at pass-through bus 916; new length 0.42086 m.",
@@ -6898,19 +6609,6 @@
       "element_id": "line455"
     },
     {
-      "message": "Merged line line490 (0.60168 m) into line529 at pass-through bus 510; new length 1.69828 m.",
-      "detail": {
-        "new_length": 1.69828,
-        "absorbed_line": "line490",
-        "removed_bus": "510"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line529"
-    },
-    {
       "message": "Merged line line1077 (2.7434 m) into line1081 at pass-through bus 1078; new length 2.8996 m.",
       "detail": {
         "new_length": 2.8996,
@@ -6935,6 +6633,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line256"
+    },
+    {
+      "message": "Merged line line490 (0.60168 m) into line529 at pass-through bus 510; new length 1.69828 m.",
+      "detail": {
+        "new_length": 1.69828,
+        "absorbed_line": "line490",
+        "removed_bus": "510"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line529"
     },
     {
       "message": "Merged line line19 (0.12897 m) into line18 at pass-through bus 19; new length 0.23366 m.",
@@ -7198,19 +6909,6 @@
       "element_id": "line1146"
     },
     {
-      "message": "Merged line line181 (0.065002 m) into line197 at pass-through bus 182; new length 0.164302 m.",
-      "detail": {
-        "new_length": 0.164302,
-        "absorbed_line": "line181",
-        "removed_bus": "182"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line197"
-    },
-    {
       "message": "Merged line line183 (0.063246 m) into line175 at pass-through bus 176; new length 0.117098 m.",
       "detail": {
         "new_length": 0.117098,
@@ -7222,6 +6920,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line175"
+    },
+    {
+      "message": "Merged line line181 (0.065002 m) into line197 at pass-through bus 182; new length 0.164302 m.",
+      "detail": {
+        "new_length": 0.164302,
+        "absorbed_line": "line181",
+        "removed_bus": "182"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line197"
     },
     {
       "message": "Merged line line1086 (0.31385 m) into line1082 at pass-through bus 1083; new length 0.42787000000000003 m.",
@@ -7536,17 +7247,17 @@
       "element_id": "line199"
     },
     {
-      "message": "Merged line line662 (2.8718 m) into line640 at pass-through bus 641; new length 3.30285 m.",
+      "message": "Merged line line1088 (0.43382 m) into line1084 at pass-through bus 1085; new length 0.519259 m.",
       "detail": {
-        "new_length": 3.30285,
-        "absorbed_line": "line662",
-        "removed_bus": "641"
+        "new_length": 0.519259,
+        "absorbed_line": "line1088",
+        "removed_bus": "1085"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line640"
+      "element_id": "line1084"
     },
     {
       "message": "Merged line line442 (2.8082 m) into line427 at pass-through bus 428; new length 7.708499999999999 m.",
@@ -7562,17 +7273,17 @@
       "element_id": "line427"
     },
     {
-      "message": "Merged line line1088 (0.43382 m) into line1084 at pass-through bus 1085; new length 0.519259 m.",
+      "message": "Merged line line662 (2.8718 m) into line640 at pass-through bus 641; new length 3.30285 m.",
       "detail": {
-        "new_length": 0.519259,
-        "absorbed_line": "line1088",
-        "removed_bus": "1085"
+        "new_length": 3.30285,
+        "absorbed_line": "line662",
+        "removed_bus": "641"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line1084"
+      "element_id": "line640"
     },
     {
       "message": "Merged line line1081 (2.8996 m) into line1069 at pass-through bus 1074; new length 3.8638 m.",
@@ -8161,17 +7872,17 @@
       "element_id": "line440"
     },
     {
-      "message": "Merged line line919 (0.16125 m) into line929 at pass-through bus 920; new length 0.46623000000000003 m.",
+      "message": "Merged line line1108 (1.01855 m) into line1110 at pass-through bus 1109; new length 1.2915 m.",
       "detail": {
-        "new_length": 0.46623000000000003,
-        "absorbed_line": "line919",
-        "removed_bus": "920"
+        "new_length": 1.2915,
+        "absorbed_line": "line1108",
+        "removed_bus": "1109"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line929"
+      "element_id": "line1110"
     },
     {
       "message": "Merged line line810 (0.96566 m) into line818 at pass-through bus 811; new length 1.79028 m.",
@@ -8187,17 +7898,17 @@
       "element_id": "line818"
     },
     {
-      "message": "Merged line line1108 (1.01855 m) into line1110 at pass-through bus 1109; new length 1.2915 m.",
+      "message": "Merged line line919 (0.16125 m) into line929 at pass-through bus 920; new length 0.46623000000000003 m.",
       "detail": {
-        "new_length": 1.2915,
-        "absorbed_line": "line1108",
-        "removed_bus": "1109"
+        "new_length": 0.46623000000000003,
+        "absorbed_line": "line919",
+        "removed_bus": "920"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line1110"
+      "element_id": "line929"
     },
     {
       "message": "Merged line line1167 (0.19416 m) into line1166 at pass-through bus 1167; new length 2.95676 m.",
@@ -8213,19 +7924,6 @@
       "element_id": "line1166"
     },
     {
-      "message": "Merged line line103 (9.3163 m) into line97 at pass-through bus 98; new length 19.6751 m.",
-      "detail": {
-        "new_length": 19.6751,
-        "absorbed_line": "line103",
-        "removed_bus": "98"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line97"
-    },
-    {
       "message": "Merged line line489 (0.098488 m) into line472 at pass-through bus 473; new length 0.351708 m.",
       "detail": {
         "new_length": 0.351708,
@@ -8237,6 +7935,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line472"
+    },
+    {
+      "message": "Merged line line103 (9.3163 m) into line97 at pass-through bus 98; new length 19.6751 m.",
+      "detail": {
+        "new_length": 19.6751,
+        "absorbed_line": "line103",
+        "removed_bus": "98"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line97"
     },
     {
       "message": "Merged line line1114 (0.26249 m) into line1112 at pass-through bus 1113; new length 0.5066200000000001 m.",
@@ -8929,19 +8640,6 @@
       "element_id": "line926"
     },
     {
-      "message": "Merged line line741 (5.3199 m) into line725 at pass-through bus 726; new length 12.418199999999999 m.",
-      "detail": {
-        "new_length": 12.418199999999999,
-        "absorbed_line": "line741",
-        "removed_bus": "726"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line725"
-    },
-    {
       "message": "Merged line line165 (0.78517 m) into line155 at pass-through bus 156; new length 0.89831 m.",
       "detail": {
         "new_length": 0.89831,
@@ -8953,6 +8651,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line155"
+    },
+    {
+      "message": "Merged line line741 (5.3199 m) into line725 at pass-through bus 726; new length 12.418199999999999 m.",
+      "detail": {
+        "new_length": 12.418199999999999,
+        "absorbed_line": "line741",
+        "removed_bus": "726"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line725"
     },
     {
       "message": "Merged line line219 (10.3121 m) into line229 at pass-through bus 220; new length 14.815199999999999 m.",
@@ -9086,17 +8797,17 @@
       "element_id": "line859"
     },
     {
-      "message": "Merged line line1092 (2.5744 m) into line1087 at pass-through bus 1088; new length 3.3490599999999997 m.",
+      "message": "Merged line line1087 (0.77466 m) into line1092 at pass-through bus 1088; new length 3.3490599999999997 m.",
       "detail": {
         "new_length": 3.3490599999999997,
-        "absorbed_line": "line1092",
+        "absorbed_line": "line1087",
         "removed_bus": "1088"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line1087"
+      "element_id": "line1092"
     },
     {
       "message": "Merged line line571 (6.33681 m) into line440 at pass-through bus 472; new length 6.69515 m.",
@@ -9190,19 +8901,6 @@
       "element_id": "line242"
     },
     {
-      "message": "Merged line line791 (0.69991 m) into line797 at pass-through bus 792; new length 0.94074 m.",
-      "detail": {
-        "new_length": 0.94074,
-        "absorbed_line": "line791",
-        "removed_bus": "792"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line797"
-    },
-    {
       "message": "Merged line line106 (0.08544 m) into line100 at pass-through bus 101; new length 0.7795899999999999 m.",
       "detail": {
         "new_length": 0.7795899999999999,
@@ -9214,6 +8912,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line100"
+    },
+    {
+      "message": "Merged line line791 (0.69991 m) into line797 at pass-through bus 792; new length 0.94074 m.",
+      "detail": {
+        "new_length": 0.94074,
+        "absorbed_line": "line791",
+        "removed_bus": "792"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line797"
     },
     {
       "message": "Merged line line714 (0.10198 m) into line731 at pass-through bus 715; new length 0.20396 m.",
@@ -9229,19 +8940,6 @@
       "element_id": "line731"
     },
     {
-      "message": "Merged line line1058 (0.084854 m) into line1053 at pass-through bus 1054; new length 0.30980599999999997 m.",
-      "detail": {
-        "new_length": 0.30980599999999997,
-        "absorbed_line": "line1058",
-        "removed_bus": "1054"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line1053"
-    },
-    {
       "message": "Merged line line1116 (0.2 m) into line1112 at pass-through bus 1115; new length 0.70662 m.",
       "detail": {
         "new_length": 0.70662,
@@ -9253,6 +8951,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line1112"
+    },
+    {
+      "message": "Merged line line1058 (0.084854 m) into line1053 at pass-through bus 1054; new length 0.30980599999999997 m.",
+      "detail": {
+        "new_length": 0.30980599999999997,
+        "absorbed_line": "line1058",
+        "removed_bus": "1054"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line1053"
     },
     {
       "message": "Merged line line175 (0.117098 m) into line167 at pass-through bus 168; new length 0.167098 m.",
@@ -9333,10 +9044,10 @@
       "element_id": "line979"
     },
     {
-      "message": "Merged line line1087 (3.3490599999999997 m) into line1083 at pass-through bus 1084; new length 3.6616299999999997 m.",
+      "message": "Merged line line1092 (3.3490599999999997 m) into line1083 at pass-through bus 1084; new length 3.6616299999999997 m.",
       "detail": {
         "new_length": 3.6616299999999997,
-        "absorbed_line": "line1087",
+        "absorbed_line": "line1092",
         "removed_bus": "1084"
       },
       "severity": "info",
@@ -9541,19 +9252,6 @@
       "element_id": "line1118"
     },
     {
-      "message": "Merged line line572 (4.4881 m) into line551 at pass-through bus 552; new length 8.506240000000002 m.",
-      "detail": {
-        "new_length": 8.506240000000002,
-        "absorbed_line": "line572",
-        "removed_bus": "552"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line551"
-    },
-    {
       "message": "Merged line line11 (0.54111 m) into line12 at pass-through bus 12; new length 3.22731 m.",
       "detail": {
         "new_length": 3.22731,
@@ -9578,6 +9276,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line191"
+    },
+    {
+      "message": "Merged line line572 (4.4881 m) into line551 at pass-through bus 552; new length 8.506240000000002 m.",
+      "detail": {
+        "new_length": 8.506240000000002,
+        "absorbed_line": "line572",
+        "removed_bus": "552"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line551"
     },
     {
       "message": "Lines line713 (linecode lc1) and line693 (linecode lc3) at bus 694 have different linecodes — not merged.",
@@ -9737,19 +9448,6 @@
       "element_id": "line487"
     },
     {
-      "message": "Merged line line755 (0.16125 m) into line744 at pass-through bus 745; new length 1.05679 m.",
-      "detail": {
-        "new_length": 1.05679,
-        "absorbed_line": "line755",
-        "removed_bus": "745"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line744"
-    },
-    {
       "message": "Merged line line695 (0.21 m) into line715 at pass-through bus 696; new length 0.43361 m.",
       "detail": {
         "new_length": 0.43361,
@@ -9761,6 +9459,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line715"
+    },
+    {
+      "message": "Merged line line755 (0.16125 m) into line744 at pass-through bus 745; new length 1.05679 m.",
+      "detail": {
+        "new_length": 1.05679,
+        "absorbed_line": "line755",
+        "removed_bus": "745"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line744"
     },
     {
       "message": "Merged line line667 (5.1369 m) into line687 at pass-through bus 668; new length 10.3986 m.",
@@ -10582,19 +10293,6 @@
       "element_id": "line1083"
     },
     {
-      "message": "Merged line line798 (0.57613 m) into line786 at pass-through bus 787; new length 0.636959 m.",
-      "detail": {
-        "new_length": 0.636959,
-        "absorbed_line": "line798",
-        "removed_bus": "787"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line786"
-    },
-    {
       "message": "Merged line line645 (5.8203700000000005 m) into line575 at pass-through bus 600; new length 6.5231200000000005 m.",
       "detail": {
         "new_length": 6.5231200000000005,
@@ -10606,6 +10304,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line575"
+    },
+    {
+      "message": "Merged line line798 (0.57613 m) into line786 at pass-through bus 787; new length 0.636959 m.",
+      "detail": {
+        "new_length": 0.636959,
+        "absorbed_line": "line798",
+        "removed_bus": "787"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line786"
     },
     {
       "message": "Merged line line282 (0.044722 m) into line271 at pass-through bus 272; new length 0.089443 m.",
@@ -10673,17 +10384,17 @@
       "element_id": "line7"
     },
     {
-      "message": "Merged line line794 (0.092195 m) into line819 at pass-through bus 795; new length 5.682488 m.",
+      "message": "Merged line line1168 (0.40249 m) into line1166 at pass-through bus 1168; new length 3.3592500000000003 m.",
       "detail": {
-        "new_length": 5.682488,
-        "absorbed_line": "line794",
-        "removed_bus": "795"
+        "new_length": 3.3592500000000003,
+        "absorbed_line": "line1168",
+        "removed_bus": "1168"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line819"
+      "element_id": "line1166"
     },
     {
       "message": "Merged line line193 (0.24413 m) into line201 at pass-through bus 194; new length 0.59797 m.",
@@ -10699,17 +10410,17 @@
       "element_id": "line201"
     },
     {
-      "message": "Merged line line1168 (0.40249 m) into line1166 at pass-through bus 1168; new length 3.3592500000000003 m.",
+      "message": "Merged line line794 (0.092195 m) into line819 at pass-through bus 795; new length 5.682488 m.",
       "detail": {
-        "new_length": 3.3592500000000003,
-        "absorbed_line": "line1168",
-        "removed_bus": "1168"
+        "new_length": 5.682488,
+        "absorbed_line": "line794",
+        "removed_bus": "795"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line1166"
+      "element_id": "line819"
     },
     {
       "message": "Merged line line867 (4.3258600000000005 m) into line853 at pass-through bus 854; new length 4.5854800000000004 m.",
@@ -10972,19 +10683,6 @@
       "element_id": "line120"
     },
     {
-      "message": "Merged line line394 (0.21633 m) into line408 at pass-through bus 395; new length 0.306884 m.",
-      "detail": {
-        "new_length": 0.306884,
-        "absorbed_line": "line394",
-        "removed_bus": "395"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line408"
-    },
-    {
       "message": "Merged line line1072 (0.22198 m) into line1063 at pass-through bus 1069; new length 0.408515 m.",
       "detail": {
         "new_length": 0.408515,
@@ -10996,6 +10694,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line1063"
+    },
+    {
+      "message": "Merged line line394 (0.21633 m) into line408 at pass-through bus 395; new length 0.306884 m.",
+      "detail": {
+        "new_length": 0.306884,
+        "absorbed_line": "line394",
+        "removed_bus": "395"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line408"
     },
     {
       "message": "Merged line line1063 (0.408515 m) into line1053 at pass-through bus 1059; new length 0.718321 m.",
@@ -11232,19 +10943,6 @@
       "element_id": "line97"
     },
     {
-      "message": "Merged line line200 (0.155818 m) into line184 at pass-through bus 185; new length 0.197049 m.",
-      "detail": {
-        "new_length": 0.197049,
-        "absorbed_line": "line200",
-        "removed_bus": "185"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line184"
-    },
-    {
       "message": "Merged line line1137 (7.3306 m) into line1135 at pass-through bus 1136; new length 7.9326799999999995 m.",
       "detail": {
         "new_length": 7.9326799999999995,
@@ -11256,6 +10954,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line1135"
+    },
+    {
+      "message": "Merged line line200 (0.155818 m) into line184 at pass-through bus 185; new length 0.197049 m.",
+      "detail": {
+        "new_length": 0.197049,
+        "absorbed_line": "line200",
+        "removed_bus": "185"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line184"
     },
     {
       "message": "Merged line line409 (0.064031 m) into line440 at pass-through bus 410; new length 7.414254000000001 m.",
@@ -11388,19 +11099,6 @@
       "element_id": "line1170"
     },
     {
-      "message": "Merged line line809 (0.092195 m) into line817 at pass-through bus 810; new length 0.190684 m.",
-      "detail": {
-        "new_length": 0.190684,
-        "absorbed_line": "line809",
-        "removed_bus": "810"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line817"
-    },
-    {
       "message": "Merged line line127 (0.43174 m) into line137 at pass-through bus 128; new length 0.492568 m.",
       "detail": {
         "new_length": 0.492568,
@@ -11412,6 +11110,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line137"
+    },
+    {
+      "message": "Merged line line809 (0.092195 m) into line817 at pass-through bus 810; new length 0.190684 m.",
+      "detail": {
+        "new_length": 0.190684,
+        "absorbed_line": "line809",
+        "removed_bus": "810"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line817"
     },
     {
       "message": "Merged line line1124 (0.11705 m) into line1126 at pass-through bus 1125; new length 7.61757 m.",
@@ -12104,19 +11815,6 @@
       "element_id": "line1032"
     },
     {
-      "message": "Merged line line708 (0.39825 m) into line725 at pass-through bus 709; new length 12.81645 m.",
-      "detail": {
-        "new_length": 12.81645,
-        "absorbed_line": "line708",
-        "removed_bus": "709"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line725"
-    },
-    {
       "message": "Merged line line451 (10.0015 m) into line373 at pass-through bus 422; new length 10.96307 m.",
       "detail": {
         "new_length": 10.96307,
@@ -12128,6 +11826,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line373"
+    },
+    {
+      "message": "Merged line line708 (0.39825 m) into line725 at pass-through bus 709; new length 12.81645 m.",
+      "detail": {
+        "new_length": 12.81645,
+        "absorbed_line": "line708",
+        "removed_bus": "709"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line725"
     },
     {
       "message": "Merged line line668 (0.24352 m) into line625 at pass-through bus 648; new length 0.66192 m.",
@@ -12533,30 +12244,17 @@
       "element_id": "line247"
     },
     {
-      "message": "Merged line line882 (2.08547 m) into line896 at pass-through bus 890; new length 2.34624 m.",
+      "message": "Merged line line550 (5.0912 m) into line472 at pass-through bus 529; new length 12.443998 m.",
       "detail": {
-        "new_length": 2.34624,
-        "absorbed_line": "line882",
-        "removed_bus": "890"
+        "new_length": 12.443998,
+        "absorbed_line": "line550",
+        "removed_bus": "529"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line896"
-    },
-    {
-      "message": "Merged line line856 (0.044722 m) into line842 at pass-through bus 850; new length 0.9805240000000001 m.",
-      "detail": {
-        "new_length": 0.9805240000000001,
-        "absorbed_line": "line856",
-        "removed_bus": "850"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line842"
+      "element_id": "line472"
     },
     {
       "message": "Merged line line69 (0.19 m) into line64 at pass-through bus 68; new length 0.42549 m.",
@@ -12572,17 +12270,30 @@
       "element_id": "line64"
     },
     {
-      "message": "Merged line line550 (5.0912 m) into line472 at pass-through bus 529; new length 12.443998 m.",
+      "message": "Merged line line856 (0.044722 m) into line842 at pass-through bus 850; new length 0.9805240000000001 m.",
       "detail": {
-        "new_length": 12.443998,
-        "absorbed_line": "line550",
-        "removed_bus": "529"
+        "new_length": 0.9805240000000001,
+        "absorbed_line": "line856",
+        "removed_bus": "850"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line472"
+      "element_id": "line842"
+    },
+    {
+      "message": "Merged line line882 (2.08547 m) into line896 at pass-through bus 890; new length 2.34624 m.",
+      "detail": {
+        "new_length": 2.34624,
+        "absorbed_line": "line882",
+        "removed_bus": "890"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line896"
     },
     {
       "message": "Merged line line75 (0.94126 m) into line78 at pass-through bus 76; new length 1.94263 m.",
@@ -13743,19 +13454,6 @@
       "element_id": "line974"
     },
     {
-      "message": "Merged line line187 (3.9562999999999997 m) into line242 at pass-through bus 222; new length 5.78123 m.",
-      "detail": {
-        "new_length": 5.78123,
-        "absorbed_line": "line187",
-        "removed_bus": "222"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line242"
-    },
-    {
       "message": "Merged line line1135 (8.595559999999999 m) into line1126 at pass-through bus 1129; new length 16.21313 m.",
       "detail": {
         "new_length": 16.21313,
@@ -13767,6 +13465,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line1126"
+    },
+    {
+      "message": "Merged line line187 (3.9562999999999997 m) into line242 at pass-through bus 222; new length 5.78123 m.",
+      "detail": {
+        "new_length": 5.78123,
+        "absorbed_line": "line187",
+        "removed_bus": "222"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line242"
     },
     {
       "message": "Merged line line342 (0.1063 m) into line423 at pass-through bus 343; new length 0.7120679999999999 m.",
@@ -13925,19 +13636,6 @@
       "element_id": "line1016"
     },
     {
-      "message": "Merged line line293 (0.18682 m) into line315 at pass-through bus 294; new length 0.27780900000000003 m.",
-      "detail": {
-        "new_length": 0.27780900000000003,
-        "absorbed_line": "line293",
-        "removed_bus": "294"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line315"
-    },
-    {
       "message": "Merged line line1151 (0.21587 m) into line1153 at pass-through bus 1152; new length 0.41811 m.",
       "detail": {
         "new_length": 0.41811,
@@ -13949,6 +13647,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line1153"
+    },
+    {
+      "message": "Merged line line293 (0.18682 m) into line315 at pass-through bus 294; new length 0.27780900000000003 m.",
+      "detail": {
+        "new_length": 0.27780900000000003,
+        "absorbed_line": "line293",
+        "removed_bus": "294"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line315"
     },
     {
       "message": "Merged line line964 (2.60034 m) into line1017 at pass-through bus 965; new length 15.3062 m.",
@@ -14380,19 +14091,6 @@
       "element_id": "line122"
     },
     {
-      "message": "Merged line line309 (6.5219 m) into line299 at pass-through bus 300; new length 6.97955 m.",
-      "detail": {
-        "new_length": 6.97955,
-        "absorbed_line": "line309",
-        "removed_bus": "300"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line299"
-    },
-    {
       "message": "Merged line line992 (0.496822 m) into line1066 at pass-through bus 1000; new length 9.232757000000001 m.",
       "detail": {
         "new_length": 9.232757000000001,
@@ -14404,6 +14102,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line1066"
+    },
+    {
+      "message": "Merged line line309 (6.5219 m) into line299 at pass-through bus 300; new length 6.97955 m.",
+      "detail": {
+        "new_length": 6.97955,
+        "absorbed_line": "line309",
+        "removed_bus": "300"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line299"
     },
     {
       "message": "Merged line line1025 (0.34986 m) into line1017 at pass-through bus 1018; new length 15.65606 m.",
@@ -14510,19 +14221,6 @@
       "element_id": "line367"
     },
     {
-      "message": "Merged line line912 (0.14142 m) into line929 at pass-through bus 913; new length 0.60765 m.",
-      "detail": {
-        "new_length": 0.60765,
-        "absorbed_line": "line912",
-        "removed_bus": "913"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line929"
-    },
-    {
       "message": "Merged line line801 (1.2619 m) into line840 at pass-through bus 802; new length 10.20448 m.",
       "detail": {
         "new_length": 10.20448,
@@ -14534,6 +14232,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line840"
+    },
+    {
+      "message": "Merged line line912 (0.14142 m) into line929 at pass-through bus 913; new length 0.60765 m.",
+      "detail": {
+        "new_length": 0.60765,
+        "absorbed_line": "line912",
+        "removed_bus": "913"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line929"
     },
     {
       "message": "Merged line line77 (17.3059 m) into line92 at pass-through bus 85; new length 22.953500000000002 m.",
@@ -14601,19 +14312,6 @@
       "element_id": "line706"
     },
     {
-      "message": "Merged line line934 (0.17692 m) into line929 at pass-through bus 930; new length 0.78457 m.",
-      "detail": {
-        "new_length": 0.78457,
-        "absorbed_line": "line934",
-        "removed_bus": "930"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line929"
-    },
-    {
       "message": "Merged line line1132 (1.2031 m) into line1156 at pass-through bus 1137; new length 12.32021 m.",
       "detail": {
         "new_length": 12.32021,
@@ -14625,6 +14323,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line1156"
+    },
+    {
+      "message": "Merged line line934 (0.17692 m) into line929 at pass-through bus 930; new length 0.78457 m.",
+      "detail": {
+        "new_length": 0.78457,
+        "absorbed_line": "line934",
+        "removed_bus": "930"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line929"
     },
     {
       "message": "Merged line line92 (22.953500000000002 m) into line74 at pass-through bus 75; new length 28.432740000000003 m.",
@@ -14770,17 +14481,17 @@
       "element_id": "line1064"
     },
     {
-      "message": "Merged line line786 (0.90615 m) into line850 at pass-through bus 830; new length 11.03659 m.",
+      "message": "Merged line line686 (0.248752 m) into line724 at pass-through bus 687; new length 0.830322 m.",
       "detail": {
-        "new_length": 11.03659,
-        "absorbed_line": "line786",
-        "removed_bus": "830"
+        "new_length": 0.830322,
+        "absorbed_line": "line686",
+        "removed_bus": "687"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line850"
+      "element_id": "line724"
     },
     {
       "message": "Merged line line234 (0.133853 m) into line224 at pass-through bus 225; new length 8.188505 m.",
@@ -14796,17 +14507,17 @@
       "element_id": "line224"
     },
     {
-      "message": "Merged line line686 (0.248752 m) into line724 at pass-through bus 687; new length 0.830322 m.",
+      "message": "Merged line line786 (0.90615 m) into line850 at pass-through bus 830; new length 11.03659 m.",
       "detail": {
-        "new_length": 0.830322,
-        "absorbed_line": "line686",
-        "removed_bus": "687"
+        "new_length": 11.03659,
+        "absorbed_line": "line786",
+        "removed_bus": "830"
       },
       "severity": "info",
       "operation": "merge_series_lines",
       "code": "LINES_MERGED",
       "element_type": "line",
-      "element_id": "line724"
+      "element_id": "line850"
     },
     {
       "message": "Merged line line1035 (0.13454 m) into line1041 at pass-through bus 1036; new length 0.31482 m.",
@@ -15005,19 +14716,6 @@
       "element_id": "line1118"
     },
     {
-      "message": "Merged line line649 (4.1382 m) into line627 at pass-through bus 628; new length 25.5481 m.",
-      "detail": {
-        "new_length": 25.5481,
-        "absorbed_line": "line649",
-        "removed_bus": "628"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line627"
-    },
-    {
       "message": "Merged line line1141 (1.41318 m) into line1155 at pass-through bus 1154; new length 12.097330000000001 m.",
       "detail": {
         "new_length": 12.097330000000001,
@@ -15029,6 +14727,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line1155"
+    },
+    {
+      "message": "Merged line line649 (4.1382 m) into line627 at pass-through bus 628; new length 25.5481 m.",
+      "detail": {
+        "new_length": 25.5481,
+        "absorbed_line": "line649",
+        "removed_bus": "628"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line627"
     },
     {
       "message": "Merged line line666 (5.6196 m) into line575 at pass-through bus 646; new length 12.47117 m.",
@@ -15055,6 +14766,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line733"
+    },
+    {
+      "message": "Merged line line328 (0.16 m) into line307 at pass-through bus 319; new length 0.48136 m.",
+      "detail": {
+        "new_length": 0.48136,
+        "absorbed_line": "line328",
+        "removed_bus": "319"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line307"
     },
     {
       "message": "Merged line line460 (2.12133 m) into line537 at pass-through bus 478; new length 14.697030000000002 m.",
@@ -15094,19 +14818,6 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line757"
-    },
-    {
-      "message": "Merged line line328 (0.16 m) into line307 at pass-through bus 319; new length 0.48136 m.",
-      "detail": {
-        "new_length": 0.48136,
-        "absorbed_line": "line328",
-        "removed_bus": "319"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line307"
     },
     {
       "message": "Merged line line614 (6.11134 m) into line544 at pass-through bus 567; new length 7.48115 m.",
@@ -15746,19 +15457,6 @@
       "element_id": "line453"
     },
     {
-      "message": "Merged line line816 (0.5412410000000001 m) into line799 at pass-through bus 800; new length 0.7424910000000001 m.",
-      "detail": {
-        "new_length": 0.7424910000000001,
-        "absorbed_line": "line816",
-        "removed_bus": "800"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line799"
-    },
-    {
       "message": "Merged line line1027 (9.34196 m) into line1065 at pass-through bus 1040; new length 16.56119 m.",
       "detail": {
         "new_length": 16.56119,
@@ -15770,6 +15468,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line1065"
+    },
+    {
+      "message": "Merged line line816 (0.5412410000000001 m) into line799 at pass-through bus 800; new length 0.7424910000000001 m.",
+      "detail": {
+        "new_length": 0.7424910000000001,
+        "absorbed_line": "line816",
+        "removed_bus": "800"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line799"
     },
     {
       "message": "Merged line line706 (5.29181 m) into line617 at pass-through bus 618; new length 11.710588 m.",
@@ -15981,19 +15692,6 @@
       "element_id": "line636"
     },
     {
-      "message": "Merged line line850 (11.565919000000001 m) into line871 at pass-through bus 865; new length 15.872919000000001 m.",
-      "detail": {
-        "new_length": 15.872919000000001,
-        "absorbed_line": "line850",
-        "removed_bus": "865"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line871"
-    },
-    {
       "message": "Merged line line283 (6.4719 m) into line273 at pass-through bus 274; new length 10.4296 m.",
       "detail": {
         "new_length": 10.4296,
@@ -16005,6 +15703,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line273"
+    },
+    {
+      "message": "Merged line line850 (11.565919000000001 m) into line871 at pass-through bus 865; new length 15.872919000000001 m.",
+      "detail": {
+        "new_length": 15.872919000000001,
+        "absorbed_line": "line850",
+        "removed_bus": "865"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line871"
     },
     {
       "message": "Merged line line799 (5.709721 m) into line974 at pass-through bus 888; new length 16.875381 m.",
@@ -16410,19 +16121,6 @@
       "element_id": "line821"
     },
     {
-      "message": "Merged line line694 (0.56284 m) into line757 at pass-through bus 732; new length 11.923459999999999 m.",
-      "detail": {
-        "new_length": 11.923459999999999,
-        "absorbed_line": "line694",
-        "removed_bus": "732"
-      },
-      "severity": "info",
-      "operation": "merge_series_lines",
-      "code": "LINES_MERGED",
-      "element_type": "line",
-      "element_id": "line757"
-    },
-    {
       "message": "Merged line line346 (4.4724 m) into line335 at pass-through bus 336; new length 11.9139 m.",
       "detail": {
         "new_length": 11.9139,
@@ -16434,6 +16132,19 @@
       "code": "LINES_MERGED",
       "element_type": "line",
       "element_id": "line335"
+    },
+    {
+      "message": "Merged line line694 (0.56284 m) into line757 at pass-through bus 732; new length 11.923459999999999 m.",
+      "detail": {
+        "new_length": 11.923459999999999,
+        "absorbed_line": "line694",
+        "removed_bus": "732"
+      },
+      "severity": "info",
+      "operation": "merge_series_lines",
+      "code": "LINES_MERGED",
+      "element_type": "line",
+      "element_id": "line757"
     },
     {
       "message": "Merged line line602 (0.41677 m) into line625 at pass-through bus 603; new length 14.15514 m.",
@@ -16478,942 +16189,991 @@
   "bus": {
     "605": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "253": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "372": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "912": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "673": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "558": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "1019": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "1132": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "273": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "734": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "264": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "356": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "707": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "742": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "315": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "988": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "1108": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "771": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "241": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "551": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "615": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "364": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "534": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "324": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "667": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "54": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "724": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "1027": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "743": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "449": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "694": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "458": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "45": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "744": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "780": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "940": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "516": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "1012": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "779": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "597": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "262": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "48": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "747": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "919": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "672": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "513": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "382": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "918": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "280": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "645": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "759": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "285": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "325": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "580": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "977": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "1066": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "41": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "475": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "293": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "514": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "676": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "935": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "413": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "360": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "1160": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "284": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "251": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "53": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "650": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "963": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "111": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "93": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "1130": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "399": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "776": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "1091": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "741": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "sourcebus": {
-      "v_declared": 240.17771198288432,
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "729": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "351": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "967": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "1087": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "230": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "394": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "302": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "1098": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "688": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "712": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "794": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "663": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "345": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "312": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "621": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "535": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "820": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "1173": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "493": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "538": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "347": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "25": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     },
     "377": {
+      "perfectly_grounded_terminals": [
+        "4"
+      ],
       "terminal_names": [
-        "1",
-        "2",
-        "3",
+        "a",
+        "b",
+        "c",
         "n"
       ],
-      "perfectly_grounded_terminals": [
-        "n"
-      ]
+      "neutral_terminal": "n"
     },
     "604": {
       "terminal_names": [
-        "1",
-        "2",
-        "3"
+        "a",
+        "b",
+        "c"
       ]
     }
   },
   "linecode": {
     "lc9": {
       "X_series_2_3": 8.350800000000003e-5,
-      "R_series_1_3": 0.00032280699999999993,
-      "R_series_1_2": 0.00032280699999999993,
-      "R_series_2_2": 0.0006456139999999999,
+      "R_series_1_3": 0.000322807,
+      "R_series_1_2": 0.000322807,
+      "R_series_2_2": 0.000645614,
       "G_to_1_3": 0,
       "G_from_2_2": 0,
       "B_from_3_3": 0,
       "G_to_2_1": 0,
       "B_from_2_2": 0,
-      "G_from_1_3": 0,
       "B_from_3_2": 0,
+      "G_from_1_3": 0,
       "B_from_1_2": 0,
       "B_from_3_1": 0,
       "X_series_2_1": 8.350800000000003e-5,
       "B_from_1_3": 0,
       "B_from_1_1": 0,
       "B_to_2_3": 0,
-      "R_series_2_1": 0.00032280699999999993,
       "G_to_3_3": 0,
-      "R_series_3_1": 0.00032280699999999993,
+      "R_series_2_1": 0.000322807,
+      "R_series_3_1": 0.000322807,
       "G_from_3_3": 0,
       "X_series_3_3": 0.0001230420000000001,
       "G_to_2_3": 0,
@@ -17422,25 +17182,25 @@
       "B_to_2_2": 0,
       "G_from_3_1": 0,
       "B_from_2_1": 0,
-      "R_series_1_1": 0.0006456139999999999,
+      "R_series_1_1": 0.000645614,
       "G_to_3_1": 0,
       "G_from_3_2": 0,
       "B_to_1_1": 0,
       "X_series_2_2": 0.00016701600000000006,
       "G_to_2_2": 0,
-      "X_series_1_2": 8.350800000000003e-5,
       "G_to_3_2": 0,
-      "R_series_3_2": 0.00032280699999999993,
+      "X_series_1_2": 8.350800000000003e-5,
+      "R_series_3_2": 0.000322807,
       "B_from_2_3": 0,
       "G_from_1_1": 0,
       "G_to_1_2": 0,
       "X_series_1_3": 3.953400000000007e-5,
       "G_from_2_3": 0,
-      "R_series_3_3": 0.0006456139999999999,
+      "R_series_3_3": 0.000645614,
       "B_to_3_2": 0,
       "X_series_3_2": 8.350800000000003e-5,
       "B_to_1_3": 0,
-      "R_series_2_3": 0.00032280699999999993,
+      "R_series_2_3": 0.000322807,
       "G_from_1_2": 0,
       "X_series_1_1": 0.0001230420000000001,
       "G_to_1_1": 0,
@@ -17454,56 +17214,56 @@
       "G_from_2_1": 0,
       "X_series_3_1": 3.953400000000007e-5
     },
-    "lc3": {
-      "X_series_2_3": 9.384399999999992e-5,
-      "R_series_1_3": 0.000523967,
-      "R_series_1_2": 0.000525131,
-      "R_series_2_2": 0.001050262,
+    "lc6": {
+      "X_series_2_3": 0.000114448,
+      "R_series_1_3": 0.001151747,
+      "R_series_1_2": 0.0011534,
+      "R_series_2_2": 0.002306801,
       "G_to_1_3": 0,
       "G_from_2_2": 0,
       "B_from_3_3": 0,
       "G_to_2_1": 0,
       "B_from_2_2": 0,
-      "G_from_1_3": 0,
       "B_from_3_2": 0,
+      "G_from_1_3": 0,
       "B_from_1_2": 0,
       "B_from_3_1": 0,
-      "X_series_2_1": 9.383799999999987e-5,
+      "X_series_2_1": 0.00011444699999999997,
       "B_from_1_3": 0,
       "B_from_1_1": 0,
       "B_to_2_3": 0,
-      "R_series_2_1": 0.000525131,
       "G_to_3_3": 0,
-      "R_series_3_1": 0.0005239669999999999,
+      "R_series_2_1": 0.0011534,
+      "R_series_3_1": 0.001151747,
       "G_from_3_3": 0,
-      "X_series_3_3": 0.00013925699999999997,
+      "X_series_3_3": 0.0001689449999999999,
       "G_to_2_3": 0,
       "B_to_1_2": 0,
       "B_to_2_1": 0,
       "B_to_2_2": 0,
       "G_from_3_1": 0,
       "B_from_2_1": 0,
-      "R_series_1_1": 0.001049097,
+      "R_series_1_1": 0.002305147,
       "G_to_3_1": 0,
       "G_from_3_2": 0,
       "B_to_1_1": 0,
-      "X_series_2_2": 0.00018767999999999986,
+      "X_series_2_2": 0.00022889099999999995,
       "G_to_2_2": 0,
-      "X_series_1_2": 9.383799999999987e-5,
       "G_to_3_2": 0,
-      "R_series_3_2": 0.0005251309999999999,
+      "X_series_1_2": 0.00011444699999999997,
+      "R_series_3_2": 0.0011534,
       "B_from_2_3": 0,
       "G_from_1_1": 0,
       "G_to_1_2": 0,
-      "X_series_1_3": 4.5408999999999924e-5,
+      "X_series_1_3": 5.449899999999985e-5,
       "G_from_2_3": 0,
-      "R_series_3_3": 0.001049097,
+      "R_series_3_3": 0.002305148,
       "B_to_3_2": 0,
-      "X_series_3_2": 9.384399999999992e-5,
+      "X_series_3_2": 0.000114448,
       "B_to_1_3": 0,
-      "R_series_2_3": 0.000525131,
+      "R_series_2_3": 0.0011534,
       "G_from_1_2": 0,
-      "X_series_1_1": 0.00013924199999999987,
+      "X_series_1_1": 0.00016893999999999988,
       "G_to_1_1": 0,
       "B_to_3_1": 0,
       "B_to_3_3": 0,
@@ -17513,7 +17273,7 @@
         600
       ],
       "G_from_2_1": 0,
-      "X_series_3_1": 4.5408999999999924e-5
+      "X_series_3_1": 5.449899999999985e-5
     },
     "lc1": {
       "X_series_2_3": 0.00010397199999999996,
@@ -17525,16 +17285,16 @@
       "B_from_3_3": 0,
       "G_to_2_1": 0,
       "B_from_2_2": 0,
-      "G_from_1_3": 0,
       "B_from_3_2": 0,
+      "G_from_1_3": 0,
       "B_from_1_2": 0,
       "B_from_3_1": 0,
-      "X_series_2_1": 0.00010397500000000003,
+      "X_series_2_1": 0.00010397500000000005,
       "B_from_1_3": 0,
       "B_from_1_1": 0,
       "B_to_2_3": 0,
-      "R_series_2_1": 0.001151967,
       "G_to_3_3": 0,
+      "R_series_2_1": 0.001151967,
       "R_series_3_1": 0.001151628,
       "G_from_3_3": 0,
       "X_series_3_3": 0.00016000599999999997,
@@ -17550,8 +17310,8 @@
       "B_to_1_1": 0,
       "X_series_2_2": 0.0002079509999999999,
       "G_to_2_2": 0,
-      "X_series_1_2": 0.00010397500000000003,
       "G_to_3_2": 0,
+      "X_series_1_2": 0.00010397500000000005,
       "R_series_3_2": 0.001151967,
       "B_from_2_3": 0,
       "G_from_1_1": 0,
@@ -17576,56 +17336,56 @@
       "G_from_2_1": 0,
       "X_series_3_1": 5.604100000000001e-5
     },
-    "lc6": {
-      "X_series_2_3": 0.000114448,
-      "R_series_1_3": 0.001151747,
-      "R_series_1_2": 0.0011534,
-      "R_series_2_2": 0.002306801,
+    "lc3": {
+      "X_series_2_3": 9.384399999999992e-5,
+      "R_series_1_3": 0.000523967,
+      "R_series_1_2": 0.0005251310000000001,
+      "R_series_2_2": 0.0010502620000000002,
       "G_to_1_3": 0,
       "G_from_2_2": 0,
       "B_from_3_3": 0,
       "G_to_2_1": 0,
       "B_from_2_2": 0,
-      "G_from_1_3": 0,
       "B_from_3_2": 0,
+      "G_from_1_3": 0,
       "B_from_1_2": 0,
       "B_from_3_1": 0,
-      "X_series_2_1": 0.00011444699999999997,
+      "X_series_2_1": 9.383799999999987e-5,
       "B_from_1_3": 0,
       "B_from_1_1": 0,
       "B_to_2_3": 0,
-      "R_series_2_1": 0.0011534,
       "G_to_3_3": 0,
-      "R_series_3_1": 0.001151747,
+      "R_series_2_1": 0.0005251310000000001,
+      "R_series_3_1": 0.0005239669999999999,
       "G_from_3_3": 0,
-      "X_series_3_3": 0.0001689449999999999,
+      "X_series_3_3": 0.00013925699999999997,
       "G_to_2_3": 0,
       "B_to_1_2": 0,
       "B_to_2_1": 0,
       "B_to_2_2": 0,
       "G_from_3_1": 0,
       "B_from_2_1": 0,
-      "R_series_1_1": 0.002305147,
+      "R_series_1_1": 0.001049097,
       "G_to_3_1": 0,
       "G_from_3_2": 0,
       "B_to_1_1": 0,
-      "X_series_2_2": 0.00022889099999999995,
+      "X_series_2_2": 0.00018767999999999986,
       "G_to_2_2": 0,
-      "X_series_1_2": 0.00011444699999999997,
       "G_to_3_2": 0,
-      "R_series_3_2": 0.0011534,
+      "X_series_1_2": 9.383799999999987e-5,
+      "R_series_3_2": 0.0005251309999999999,
       "B_from_2_3": 0,
       "G_from_1_1": 0,
       "G_to_1_2": 0,
-      "X_series_1_3": 5.449899999999985e-5,
+      "X_series_1_3": 4.5408999999999924e-5,
       "G_from_2_3": 0,
-      "R_series_3_3": 0.002305148,
+      "R_series_3_3": 0.001049097,
       "B_to_3_2": 0,
-      "X_series_3_2": 0.000114448,
+      "X_series_3_2": 9.384399999999992e-5,
       "B_to_1_3": 0,
-      "R_series_2_3": 0.0011534,
+      "R_series_2_3": 0.0005251310000000001,
       "G_from_1_2": 0,
-      "X_series_1_1": 0.00016893999999999986,
+      "X_series_1_1": 0.00013924199999999987,
       "G_to_1_1": 0,
       "B_to_3_1": 0,
       "B_to_3_3": 0,
@@ -17635,7 +17395,7 @@
         600
       ],
       "G_from_2_1": 0,
-      "X_series_3_1": 5.449899999999985e-5
+      "X_series_3_1": 4.5408999999999924e-5
     },
     "lc2": {
       "X_series_2_3": 9.674200000000011e-5,
@@ -17647,16 +17407,16 @@
       "B_from_3_3": 0,
       "G_to_2_1": 0,
       "B_from_2_2": 0,
-      "G_from_1_3": 0,
       "B_from_3_2": 0,
+      "G_from_1_3": 0,
       "B_from_1_2": 0,
       "B_from_3_1": 0,
-      "X_series_2_1": 9.674199999999999e-5,
+      "X_series_2_1": 9.6742e-5,
       "B_from_1_3": 0,
       "B_from_1_1": 0,
       "B_to_2_3": 0,
-      "R_series_2_1": 0.0007279920000000001,
       "G_to_3_3": 0,
+      "R_series_2_1": 0.0007279920000000001,
       "R_series_3_1": 0.0007272050000000001,
       "G_from_3_3": 0,
       "X_series_3_3": 0.00014473400000000004,
@@ -17672,8 +17432,8 @@
       "B_to_1_1": 0,
       "X_series_2_2": 0.00019347400000000004,
       "G_to_2_2": 0,
-      "X_series_1_2": 9.674199999999999e-5,
       "G_to_3_2": 0,
+      "X_series_1_2": 9.6742e-5,
       "R_series_3_2": 0.0007279910000000001,
       "B_from_2_3": 0,
       "G_from_1_1": 0,
@@ -17699,25 +17459,25 @@
       "X_series_3_1": 4.7987e-5
     },
     "lc4": {
-      "X_series_2_3": 9.144699996466887e-5,
+      "X_series_2_3": 9.144699996466888e-5,
       "R_series_1_3": 0.00026870800000000004,
       "R_series_1_2": 0.00027105900000000004,
-      "R_series_2_2": 0.0005421180000368696,
+      "R_series_2_2": 0.0005421180000368697,
       "G_to_1_3": 0,
       "G_from_2_2": 0,
       "B_from_3_3": 0,
       "G_to_2_1": 0,
       "B_from_2_2": 0,
-      "G_from_1_3": 0,
       "B_from_3_2": 0,
+      "G_from_1_3": 0,
       "B_from_1_2": 0,
       "B_from_3_1": 0,
-      "X_series_2_1": 9.144699999999994e-5,
+      "X_series_2_1": 9.144699999999995e-5,
       "B_from_1_3": 0,
       "B_from_1_1": 0,
       "B_to_2_3": 0,
-      "R_series_2_1": 0.00027105900000000004,
       "G_to_3_3": 0,
+      "R_series_2_1": 0.00027105900000000004,
       "R_series_3_1": 0.00026870800000000004,
       "G_from_3_3": 0,
       "X_series_3_3": 0.00013493799996466894,
@@ -17733,8 +17493,8 @@
       "B_to_1_1": 0,
       "X_series_2_2": 0.0001828999999646689,
       "G_to_2_2": 0,
-      "X_series_1_2": 9.144699999999994e-5,
       "G_to_3_2": 0,
+      "X_series_1_2": 9.144699999999995e-5,
       "R_series_3_2": 0.00027105900003686963,
       "B_from_2_3": 0,
       "G_from_1_1": 0,
@@ -17743,7 +17503,7 @@
       "G_from_2_3": 0,
       "R_series_3_3": 0.0005397670000368696,
       "B_to_3_2": 0,
-      "X_series_3_2": 9.144699996466887e-5,
+      "X_series_3_2": 9.144699996466888e-5,
       "B_to_1_3": 0,
       "R_series_2_3": 0.00027105900003686963,
       "G_from_1_2": 0,

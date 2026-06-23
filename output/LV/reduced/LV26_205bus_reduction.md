@@ -1,6 +1,6 @@
 # Simplification log: LV26_205bus
 
-**Generated:** 2026-06-22 14:06:31  
+**Generated:** 2026-06-23 21:34:01  
 **Buses:** 206 → 142 (−64)  
 **Lines:** 196 → 140 (−56)  
 **Operations:** 67
@@ -51,8 +51,8 @@
 | 32 | `remove_dangling_lines` | line `l_782` | Removed dangling line l_782 and its leaf bus b2809 (leaf has no active elements). |
 | 33 | `remove_dangling_lines` | line `l_1182` | Removed dangling line l_1182 and its leaf bus b692 (leaf has no active elements). |
 | 34 | `remove_dangling_lines` | line `l_4694` | Removed dangling line l_4694 and its leaf bus b2344 (leaf has no active elements). |
-| 35 | `remove_dangling_lines` | line `l_1624` | Removed dangling line l_1624 and its leaf bus b1499 (leaf has no active elements). |
-| 36 | `remove_dangling_lines` | line `l_2671` | Removed dangling line l_2671 and its leaf bus b2520 (leaf has no active elements). |
+| 35 | `remove_dangling_lines` | line `l_2671` | Removed dangling line l_2671 and its leaf bus b2520 (leaf has no active elements). |
+| 36 | `remove_dangling_lines` | line `l_1624` | Removed dangling line l_1624 and its leaf bus b1499 (leaf has no active elements). |
 | 37 | `remove_dangling_lines` | line `l_4142` | Removed dangling line l_4142 and its leaf bus b319 (leaf has no active elements). |
 | 38 | `remove_dangling_lines` | line `l_4354` | Removed dangling line l_4354 and its leaf bus b874 (leaf has no active elements). |
 | 39 | `remove_dangling_lines` | line `l_2265` | Removed dangling line l_2265 and its leaf bus b1513 (leaf has no active elements). |

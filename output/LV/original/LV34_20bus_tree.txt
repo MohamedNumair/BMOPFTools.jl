@@ -1,7 +1,7 @@
 # Network graph  (21 buses)
 
 b784 (SRC)
-└── [tx4258: Dyn1 11.0kV/433V]── b855
+└── [tx4258: Dyn0 11.0kV/433V]── b855
     └── b1955
         └── [SW]── b2850
             └── b1659
@@ -23,4 +23,4 @@ b784 (SRC)
                                 └── b1952 (L1)
 
 Loads (1 total):
-  L1 = ld833_load_a       10.0 kW  SINGLE_PHASE  terminals: 1,n
+  L1 = ld833_load_a       10.0 kW  SINGLE_PHASE  terminals: a,n

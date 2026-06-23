@@ -1,6 +1,6 @@
 # Simplification log: LV27_23bus
 
-**Generated:** 2026-06-22 14:06:31  
+**Generated:** 2026-06-23 21:34:01  
 **Buses:** 24 → 3 (−21)  
 **Lines:** 16 → 1 (−15)  
 **Operations:** 21
@@ -18,8 +18,8 @@
 |--:|-----------|---------|---------|
 | 1 | `collapse_closed_switches` | switch `switch_4071_closed` | Collapsed closed switch switch_4071_closed: bus b167 merged into b1265. |
 | 2 | `collapse_closed_switches` | switch `switch_53_closed` | Collapsed closed switch switch_53_closed: bus b80 merged into b551. |
-| 3 | `collapse_closed_switches` | switch `switch_785_closed` | Collapsed closed switch switch_785_closed: bus b9 merged into b1361. |
-| 4 | `collapse_closed_switches` | switch `switch_1406_closed` | Collapsed closed switch switch_1406_closed: bus b194 merged into b887. |
+| 3 | `collapse_closed_switches` | switch `switch_1406_closed` | Collapsed closed switch switch_1406_closed: bus b194 merged into b887. |
+| 4 | `collapse_closed_switches` | switch `switch_785_closed` | Collapsed closed switch switch_785_closed: bus b9 merged into b1361. |
 | 5 | `collapse_closed_switches` | switch `switch_3775_closed` | Collapsed closed switch switch_3775_closed: bus b1025 merged into b2095. |
 | 6 | `collapse_closed_switches` | switch `switch_1391_closed` | Collapsed closed switch switch_1391_closed: bus b621 merged into b1325. |
 | 7 | `remove_dangling_lines` | line `l_4180` | Removed dangling line l_4180 and its leaf bus b3316 (leaf has no active elements). |

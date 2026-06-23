@@ -1,7 +1,7 @@
 # Network graph  (13 buses)
 
 b1569 (SRC)
-└── [tx1621: Dyn1 11.0kV/433V]── b2161
+└── [tx1621: Dyn0 11.0kV/433V]── b2161
     └── b2886
         └── [SW]── b3046
             └── b2156
@@ -15,4 +15,4 @@ b1569 (SRC)
                     └── [SW]── b3030
 
 Loads (1 total):
-  L1 = ld361_load_a       10.0 kW  SINGLE_PHASE  terminals: 1,n
+  L1 = ld361_load_a       10.0 kW  SINGLE_PHASE  terminals: a,n

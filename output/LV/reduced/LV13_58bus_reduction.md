@@ -1,6 +1,6 @@
 # Simplification log: LV13_58bus
 
-**Generated:** 2026-06-22 14:06:29  
+**Generated:** 2026-06-23 21:34:00  
 **Buses:** 59 → 25 (−34)  
 **Lines:** 47 → 23 (−24)  
 **Operations:** 40
@@ -17,7 +17,7 @@
 
 | # | Operation | Element | Message |
 |--:|-----------|---------|---------|
-| 1 | `collapse_closed_switches` | switch `switch_1078_closed` | Collapsed closed switch switch_1078_closed: bus b2418 merged into b870. |
+| 1 | `collapse_closed_switches` | switch `switch_2037_closed` | Collapsed closed switch switch_2037_closed: bus b1587 merged into b1323. |
 | 2 | `collapse_closed_switches` | switch `switch_2474_closed` | Collapsed closed switch switch_2474_closed: bus b1564 merged into b136. |
 | 3 | `collapse_closed_switches` | switch `switch_3581_closed` | Collapsed closed switch switch_3581_closed: bus b2165 merged into b2836. |
 | 4 | `collapse_closed_switches` | switch `switch_4508_closed` | Collapsed closed switch switch_4508_closed: bus b3398 merged into b1650. |
@@ -25,7 +25,7 @@
 | 6 | `collapse_closed_switches` | switch `switch_1235_closed` | Collapsed closed switch switch_1235_closed: bus b660 merged into b2966. |
 | 7 | `collapse_closed_switches` | switch `switch_3177_closed` | Collapsed closed switch switch_3177_closed: bus b207 merged into b520. |
 | 8 | `collapse_closed_switches` | switch `switch_3499_closed` | Collapsed closed switch switch_3499_closed: bus b434 merged into b2416. |
-| 9 | `collapse_closed_switches` | switch `switch_2037_closed` | Collapsed closed switch switch_2037_closed: bus b1587 merged into b1323. |
+| 9 | `collapse_closed_switches` | switch `switch_1078_closed` | Collapsed closed switch switch_1078_closed: bus b2418 merged into b870. |
 | 10 | `collapse_closed_switches` | switch `switch_2311_closed` | Collapsed closed switch switch_2311_closed: bus b963 merged into b1260. |
 | 11 | `remove_dangling_lines` | line `l_1322` | Removed dangling line l_1322 and its leaf bus b2404 (leaf has no active elements). |
 | 12 | `remove_dangling_lines` | line `l_2155` | Removed dangling line l_2155 and its leaf bus b132 (leaf has no active elements). |

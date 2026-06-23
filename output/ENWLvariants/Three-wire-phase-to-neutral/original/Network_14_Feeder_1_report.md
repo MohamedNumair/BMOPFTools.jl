@@ -1,7 +1,7 @@
 # BMOPF Network Summary: Three-wire-phase-to-neutral / Network_14 / Feeder_1
 
-**Generated:** 2026-06-22 14:04:33  
-**Findings:** 0 errors · 315 warnings · 703 info  
+**Generated:** 2026-06-23 21:32:15  
+**Findings:** 0 errors · 316 warnings · 702 info  
 **Convention:** LV_240V: mixed; implicit (Kron-style) grounding
 
 ---
@@ -106,7 +106,7 @@
 |-------------------|------:|
 | Buses with neutral | 73 |
 | Neutral branches | 0 |
-| Grounding points | 73 |
+| Grounding points | 1 |
 | Neutral sections | 73 |
 | Floating sections | 0 |
 
@@ -122,9 +122,10 @@
 
 | Zone | Buses | Wires | Star point | Downstream earths | Likely system |
 |------|------:|-------|------------|------------------:|---------------|
-| 240.0 V | 2349 | ≤3-wire | solid | 72 | indeterminate (3-wire / Kron-style implicit grounding) |
+| 240.0 V | 2349 | ≤3-wire | solid | 0 | indeterminate (3-wire / Kron-style implicit grounding) |
 
 > 🔵 **[I.PROV.NO_PI_SHUNT]** All 8 linecode(s) have no π-shunt admittance (G_from/B_from/G_to/B_to absent or zero) — the line model reduces to a series impedance only. Shunt capacitance is typically negligible for short LV cables but may be significant for long MV/HV lines.
+> 🟡 **[W.PROV.IMPLICIT_GROUNDING]** No branch carries a neutral conductor, but 72 bus(es) have components referencing terminal 'n' without an explicit grounding — the model implicitly assumes every bus is grounded (Kron-style convention). Make this assumption explicit.
 > 🔵 **[I.PROV.DSS_DEFAULT_LENGTH]** 1 of 2348 line(s) have length exactly 1.0 among otherwise varied lengths — the OpenDSS default; these lengths were likely never set.
 > 🔵 **[I.PROV.IMPEDANCE_TRANSFORM_PN]** 8 three-wire linecode(s) match the impedance signature of phase-to-neutral approximation — R block is circulant with mutual ≈ ½ self (neutral resistance folded into phase self-terms); X block retains the original geometric structure. Valid approximation for equal phase/neutral conductors; error grows with grounding impedance.: lc1, lc2, lc3, lc4, lc6, lc7, lc8, lc9.
 > 🔵 **[I.PROV.LINE_SWITCH_LIKE]** Line 'line10' has near-zero series impedance and may be modelled more accurately as a switch: effective impedance (Z·length) < 0.0001 Ω on all diagonals.
@@ -836,8 +837,8 @@
 
 | Benchmark readiness | Value |
 |---------------------|------:|
-| Objective well-posed | true |
-| Only slack generation | true |
+| Objective well-posed | false |
+| Only slack generation | false |
 | Buses with \|V\| bounds | 0.0% |
 | Buses with vpn / vpp / vpos bounds | 0 / 0 / 0 |
 | Lines with thermal limits | 100.0% |
@@ -848,15 +849,15 @@
 
 **Augmentation needed:**
 
-- only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds
+- no priced slack or generator — the generation-cost objective is degenerate; add a cost to the voltage source at the source bus (augment_case does this by default) or dispatchable DERs
 - no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground)
 - no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF
 
-> 🔵 **[I.BENCH.AUGMENTATION]** Case needs augmentation to be a non-trivial OPF benchmark: only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF.
+> 🔵 **[I.BENCH.AUGMENTATION]** Case needs augmentation to be a non-trivial OPF benchmark: no priced slack or generator — the generation-cost objective is degenerate; add a cost to the voltage source at the source bus (augment_case does this by default) or dispatchable DERs; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF.
 
 ## 9. Data Quality Summary
 
-**Total findings:** 1018 (0 errors, 315 warnings, 703 info)
+**Total findings:** 1018 (0 errors, 316 warnings, 702 info)
 
 ### 🟡 Warnings
 
@@ -864,6 +865,8 @@
   201 bus(es) are degree-1 with no attached load, generator, or shunt.
 - **[W.OPS.IMPORT_DEPENDENT]** `network`  
   Network is heavily import-dependent: local generation capacity (0.0 MW) is less than 5% of total load (0.06 MW).
+- **[W.PROV.IMPLICIT_GROUNDING]** `network`  
+  No branch carries a neutral conductor, but 72 bus(es) have components referencing terminal 'n' without an explicit grounding — the model implicitly assumes every bus is grounded (Kron-style convention). Make this assumption explicit.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line2274`  
   Line 'line2274' has ||Z||_F = 9.33e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1342`  
@@ -898,10 +901,10 @@
   Line 'line7' has ||Z||_F = 2.23e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1911`  
   Line 'line1911' has ||Z||_F = 9.45e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line143`  
-  Line 'line143' has ||Z||_F = 4.63e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1964`  
   Line 'line1964' has ||Z||_F = 4.32e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line143`  
+  Line 'line143' has ||Z||_F = 4.63e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line301`  
   Line 'line301' has ||Z||_F = 7.73e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1245`  
@@ -922,10 +925,10 @@
   Line 'line2312' has ||Z||_F = 5.46e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line5`  
   Line 'line5' has ||Z||_F = 2.04e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line31`  
-  Line 'line31' has ||Z||_F = 5.08e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1863`  
   Line 'line1863' has ||Z||_F = 6.16e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line31`  
+  Line 'line31' has ||Z||_F = 5.08e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1264`  
   Line 'line1264' has ||Z||_F = 7.54e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line533`  
@@ -958,10 +961,10 @@
   Line 'line29' has ||Z||_F = 5.1e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1869`  
   Line 'line1869' has ||Z||_F = 7.7e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line1664`  
-  Line 'line1664' has ||Z||_F = 9.83e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1867`  
   Line 'line1867' has ||Z||_F = 7.11e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line1664`  
+  Line 'line1664' has ||Z||_F = 9.83e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line472`  
   Line 'line472' has ||Z||_F = 5.48e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line575`  
@@ -1030,12 +1033,12 @@
   Line 'line38' has ||Z||_F = 5.4e-6 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1358`  
   Line 'line1358' has ||Z||_F = 6.55e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line137`  
-  Line 'line137' has ||Z||_F = 4.19e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line543`  
-  Line 'line543' has ||Z||_F = 2.9e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1674`  
   Line 'line1674' has ||Z||_F = 5.7e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line543`  
+  Line 'line543' has ||Z||_F = 2.9e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line137`  
+  Line 'line137' has ||Z||_F = 4.19e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line311`  
   Line 'line311' has ||Z||_F = 8.94e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line42`  
@@ -1096,10 +1099,10 @@
   Line 'line1821' has ||Z||_F = 6.54e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line8`  
   Line 'line8' has ||Z||_F = 2.23e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line2219`  
-  Line 'line2219' has ||Z||_F = 3.5e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line2328`  
   Line 'line2328' has ||Z||_F = 5.63e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line2219`  
+  Line 'line2219' has ||Z||_F = 3.5e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line277`  
   Line 'line277' has ||Z||_F = 6.34e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line2182`  
@@ -1118,10 +1121,10 @@
   Line 'line1935' has ||Z||_F = 9.05e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line288`  
   Line 'line288' has ||Z||_F = 3.58e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line2054`  
-  Line 'line2054' has ||Z||_F = 8.53e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line2117`  
   Line 'line2117' has ||Z||_F = 2.19e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line2054`  
+  Line 'line2054' has ||Z||_F = 8.53e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line6`  
   Line 'line6' has ||Z||_F = 2.04e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1921`  
@@ -1136,18 +1139,18 @@
   Line 'line2296' has ||Z||_F = 5.74e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line810`  
   Line 'line810' has ||Z||_F = 6.45e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line3`  
-  Line 'line3' has ||Z||_F = 2.32e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line482`  
   Line 'line482' has ||Z||_F = 5.68e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line3`  
+  Line 'line3' has ||Z||_F = 2.32e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1949`  
   Line 'line1949' has ||Z||_F = 4.02e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line449`  
   Line 'line449' has ||Z||_F = 8.82e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line274`  
-  Line 'line274' has ||Z||_F = 5.07e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line2284`  
   Line 'line2284' has ||Z||_F = 7.03e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line274`  
+  Line 'line274' has ||Z||_F = 5.07e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1453`  
   Line 'line1453' has ||Z||_F = 2.94e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1801`  
@@ -1180,10 +1183,10 @@
   Line 'line2266' has ||Z||_F = 8.04e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line479`  
   Line 'line479' has ||Z||_F = 9.28e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line220`  
-  Line 'line220' has ||Z||_F = 4.03e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line648`  
   Line 'line648' has ||Z||_F = 5.35e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line220`  
+  Line 'line220' has ||Z||_F = 4.03e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line10`  
   Line 'line10' has ||Z||_F = 3.1e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1756`  
@@ -1234,14 +1237,14 @@
   Line 'line17' has ||Z||_F = 2.45e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line676`  
   Line 'line676' has ||Z||_F = 7.98e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line2227`  
+  Line 'line2227' has ||Z||_F = 7.55e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line208`  
   Line 'line208' has ||Z||_F = 4.1e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line309`  
   Line 'line309' has ||Z||_F = 7.64e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line705`  
   Line 'line705' has ||Z||_F = 5.3e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line2227`  
-  Line 'line2227' has ||Z||_F = 7.55e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line18`  
   Line 'line18' has ||Z||_F = 2.39e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line659`  
@@ -1322,22 +1325,22 @@
   Line 'line732' has ||Z||_F = 8.86e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line140`  
   Line 'line140' has ||Z||_F = 7.42e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line1158`  
-  Line 'line1158' has ||Z||_F = 7.64e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line1338`  
-  Line 'line1338' has ||Z||_F = 6.13e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1645`  
   Line 'line1645' has ||Z||_F = 5.83e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line1338`  
+  Line 'line1338' has ||Z||_F = 6.13e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line1158`  
+  Line 'line1158' has ||Z||_F = 7.64e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line469`  
   Line 'line469' has ||Z||_F = 6.07e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line481`  
   Line 'line481' has ||Z||_F = 5.24e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line822`  
   Line 'line822' has ||Z||_F = 5.0e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line214`  
-  Line 'line214' has ||Z||_F = 5.2e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line2208`  
   Line 'line2208' has ||Z||_F = 5.29e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line214`  
+  Line 'line214' has ||Z||_F = 5.2e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line516`  
   Line 'line516' has ||Z||_F = 5.64e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line2153`  
@@ -1354,10 +1357,10 @@
   Line 'line581' has ||Z||_F = 2.62e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line2094`  
   Line 'line2094' has ||Z||_F = 1.89e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line2116`  
-  Line 'line2116' has ||Z||_F = 8.83e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line2292`  
   Line 'line2292' has ||Z||_F = 4.74e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line2116`  
+  Line 'line2116' has ||Z||_F = 8.83e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1609`  
   Line 'line1609' has ||Z||_F = 7.54e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line251`  
@@ -1380,12 +1383,12 @@
   Line 'line1675' has ||Z||_F = 2.27e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line40`  
   Line 'line40' has ||Z||_F = 1.78e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line1727`  
+  Line 'line1727' has ||Z||_F = 8.62e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1614`  
   Line 'line1614' has ||Z||_F = 8.51e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line125`  
   Line 'line125' has ||Z||_F = 9.31e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line1727`  
-  Line 'line1727' has ||Z||_F = 8.62e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line536`  
   Line 'line536' has ||Z||_F = 2.94e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line730`  
@@ -1408,12 +1411,12 @@
   Line 'line565' has ||Z||_F = 2.63e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1751`  
   Line 'line1751' has ||Z||_F = 7.87e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line246`  
-  Line 'line246' has ||Z||_F = 5.56e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line154`  
   Line 'line154' has ||Z||_F = 5.47e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line684`  
   Line 'line684' has ||Z||_F = 5.69e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line246`  
+  Line 'line246' has ||Z||_F = 5.56e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line690`  
   Line 'line690' has ||Z||_F = 8.24e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line726`  
@@ -1432,28 +1435,28 @@
   Line 'line221' has ||Z||_F = 7.91e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1134`  
   Line 'line1134' has ||Z||_F = 5.33e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line2103`  
+  Line 'line2103' has ||Z||_F = 2.04e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1927`  
   Line 'line1927' has ||Z||_F = 9.8e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1992`  
   Line 'line1992' has ||Z||_F = 9.44e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line2103`  
-  Line 'line2103' has ||Z||_F = 2.04e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1802`  
   Line 'line1802' has ||Z||_F = 7.16e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line50`  
-  Line 'line50' has ||Z||_F = 8.78e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line2288`  
   Line 'line2288' has ||Z||_F = 6.51e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line50`  
+  Line 'line50' has ||Z||_F = 8.78e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line2318`  
   Line 'line2318' has ||Z||_F = 3.1e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1925`  
   Line 'line1925' has ||Z||_F = 7.36e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line35`  
   Line 'line35' has ||Z||_F = 2.73e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line293`  
-  Line 'line293' has ||Z||_F = 7.58e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1341`  
   Line 'line1341' has ||Z||_F = 7.64e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line293`  
+  Line 'line293' has ||Z||_F = 7.58e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line241`  
   Line 'line241' has ||Z||_F = 3.29e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1976`  
@@ -1484,10 +1487,10 @@
   Line 'line1224' has ||Z||_F = 8.68e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1422`  
   Line 'line1422' has ||Z||_F = 9.52e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
-- **[W.DOM.LINE_LOW_IMPEDANCE]** `line520`  
-  Line 'line520' has ||Z||_F = 7.12e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line1646`  
   Line 'line1646' has ||Z||_F = 5.84e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
+- **[W.DOM.LINE_LOW_IMPEDANCE]** `line520`  
+  Line 'line520' has ||Z||_F = 7.12e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 - **[W.DOM.LINE_LOW_IMPEDANCE]** `line23`  
   Line 'line23' has ||Z||_F = 1.73e-5 Ω < threshold 0.0001 Ω — near-zero series impedance; consider replacing with a switch object to avoid ill-conditioned KVL constraints.
 
@@ -2889,14 +2892,12 @@
   2349 bus(es) have no voltage bounds — voltage will be unconstrained at these buses.
 - **[I.PRE.SINGLE_SOURCE]** `network`  
   Network has a single voltage source — single point of failure. Infeasibility of the source makes the entire network infeasible.
-- **[I.SCHEMA.UNKNOWN_FIELDS]** `[source]`  
-  Additional property not defined in schema at [voltage_source][source].
-- **[I.SCHEMA.UNKNOWN_FIELDS]** `bus`  
-  bus has field(s) not in the BMOPF schema: v_declared.
+- **[I.SCHEMA.VERSION_UNKNOWN]** `network`  
+  Spec version 'unknown' has no bundled JSON Schema; structural validation skipped. Unknown-field catalogue still runs.
 - **[I.DOM.LINE_IMPEDANCE_SPREAD]** `line`  
   Adjacent lines 'line1126' and 'line1105' at bus '1106' have ||Z||_F ratio 1160.0× — large impedance contrasts between neighbouring lines cause ill-conditioned KKT Jacobians; consider per-unit scaling or network reformulation.
 - **[I.RED.MERGEABLE_LINES]** `line`  
   246 group(s) of series lines (2086 lines total) can be merged — intermediate buses have no other connections.
 - **[I.BENCH.AUGMENTATION]** `network`  
-  Case needs augmentation to be a non-trivial OPF benchmark: only slack generation — dispatch is trivial (loss minimisation); add dispatchable DERs with diverse costs and p/q bounds; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF.
+  Case needs augmentation to be a non-trivial OPF benchmark: no priced slack or generator — the generation-cost objective is degenerate; add a cost to the voltage source at the source bus (augment_case does this by default) or dispatchable DERs; no voltage magnitude bounds on any bus — voltage is unconstrained; add v_min/v_max (phase-to-ground); no phase-to-neutral or sequence voltage bounds (vpn_*/vpos_*) — sequence bounds also improve solver robustness for 4-wire OPF.
 

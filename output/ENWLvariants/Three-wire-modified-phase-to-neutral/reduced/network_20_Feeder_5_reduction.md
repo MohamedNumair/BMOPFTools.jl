@@ -1,6 +1,6 @@
 # Simplification log: Three-wire-modified-phase-to-neutral / network_20 / Feeder_5
 
-**Generated:** 2026-06-22 14:03:56  
+**Generated:** 2026-06-23 21:31:42  
 **Buses:** 65 → 25 (−40)  
 **Lines:** 64 → 24 (−40)  
 **Operations:** 40
@@ -49,8 +49,8 @@
 | 32 | `merge_series_lines` | line `line8` | Merged line line15 (0.05331 m) into line8 at pass-through bus 15; new length 4.547497 m. |
 | 33 | `merge_series_lines` | line `line8` | Merged line line16 (0.088157 m) into line8 at pass-through bus 16; new length 4.635654 m. |
 | 34 | `merge_series_lines` | line `line38` | Merged line line40 (2.8922 m) into line38 at pass-through bus 40; new length 3.21915 m. |
-| 35 | `merge_series_lines` | line `line38` | Merged line line36 (0.3109 m) into line38 at pass-through bus 38; new length 3.53005 m. |
-| 36 | `merge_series_lines` | line `line24` | Merged line line18 (12.851854 m) into line24 at pass-through bus 21; new length 18.565674 m. |
+| 35 | `merge_series_lines` | line `line24` | Merged line line18 (12.851854 m) into line24 at pass-through bus 21; new length 18.565674 m. |
+| 36 | `merge_series_lines` | line `line38` | Merged line line36 (0.3109 m) into line38 at pass-through bus 38; new length 3.53005 m. |
 | 37 | `merge_series_lines` | line `line38` | Merged line line30 (7.276820000000001 m) into line38 at pass-through bus 36; new length 10.80687 m. |
 | 38 | `merge_series_lines` | line `line8` | Merged line line24 (18.565674 m) into line8 at pass-through bus 18; new length 23.201328 m. |
 | 39 | `merge_series_lines` | line `line8` | Merged line line38 (10.80687 m) into line8 at pass-through bus 30; new length 34.008198 m. |

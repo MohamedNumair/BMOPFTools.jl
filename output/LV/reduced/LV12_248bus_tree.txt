@@ -1,7 +1,7 @@
 # Network graph  (182 buses)
 
 b2268 (SRC)
-└── [tx2382: Dyn1 11.0kV/433V]── b908
+└── [tx2382: Dyn0 11.0kV/433V]── b908
     └── b800
         ├── b1359
         │   └── b3358
@@ -184,54 +184,54 @@ b2268 (SRC)
                 └── b2962 (L68)
 
 Loads (121 total):
-  L1 = ld1010_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L2 = ld1014_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L3 = ld1058_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L4 = ld105_load_c       10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L5 = ld1179_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L6 = ld1270_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L7 = ld1277_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L8 = ld1283_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L9 = ld1314_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L10 = ld141_load_a       10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L11 = ld1489_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L12 = ld1492_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L13 = ld1589_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L14 = ld1592_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L15 = ld1625_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L16 = ld1704_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L17 = ld1719_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L18 = ld1724_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L19 = ld1861_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L20 = ld187_load_b       10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L21 = ld1893_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L22 = ld1985_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L23 = ld1996_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L24 = ld2048_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L25 = ld2108_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L26 = ld2148_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L27 = ld2158_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L28 = ld2159_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L29 = ld2195_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L30 = ld2302_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L31 = ld2309_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L32 = ld2312_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L33 = ld2344_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L34 = ld2347_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L35 = ld2369_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L36 = ld2432_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L37 = ld2455_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L38 = ld2466_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L39 = ld2496_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L40 = ld2518_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L41 = ld2549_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L42 = ld2587_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L43 = ld2601_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L44 = ld2603_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L45 = ld2606_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L46 = ld2612_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L47 = ld2676_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L48 = ld2718_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L49 = ld274_load_c       10.0 kW  SINGLE_PHASE  terminals: 3,n
-  L50 = ld2812_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
+  L1 = ld1010_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L2 = ld1014_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L3 = ld1058_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L4 = ld105_load_c       10.0 kW  SINGLE_PHASE  terminals: c,n
+  L5 = ld1179_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L6 = ld1270_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L7 = ld1277_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L8 = ld1283_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L9 = ld1314_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L10 = ld141_load_a       10.0 kW  SINGLE_PHASE  terminals: a,n
+  L11 = ld1489_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L12 = ld1492_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L13 = ld1589_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L14 = ld1592_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L15 = ld1625_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L16 = ld1704_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L17 = ld1719_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L18 = ld1724_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L19 = ld1861_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L20 = ld187_load_b       10.0 kW  SINGLE_PHASE  terminals: b,n
+  L21 = ld1893_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L22 = ld1985_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L23 = ld1996_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L24 = ld2048_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L25 = ld2108_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L26 = ld2148_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L27 = ld2158_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L28 = ld2159_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L29 = ld2195_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L30 = ld2302_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L31 = ld2309_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L32 = ld2312_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L33 = ld2344_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L34 = ld2347_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L35 = ld2369_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L36 = ld2432_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L37 = ld2455_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L38 = ld2466_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L39 = ld2496_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L40 = ld2518_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L41 = ld2549_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L42 = ld2587_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L43 = ld2601_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L44 = ld2603_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L45 = ld2606_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L46 = ld2612_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
+  L47 = ld2676_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L48 = ld2718_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L49 = ld274_load_c       10.0 kW  SINGLE_PHASE  terminals: c,n
+  L50 = ld2812_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n
   … and 71 more (pass legend_limit= to show all)

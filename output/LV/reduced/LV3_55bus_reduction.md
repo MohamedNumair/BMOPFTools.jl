@@ -1,6 +1,6 @@
 # Simplification log: LV3_55bus
 
-**Generated:** 2026-06-22 14:06:31  
+**Generated:** 2026-06-23 21:34:02  
 **Buses:** 56 → 28 (−28)  
 **Lines:** 46 → 26 (−20)  
 **Operations:** 34
@@ -18,8 +18,8 @@
 | # | Operation | Element | Message |
 |--:|-----------|---------|---------|
 | 1 | `collapse_closed_switches` | switch `switch_3774_closed` | Collapsed closed switch switch_3774_closed: bus b1599 merged into b2526. |
-| 2 | `collapse_closed_switches` | switch `switch_3753_closed` | Collapsed closed switch switch_3753_closed: bus b2973 merged into b2236. |
-| 3 | `collapse_closed_switches` | switch `switch_3760_closed` | Collapsed closed switch switch_3760_closed: bus b1006 merged into b1384. |
+| 2 | `collapse_closed_switches` | switch `switch_3760_closed` | Collapsed closed switch switch_3760_closed: bus b1006 merged into b1384. |
+| 3 | `collapse_closed_switches` | switch `switch_3753_closed` | Collapsed closed switch switch_3753_closed: bus b2973 merged into b2236. |
 | 4 | `collapse_closed_switches` | switch `switch_1450_closed` | Collapsed closed switch switch_1450_closed: bus b1656 merged into b608. |
 | 5 | `collapse_closed_switches` | switch `switch_1030_closed` | Collapsed closed switch switch_1030_closed: bus b1606 merged into b1473. |
 | 6 | `collapse_closed_switches` | switch `switch_3416_closed` | Collapsed closed switch switch_3416_closed: bus b1141 merged into b1396. |

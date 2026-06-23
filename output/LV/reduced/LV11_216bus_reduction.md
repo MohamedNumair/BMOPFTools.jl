@@ -1,6 +1,6 @@
 # Simplification log: LV11_216bus
 
-**Generated:** 2026-06-22 14:06:29  
+**Generated:** 2026-06-23 21:34:00  
 **Buses:** 217 → 170 (−47)  
 **Lines:** 207 → 168 (−39)  
 **Operations:** 54
@@ -33,8 +33,8 @@
 | 14 | `remove_dangling_lines` | line `l_3055` | Removed dangling line l_3055 and its leaf bus b758 (leaf has no active elements). |
 | 15 | `remove_dangling_lines` | line `l_1602` | Removed dangling line l_1602 and its leaf bus b3064 (leaf has no active elements). |
 | 16 | `remove_dangling_lines` | line `l_1281` | Removed dangling line l_1281 and its leaf bus b41 (leaf has no active elements). |
-| 17 | `remove_dangling_lines` | line `l_1877` | Removed dangling line l_1877 and its leaf bus b3096 (leaf has no active elements). |
-| 18 | `remove_dangling_lines` | line `l_485` | Removed dangling line l_485 and its leaf bus b2010 (leaf has no active elements). |
+| 17 | `remove_dangling_lines` | line `l_485` | Removed dangling line l_485 and its leaf bus b2010 (leaf has no active elements). |
+| 18 | `remove_dangling_lines` | line `l_1877` | Removed dangling line l_1877 and its leaf bus b3096 (leaf has no active elements). |
 | 19 | `remove_dangling_lines` | line `l_1979` | Removed dangling line l_1979 and its leaf bus b2366 (leaf has no active elements). |
 | 20 | `remove_dangling_lines` | line `l_4516` | Removed dangling line l_4516 and its leaf bus b3207 (leaf has no active elements). |
 | 21 | `remove_dangling_lines` | line `l_3413` | Removed dangling line l_3413 and its leaf bus b1217 (leaf has no active elements). |
@@ -44,15 +44,15 @@
 | 25 | `remove_dangling_lines` | line `l_242` | Removed dangling line l_242 and its leaf bus b3138 (leaf has no active elements). |
 | 26 | `remove_dangling_lines` | line `l_11` | Removed dangling line l_11 and its leaf bus b1731 (leaf has no active elements). |
 | 27 | `remove_dangling_lines` | line `l_2684` | Removed dangling line l_2684 and its leaf bus b2141 (leaf has no active elements). |
-| 28 | `remove_dangling_lines` | line `l_2203` | Removed dangling line l_2203 and its leaf bus b1488 (leaf has no active elements). |
-| 29 | `remove_dangling_lines` | line `l_477` | Removed dangling line l_477 and its leaf bus b1410 (leaf has no active elements). |
+| 28 | `remove_dangling_lines` | line `l_477` | Removed dangling line l_477 and its leaf bus b1410 (leaf has no active elements). |
+| 29 | `remove_dangling_lines` | line `l_2203` | Removed dangling line l_2203 and its leaf bus b1488 (leaf has no active elements). |
 | 30 | `remove_dangling_lines` | line `l_646` | Removed dangling line l_646 and its leaf bus b56 (leaf has no active elements). |
 | 31 | `remove_dangling_lines` | line `l_334` | Removed dangling line l_334 and its leaf bus b802 (leaf has no active elements). |
 | 32 | `remove_dangling_lines` | line `l_903` | Removed dangling line l_903 and its leaf bus b3332 (leaf has no active elements). |
 | 33 | `remove_dangling_lines` | line `l_3492` | Removed dangling line l_3492 and its leaf bus b268 (leaf has no active elements). |
 | 34 | `remove_dangling_lines` | line `l_2084` | Removed dangling line l_2084 and its leaf bus b3265 (leaf has no active elements). |
-| 35 | `remove_dangling_lines` | line `l_2394` | Removed dangling line l_2394 and its leaf bus b2832 (leaf has no active elements). |
-| 36 | `remove_dangling_lines` | line `l_3336` | Removed dangling line l_3336 and its leaf bus b367 (leaf has no active elements). |
+| 35 | `remove_dangling_lines` | line `l_3336` | Removed dangling line l_3336 and its leaf bus b367 (leaf has no active elements). |
+| 36 | `remove_dangling_lines` | line `l_2394` | Removed dangling line l_2394 and its leaf bus b2832 (leaf has no active elements). |
 | 37 | `remove_dangling_lines` | line `l_4506` | Removed dangling line l_4506 and its leaf bus b1960 (leaf has no active elements). |
 | 38 | `remove_dangling_lines` | line `l_2894` | Removed dangling line l_2894 and its leaf bus b1243 (leaf has no active elements). |
 | 39 | `remove_dangling_lines` | line `l_1160` | Removed dangling line l_1160 and its leaf bus b1344 (leaf has no active elements). |

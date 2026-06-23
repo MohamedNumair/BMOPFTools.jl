@@ -1,7 +1,7 @@
 # Network graph  (14 buses)
 
 b2755 (SRC)
-└── [tx1257: Dyn1 11.0kV/433V]── b395
+└── [tx1257: Dyn0 11.0kV/433V]── b395
     ├── b560
     └── b57
         └── [SW]── b1232

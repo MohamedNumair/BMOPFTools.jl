@@ -1,7 +1,7 @@
 # Network graph  (16 buses)
 
 b3190 (SRC)
-└── [tx2177: Dyn1 11.0kV/433V]── b1279
+└── [tx2177: Dyn0 11.0kV/433V]── b1279
     ├── b1210
     │   └── [SW]── b886
     │       └── b1835
@@ -18,6 +18,6 @@ b3190 (SRC)
     └── b2690
 
 Loads (3 total):
-  L1 = ld1212_load_a      10.0 kW  SINGLE_PHASE  terminals: 1,n
-  L2 = ld1615_load_b      10.0 kW  SINGLE_PHASE  terminals: 2,n
-  L3 = ld3571_load_c      10.0 kW  SINGLE_PHASE  terminals: 3,n
+  L1 = ld1212_load_a      10.0 kW  SINGLE_PHASE  terminals: a,n
+  L2 = ld1615_load_b      10.0 kW  SINGLE_PHASE  terminals: b,n
+  L3 = ld3571_load_c      10.0 kW  SINGLE_PHASE  terminals: c,n

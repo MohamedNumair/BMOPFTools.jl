@@ -1,6 +1,6 @@
 # Simplification log: LV24_246bus
 
-**Generated:** 2026-06-22 14:06:30  
+**Generated:** 2026-06-23 21:34:01  
 **Buses:** 246 → 191 (−55)  
 **Lines:** 235 → 189 (−46)  
 **Operations:** 61
@@ -17,13 +17,13 @@
 
 | # | Operation | Element | Message |
 |--:|-----------|---------|---------|
-| 1 | `collapse_closed_switches` | switch `switch_4228_closed` | Collapsed closed switch switch_4228_closed: bus b732 merged into b448. |
-| 2 | `collapse_closed_switches` | switch `switch_2927_closed` | Collapsed closed switch switch_2927_closed: bus b1350 merged into b3034. |
+| 1 | `collapse_closed_switches` | switch `switch_2927_closed` | Collapsed closed switch switch_2927_closed: bus b1350 merged into b3034. |
+| 2 | `collapse_closed_switches` | switch `switch_4228_closed` | Collapsed closed switch switch_4228_closed: bus b732 merged into b448. |
 | 3 | `collapse_closed_switches` | switch `switch_3051_closed` | Collapsed closed switch switch_3051_closed: bus b1394 merged into b3328. |
 | 4 | `collapse_closed_switches` | switch `switch_2917_closed` | Collapsed closed switch switch_2917_closed: bus b1607 merged into b779. |
 | 5 | `collapse_closed_switches` | switch `switch_368_closed` | Collapsed closed switch switch_368_closed: bus b1560 merged into b2726. |
-| 6 | `collapse_closed_switches` | switch `switch_1563_closed` | Collapsed closed switch switch_1563_closed: bus b3281 merged into b294. |
-| 7 | `collapse_closed_switches` | switch `switch_3704_closed` | Collapsed closed switch switch_3704_closed: bus b899 merged into b3146. |
+| 6 | `collapse_closed_switches` | switch `switch_3704_closed` | Collapsed closed switch switch_3704_closed: bus b899 merged into b3146. |
+| 7 | `collapse_closed_switches` | switch `switch_1563_closed` | Collapsed closed switch switch_1563_closed: bus b3281 merged into b294. |
 | 8 | `collapse_closed_switches` | switch `switch_3663_closed` | Collapsed closed switch switch_3663_closed: bus b3028 merged into b2949. |
 | 9 | `collapse_closed_switches` | switch `switch_1046_closed` | Collapsed closed switch switch_1046_closed: bus b2497 merged into b254. |
 | 10 | `remove_dangling_lines` | line `l_4493` | Removed dangling line l_4493 and its leaf bus b674 (leaf has no active elements). |

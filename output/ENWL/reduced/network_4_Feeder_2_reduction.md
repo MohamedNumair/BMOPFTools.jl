@@ -1,6 +1,6 @@
 # Simplification log: network_4 / Feeder_2
 
-**Generated:** 2026-06-22 14:00:17  
+**Generated:** 2026-06-23 21:28:22  
 **Buses:** 392 → 35 (−357)  
 **Lines:** 391 → 34 (−357)  
 **Operations:** 360
@@ -46,9 +46,9 @@
 | 28 | `remove_dangling_lines` | line `line138` | Removed dangling line line138 and its leaf bus 139 (leaf has no active elements). |
 | 29 | `remove_dangling_lines` | line `line367` | Removed dangling line line367 and its leaf bus 368 (leaf has no active elements). |
 | 30 | `remove_dangling_lines` | line `line84` | Removed dangling line line84 and its leaf bus 85 (leaf has no active elements). |
-| 31 | `remove_dangling_lines` | line `line308` | Removed dangling line line308 and its leaf bus 309 (leaf has no active elements). |
+| 31 | `remove_dangling_lines` | line `line104` | Removed dangling line line104 and its leaf bus 105 (leaf has no active elements). |
 | 32 | `remove_dangling_lines` | line `line2` | Removed dangling line line2 and its leaf bus 3 (leaf has no active elements). |
-| 33 | `remove_dangling_lines` | line `line104` | Removed dangling line line104 and its leaf bus 105 (leaf has no active elements). |
+| 33 | `remove_dangling_lines` | line `line308` | Removed dangling line line308 and its leaf bus 309 (leaf has no active elements). |
 | 34 | `remove_dangling_lines` | line `line80` | Removed dangling line line80 and its leaf bus 81 (leaf has no active elements). |
 | 35 | `remove_dangling_lines` | line `line26` | Removed dangling line line26 and its leaf bus 27 (leaf has no active elements). |
 | 36 | `remove_dangling_lines` | line `line74` | Removed dangling line line74 and its leaf bus 75 (leaf has no active elements). |
@@ -57,25 +57,25 @@
 | 39 | `remove_dangling_lines` | line `line119` | Removed dangling line line119 and its leaf bus 120 (leaf has no active elements). |
 | 40 | `remove_dangling_lines` | line `line116` | Removed dangling line line116 and its leaf bus 117 (leaf has no active elements). |
 | 41 | `remove_dangling_lines` | line `line177` | Removed dangling line line177 and its leaf bus 178 (leaf has no active elements). |
-| 42 | `remove_dangling_lines` | line `line88` | Removed dangling line line88 and its leaf bus 89 (leaf has no active elements). |
-| 43 | `remove_dangling_lines` | line `line274` | Removed dangling line line274 and its leaf bus 275 (leaf has no active elements). |
+| 42 | `remove_dangling_lines` | line `line274` | Removed dangling line line274 and its leaf bus 275 (leaf has no active elements). |
+| 43 | `remove_dangling_lines` | line `line88` | Removed dangling line line88 and its leaf bus 89 (leaf has no active elements). |
 | 44 | `remove_dangling_lines` | line `line181` | Removed dangling line line181 and its leaf bus 182 (leaf has no active elements). |
 | 45 | `remove_dangling_lines` | line `line345` | Removed dangling line line345 and its leaf bus 346 (leaf has no active elements). |
 | 46 | `remove_dangling_lines` | line `line340` | Removed dangling line line340 and its leaf bus 341 (leaf has no active elements). |
 | 47 | `remove_dangling_lines` | line `line145` | Removed dangling line line145 and its leaf bus 146 (leaf has no active elements). |
 | 48 | `remove_dangling_lines` | line `line141` | Removed dangling line line141 and its leaf bus 142 (leaf has no active elements). |
 | 49 | `remove_dangling_lines` | line `line307` | Removed dangling line line307 and its leaf bus 308 (leaf has no active elements). |
-| 50 | `remove_dangling_lines` | line `line56` | Removed dangling line line56 and its leaf bus 57 (leaf has no active elements). |
-| 51 | `remove_dangling_lines` | line `line164` | Removed dangling line line164 and its leaf bus 165 (leaf has no active elements). |
-| 52 | `remove_dangling_lines` | line `line60` | Removed dangling line line60 and its leaf bus 61 (leaf has no active elements). |
-| 53 | `remove_dangling_lines` | line `line14` | Removed dangling line line14 and its leaf bus 15 (leaf has no active elements). |
+| 50 | `remove_dangling_lines` | line `line164` | Removed dangling line line164 and its leaf bus 165 (leaf has no active elements). |
+| 51 | `remove_dangling_lines` | line `line56` | Removed dangling line line56 and its leaf bus 57 (leaf has no active elements). |
+| 52 | `remove_dangling_lines` | line `line14` | Removed dangling line line14 and its leaf bus 15 (leaf has no active elements). |
+| 53 | `remove_dangling_lines` | line `line60` | Removed dangling line line60 and its leaf bus 61 (leaf has no active elements). |
 | 54 | `remove_dangling_lines` | line `line66` | Removed dangling line line66 and its leaf bus 67 (leaf has no active elements). |
 | 55 | `remove_dangling_lines` | line `line107` | Removed dangling line line107 and its leaf bus 108 (leaf has no active elements). |
 | 56 | `remove_dangling_lines` | line `line185` | Removed dangling line line185 and its leaf bus 186 (leaf has no active elements). |
 | 57 | `remove_dangling_lines` | line `line134` | Removed dangling line line134 and its leaf bus 135 (leaf has no active elements). |
 | 58 | `remove_dangling_lines` | line `line130` | Removed dangling line line130 and its leaf bus 131 (leaf has no active elements). |
-| 59 | `remove_dangling_lines` | line `line52` | Removed dangling line line52 and its leaf bus 53 (leaf has no active elements). |
-| 60 | `remove_dangling_lines` | line `line50` | Removed dangling line line50 and its leaf bus 51 (leaf has no active elements). |
+| 59 | `remove_dangling_lines` | line `line50` | Removed dangling line line50 and its leaf bus 51 (leaf has no active elements). |
+| 60 | `remove_dangling_lines` | line `line52` | Removed dangling line line52 and its leaf bus 53 (leaf has no active elements). |
 | 61 | `remove_dangling_lines` | line `line110` | Removed dangling line line110 and its leaf bus 111 (leaf has no active elements). |
 | 62 | `remove_dangling_lines` | line `line140` | Removed dangling line line140 and its leaf bus 141 (leaf has no active elements). |
 | 63 | `remove_dangling_lines` | line `line277` | Removed dangling line line277 and its leaf bus 278 (leaf has no active elements). |
@@ -141,20 +141,20 @@
 | 123 | `remove_dangling_lines` | line `line113` | Removed dangling line line113 and its leaf bus 114 (leaf has no active elements). |
 | 124 | `remove_dangling_lines` | line `line30` | Removed dangling line line30 and its leaf bus 31 (leaf has no active elements). |
 | 125 | `remove_dangling_lines` | line `line273` | Removed dangling line line273 and its leaf bus 274 (leaf has no active elements). |
-| 126 | `remove_dangling_lines` | line `line363` | Removed dangling line line363 and its leaf bus 364 (leaf has no active elements). |
-| 127 | `remove_dangling_lines` | line `line359` | Removed dangling line line359 and its leaf bus 360 (leaf has no active elements). |
-| 128 | `remove_dangling_lines` | line `line355` | Removed dangling line line355 and its leaf bus 356 (leaf has no active elements). |
-| 129 | `remove_dangling_lines` | line `line312` | Removed dangling line line312 and its leaf bus 313 (leaf has no active elements). |
-| 130 | `remove_dangling_lines` | line `line306` | Removed dangling line line306 and its leaf bus 307 (leaf has no active elements). |
-| 131 | `remove_dangling_lines` | line `line301` | Removed dangling line line301 and its leaf bus 302 (leaf has no active elements). |
-| 132 | `remove_dangling_lines` | line `line296` | Removed dangling line line296 and its leaf bus 297 (leaf has no active elements). |
-| 133 | `remove_dangling_lines` | line `line291` | Removed dangling line line291 and its leaf bus 292 (leaf has no active elements). |
-| 134 | `remove_dangling_lines` | line `line286` | Removed dangling line line286 and its leaf bus 287 (leaf has no active elements). |
-| 135 | `remove_dangling_lines` | line `line278` | Removed dangling line line278 and its leaf bus 279 (leaf has no active elements). |
+| 126 | `remove_dangling_lines` | line `line278` | Removed dangling line line278 and its leaf bus 279 (leaf has no active elements). |
+| 127 | `remove_dangling_lines` | line `line312` | Removed dangling line line312 and its leaf bus 313 (leaf has no active elements). |
+| 128 | `remove_dangling_lines` | line `line306` | Removed dangling line line306 and its leaf bus 307 (leaf has no active elements). |
+| 129 | `remove_dangling_lines` | line `line301` | Removed dangling line line301 and its leaf bus 302 (leaf has no active elements). |
+| 130 | `remove_dangling_lines` | line `line296` | Removed dangling line line296 and its leaf bus 297 (leaf has no active elements). |
+| 131 | `remove_dangling_lines` | line `line291` | Removed dangling line line291 and its leaf bus 292 (leaf has no active elements). |
+| 132 | `remove_dangling_lines` | line `line286` | Removed dangling line line286 and its leaf bus 287 (leaf has no active elements). |
+| 133 | `remove_dangling_lines` | line `line363` | Removed dangling line line363 and its leaf bus 364 (leaf has no active elements). |
+| 134 | `remove_dangling_lines` | line `line359` | Removed dangling line line359 and its leaf bus 360 (leaf has no active elements). |
+| 135 | `remove_dangling_lines` | line `line355` | Removed dangling line line355 and its leaf bus 356 (leaf has no active elements). |
 | 136 | `remove_dangling_lines` | line `line168` | Removed dangling line line168 and its leaf bus 169 (leaf has no active elements). |
-| 137 | `remove_dangling_lines` | line `line351` | Removed dangling line line351 and its leaf bus 352 (leaf has no active elements). |
+| 137 | `remove_dangling_lines` | line `line128` | Removed dangling line line128 and its leaf bus 129 (leaf has no active elements). |
 | 138 | `remove_dangling_lines` | line `line149` | Removed dangling line line149 and its leaf bus 150 (leaf has no active elements). |
-| 139 | `remove_dangling_lines` | line `line128` | Removed dangling line line128 and its leaf bus 129 (leaf has no active elements). |
+| 139 | `remove_dangling_lines` | line `line351` | Removed dangling line line351 and its leaf bus 352 (leaf has no active elements). |
 | 140 | `remove_dangling_lines` | line `line287` | Removed dangling line line287 and its leaf bus 288 (leaf has no active elements). |
 | 141 | `remove_dangling_lines` | line `line281` | Removed dangling line line281 and its leaf bus 282 (leaf has no active elements). |
 | 142 | `remove_dangling_lines` | line `line275` | Removed dangling line line275 and its leaf bus 276 (leaf has no active elements). |
@@ -183,24 +183,24 @@
 | 165 | `remove_dangling_lines` | line `line10` | Removed dangling line line10 and its leaf bus 11 (leaf has no active elements). |
 | 166 | `remove_dangling_lines` | line `line270` | Removed dangling line line270 and its leaf bus 271 (leaf has no active elements). |
 | 167 | `remove_dangling_lines` | line `line266` | Removed dangling line line266 and its leaf bus 267 (leaf has no active elements). |
-| 168 | `remove_dangling_lines` | line `line137` | Removed dangling line line137 and its leaf bus 138 (leaf has no active elements). |
-| 169 | `remove_dangling_lines` | line `line133` | Removed dangling line line133 and its leaf bus 134 (leaf has no active elements). |
-| 170 | `remove_dangling_lines` | line `line129` | Removed dangling line line129 and its leaf bus 130 (leaf has no active elements). |
-| 171 | `remove_dangling_lines` | line `line126` | Removed dangling line line126 and its leaf bus 127 (leaf has no active elements). |
-| 172 | `remove_dangling_lines` | line `line123` | Removed dangling line line123 and its leaf bus 124 (leaf has no active elements). |
-| 173 | `remove_dangling_lines` | line `line120` | Removed dangling line line120 and its leaf bus 121 (leaf has no active elements). |
-| 174 | `remove_dangling_lines` | line `line117` | Removed dangling line line117 and its leaf bus 118 (leaf has no active elements). |
-| 175 | `remove_dangling_lines` | line `line114` | Removed dangling line line114 and its leaf bus 115 (leaf has no active elements). |
-| 176 | `remove_dangling_lines` | line `line111` | Removed dangling line line111 and its leaf bus 112 (leaf has no active elements). |
-| 177 | `remove_dangling_lines` | line `line108` | Removed dangling line line108 and its leaf bus 109 (leaf has no active elements). |
-| 178 | `remove_dangling_lines` | line `line105` | Removed dangling line line105 and its leaf bus 106 (leaf has no active elements). |
-| 179 | `remove_dangling_lines` | line `line102` | Removed dangling line line102 and its leaf bus 103 (leaf has no active elements). |
-| 180 | `remove_dangling_lines` | line `line99` | Removed dangling line line99 and its leaf bus 100 (leaf has no active elements). |
-| 181 | `remove_dangling_lines` | line `line96` | Removed dangling line line96 and its leaf bus 97 (leaf has no active elements). |
-| 182 | `remove_dangling_lines` | line `line93` | Removed dangling line line93 and its leaf bus 94 (leaf has no active elements). |
-| 183 | `remove_dangling_lines` | line `line90` | Removed dangling line line90 and its leaf bus 91 (leaf has no active elements). |
-| 184 | `remove_dangling_lines` | line `line86` | Removed dangling line line86 and its leaf bus 87 (leaf has no active elements). |
-| 185 | `remove_dangling_lines` | line `line144` | Removed dangling line line144 and its leaf bus 145 (leaf has no active elements). |
+| 168 | `remove_dangling_lines` | line `line144` | Removed dangling line line144 and its leaf bus 145 (leaf has no active elements). |
+| 169 | `remove_dangling_lines` | line `line137` | Removed dangling line line137 and its leaf bus 138 (leaf has no active elements). |
+| 170 | `remove_dangling_lines` | line `line133` | Removed dangling line line133 and its leaf bus 134 (leaf has no active elements). |
+| 171 | `remove_dangling_lines` | line `line129` | Removed dangling line line129 and its leaf bus 130 (leaf has no active elements). |
+| 172 | `remove_dangling_lines` | line `line126` | Removed dangling line line126 and its leaf bus 127 (leaf has no active elements). |
+| 173 | `remove_dangling_lines` | line `line123` | Removed dangling line line123 and its leaf bus 124 (leaf has no active elements). |
+| 174 | `remove_dangling_lines` | line `line120` | Removed dangling line line120 and its leaf bus 121 (leaf has no active elements). |
+| 175 | `remove_dangling_lines` | line `line117` | Removed dangling line line117 and its leaf bus 118 (leaf has no active elements). |
+| 176 | `remove_dangling_lines` | line `line114` | Removed dangling line line114 and its leaf bus 115 (leaf has no active elements). |
+| 177 | `remove_dangling_lines` | line `line111` | Removed dangling line line111 and its leaf bus 112 (leaf has no active elements). |
+| 178 | `remove_dangling_lines` | line `line108` | Removed dangling line line108 and its leaf bus 109 (leaf has no active elements). |
+| 179 | `remove_dangling_lines` | line `line105` | Removed dangling line line105 and its leaf bus 106 (leaf has no active elements). |
+| 180 | `remove_dangling_lines` | line `line102` | Removed dangling line line102 and its leaf bus 103 (leaf has no active elements). |
+| 181 | `remove_dangling_lines` | line `line99` | Removed dangling line line99 and its leaf bus 100 (leaf has no active elements). |
+| 182 | `remove_dangling_lines` | line `line96` | Removed dangling line line96 and its leaf bus 97 (leaf has no active elements). |
+| 183 | `remove_dangling_lines` | line `line93` | Removed dangling line line93 and its leaf bus 94 (leaf has no active elements). |
+| 184 | `remove_dangling_lines` | line `line90` | Removed dangling line line90 and its leaf bus 91 (leaf has no active elements). |
+| 185 | `remove_dangling_lines` | line `line86` | Removed dangling line line86 and its leaf bus 87 (leaf has no active elements). |
 | 186 | `remove_dangling_lines` | line `line293` | Removed dangling line line293 and its leaf bus 294 (leaf has no active elements). |
 | 187 | `remove_dangling_lines` | line `line288` | Removed dangling line line288 and its leaf bus 289 (leaf has no active elements). |
 | 188 | `remove_dangling_lines` | line `line283` | Removed dangling line line283 and its leaf bus 284 (leaf has no active elements). |
@@ -229,8 +229,8 @@
 | 211 | `merge_series_lines` | line `line322` | Merged line line323 (4.5495 m) into line322 at pass-through bus 323; new length 4.80316 m. |
 | 212 | `merge_series_lines` | line `line317` | Merged line line318 (1.101 m) into line317 at pass-through bus 318; new length 2.3884 m. |
 | 213 | `merge_series_lines` | line `line332` | Merged line line335 (2.924 m) into line332 at pass-through bus 333; new length 5.7682 m. |
-| 214 | `merge_series_lines` | line `line191` | Merged line line195 (0.3287 m) into line191 at pass-through bus 192; new length 0.72367 m. |
-| 215 | `merge_series_lines` | line `line13` | Merged line line11 (0.056604 m) into line13 at pass-through bus 12; new length 0.11474200000000001 m. |
+| 214 | `merge_series_lines` | line `line13` | Merged line line11 (0.056604 m) into line13 at pass-through bus 12; new length 0.11474200000000001 m. |
+| 215 | `merge_series_lines` | line `line191` | Merged line line195 (0.3287 m) into line191 at pass-through bus 192; new length 0.72367 m. |
 | 216 | `merge_series_lines` | line `line21` | Merged line line19 (0.14117 m) into line21 at pass-through bus 20; new length 0.197685 m. |
 | 217 | `merge_series_lines` | line `line13` | Merged line line15 (0.083546 m) into line13 at pass-through bus 14; new length 0.19828800000000002 m. |
 | 218 | `merge_series_lines` | line `line176` | Merged line line180 (1.1228 m) into line176 at pass-through bus 177; new length 1.56317 m. |
@@ -272,8 +272,8 @@
 | 254 | `merge_series_lines` | line `line47` | Merged line line45 (3.3308 m) into line47 at pass-through bus 46; new length 7.6641 m. |
 | 255 | `merge_series_lines` | line `line249` | Merged line line247 (1.0508 m) into line249 at pass-through bus 248; new length 2.2696899999999998 m. |
 | 256 | `merge_series_lines` | line `line67` | Merged line line69 (0.33258 m) into line67 at pass-through bus 68; new length 0.7126 m. |
-| 257 | `merge_series_lines` | line `line55` | Merged line line57 (0.70072 m) into line55 at pass-through bus 56; new length 1.4986 m. |
-| 258 | `merge_series_lines` | line `line148` | Merged line line146 (14.3999 m) into line148 at pass-through bus 147; new length 26.5058 m. |
+| 257 | `merge_series_lines` | line `line148` | Merged line line146 (14.3999 m) into line148 at pass-through bus 147; new length 26.5058 m. |
+| 258 | `merge_series_lines` | line `line55` | Merged line line57 (0.70072 m) into line55 at pass-through bus 56; new length 1.4986 m. |
 | 259 | `merge_series_lines` | line `line75` | Merged line line77 (0.18613 m) into line75 at pass-through bus 76; new length 0.9637600000000001 m. |
 | 260 | `merge_series_lines` | line `line261` | Merged line line264 (0.59874 m) into line261 at pass-through bus 262; new length 2.2023099999999998 m. |
 | 261 | `merge_series_lines` | line `line47` | Merged line line49 (2.32308 m) into line47 at pass-through bus 48; new length 9.98718 m. |
@@ -289,8 +289,8 @@
 | 271 | `merge_series_lines` | line `line214` | Merged line line215 (0.4027 m) into line214 at pass-through bus 215; new length 4.8522 m. |
 | 272 | `merge_series_lines` | line `line319` | Merged line line322 (4.97128 m) into line319 at pass-through bus 321; new length 10.20006 m. |
 | 273 | `merge_series_lines` | line `line217` | Merged line line218 (8.6906 m) into line217 at pass-through bus 218; new length 9.345559999999999 m. |
-| 274 | `merge_series_lines` | line `line61` | Merged line line63 (0.64851 m) into line61 at pass-through bus 62; new length 1.9125100000000002 m. |
-| 275 | `merge_series_lines` | line `line191` | Merged line line199 (0.4557 m) into line191 at pass-through bus 196; new length 1.17937 m. |
+| 274 | `merge_series_lines` | line `line191` | Merged line line199 (0.4557 m) into line191 at pass-through bus 196; new length 1.17937 m. |
+| 275 | `merge_series_lines` | line `line61` | Merged line line63 (0.64851 m) into line61 at pass-through bus 62; new length 1.9125100000000002 m. |
 | 276 | `merge_series_lines` | line `line234` | Merged line line232 (1.77471 m) into line234 at pass-through bus 234; new length 3.17021 m. |
 | 277 | `merge_series_lines` | line `line207` | Merged line line204 (2.9290000000000003 m) into line207 at pass-through bus 205; new length 7.879300000000001 m. |
 | 278 | `merge_series_lines` | line `line236` | Merged line line237 (1.1236 m) into line236 at pass-through bus 237; new length 2.62 m. |
@@ -317,13 +317,13 @@
 | 299 | `merge_series_lines` | line `line368` | Merged line line371 (1.8103 m) into line368 at pass-through bus 369; new length 15.817 m. |
 | 300 | `merge_series_lines` | line `line143` | Merged line line135 (0.41111 m) into line143 at pass-through bus 136; new length 1.025 m. |
 | 301 | `merge_series_lines` | line `line214` | Merged line line210 (1.09945 m) into line214 at pass-through bus 211; new length 6.50865 m. |
-| 302 | `merge_series_lines` | line `line330` | Merged line line328 (6.458 m) into line330 at pass-through bus 329; new length 9.2584 m. |
-| 303 | `merge_series_lines` | line `line239` | Merged line line240 (1.6123 m) into line239 at pass-through bus 240; new length 5.2882 m. |
+| 302 | `merge_series_lines` | line `line239` | Merged line line240 (1.6123 m) into line239 at pass-through bus 240; new length 5.2882 m. |
+| 303 | `merge_series_lines` | line `line330` | Merged line line328 (6.458 m) into line330 at pass-through bus 329; new length 9.2584 m. |
 | 304 | `merge_series_lines` | line `line372` | Merged line line375 (3.3687 m) into line372 at pass-through bus 373; new length 16.8727 m. |
 | 305 | `merge_series_lines` | line `line249` | Merged line line243 (6.42168 m) into line249 at pass-through bus 246; new length 8.69137 m. |
 | 306 | `merge_series_lines` | line `line39` | Merged line line37 (2.8515 m) into line39 at pass-through bus 38; new length 8.9128 m. |
-| 307 | `merge_series_lines` | line `line377` | Merged line line380 (5.867 m) into line377 at pass-through bus 378; new length 9.3853 m. |
-| 308 | `merge_series_lines` | line `line115` | Merged line line118 (0.42528 m) into line115 at pass-through bus 116; new length 1.7762799999999999 m. |
+| 307 | `merge_series_lines` | line `line115` | Merged line line118 (0.42528 m) into line115 at pass-through bus 116; new length 1.7762799999999999 m. |
+| 308 | `merge_series_lines` | line `line377` | Merged line line380 (5.867 m) into line377 at pass-through bus 378; new length 9.3853 m. |
 | 309 | `merge_series_lines` | line `line65` | Merged line line67 (0.7126 m) into line65 at pass-through bus 66; new length 3.0678 m. |
 | 310 | `merge_series_lines` | line `line249` | Merged line line239 (5.2882 m) into line249 at pass-through bus 241; new length 13.979569999999999 m. |
 | 311 | `merge_series_lines` | line `line300` | Merged line line305 (0.98252 m) into line300 at pass-through bus 301; new length 8.448839999999999 m. |
@@ -348,8 +348,8 @@
 | 330 | `merge_series_lines` | line `line214` | Merged line line206 (11.9515 m) into line214 at pass-through bus 207; new length 18.46015 m. |
 | 331 | `merge_series_lines` | line `line329` | Merged line line332 (5.7682 m) into line329 at pass-through bus 330; new length 16.477899999999998 m. |
 | 332 | `merge_series_lines` | line `line75` | Merged line line83 (0.301 m) into line75 at pass-through bus 82; new length 2.17008 m. |
-| 333 | `merge_series_lines` | line `line378` | Merged line line376 (7.0723 m) into line378 at pass-through bus 377; new length 9.2758 m. |
-| 334 | `merge_series_lines` | line `line214` | Merged line line217 (9.345559999999999 m) into line214 at pass-through bus 216; new length 27.805709999999998 m. |
+| 333 | `merge_series_lines` | line `line214` | Merged line line217 (9.345559999999999 m) into line214 at pass-through bus 216; new length 27.805709999999998 m. |
+| 334 | `merge_series_lines` | line `line378` | Merged line line376 (7.0723 m) into line378 at pass-through bus 377; new length 9.2758 m. |
 | 335 | `merge_series_lines` | line `line75` | Merged line line91 (12.259540000000001 m) into line75 at pass-through bus 84; new length 14.429620000000002 m. |
 | 336 | `merge_series_lines` | line `line115` | Merged line line103 (2.39052 m) into line115 at pass-through bus 104; new length 6.288399999999999 m. |
 | 337 | `merge_series_lines` | line `line234` | Merged line line249 (13.979569999999999 m) into line234 at pass-through bus 238; new length 21.84968 m. |

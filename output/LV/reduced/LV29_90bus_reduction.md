@@ -1,6 +1,6 @@
 # Simplification log: LV29_90bus
 
-**Generated:** 2026-06-22 14:06:31  
+**Generated:** 2026-06-23 21:34:01  
 **Buses:** 91 → 67 (−24)  
 **Lines:** 82 → 65 (−17)  
 **Operations:** 27
@@ -36,12 +36,12 @@
 | 17 | `remove_dangling_lines` | line `l_2873` | Removed dangling line l_2873 and its leaf bus b2488 (leaf has no active elements). |
 | 18 | `remove_dangling_lines` | line `l_654` | Removed dangling line l_654 and its leaf bus b822 (leaf has no active elements). |
 | 19 | `remove_dangling_lines` | line `l_2188` | Removed dangling line l_2188 and its leaf bus b1700 (leaf has no active elements). |
-| 20 | `merge_series_lines` | line `l_4088` | Merged line l_2289 (15.973101576000001 m) into l_4088 at pass-through bus b1767; new length 20.15622275204 m. |
-| 21 | `merge_series_lines` | line `l_3057` | Merged line l_1929 (16.1598571545 m) into l_3057 at pass-through bus b406; new length 24.04557272677 m. |
-| 22 | `merge_series_lines` | line `l_3026` | Merged line l_249 (0.24462917546299998 m) into l_3026 at pass-through bus b274; new length 0.5003778586609999 m. |
-| 23 | `merge_series_lines` | bus `b1747` | Lines l_555 (linecode uglv_240al_xlpe/nyl/pvc_ug_4w_bundled) and l_1925 (linecode ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled) at bus b1747 have different linecodes — not merged. |
-| 24 | `merge_series_lines` | bus `b3219` | Lines l_3748 (linecode uglv_240al_xlpe/nyl/pvc_ug_4w_bundled) and l_3090 (linecode ughv_400al_triplex_ug_4w_bundled) at bus b3219 have different linecodes — not merged. |
-| 25 | `merge_series_lines` | line `l_3090` | Merged line l_229 (0.206301915236 m) into l_3090 at pass-through bus b1896; new length 0.27322198196110004 m. |
-| 26 | `merge_series_lines` | line `l_4424` | Merged line l_4116 (0.06692006672510001 m) into l_4424 at pass-through bus b1145; new length 0.3877919184331 m. |
-| 27 | `merge_series_lines` | bus `b2961` | Lines l_4424 (linecode ughv_400al_triplex_ug_4w_bundled) and l_2032 (linecode uglv_240al_xlpe/nyl/pvc_ug_4w_bundled) at bus b2961 have different linecodes — not merged. |
+| 20 | `merge_series_lines` | line `l_3057` | Merged line l_1929 (16.1598571545 m) into l_3057 at pass-through bus b406; new length 24.04557272677 m. |
+| 21 | `merge_series_lines` | line `l_3026` | Merged line l_249 (0.24462917546299998 m) into l_3026 at pass-through bus b274; new length 0.5003778586609999 m. |
+| 22 | `merge_series_lines` | bus `b1747` | Lines l_555 (linecode uglv_240al_xlpe/nyl/pvc_ug_4w_bundled) and l_1925 (linecode ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled) at bus b1747 have different linecodes — not merged. |
+| 23 | `merge_series_lines` | bus `b3219` | Lines l_3748 (linecode uglv_240al_xlpe/nyl/pvc_ug_4w_bundled) and l_3090 (linecode ughv_400al_triplex_ug_4w_bundled) at bus b3219 have different linecodes — not merged. |
+| 24 | `merge_series_lines` | line `l_3090` | Merged line l_229 (0.206301915236 m) into l_3090 at pass-through bus b1896; new length 0.27322198196110004 m. |
+| 25 | `merge_series_lines` | line `l_4116` | Merged line l_4424 (0.320871851708 m) into l_4116 at pass-through bus b1145; new length 0.3877919184331 m. |
+| 26 | `merge_series_lines` | bus `b2961` | Lines l_4116 (linecode ughv_400al_triplex_ug_4w_bundled) and l_2032 (linecode uglv_240al_xlpe/nyl/pvc_ug_4w_bundled) at bus b2961 have different linecodes — not merged. |
+| 27 | `merge_series_lines` | line `l_4088` | Merged line l_2289 (15.973101576000001 m) into l_4088 at pass-through bus b1767; new length 20.15622275204 m. |
 

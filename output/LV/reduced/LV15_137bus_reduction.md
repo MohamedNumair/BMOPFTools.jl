@@ -1,6 +1,6 @@
 # Simplification log: LV15_137bus
 
-**Generated:** 2026-06-22 14:06:30  
+**Generated:** 2026-06-23 21:34:01  
 **Buses:** 138 → 76 (−62)  
 **Lines:** 129 → 74 (−55)  
 **Operations:** 67
@@ -17,20 +17,20 @@
 
 | # | Operation | Element | Message |
 |--:|-----------|---------|---------|
-| 1 | `collapse_closed_switches` | switch `switch_1311_closed` | Collapsed closed switch switch_1311_closed: bus b606 merged into b711. |
-| 2 | `collapse_closed_switches` | switch `switch_2062_closed` | Collapsed closed switch switch_2062_closed: bus b2839 merged into b2276. |
+| 1 | `collapse_closed_switches` | switch `switch_2062_closed` | Collapsed closed switch switch_2062_closed: bus b2839 merged into b2276. |
+| 2 | `collapse_closed_switches` | switch `switch_2375_closed` | Collapsed closed switch switch_2375_closed: bus b620 merged into b2185. |
 | 3 | `collapse_closed_switches` | switch `switch_4611_closed` | Collapsed closed switch switch_4611_closed: bus b3229 merged into b2256. |
 | 4 | `collapse_closed_switches` | switch `switch_1080_closed` | Collapsed closed switch switch_1080_closed: bus b1114 merged into b2624. |
 | 5 | `collapse_closed_switches` | switch `switch_3969_closed` | Collapsed closed switch switch_3969_closed: bus b1218 merged into b3124. |
-| 6 | `collapse_closed_switches` | switch `switch_2375_closed` | Collapsed closed switch switch_2375_closed: bus b620 merged into b2185. |
+| 6 | `collapse_closed_switches` | switch `switch_1311_closed` | Collapsed closed switch switch_1311_closed: bus b606 merged into b711. |
 | 7 | `collapse_closed_switches` | switch `switch_1358_closed` | Collapsed closed switch switch_1358_closed: bus b2585 merged into b940. |
-| 8 | `remove_dangling_lines` | line `l_839` | Removed dangling line l_839 and its leaf bus b358 (leaf has no active elements). |
-| 9 | `remove_dangling_lines` | line `l_1234` | Removed dangling line l_1234 and its leaf bus b252 (leaf has no active elements). |
+| 8 | `remove_dangling_lines` | line `l_1234` | Removed dangling line l_1234 and its leaf bus b252 (leaf has no active elements). |
+| 9 | `remove_dangling_lines` | line `l_839` | Removed dangling line l_839 and its leaf bus b358 (leaf has no active elements). |
 | 10 | `remove_dangling_lines` | line `l_3258` | Removed dangling line l_3258 and its leaf bus b2346 (leaf has no active elements). |
-| 11 | `remove_dangling_lines` | line `l_887` | Removed dangling line l_887 and its leaf bus b48 (leaf has no active elements). |
+| 11 | `remove_dangling_lines` | line `l_1887` | Removed dangling line l_1887 and its leaf bus b1460 (leaf has no active elements). |
 | 12 | `remove_dangling_lines` | line `l_4380` | Removed dangling line l_4380 and its leaf bus b2379 (leaf has no active elements). |
 | 13 | `remove_dangling_lines` | line `l_1228` | Removed dangling line l_1228 and its leaf bus b2048 (leaf has no active elements). |
-| 14 | `remove_dangling_lines` | line `l_1887` | Removed dangling line l_1887 and its leaf bus b1460 (leaf has no active elements). |
+| 14 | `remove_dangling_lines` | line `l_887` | Removed dangling line l_887 and its leaf bus b48 (leaf has no active elements). |
 | 15 | `remove_dangling_lines` | line `l_1402` | Removed dangling line l_1402 and its leaf bus b1021 (leaf has no active elements). |
 | 16 | `remove_dangling_lines` | line `l_2269` | Removed dangling line l_2269 and its leaf bus b525 (leaf has no active elements). |
 | 17 | `remove_dangling_lines` | line `l_4557` | Removed dangling line l_4557 and its leaf bus b1660 (leaf has no active elements). |
@@ -44,9 +44,9 @@
 | 25 | `remove_dangling_lines` | line `l_932` | Removed dangling line l_932 and its leaf bus b16 (leaf has no active elements). |
 | 26 | `remove_dangling_lines` | line `l_2845` | Removed dangling line l_2845 and its leaf bus b2447 (leaf has no active elements). |
 | 27 | `remove_dangling_lines` | line `l_2515` | Removed dangling line l_2515 and its leaf bus b1065 (leaf has no active elements). |
-| 28 | `remove_dangling_lines` | line `l_2765` | Removed dangling line l_2765 and its leaf bus b1049 (leaf has no active elements). |
-| 29 | `remove_dangling_lines` | line `l_506` | Removed dangling line l_506 and its leaf bus b308 (leaf has no active elements). |
-| 30 | `remove_dangling_lines` | line `l_4549` | Removed dangling line l_4549 and its leaf bus b691 (leaf has no active elements). |
+| 28 | `remove_dangling_lines` | line `l_506` | Removed dangling line l_506 and its leaf bus b308 (leaf has no active elements). |
+| 29 | `remove_dangling_lines` | line `l_4549` | Removed dangling line l_4549 and its leaf bus b691 (leaf has no active elements). |
+| 30 | `remove_dangling_lines` | line `l_2765` | Removed dangling line l_2765 and its leaf bus b1049 (leaf has no active elements). |
 | 31 | `remove_dangling_lines` | line `l_1347` | Removed dangling line l_1347 and its leaf bus b2525 (leaf has no active elements). |
 | 32 | `remove_dangling_lines` | line `l_2090` | Removed dangling line l_2090 and its leaf bus b313 (leaf has no active elements). |
 | 33 | `remove_dangling_lines` | line `l_3516` | Removed dangling line l_3516 and its leaf bus b2743 (leaf has no active elements). |
@@ -62,13 +62,13 @@
 | 43 | `remove_dangling_lines` | line `l_1205` | Removed dangling line l_1205 and its leaf bus b996 (leaf has no active elements). |
 | 44 | `remove_dangling_lines` | line `l_3582` | Removed dangling line l_3582 and its leaf bus b2299 (leaf has no active elements). |
 | 45 | `remove_dangling_lines` | line `l_196` | Removed dangling line l_196 and its leaf bus b940 (leaf has no active elements). |
-| 46 | `remove_dangling_lines` | line `l_892` | Removed dangling line l_892 and its leaf bus b644 (leaf has no active elements). |
-| 47 | `remove_dangling_lines` | line `l_1855` | Removed dangling line l_1855 and its leaf bus b88 (leaf has no active elements). |
-| 48 | `remove_dangling_lines` | line `l_19` | Removed dangling line l_19 and its leaf bus b2021 (leaf has no active elements). |
-| 49 | `remove_dangling_lines` | line `l_2586` | Removed dangling line l_2586 and its leaf bus b1123 (leaf has no active elements). |
-| 50 | `remove_dangling_lines` | line `l_4511` | Removed dangling line l_4511 and its leaf bus b875 (leaf has no active elements). |
-| 51 | `remove_dangling_lines` | line `l_324` | Removed dangling line l_324 and its leaf bus b1889 (leaf has no active elements). |
-| 52 | `remove_dangling_lines` | line `l_968` | Removed dangling line l_968 and its leaf bus b323 (leaf has no active elements). |
+| 46 | `remove_dangling_lines` | line `l_968` | Removed dangling line l_968 and its leaf bus b323 (leaf has no active elements). |
+| 47 | `remove_dangling_lines` | line `l_892` | Removed dangling line l_892 and its leaf bus b644 (leaf has no active elements). |
+| 48 | `remove_dangling_lines` | line `l_1855` | Removed dangling line l_1855 and its leaf bus b88 (leaf has no active elements). |
+| 49 | `remove_dangling_lines` | line `l_19` | Removed dangling line l_19 and its leaf bus b2021 (leaf has no active elements). |
+| 50 | `remove_dangling_lines` | line `l_2586` | Removed dangling line l_2586 and its leaf bus b1123 (leaf has no active elements). |
+| 51 | `remove_dangling_lines` | line `l_4511` | Removed dangling line l_4511 and its leaf bus b875 (leaf has no active elements). |
+| 52 | `remove_dangling_lines` | line `l_324` | Removed dangling line l_324 and its leaf bus b1889 (leaf has no active elements). |
 | 53 | `remove_dangling_lines` | line `l_3892` | Removed dangling line l_3892 and its leaf bus b3049 (leaf has no active elements). |
 | 54 | `merge_series_lines` | line `l_3174` | Merged line l_4362 (0.533135857936 m) into l_3174 at pass-through bus b3124; new length 0.6000559244261 m. |
 | 55 | `merge_series_lines` | line `l_4629` | Merged line l_2421 (0.353824695522 m) into l_4629 at pass-through bus b2276; new length 0.60957337872 m. |

@@ -1,6 +1,6 @@
 # Simplification log: LV18_12bus
 
-**Generated:** 2026-06-22 14:06:30  
+**Generated:** 2026-06-23 21:34:01  
 **Buses:** 13 → 4 (−9)  
 **Lines:** 7 → 2 (−5)  
 **Operations:** 10
@@ -25,6 +25,6 @@
 | 6 | `remove_dangling_lines` | line `l_1134` | Removed dangling line l_1134 and its leaf bus b2729 (leaf has no active elements). |
 | 7 | `remove_dangling_lines` | line `l_1687` | Removed dangling line l_1687 and its leaf bus b3030 (leaf has no active elements). |
 | 8 | `merge_series_lines` | line `l_1849` | Merged line l_2437 (0.554144731608 m) into l_1849 at pass-through bus b2156; new length 0.798773907071 m. |
-| 9 | `merge_series_lines` | bus `b526` | Lines l_124 (linecode ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled) and l_1849 (linecode ughv_400al_triplex_ug_4w_bundled) at bus b526 have different linecodes — not merged. |
-| 10 | `merge_series_lines` | line `l_3611` | Merged line l_1849 (0.798773907071 m) into l_3611 at pass-through bus b3046; new length 1.054711509838 m. |
+| 9 | `merge_series_lines` | bus `b526` | Lines l_1849 (linecode ughv_400al_triplex_ug_4w_bundled) and l_124 (linecode ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled) at bus b526 have different linecodes — not merged. |
+| 10 | `merge_series_lines` | line `l_1849` | Merged line l_3611 (0.255937602767 m) into l_1849 at pass-through bus b3046; new length 1.054711509838 m. |
 

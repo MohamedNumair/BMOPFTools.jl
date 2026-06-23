@@ -1,6 +1,6 @@
 # Simplification log: MV_LV_combined
 
-**Generated:** 2026-06-22 14:06:36  
+**Generated:** 2026-06-23 21:34:06  
 **Buses:** 3409 → 2169 (−1240)  
 **Lines:** 3096 → 2135 (−961)  
 **Operations:** 1450
@@ -26,8 +26,8 @@
 | 7 | `collapse_closed_switches` | switch `switch_4243_closed` | Collapsed closed switch switch_4243_closed: bus b1705 merged into b3264. |
 | 8 | `collapse_closed_switches` | switch `switch_1839_closed` | Collapsed closed switch switch_1839_closed: bus b2338 merged into b1317. |
 | 9 | `collapse_closed_switches` | switch `switch_3852_closed` | Collapsed closed switch switch_3852_closed: bus b2730 merged into b3. |
-| 10 | `collapse_closed_switches` | switch `switch_179_closed` | Collapsed closed switch switch_179_closed: bus b1439 merged into b3093. |
-| 11 | `collapse_closed_switches` | switch `switch_3111_closed` | Collapsed closed switch switch_3111_closed: bus b839 merged into b576. |
+| 10 | `collapse_closed_switches` | switch `switch_3111_closed` | Collapsed closed switch switch_3111_closed: bus b839 merged into b576. |
+| 11 | `collapse_closed_switches` | switch `switch_179_closed` | Collapsed closed switch switch_179_closed: bus b1439 merged into b3093. |
 | 12 | `collapse_closed_switches` | switch `switch_2799_closed` | Collapsed closed switch switch_2799_closed: bus b1426 merged into b152. |
 | 13 | `collapse_closed_switches` | switch `switch_3478_closed` | Collapsed closed switch switch_3478_closed: bus b1756 merged into b1198. |
 | 14 | `collapse_closed_switches` | switch `switch_2124_closed` | Collapsed closed switch switch_2124_closed: bus b1186 merged into b616. |
@@ -59,8 +59,8 @@
 | 40 | `collapse_closed_switches` | switch `switch_678_closed` | Collapsed closed switch switch_678_closed: bus b3013 merged into b2930. |
 | 41 | `collapse_closed_switches` | switch `switch_4071_closed` | Collapsed closed switch switch_4071_closed: bus b167 merged into b1265. |
 | 42 | `collapse_closed_switches` | switch `switch_4228_closed` | Collapsed closed switch switch_4228_closed: bus b732 merged into b448. |
-| 43 | `collapse_closed_switches` | switch `switch_3482_closed` | Collapsed closed switch switch_3482_closed: bus b655 merged into b175. |
-| 44 | `collapse_closed_switches` | switch `switch_4317_closed` | Collapsed closed switch switch_4317_closed: bus b2080 merged into b1689. |
+| 43 | `collapse_closed_switches` | switch `switch_4317_closed` | Collapsed closed switch switch_4317_closed: bus b2080 merged into b1689. |
+| 44 | `collapse_closed_switches` | switch `switch_3482_closed` | Collapsed closed switch switch_3482_closed: bus b655 merged into b175. |
 | 45 | `collapse_closed_switches` | switch `switch_717_closed` | Collapsed closed switch switch_717_closed: bus b392 merged into b2267. |
 | 46 | `collapse_closed_switches` | switch `switch_2491_closed` | Collapsed closed switch switch_2491_closed: bus b1938 merged into b2609. |
 | 47 | `collapse_closed_switches` | switch `switch_1078_closed` | Collapsed closed switch switch_1078_closed: bus b2418 merged into b870. |
@@ -68,21 +68,21 @@
 | 49 | `collapse_closed_switches` | switch `switch_1750_closed` | Collapsed closed switch switch_1750_closed: bus b561 merged into b1156. |
 | 50 | `collapse_closed_switches` | switch `switch_734_closed` | Collapsed closed switch switch_734_closed: bus b631 merged into b2215. |
 | 51 | `collapse_closed_switches` | switch `switch_3775_closed` | Collapsed closed switch switch_3775_closed: bus b1025 merged into b2095. |
-| 52 | `collapse_closed_switches` | switch `switch_1024_closed` | Collapsed closed switch switch_1024_closed: bus b1383 merged into b1212. |
-| 53 | `collapse_closed_switches` | switch `switch_1105_closed` | Collapsed closed switch switch_1105_closed: bus b1147 merged into b2068. |
-| 54 | `collapse_closed_switches` | switch `switch_1966_closed` | Collapsed closed switch switch_1966_closed: bus b1921 merged into b2600. |
-| 55 | `collapse_closed_switches` | switch `switch_713_closed` | Collapsed closed switch switch_713_closed: bus b2340 merged into b274. |
-| 56 | `collapse_closed_switches` | switch `switch_1972_closed` | Collapsed closed switch switch_1972_closed: bus b1133 merged into b514. |
-| 57 | `collapse_closed_switches` | switch `switch_1181_closed` | Collapsed closed switch switch_1181_closed: bus b2925 merged into b2972. |
-| 58 | `collapse_closed_switches` | switch `switch_3941_closed` | Collapsed closed switch switch_3941_closed: bus b2240 merged into b1975. |
+| 52 | `collapse_closed_switches` | switch `switch_1105_closed` | Collapsed closed switch switch_1105_closed: bus b1147 merged into b2068. |
+| 53 | `collapse_closed_switches` | switch `switch_1024_closed` | Collapsed closed switch switch_1024_closed: bus b1383 merged into b1212. |
+| 54 | `collapse_closed_switches` | switch `switch_713_closed` | Collapsed closed switch switch_713_closed: bus b2340 merged into b274. |
+| 55 | `collapse_closed_switches` | switch `switch_1181_closed` | Collapsed closed switch switch_1181_closed: bus b2925 merged into b2972. |
+| 56 | `collapse_closed_switches` | switch `switch_3941_closed` | Collapsed closed switch switch_3941_closed: bus b2240 merged into b1975. |
+| 57 | `collapse_closed_switches` | switch `switch_1972_closed` | Collapsed closed switch switch_1972_closed: bus b1133 merged into b514. |
+| 58 | `collapse_closed_switches` | switch `switch_1966_closed` | Collapsed closed switch switch_1966_closed: bus b1921 merged into b2600. |
 | 59 | `collapse_closed_switches` | switch `switch_3774_closed` | Collapsed closed switch switch_3774_closed: bus b1599 merged into b2526. |
 | 60 | `collapse_closed_switches` | switch `switch_59_closed` | Collapsed closed switch switch_59_closed: bus b3055 merged into b558. |
 | 61 | `collapse_closed_switches` | switch `switch_2514_closed` | Collapsed closed switch switch_2514_closed: bus b554 merged into b2255. |
 | 62 | `collapse_closed_switches` | switch `switch_1797_closed` | Collapsed closed switch switch_1797_closed: bus b2739 merged into b351. |
 | 63 | `collapse_closed_switches` | switch `switch_1619_closed` | Collapsed closed switch switch_1619_closed: bus b3364 merged into b3219. |
 | 64 | `collapse_closed_switches` | switch `switch_921_closed` | Collapsed closed switch switch_921_closed: bus b3107 merged into b990. |
-| 65 | `collapse_closed_switches` | switch `switch_3724_closed` | Collapsed closed switch switch_3724_closed: bus b83 merged into b3030. |
-| 66 | `collapse_closed_switches` | switch `switch_240_closed` | Collapsed closed switch switch_240_closed: bus b1819 merged into b609. |
+| 65 | `collapse_closed_switches` | switch `switch_240_closed` | Collapsed closed switch switch_240_closed: bus b1819 merged into b609. |
+| 66 | `collapse_closed_switches` | switch `switch_3724_closed` | Collapsed closed switch switch_3724_closed: bus b83 merged into b3030. |
 | 67 | `collapse_closed_switches` | switch `switch_1818_closed` | Collapsed closed switch switch_1818_closed: bus b188 merged into b494. |
 | 68 | `collapse_closed_switches` | switch `switch_3581_closed` | Collapsed closed switch switch_3581_closed: bus b2165 merged into b2836. |
 | 69 | `collapse_closed_switches` | switch `switch_3078_closed` | Collapsed closed switch switch_3078_closed: bus b3048 merged into b866. |
@@ -92,16 +92,16 @@
 | 73 | `collapse_closed_switches` | switch `switch_2025_closed` | Collapsed closed switch switch_2025_closed: bus b463 merged into b3313. |
 | 74 | `collapse_closed_switches` | switch `switch_1988_closed` | Collapsed closed switch switch_1988_closed: bus b3077 merged into b1405. |
 | 75 | `collapse_closed_switches` | switch `switch_1356_closed` | Collapsed closed switch switch_1356_closed: bus b1335 merged into b2635. |
-| 76 | `collapse_closed_switches` | switch `switch_4341_closed` | Collapsed closed switch switch_4341_closed: bus b1257 merged into b493. |
-| 77 | `collapse_closed_switches` | switch `switch_883_closed` | Collapsed closed switch switch_883_closed: bus b3139 merged into b853. |
+| 76 | `collapse_closed_switches` | switch `switch_883_closed` | Collapsed closed switch switch_883_closed: bus b3139 merged into b853. |
+| 77 | `collapse_closed_switches` | switch `switch_4341_closed` | Collapsed closed switch switch_4341_closed: bus b1257 merged into b493. |
 | 78 | `collapse_closed_switches` | switch `switch_2246_closed` | Collapsed closed switch switch_2246_closed: bus b1225 merged into b2791. |
 | 79 | `collapse_closed_switches` | switch `switch_2037_closed` | Collapsed closed switch switch_2037_closed: bus b1587 merged into b1323. |
 | 80 | `collapse_closed_switches` | switch `switch_4666_closed` | Collapsed closed switch switch_4666_closed: bus b3305 merged into b2715. |
 | 81 | `collapse_closed_switches` | switch `switch_666_closed` | Collapsed closed switch switch_666_closed: bus b3366 merged into b14. |
 | 82 | `collapse_closed_switches` | switch `switch_1563_closed` | Collapsed closed switch switch_1563_closed: bus b3281 merged into b294. |
 | 83 | `collapse_closed_switches` | switch `switch_3243_closed` | Collapsed closed switch switch_3243_closed: bus b932 merged into b1885. |
-| 84 | `collapse_closed_switches` | switch `switch_178_closed` | Collapsed closed switch switch_178_closed: bus b3283 merged into b2342. |
-| 85 | `collapse_closed_switches` | switch `switch_3533_closed` | Collapsed closed switch switch_3533_closed: bus b2561 merged into b155. |
+| 84 | `collapse_closed_switches` | switch `switch_3533_closed` | Collapsed closed switch switch_3533_closed: bus b2561 merged into b155. |
+| 85 | `collapse_closed_switches` | switch `switch_178_closed` | Collapsed closed switch switch_178_closed: bus b3283 merged into b2342. |
 | 86 | `collapse_closed_switches` | switch `switch_1731_closed` | Collapsed closed switch switch_1731_closed: bus b130 merged into b418. |
 | 87 | `collapse_closed_switches` | switch `switch_3662_closed` | Collapsed closed switch switch_3662_closed: bus b1752 merged into b2961. |
 | 88 | `collapse_closed_switches` | switch `switch_1311_closed` | Collapsed closed switch switch_1311_closed: bus b606 merged into b711. |
@@ -135,8 +135,8 @@
 | 116 | `collapse_closed_switches` | switch `switch_416_closed` | Collapsed closed switch switch_416_closed: bus b2305 merged into b149. |
 | 117 | `collapse_closed_switches` | switch `switch_685_closed` | Collapsed closed switch switch_685_closed: bus b1322 merged into b939. |
 | 118 | `collapse_closed_switches` | switch `switch_3164_closed` | Collapsed closed switch switch_3164_closed: bus b1709 merged into b2077. |
-| 119 | `collapse_closed_switches` | switch `switch_1030_closed` | Collapsed closed switch switch_1030_closed: bus b1606 merged into b1473. |
-| 120 | `collapse_closed_switches` | switch `switch_396_closed` | Collapsed closed switch switch_396_closed: bus b2036 merged into b390. |
+| 119 | `collapse_closed_switches` | switch `switch_396_closed` | Collapsed closed switch switch_396_closed: bus b2036 merged into b390. |
+| 120 | `collapse_closed_switches` | switch `switch_1030_closed` | Collapsed closed switch switch_1030_closed: bus b1606 merged into b1473. |
 | 121 | `collapse_closed_switches` | switch `switch_2341_closed` | Collapsed closed switch switch_2341_closed: bus b2798 merged into b1461. |
 | 122 | `collapse_closed_switches` | switch `switch_341_closed` | Collapsed closed switch switch_341_closed: bus b766 merged into b566. |
 | 123 | `collapse_closed_switches` | switch `switch_1087_closed` | Collapsed closed switch switch_1087_closed: bus b366 merged into b2794. |
@@ -146,8 +146,8 @@
 | 127 | `collapse_closed_switches` | switch `switch_2291_closed` | Collapsed closed switch switch_2291_closed: bus b1128 merged into b1140. |
 | 128 | `collapse_closed_switches` | switch `switch_2467_closed` | Collapsed closed switch switch_2467_closed: bus b3383 merged into b1915. |
 | 129 | `collapse_closed_switches` | switch `switch_591_closed` | Collapsed closed switch switch_591_closed: bus b688 merged into b1803. |
-| 130 | `collapse_closed_switches` | switch `switch_1829_closed` | Collapsed closed switch switch_1829_closed: bus b1470 merged into b3129. |
-| 131 | `collapse_closed_switches` | switch `switch_2278_closed` | Collapsed closed switch switch_2278_closed: bus b2244 merged into b2477. |
+| 130 | `collapse_closed_switches` | switch `switch_2278_closed` | Collapsed closed switch switch_2278_closed: bus b2244 merged into b2477. |
+| 131 | `collapse_closed_switches` | switch `switch_1829_closed` | Collapsed closed switch switch_1829_closed: bus b1470 merged into b3129. |
 | 132 | `collapse_closed_switches` | switch `switch_1141_closed` | Collapsed closed switch switch_1141_closed: bus b1941 merged into b3232. |
 | 133 | `collapse_closed_switches` | switch `switch_2599_closed` | Collapsed closed switch switch_2599_closed: bus b217 merged into b2238. |
 | 134 | `collapse_closed_switches` | switch `switch_1046_closed` | Collapsed closed switch switch_1046_closed: bus b2497 merged into b254. |
@@ -160,45 +160,45 @@
 | 141 | `collapse_closed_switches` | switch `switch_1450_closed` | Collapsed closed switch switch_1450_closed: bus b1656 merged into b608. |
 | 142 | `collapse_closed_switches` | switch `switch_483_closed` | Collapsed closed switch switch_483_closed: bus b3099 merged into b1158. |
 | 143 | `collapse_closed_switches` | switch `switch_393_closed` | Collapsed closed switch switch_393_closed: bus b1036 merged into b909. |
-| 144 | `collapse_closed_switches` | switch `switch_3616_closed` | Collapsed closed switch switch_3616_closed: bus b743 merged into b1319. |
+| 144 | `collapse_closed_switches` | switch `switch_4391_closed` | Collapsed closed switch switch_4391_closed: bus b752 merged into b1255. |
 | 145 | `collapse_closed_switches` | switch `switch_710_closed` | Collapsed closed switch switch_710_closed: bus b850 merged into b3037. |
-| 146 | `collapse_closed_switches` | switch `switch_4391_closed` | Collapsed closed switch switch_4391_closed: bus b752 merged into b1255. |
+| 146 | `collapse_closed_switches` | switch `switch_3616_closed` | Collapsed closed switch switch_3616_closed: bus b743 merged into b1319. |
 | 147 | `collapse_closed_switches` | switch `switch_4185_closed` | Collapsed closed switch switch_4185_closed: bus b462 merged into b2625. |
 | 148 | `collapse_closed_switches` | switch `switch_499_closed` | Collapsed closed switch switch_499_closed: bus b3218 merged into b1149. |
 | 149 | `collapse_closed_switches` | switch `switch_3992_closed` | Collapsed closed switch switch_3992_closed: bus b2942 merged into b2061. |
-| 150 | `collapse_closed_switches` | switch `switch_2917_closed` | Collapsed closed switch switch_2917_closed: bus b1607 merged into b779. |
-| 151 | `collapse_closed_switches` | switch `switch_751_closed` | Collapsed closed switch switch_751_closed: bus b2146 merged into b3351. |
+| 150 | `collapse_closed_switches` | switch `switch_751_closed` | Collapsed closed switch switch_751_closed: bus b2146 merged into b3351. |
+| 151 | `collapse_closed_switches` | switch `switch_2917_closed` | Collapsed closed switch switch_2917_closed: bus b1607 merged into b779. |
 | 152 | `collapse_closed_switches` | switch `switch_2207_closed` | Collapsed closed switch switch_2207_closed: bus b2740 merged into b718. |
 | 153 | `collapse_closed_switches` | switch `switch_2339_closed` | Collapsed closed switch switch_2339_closed: bus b3272 merged into b2660. |
-| 154 | `collapse_closed_switches` | switch `switch_4011_closed` | Collapsed closed switch switch_4011_closed: bus b2834 merged into b3214. |
-| 155 | `collapse_closed_switches` | switch `switch_2129_closed` | Collapsed closed switch switch_2129_closed: bus b2090 merged into b650. |
-| 156 | `collapse_closed_switches` | switch `switch_2717_closed` | Collapsed closed switch switch_2717_closed: bus b3343 merged into b612. |
+| 154 | `collapse_closed_switches` | switch `switch_2129_closed` | Collapsed closed switch switch_2129_closed: bus b2090 merged into b650. |
+| 155 | `collapse_closed_switches` | switch `switch_4011_closed` | Collapsed closed switch switch_4011_closed: bus b2834 merged into b3214. |
+| 156 | `collapse_closed_switches` | switch `switch_785_closed` | Collapsed closed switch switch_785_closed: bus b9 merged into b1361. |
 | 157 | `collapse_closed_switches` | switch `switch_3986_closed` | Collapsed closed switch switch_3986_closed: bus b2767 merged into b403. |
-| 158 | `collapse_closed_switches` | switch `switch_2490_closed` | Collapsed closed switch switch_2490_closed: bus b916 merged into b1973. |
-| 159 | `collapse_closed_switches` | switch `switch_785_closed` | Collapsed closed switch switch_785_closed: bus b9 merged into b1361. |
+| 158 | `collapse_closed_switches` | switch `switch_2717_closed` | Collapsed closed switch switch_2717_closed: bus b3343 merged into b612. |
+| 159 | `collapse_closed_switches` | switch `switch_2490_closed` | Collapsed closed switch switch_2490_closed: bus b916 merged into b1973. |
 | 160 | `collapse_closed_switches` | switch `switch_1919_closed` | Collapsed closed switch switch_1919_closed: bus b1600 merged into b884. |
 | 161 | `collapse_closed_switches` | switch `switch_2445_closed` | Collapsed closed switch switch_2445_closed: bus b2803 merged into b1907. |
 | 162 | `collapse_closed_switches` | switch `switch_850_closed` | Collapsed closed switch switch_850_closed: bus b1444 merged into b892. |
 | 163 | `collapse_closed_switches` | switch `switch_2927_closed` | Collapsed closed switch switch_2927_closed: bus b1350 merged into b3034. |
 | 164 | `collapse_closed_switches` | switch `switch_3051_closed` | Collapsed closed switch switch_3051_closed: bus b1394 merged into b3328. |
 | 165 | `collapse_closed_switches` | switch `switch_2180_closed` | Collapsed closed switch switch_2180_closed: bus b2886 merged into b3046. |
-| 166 | `collapse_closed_switches` | switch `switch_807_closed` | Collapsed closed switch switch_807_closed: bus b1057 merged into b2959. |
+| 166 | `collapse_closed_switches` | switch `switch_2915_closed` | Collapsed closed switch switch_2915_closed: bus b1267 merged into b1565. |
 | 167 | `collapse_closed_switches` | switch `switch_3743_closed` | Collapsed closed switch switch_3743_closed: bus b3212 merged into b370. |
-| 168 | `collapse_closed_switches` | switch `switch_2915_closed` | Collapsed closed switch switch_2915_closed: bus b1267 merged into b1565. |
+| 168 | `collapse_closed_switches` | switch `switch_807_closed` | Collapsed closed switch switch_807_closed: bus b1057 merged into b2959. |
 | 169 | `collapse_closed_switches` | switch `switch_2375_closed` | Collapsed closed switch switch_2375_closed: bus b620 merged into b2185. |
 | 170 | `collapse_closed_switches` | switch `switch_4526_closed` | Collapsed closed switch switch_4526_closed: bus b678 merged into b3392. |
 | 171 | `collapse_closed_switches` | switch `switch_3115_closed` | Collapsed closed switch switch_3115_closed: bus b113 merged into b1024. |
 | 172 | `collapse_closed_switches` | switch `switch_2600_closed` | Collapsed closed switch switch_2600_closed: bus b2898 merged into b1154. |
 | 173 | `collapse_closed_switches` | switch `switch_1831_closed` | Collapsed closed switch switch_1831_closed: bus b3056 merged into b642. |
 | 174 | `collapse_closed_switches` | switch `switch_3904_closed` | Collapsed closed switch switch_3904_closed: bus b1536 merged into b3399. |
-| 175 | `collapse_closed_switches` | switch `switch_4259_closed` | Collapsed closed switch switch_4259_closed: bus b2300 merged into b782. |
-| 176 | `collapse_closed_switches` | switch `switch_1043_closed` | Collapsed closed switch switch_1043_closed: bus b1982 merged into b2252. |
-| 177 | `collapse_closed_switches` | switch `switch_405_closed` | Collapsed closed switch switch_405_closed: bus b886 merged into b1210. |
-| 178 | `collapse_closed_switches` | switch `switch_3416_closed` | Collapsed closed switch switch_3416_closed: bus b1141 merged into b1396. |
-| 179 | `collapse_closed_switches` | switch `switch_2287_closed` | Collapsed closed switch switch_2287_closed: bus b1735 merged into b1916. |
+| 175 | `collapse_closed_switches` | switch `switch_405_closed` | Collapsed closed switch switch_405_closed: bus b886 merged into b1210. |
+| 176 | `collapse_closed_switches` | switch `switch_4259_closed` | Collapsed closed switch switch_4259_closed: bus b2300 merged into b782. |
+| 177 | `collapse_closed_switches` | switch `switch_1043_closed` | Collapsed closed switch switch_1043_closed: bus b1982 merged into b2252. |
+| 178 | `collapse_closed_switches` | switch `switch_2287_closed` | Collapsed closed switch switch_2287_closed: bus b1735 merged into b1916. |
+| 179 | `collapse_closed_switches` | switch `switch_3416_closed` | Collapsed closed switch switch_3416_closed: bus b1141 merged into b1396. |
 | 180 | `collapse_closed_switches` | switch `switch_2311_closed` | Collapsed closed switch switch_2311_closed: bus b963 merged into b1260. |
-| 181 | `collapse_closed_switches` | switch `switch_1235_closed` | Collapsed closed switch switch_1235_closed: bus b660 merged into b2966. |
-| 182 | `collapse_closed_switches` | switch `switch_291_closed` | Collapsed closed switch switch_291_closed: bus b1611 merged into b3322. |
+| 181 | `collapse_closed_switches` | switch `switch_291_closed` | Collapsed closed switch switch_291_closed: bus b1611 merged into b3322. |
+| 182 | `collapse_closed_switches` | switch `switch_1235_closed` | Collapsed closed switch switch_1235_closed: bus b660 merged into b2966. |
 | 183 | `collapse_closed_switches` | switch `switch_3062_closed` | Collapsed closed switch switch_3062_closed: bus b3253 merged into b2923. |
 | 184 | `collapse_closed_switches` | switch `switch_329_closed` | Collapsed closed switch switch_329_closed: bus b3119 merged into b1580. |
 | 185 | `collapse_closed_switches` | switch `switch_3698_closed` | Collapsed closed switch switch_3698_closed: bus b87 merged into b2507. |
@@ -232,8 +232,8 @@
 | 213 | `collapse_closed_switches` | switch `switch_3927_closed` | Collapsed closed switch switch_3927_closed: bus b230 merged into b2414. |
 | 214 | `collapse_closed_switches` | switch `switch_707_closed` | Collapsed closed switch switch_707_closed: bus b1388 merged into b979. |
 | 215 | `collapse_closed_switches` | switch `switch_3474_closed` | Collapsed closed switch switch_3474_closed: bus b1477 merged into b2094. |
-| 216 | `collapse_closed_switches` | switch `switch_1916_closed` | Collapsed closed switch switch_1916_closed: bus b1122 merged into b238. |
-| 217 | `collapse_closed_switches` | switch `switch_1755_closed` | Collapsed closed switch switch_1755_closed: bus b818 merged into b1785. |
+| 216 | `collapse_closed_switches` | switch `switch_1755_closed` | Collapsed closed switch switch_1755_closed: bus b818 merged into b1785. |
+| 217 | `collapse_closed_switches` | switch `switch_1916_closed` | Collapsed closed switch switch_1916_closed: bus b1122 merged into b238. |
 | 218 | `collapse_closed_switches` | switch `switch_2861_closed` | Collapsed closed switch switch_2861_closed: bus b871 merged into b2248. |
 | 219 | `collapse_closed_switches` | switch `switch_1033_closed` | Collapsed closed switch switch_1033_closed: bus b334 merged into b759. |
 | 220 | `collapse_closed_switches` | switch `switch_4535_closed` | Collapsed closed switch switch_4535_closed: bus b531 merged into b2073. |
@@ -254,11 +254,11 @@
 | 235 | `collapse_closed_switches` | switch `switch_3985_closed` | Collapsed closed switch switch_3985_closed: bus b1201 merged into b2796. |
 | 236 | `collapse_closed_switches` | switch `switch_4268_closed` | Collapsed closed switch switch_4268_closed: bus b374 merged into b1765. |
 | 237 | `collapse_closed_switches` | switch `switch_1451_closed` | Collapsed closed switch switch_1451_closed: bus b1653 merged into b2869. |
-| 238 | `collapse_closed_switches` | switch `switch_3704_closed` | Collapsed closed switch switch_3704_closed: bus b899 merged into b3146. |
-| 239 | `collapse_closed_switches` | switch `switch_1718_closed` | Collapsed closed switch switch_1718_closed: bus b2518 merged into b2284. |
-| 240 | `collapse_closed_switches` | switch `switch_3833_closed` | Collapsed closed switch switch_3833_closed: bus b2147 merged into b3132. |
-| 241 | `collapse_closed_switches` | switch `switch_3886_closed` | Collapsed closed switch switch_3886_closed: bus b460 merged into b2598. |
-| 242 | `collapse_closed_switches` | switch `switch_144_closed` | Collapsed closed switch switch_144_closed: bus b503 merged into b2020. |
+| 238 | `collapse_closed_switches` | switch `switch_1718_closed` | Collapsed closed switch switch_1718_closed: bus b2518 merged into b2284. |
+| 239 | `collapse_closed_switches` | switch `switch_3704_closed` | Collapsed closed switch switch_3704_closed: bus b899 merged into b3146. |
+| 240 | `collapse_closed_switches` | switch `switch_3886_closed` | Collapsed closed switch switch_3886_closed: bus b460 merged into b2598. |
+| 241 | `collapse_closed_switches` | switch `switch_144_closed` | Collapsed closed switch switch_144_closed: bus b503 merged into b2020. |
+| 242 | `collapse_closed_switches` | switch `switch_3833_closed` | Collapsed closed switch switch_3833_closed: bus b2147 merged into b3132. |
 | 243 | `collapse_closed_switches` | switch `switch_2259_closed` | Collapsed closed switch switch_2259_closed: bus b2427 merged into b369. |
 | 244 | `collapse_closed_switches` | switch `switch_3363_closed` | Collapsed closed switch switch_3363_closed: bus b57 merged into b1232. |
 | 245 | `collapse_closed_switches` | switch `switch_197_closed` | Collapsed closed switch switch_197_closed: bus b579 merged into b1359. |
@@ -284,13 +284,13 @@
 | 265 | `collapse_closed_switches` | switch `switch_270_closed` | Collapsed closed switch switch_270_closed: bus b586 merged into b3199. |
 | 266 | `collapse_closed_switches` | switch `switch_1570_closed` | Collapsed closed switch switch_1570_closed: bus b2093 merged into b515. |
 | 267 | `collapse_closed_switches` | switch `switch_2670_closed` | Collapsed closed switch switch_2670_closed: bus b273 merged into b1367. |
-| 268 | `collapse_closed_switches` | switch `switch_3756_closed` | Collapsed closed switch switch_3756_closed: bus b2388 merged into b3156. |
-| 269 | `collapse_closed_switches` | switch `switch_851_closed` | Collapsed closed switch switch_851_closed: bus b3141 merged into b2758. |
+| 268 | `collapse_closed_switches` | switch `switch_851_closed` | Collapsed closed switch switch_851_closed: bus b3141 merged into b2758. |
+| 269 | `collapse_closed_switches` | switch `switch_3756_closed` | Collapsed closed switch switch_3756_closed: bus b2388 merged into b3156. |
 | 270 | `collapse_closed_switches` | switch `switch_4695_closed` | Collapsed closed switch switch_4695_closed: bus b1699 merged into b1670. |
 | 271 | `collapse_closed_switches` | switch `switch_368_closed` | Collapsed closed switch switch_368_closed: bus b1560 merged into b2726. |
 | 272 | `collapse_closed_switches` | switch `switch_1080_closed` | Collapsed closed switch switch_1080_closed: bus b1114 merged into b2624. |
-| 273 | `collapse_closed_switches` | switch `switch_4575_closed` | Collapsed closed switch switch_4575_closed: bus b2247 merged into b747. |
-| 274 | `collapse_closed_switches` | switch `switch_543_closed` | Collapsed closed switch switch_543_closed: bus b712 merged into b479. |
+| 273 | `collapse_closed_switches` | switch `switch_543_closed` | Collapsed closed switch switch_543_closed: bus b712 merged into b479. |
+| 274 | `collapse_closed_switches` | switch `switch_4575_closed` | Collapsed closed switch switch_4575_closed: bus b2247 merged into b747. |
 | 275 | `collapse_closed_switches` | switch `switch_2724_closed` | Collapsed closed switch switch_2724_closed: bus b1498 merged into b1659. |
 | 276 | `collapse_closed_switches` | switch `switch_3558_closed` | Collapsed closed switch switch_3558_closed: bus b2534 merged into b1127. |
 | 277 | `collapse_closed_switches` | switch `switch_2843_closed` | Collapsed closed switch switch_2843_closed: bus b2606 merged into b377. |
@@ -341,8 +341,8 @@
 | 322 | `remove_dangling_lines` | line `l_2901` | Removed dangling line l_2901 and its leaf bus b2775 (leaf has no active elements). |
 | 323 | `remove_dangling_lines` | line `l_211` | Removed dangling line l_211 and its leaf bus b1224 (leaf has no active elements). |
 | 324 | `remove_dangling_lines` | line `l_1612` | Removed dangling line l_1612 and its leaf bus b2993 (leaf has no active elements). |
-| 325 | `remove_dangling_lines` | line `l_2873` | Removed dangling line l_2873 and its leaf bus b2488 (leaf has no active elements). |
-| 326 | `remove_dangling_lines` | line `l_3451` | Removed dangling line l_3451 and its leaf bus b2089 (leaf has no active elements). |
+| 325 | `remove_dangling_lines` | line `l_3451` | Removed dangling line l_3451 and its leaf bus b2089 (leaf has no active elements). |
+| 326 | `remove_dangling_lines` | line `l_2873` | Removed dangling line l_2873 and its leaf bus b2488 (leaf has no active elements). |
 | 327 | `remove_dangling_lines` | line `l_1169` | Removed dangling line l_1169 and its leaf bus b2844 (leaf has no active elements). |
 | 328 | `remove_dangling_lines` | line `l_4092` | Removed dangling line l_4092 and its leaf bus b1674 (leaf has no active elements). |
 | 329 | `remove_dangling_lines` | line `l_2255` | Removed dangling line l_2255 and its leaf bus b1216 (leaf has no active elements). |
@@ -461,8 +461,8 @@
 | 442 | `remove_dangling_lines` | line `l_2394` | Removed dangling line l_2394 and its leaf bus b2832 (leaf has no active elements). |
 | 443 | `remove_dangling_lines` | line `l_4142` | Removed dangling line l_4142 and its leaf bus b319 (leaf has no active elements). |
 | 444 | `remove_dangling_lines` | line `l_1769` | Removed dangling line l_1769 and its leaf bus b537 (leaf has no active elements). |
-| 445 | `remove_dangling_lines` | line `l_1372` | Removed dangling line l_1372 and its leaf bus b931 (leaf has no active elements). |
-| 446 | `remove_dangling_lines` | line `l_3367` | Removed dangling line l_3367 and its leaf bus b638 (leaf has no active elements). |
+| 445 | `remove_dangling_lines` | line `l_3367` | Removed dangling line l_3367 and its leaf bus b638 (leaf has no active elements). |
+| 446 | `remove_dangling_lines` | line `l_1372` | Removed dangling line l_1372 and its leaf bus b931 (leaf has no active elements). |
 | 447 | `remove_dangling_lines` | line `l_4301` | Removed dangling line l_4301 and its leaf bus b2615 (leaf has no active elements). |
 | 448 | `remove_dangling_lines` | line `l_3389` | Removed dangling line l_3389 and its leaf bus b1370 (leaf has no active elements). |
 | 449 | `remove_dangling_lines` | line `l_4099` | Removed dangling line l_4099 and its leaf bus b1111 (leaf has no active elements). |
@@ -546,8 +546,8 @@
 | 527 | `remove_dangling_lines` | line `l_1795` | Removed dangling line l_1795 and its leaf bus b1096 (leaf has no active elements). |
 | 528 | `remove_dangling_lines` | line `l_1438` | Removed dangling line l_1438 and its leaf bus b3249 (leaf has no active elements). |
 | 529 | `remove_dangling_lines` | line `l_2269` | Removed dangling line l_2269 and its leaf bus b525 (leaf has no active elements). |
-| 530 | `remove_dangling_lines` | line `l_659` | Removed dangling line l_659 and its leaf bus b1397 (leaf has no active elements). |
-| 531 | `remove_dangling_lines` | line `l_1526` | Removed dangling line l_1526 and its leaf bus b2576 (leaf has no active elements). |
+| 530 | `remove_dangling_lines` | line `l_1526` | Removed dangling line l_1526 and its leaf bus b2576 (leaf has no active elements). |
+| 531 | `remove_dangling_lines` | line `l_659` | Removed dangling line l_659 and its leaf bus b1397 (leaf has no active elements). |
 | 532 | `remove_dangling_lines` | line `l_1074` | Removed dangling line l_1074 and its leaf bus b983 (leaf has no active elements). |
 | 533 | `remove_dangling_lines` | line `l_1300` | Removed dangling line l_1300 and its leaf bus b2964 (leaf has no active elements). |
 | 534 | `remove_dangling_lines` | line `l_4434` | Removed dangling line l_4434 and its leaf bus b2260 (leaf has no active elements). |
@@ -785,8 +785,8 @@
 | 766 | `remove_dangling_lines` | line `l_4538` | Removed dangling line l_4538 and its leaf bus b2644 (leaf has no active elements). |
 | 767 | `remove_dangling_lines` | line `l_2489` | Removed dangling line l_2489 and its leaf bus b1059 (leaf has no active elements). |
 | 768 | `remove_dangling_lines` | line `l_11` | Removed dangling line l_11 and its leaf bus b1731 (leaf has no active elements). |
-| 769 | `remove_dangling_lines` | line `l_2248` | Removed dangling line l_2248 and its leaf bus b2863 (leaf has no active elements). |
-| 770 | `remove_dangling_lines` | line `l_2755` | Removed dangling line l_2755 and its leaf bus b1002 (leaf has no active elements). |
+| 769 | `remove_dangling_lines` | line `l_2755` | Removed dangling line l_2755 and its leaf bus b1002 (leaf has no active elements). |
+| 770 | `remove_dangling_lines` | line `l_2248` | Removed dangling line l_2248 and its leaf bus b2863 (leaf has no active elements). |
 | 771 | `remove_dangling_lines` | line `l_3084` | Removed dangling line l_3084 and its leaf bus b2382 (leaf has no active elements). |
 | 772 | `remove_dangling_lines` | line `l_1142` | Removed dangling line l_1142 and its leaf bus b2853 (leaf has no active elements). |
 | 773 | `remove_dangling_lines` | line `l_2816` | Removed dangling line l_2816 and its leaf bus b2400 (leaf has no active elements). |
@@ -856,8 +856,8 @@
 | 837 | `remove_dangling_lines` | line `l_3709` | Removed dangling line l_3709 and its leaf bus b3104 (leaf has no active elements). |
 | 838 | `remove_dangling_lines` | line `l_1015` | Removed dangling line l_1015 and its leaf bus b617 (leaf has no active elements). |
 | 839 | `remove_dangling_lines` | line `l_1599` | Removed dangling line l_1599 and its leaf bus b1843 (leaf has no active elements). |
-| 840 | `remove_dangling_lines` | line `l_2763` | Removed dangling line l_2763 and its leaf bus b131 (leaf has no active elements). |
-| 841 | `remove_dangling_lines` | line `l_805` | Removed dangling line l_805 and its leaf bus b1623 (leaf has no active elements). |
+| 840 | `remove_dangling_lines` | line `l_805` | Removed dangling line l_805 and its leaf bus b1623 (leaf has no active elements). |
+| 841 | `remove_dangling_lines` | line `l_2763` | Removed dangling line l_2763 and its leaf bus b131 (leaf has no active elements). |
 | 842 | `remove_dangling_lines` | line `l_1316` | Removed dangling line l_1316 and its leaf bus b3117 (leaf has no active elements). |
 | 843 | `remove_dangling_lines` | line `l_1175` | Removed dangling line l_1175 and its leaf bus b2271 (leaf has no active elements). |
 | 844 | `remove_dangling_lines` | line `l_3863` | Removed dangling line l_3863 and its leaf bus b597 (leaf has no active elements). |
@@ -979,8 +979,8 @@
 | 960 | `remove_dangling_lines` | line `l_3210` | Removed dangling line l_3210 and its leaf bus b2410 (leaf has no active elements). |
 | 961 | `remove_dangling_lines` | line `l_147` | Removed dangling line l_147 and its leaf bus b2757 (leaf has no active elements). |
 | 962 | `remove_dangling_lines` | line `l_4516` | Removed dangling line l_4516 and its leaf bus b3207 (leaf has no active elements). |
-| 963 | `remove_dangling_lines` | line `l_1963` | Removed dangling line l_1963 and its leaf bus b143 (leaf has no active elements). |
-| 964 | `remove_dangling_lines` | line `l_816` | Removed dangling line l_816 and its leaf bus b1419 (leaf has no active elements). |
+| 963 | `remove_dangling_lines` | line `l_816` | Removed dangling line l_816 and its leaf bus b1419 (leaf has no active elements). |
+| 964 | `remove_dangling_lines` | line `l_1963` | Removed dangling line l_1963 and its leaf bus b143 (leaf has no active elements). |
 | 965 | `remove_dangling_lines` | line `l_4204` | Removed dangling line l_4204 and its leaf bus b1537 (leaf has no active elements). |
 | 966 | `remove_dangling_lines` | line `l_3898` | Removed dangling line l_3898 and its leaf bus b1296 (leaf has no active elements). |
 | 967 | `remove_dangling_lines` | line `l_3889` | Removed dangling line l_3889 and its leaf bus b3339 (leaf has no active elements). |
@@ -1162,7 +1162,7 @@
 | 1143 | `merge_series_lines` | bus `b3297` | Lines l_1556 (linecode uglv_240al_xlpe/nyl/pvc_ug_4w_bundled) and l_2044 (linecode ughv_400al_triplex_ug_4w_bundled) at bus b3297 have different linecodes — not merged. |
 | 1144 | `merge_series_lines` | line `l_3362` | Merged line l_402 (0.24462917511 m) into l_3362 at pass-through bus b2625; new length 0.500377858661 m. |
 | 1145 | `merge_series_lines` | bus `b865` | Lines l_3659 (linecode pluto_lv_oh_3wire) and l_254 (linecode ughv_240al_triplex_ug_3w_bundled) at bus b865 have different linecodes — not merged. |
-| 1146 | `merge_series_lines` | bus `b1934` | Lines l_671 (linecode ughv_400al_triplex_ug_3w_bundled) and l_2692 (linecode uglv_240al_xlpe/nyl/pvc_ug_3w_bundled) at bus b1934 have different linecodes — not merged. |
+| 1146 | `merge_series_lines` | bus `b1934` | Lines l_2692 (linecode uglv_240al_xlpe/nyl/pvc_ug_3w_bundled) and l_671 (linecode ughv_400al_triplex_ug_3w_bundled) at bus b1934 have different linecodes — not merged. |
 | 1147 | `merge_series_lines` | bus `b107` | Lines l_2702 (linecode ughv_400al_triplex_ug_4w_bundled) and l_2573 (linecode abc4x16_lv_oh_4w_bundled) at bus b107 have different linecodes — not merged. |
 | 1148 | `merge_series_lines` | bus `b514` | Lines l_3383 (linecode ughv_400al_triplex_ug_4w_bundled) and l_2126 (linecode ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled) at bus b514 have different linecodes — not merged. |
 | 1149 | `merge_series_lines` | line `l_4627` | Merged line l_3742 (0.5003778586609999 m) into l_4627 at pass-through bus b2911; new length 0.8471393054329999 m. |
@@ -1178,8 +1178,8 @@
 | 1159 | `merge_series_lines` | bus `b870` | Lines l_3977 (linecode ughv_400al_triplex_ug_4w_bundled) and l_1635 (linecode uglv_240al_xlpe/nyl/pvc_ug_4w_bundled) at bus b870 have different linecodes — not merged. |
 | 1160 | `merge_series_lines` | bus `b296` | Lines l_4604 (linecode ughv_400al_xlpe/nyl/pvc_ug_3w_bundled) and l_2484 (linecode ughv_400al_triplex_ug_3w_bundled) at bus b296 have different linecodes — not merged. |
 | 1161 | `merge_series_lines` | line `l_2704` | Merged line l_3358 (0.24462917511 m) into l_2704 at pass-through bus b1140; new length 0.500377858661 m. |
-| 1162 | `merge_series_lines` | line `l_2271` | Merged line l_2859 (28.6674494521 m) into l_2271 at pass-through bus b1471; new length 46.2396008142 m. |
-| 1163 | `merge_series_lines` | line `l_1743` | Merged line l_440 (11.788605515299999 m) into l_1743 at pass-through bus b700; new length 54.5450742302 m. |
+| 1162 | `merge_series_lines` | line `l_1743` | Merged line l_440 (11.788605515299999 m) into l_1743 at pass-through bus b700; new length 54.5450742302 m. |
+| 1163 | `merge_series_lines` | line `l_2271` | Merged line l_2859 (28.6674494521 m) into l_2271 at pass-through bus b1471; new length 46.2396008142 m. |
 | 1164 | `merge_series_lines` | bus `b1013` | Lines l_4662 (linecode ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled) and l_353 (linecode uglv_240al_xlpe/nyl/pvc_ug_4w_bundled) at bus b1013 have different linecodes — not merged. |
 | 1165 | `merge_series_lines` | line `l_2406` | Merged line l_4207 (48.152289843800006 m) into l_2406 at pass-through bus b2408; new length 179.3359172081 m. |
 | 1166 | `merge_series_lines` | line `l_1883` | Merged line l_2937 (257.317792275 m) into l_1883 at pass-through bus b1825; new length 372.55437693199997 m. |
@@ -1206,8 +1206,8 @@
 | 1187 | `merge_series_lines` | bus `b2020` | Lines l_3843 (linecode ughv_240cu_xlpe/nyl/pvc_ug_3w_bundled) and l_2098 (linecode ughv_400al_triplex_ug_3w_bundled) at bus b2020 have different linecodes — not merged. |
 | 1188 | `merge_series_lines` | line `l_2250` | Merged line l_3977 (0.0669200664901 m) into l_2250 at pass-through bus b2416; new length 0.2732219817261 m. |
 | 1189 | `merge_series_lines` | line `l_4181` | Merged line l_2741 (0.30596642102899996 m) into l_4181 at pass-through bus b1586; new length 0.505966421029 m. |
-| 1190 | `merge_series_lines` | bus `b1135` | Lines l_655 (linecode ughv_400al_triplex_ug_3w_bundled) and l_1753 (linecode moon_hv_oh_3wire) at bus b1135 have different linecodes — not merged. |
-| 1191 | `merge_series_lines` | line `l_4281` | Merged line l_1259 (33.7767704447 m) into l_4281 at pass-through bus b2251; new length 52.0606343909 m. |
+| 1190 | `merge_series_lines` | line `l_4281` | Merged line l_1259 (33.7767704447 m) into l_4281 at pass-through bus b2251; new length 52.0606343909 m. |
+| 1191 | `merge_series_lines` | bus `b1135` | Lines l_655 (linecode ughv_400al_triplex_ug_3w_bundled) and l_1753 (linecode moon_hv_oh_3wire) at bus b1135 have different linecodes — not merged. |
 | 1192 | `merge_series_lines` | bus `b2961` | Lines l_4116 (linecode ughv_400al_triplex_ug_4w_bundled) and l_2032 (linecode uglv_240al_xlpe/nyl/pvc_ug_4w_bundled) at bus b2961 have different linecodes — not merged. |
 | 1193 | `merge_series_lines` | bus `b2714` | Lines l_259 (linecode ughv_400al_triplex_ug_4w_bundled) and l_1716 (linecode abc4x16_lv_oh_4w_bundled) at bus b2714 have different linecodes — not merged. |
 | 1194 | `merge_series_lines` | line `l_4505` | Merged line l_2532 (30.7734308644 m) into l_4505 at pass-through bus b1493; new length 80.1629623999 m. |

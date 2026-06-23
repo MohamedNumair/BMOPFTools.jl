@@ -1,6 +1,6 @@
 # Simplification log: LV9_258bus
 
-**Generated:** 2026-06-22 14:06:32  
+**Generated:** 2026-06-23 21:34:02  
 **Buses:** 259 → 189 (−70)  
 **Lines:** 250 → 187 (−63)  
 **Operations:** 76
@@ -17,8 +17,8 @@
 
 | # | Operation | Element | Message |
 |--:|-----------|---------|---------|
-| 1 | `collapse_closed_switches` | switch `switch_850_closed` | Collapsed closed switch switch_850_closed: bus b1444 merged into b892. |
-| 2 | `collapse_closed_switches` | switch `switch_3083_closed` | Collapsed closed switch switch_3083_closed: bus b248 merged into b1802. |
+| 1 | `collapse_closed_switches` | switch `switch_3083_closed` | Collapsed closed switch switch_3083_closed: bus b248 merged into b1802. |
+| 2 | `collapse_closed_switches` | switch `switch_850_closed` | Collapsed closed switch switch_850_closed: bus b1444 merged into b892. |
 | 3 | `collapse_closed_switches` | switch `switch_3164_closed` | Collapsed closed switch switch_3164_closed: bus b1709 merged into b2077. |
 | 4 | `collapse_closed_switches` | switch `switch_1451_closed` | Collapsed closed switch switch_1451_closed: bus b1653 merged into b2869. |
 | 5 | `collapse_closed_switches` | switch `switch_1033_closed` | Collapsed closed switch switch_1033_closed: bus b334 merged into b759. |

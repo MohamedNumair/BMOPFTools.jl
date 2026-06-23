@@ -1,6 +1,6 @@
 # Simplification log: LV2_43bus
 
-**Generated:** 2026-06-22 14:06:31  
+**Generated:** 2026-06-23 21:34:01  
 **Buses:** 44 → 25 (−19)  
 **Lines:** 40 → 23 (−17)  
 **Operations:** 31
@@ -33,8 +33,8 @@
 | 14 | `remove_dangling_lines` | line `l_2176` | Removed dangling line l_2176 and its leaf bus b832 (leaf has no active elements). |
 | 15 | `remove_dangling_lines` | line `l_2169` | Removed dangling line l_2169 and its leaf bus b350 (leaf has no active elements). |
 | 16 | `merge_series_lines` | bus `b242` | Lines l_2741 (linecode ughv_400al_triplex_ug_4w_bundled) and l_3786 (linecode abc4x16_lv_oh_4w_bundled) at bus b242 have different linecodes — not merged. |
-| 17 | `merge_series_lines` | line `l_4450` | Merged line l_4542 (0.299144507835 m) into l_4450 at pass-through bus b2252; new length 0.685780559656 m. |
-| 18 | `merge_series_lines` | bus `b2206` | Lines l_1816 (linecode moon_lv_oh_4wire) and l_15 (linecode ughv_400al_triplex_ug_4w_bundled) at bus b2206 have different linecodes — not merged. |
+| 17 | `merge_series_lines` | bus `b2206` | Lines l_1816 (linecode moon_lv_oh_4wire) and l_15 (linecode ughv_400al_triplex_ug_4w_bundled) at bus b2206 have different linecodes — not merged. |
+| 18 | `merge_series_lines` | line `l_4450` | Merged line l_4542 (0.299144507835 m) into l_4450 at pass-through bus b2252; new length 0.685780559656 m. |
 | 19 | `merge_series_lines` | bus `b2098` | Lines l_2193 (linecode ughv_400al_triplex_ug_4w_bundled) and l_806 (linecode moon_lv_oh_4wire) at bus b2098 have different linecodes — not merged. |
 | 20 | `merge_series_lines` | bus `b535` | Lines l_1926 (linecode ughv_400al_triplex_ug_4w_bundled) and l_3680 (linecode moon_lv_oh_4wire) at bus b535 have different linecodes — not merged. |
 | 21 | `merge_series_lines` | line `l_2741` | Merged line l_4181 (0.2 m) into l_2741 at pass-through bus b1586; new length 0.505966421029 m. |
@@ -43,9 +43,9 @@
 | 24 | `merge_series_lines` | bus `b333` | Lines l_3409 (linecode abc4x16_lv_oh_4w_bundled) and l_3526 (linecode ughv_400al_triplex_ug_4w_bundled) at bus b333 have different linecodes — not merged. |
 | 25 | `merge_series_lines` | bus `b2821` | Lines l_1926 (linecode ughv_400al_triplex_ug_4w_bundled) and l_1659 (linecode abc4x16_lv_oh_4w_bundled) at bus b2821 have different linecodes — not merged. |
 | 26 | `merge_series_lines` | bus `b2574` | Lines l_2980 (linecode moon_lv_oh_4wire) and l_15 (linecode ughv_400al_triplex_ug_4w_bundled) at bus b2574 have different linecodes — not merged. |
-| 27 | `merge_series_lines` | bus `b491` | Lines l_1380 (linecode uglv_240al_xlpe/nyl/pvc_ug_4w_bundled) and l_4668 (linecode ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled) at bus b491 have different linecodes — not merged. |
+| 27 | `merge_series_lines` | bus `b491` | Lines l_4668 (linecode ugsc_16cu_xlpe/nyl/pvc_ug_4w_bundled) and l_1380 (linecode uglv_240al_xlpe/nyl/pvc_ug_4w_bundled) at bus b491 have different linecodes — not merged. |
 | 28 | `merge_series_lines` | bus `b2870` | Lines l_119 (linecode abc4x16_lv_oh_4w_bundled) and l_2227 (linecode ughv_400al_triplex_ug_4w_bundled) at bus b2870 have different linecodes — not merged. |
-| 29 | `merge_series_lines` | line `l_1816` | Merged line l_236 (31.4409522267 m) into l_1816 at pass-through bus b2555; new length 65.15067336850001 m. |
-| 30 | `merge_series_lines` | bus `b1535` | Lines l_1816 (linecode moon_lv_oh_4wire) and l_2193 (linecode ughv_400al_triplex_ug_4w_bundled) at bus b1535 have different linecodes — not merged. |
+| 29 | `merge_series_lines` | line `l_236` | Merged line l_1816 (33.7097211418 m) into l_236 at pass-through bus b2555; new length 65.15067336850001 m. |
+| 30 | `merge_series_lines` | bus `b1535` | Lines l_236 (linecode moon_lv_oh_4wire) and l_2193 (linecode ughv_400al_triplex_ug_4w_bundled) at bus b1535 have different linecodes — not merged. |
 | 31 | `merge_series_lines` | line `l_1386` | Merged line l_2227 (0.29550750121 m) into l_1386 at pass-through bus b3128; new length 0.69550750121 m. |
 

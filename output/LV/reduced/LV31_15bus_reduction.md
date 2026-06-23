@@ -1,6 +1,6 @@
 # Simplification log: LV31_15bus
 
-**Generated:** 2026-06-22 14:06:31  
+**Generated:** 2026-06-23 21:34:02  
 **Buses:** 16 → 6 (−10)  
 **Lines:** 10 → 4 (−6)  
 **Operations:** 11
@@ -18,8 +18,8 @@
 | # | Operation | Element | Message |
 |--:|-----------|---------|---------|
 | 1 | `collapse_closed_switches` | switch `switch_405_closed` | Collapsed closed switch switch_405_closed: bus b886 merged into b1210. |
-| 2 | `collapse_closed_switches` | switch `switch_2287_closed` | Collapsed closed switch switch_2287_closed: bus b1735 merged into b1916. |
-| 3 | `collapse_closed_switches` | switch `switch_4054_closed` | Collapsed closed switch switch_4054_closed: bus b200 merged into b1985. |
+| 2 | `collapse_closed_switches` | switch `switch_4054_closed` | Collapsed closed switch switch_4054_closed: bus b200 merged into b1985. |
+| 3 | `collapse_closed_switches` | switch `switch_2287_closed` | Collapsed closed switch switch_2287_closed: bus b1735 merged into b1916. |
 | 4 | `collapse_closed_switches` | switch `switch_3756_closed` | Collapsed closed switch switch_3756_closed: bus b2388 merged into b3156. |
 | 5 | `remove_dangling_lines` | line `l_1503` | Removed dangling line l_1503 and its leaf bus b2690 (leaf has no active elements). |
 | 6 | `remove_dangling_lines` | line `l_176` | Removed dangling line l_176 and its leaf bus b955 (leaf has no active elements). |
