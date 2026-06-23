@@ -1,5 +1,5 @@
 > [!WARNING]  
-> This project is currently ongoing rapid development and may have breaking changes made directly to main. Use at your own risk until further notice. An upcoming breaking change is removing the dependence on the OpenDSS parser from PMD, which will be switched to https://github.com/eigenergy/PowerIO.jl
+> This project is currently ongoing rapid development and may have breaking changes made directly to main. Use at your own risk until further notice. OpenDSS ingestion now goes through [PowerIO.jl](https://github.com/eigenergy/PowerIO.jl) (the earlier PowerModelsDistribution-based `from_pmd` parser has been removed).
 
 
 [![Documentation](https://github.com/frederikgeth/BMOPFTools.jl/actions/workflows/documentation.yml/badge.svg)](https://github.com/frederikgeth/BMOPFTools.jl/actions/workflows/documentation.yml) [![CI](https://github.com/frederikgeth/BMOPFTools.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/frederikgeth/BMOPFTools.jl/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/frederikgeth/BMOPFTools.jl/graph/badge.svg)](https://codecov.io/gh/frederikgeth/BMOPFTools.jl)
@@ -14,7 +14,7 @@ https://github.com/frederikgeth/bmopf-report.
 
 The network data model is a plain `Dict{String,Any}` that mirrors the BMOPF
 JSON schema exactly: no wrapper types, so data flows naturally between JSON,
-PowerModelsDistribution and your own code.
+the `to_pmd` PowerModelsDistribution export, and your own code.
 
 ## IEEE PES Task Force
 
@@ -56,8 +56,8 @@ Note that some cases are restricted to non-commercial use ("MV" and "LV").
 ## What it does
 
 ```
-OpenDSS .dss ──(powerio)──► BMOPF Dict{String,Any} ◄──── parse_bmopf ◄── BMOPF JSON
-OpenDSS .dss ──(PMD)──► ENGINEERING dict ──(from_pmd)──┘          └──── write_bmopf
+OpenDSS .dss ──(from_dss / PowerIO.jl)──► BMOPF Dict{String,Any} ◄── parse_bmopf ◄── BMOPF JSON
+                                                 │               └──── write_bmopf
                                                  │ analyze
                                                  ▼
                                           SummaryReport ──► render
@@ -78,11 +78,10 @@ OpenDSS .dss ──(PMD)──► ENGINEERING dict ──(from_pmd)──┘    
                                        SolutionReport ──► render_solution
 ```
 
-- **Conversion**: `from_dss` (via the [powerio](https://github.com/eigenergy/powerio)
-  CLI) and `from_pmd` / `to_pmd` (via PowerModelsDistribution) translate
-  OpenDSS networks into BMOPF dicts, handling earth-terminal conventions,
-  grounding reactors, transformer impedance bases, and pricing the
-  voltage source as the network's current slack.
+- **Conversion**: `from_dss` (via [PowerIO.jl](https://github.com/eigenergy/PowerIO.jl))
+  translates OpenDSS networks into BMOPF dicts, handling earth-terminal
+  conventions, grounding reactors, and transformer impedance bases. `to_pmd`
+  exports a BMOPF dict to a PowerModelsDistribution ENGINEERING model.
 - **Validation**: required fields, spec conformance (configuration/arity
   rules, terminal types), referential and dimensional integrity, domain
   plausibility, redundancy.
@@ -115,17 +114,14 @@ using Pkg
 Pkg.add(url = "https://github.com/frederikgeth/BMOPFTools.jl")
 ```
 
-Parsing, validation, analysis, reporting, and the PowerModelsDistribution
-converters (`from_pmd` / `to_pmd`) work out of the box — PMD is a direct
-dependency.  Two capabilities pull in extra tooling, activated only when you
-load it:
+Parsing, validation, analysis, reporting, OpenDSS ingestion (`from_dss`, via
+the [PowerIO.jl](https://github.com/eigenergy/PowerIO.jl) dependency), and the
+`to_pmd` exporter work out of the box. One capability pulls in extra tooling,
+activated only when you load it:
 
 - **OPF / power flow** (`solve_opf`, `solve_pf`, `solve_feasibility_opf`) is a
   package extension that activates once **JuMP** and a solver such as **Ipopt**
   are present — `Pkg.add(["JuMP", "Ipopt"])`.
-- **OpenDSS ingestion via powerio** (`from_dss`) needs the
-  [powerio](https://github.com/eigenergy/powerio) binary on `PATH` (or the
-  `BMOPFTOOLS_POWERIO_PATH` environment variable).
 
 > [!TIP]
 > Because breaking changes land directly on `main` (see the warning above),
@@ -163,37 +159,27 @@ errors(report)    # bound violations and infeasibility findings
 warnings(report)  # near-active bounds and residual warnings
 ```
 
-Converting from OpenDSS via powerio (recommended):
+Converting from OpenDSS (via PowerIO.jl):
 
 ```julia
 using BMOPFTools
 
-net    = from_dss("Master.dss")     # requires powerio binary on PATH
+net    = from_dss("Master.dss")     # parsed in-process by PowerIO.jl
 net′,  fix_mf  = fix_case(net)
 net″,  aug_mf  = augment_case(net′)
 write_bmopf("case.json", net″)
 ```
 
-Converting from OpenDSS via PowerModelsDistribution:
-
-```julia
-using BMOPFTools, PowerModelsDistribution
-
-eng = parse_file("Master.dss"; kron_reduce=false)   # keep 4-wire detail
-net = from_pmd(eng)                                  # prices the slack on the voltage source
-report = analyze(net)
-```
-
 ## Development
 
 The dependencies are declared in `Project.toml`: the core runtime pulls in
-`Graphs`, `JSON3`, `JSONSchema`, `PowerModelsDistribution`, `TOML`, and the
-standard libraries; `JuMP`/`Ipopt` are weak dependencies behind the OPF
-extension (see [Installation](#installation)). The test suite skips the OpenDSS
-integration tests when `OpenDSSDirect` is absent.
+`Graphs`, `JSON3`, `JSONSchema`, `PowerIO`, `TOML`, and the standard libraries;
+`JuMP`/`Ipopt` are weak dependencies behind the OPF extension (see
+[Installation](#installation)). The test suite skips the power-flow comparison
+tests when `OpenDSSDirect` is absent.
 
 ```sh
-# full test suite (with PMD, from the package root)
+# full test suite (from the package root)
 julia --project=. -e "using Pkg; Pkg.test()"
 
 # generate analysis reports and simplified variants for all output/ networks
@@ -219,7 +205,7 @@ julia --project=docs docs/make.jl
 ```
 
 Pages: data-model conventions, the conversion guide (every deliberate
-`from_pmd`/`to_pmd` decision), the analysis/report guide, the **complete
+`from_dss`/`to_pmd` decision), the analysis/report guide, the **complete
 finding-code reference** (128 codes), methodology notes with literature
 references, the case augmentation guide (`fix_case` + `augment_case`), the
 OPF guide, and the OPF result dictionary reference.

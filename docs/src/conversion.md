@@ -1,9 +1,14 @@
 # Conversion guide
 
-[`from_pmd`](@ref) converts a PowerModelsDistribution ENGINEERING dict into
-the BMOPF data model; [`to_pmd`](@ref) is its inverse. This page documents
-every deliberate decision in those converters — the things you would
-otherwise have to discover by diffing data.
+[`to_pmd`](@ref) exports a BMOPF data model to a PowerModelsDistribution
+ENGINEERING dict. This page documents every deliberate decision in that
+converter — the things you would otherwise have to discover by diffing data.
+The same field mapping (read in reverse) describes how a PMD ENGINEERING dict
+maps onto BMOPF, which is useful when comparing against PMD-based tooling.
+
+> **Note.** OpenDSS networks are now ingested directly by [`from_dss`](@ref)
+> (via PowerIO.jl), which emits BMOPF JSON without going through PMD. The
+> earlier `from_pmd` parser has been removed.
 
 ## Scaling and basic field mapping
 
@@ -19,22 +24,17 @@ otherwise have to discover by diffing data.
 
 ## The earth terminal (OpenDSS `.0`)
 
-PMD maps the OpenDSS earth reference node `.0` to terminal **5**. BMOPF has
-no earth terminal — ground is implicit — so `from_pmd` resolves every
-occurrence:
+BMOPF has no earth terminal — ground is implicit. OpenDSS, by contrast, uses
+node `.0` for earth, which surfaces in the BMOPF JSON as terminal **5**.
 
-| PMD pattern | BMOPF result |
-|---|---|
-| bus `terminals` containing 5 | filtered from `terminal_names` |
-| bus `grounded = [5]` | dropped (earth is not a bus terminal) |
-| self-loop line with `t_connections = [5]` (a neutral-to-earth **reactor**) | a `shunt` at the bus with `G = R/(R²+X²)`, `B = −X/(R²+X²)` on the neutral |
-| voltage source with `connections = [1,2,3,5]` (neutral bonded to earth) | earth entry dropped, `vm`/`va` sliced with the same mask |
-| transformer wye winding `connections = [.., 5]` (star point earthed directly) | re-routed to the bus **neutral** terminal, with a warning |
-
-The last row is a genuine modeling change: the star point is then earthed
-through that bus's grounding impedance rather than solidly. The warning
-makes it visible; the alternative (an extra perfectly-grounded terminal) is
-exact but non-standard — see `docs/taskforce_feedback.md` item 7.
+PowerIO renders the OpenDSS earth node as terminal `"5"` (e.g. a transformer
+wye winding whose star point is earthed arrives with
+`terminal_map_to = ["1","2","3","5"]`). On ingest, `from_dss` routes `"5"` to
+the bus neutral `"n"` as part of the `1,2,3,4 → a,b,c,n` remap, so every bus
+ends up on the `a/b/c/n` convention and its neutral is detected. The earthed
+star point is then grounded **through the bus neutral** rather than solidly —
+a slightly lossy choice (matching the earlier `from_pmd` behaviour) that is
+recorded under `net["_meta"]["earth_terminal_routing"]` so it stays inspectable.
 
 ## Pricing the slack source
 
@@ -42,24 +42,20 @@ The OpenDSS circuit object is simultaneously a voltage reference and an
 implicit unbounded power injection. The BMOPF `voltage_source` captures **both**:
 it is the network's current slack (see [Voltage source as current slack](opf.md#source-slack)).
 What's missing for a well-posed cost objective on a raw utility dataset (no
-generators at all) is a *price* on that imported power. `from_pmd` therefore
-attaches a per-phase **`cost`** to the source itself:
+generators at all) is a *price* on that imported power.
 
-- per-phase `cost` (kwarg `slack_cost`, default 1.0 \$/kWh) — minimum-cost
-  dispatch then equals loss minimisation;
-- no flow bounds are added, so the source remains an unbounded slack;
-- no auxiliary generator is created — the cost lives on the `voltage_source`.
-
-Disable with `from_pmd(eng; add_slack_generator=false)` (the kwarg name is kept
-for backwards compatibility; it now controls the source cost, not a generator).
-The augmentation pass applies the same default — see [Augmentation](augmentation.md).
+`from_dss` imports the source **without** a price (`from_dss` does not add a
+`cost`). The [augmentation pass](augmentation.md) supplies one: it attaches a
+per-phase **`cost`** to the source itself (default 1.0 \$/kWh, kwarg
+`slack_cost`), so minimum-cost dispatch equals loss minimisation. No flow
+bounds are added, so the source stays an unbounded slack, and no auxiliary
+generator is created — the cost lives on the `voltage_source`.
 
 ## Load configuration
 
-PMD labels 2-terminal loads "wye"; the spec distinguishes `SINGLE_PHASE`
-(any two nodes) from `WYE` (4-terminal midpoint return). `from_pmd`
-reclassifies by terminal arity; `to_pmd` maps `SINGLE_PHASE` back to PMD
-wye.
+The spec distinguishes `SINGLE_PHASE` (any two nodes) from `WYE` (4-terminal
+midpoint return). 2-terminal loads are `SINGLE_PHASE`; `to_pmd` maps
+`SINGLE_PHASE` back to a PMD 2-terminal "wye" load.
 
 ## Transformer impedance bases
 
@@ -154,29 +150,38 @@ b_no_load = -(cmag)       · Y_base       # cmag       = %imag       / 100
     LV branch — not an even split. BMOPFTools follows that convention for
     `wye_delta`/`delta_wye`.
 
-**Legacy single-impedance form.** A network carrying the older single
-`r_series`/`x_series` (wye-side lumped, delta ideal) is still accepted: it is
-migrated onto `r_series_from`/`x_series_from` with the secondary branch zero,
-reproducing the previous ideal-delta behaviour. `to_pmd` writes the
+**Lumped single-impedance form.** A `wye_delta`/`delta_wye` transformer may
+carry a single lumped `r_series`/`x_series` (wye-side, delta ideal) instead of
+the per-winding fields — this is what `from_dss` (PowerIO) emits today. The OPF
+and Ybus builders read only the per-winding `r/x_series_from`/`_to` fields, so
+the lumped form is **normalised at parse time** by
+`migrate` / `_migrate_transformer_series_fields!`: it is moved onto
+`r_series_from`/`x_series_from` (with the secondary branch zero) and a
+`W.MIGRATE.XFMR_SERIES_FIELDS` note is recorded. `to_pmd` writes the
 per-winding fields back to PMD `rw`/`xsc`.
 
 ## Known limitations
 
+- **Lumped transformer impedance (from `from_dss`).** PowerIO emits
+  `wye_delta`/`delta_wye` units with a single lumped `r_series`/`x_series`
+  rather than a per-winding T-model. BMOPFTools normalises this onto
+  `r_series_from`/`x_series_from` on ingest (see above), so the OPF/Ybus see a
+  nonzero leakage impedance — but the leakage is all on the from-winding (the
+  to-winding branch is zero). A faithful per-winding split would require
+  per-winding emission upstream (tracked as a PowerIO.jl issue).
+- **Earth terminal `"5"` → bus neutral (from `from_dss`).** PowerIO keeps the
+  OpenDSS earth node as terminal `"5"`. BMOPFTools routes it to the bus neutral
+  on ingest (see above), which grounds an earthed star point through the bus
+  neutral rather than solidly. Native earth resolution upstream is tracked as a
+  PowerIO.jl issue.
 - **Wye-wye three-phase transformers** have no spec type. They are parked
   in `single_phase` with 3-phase terminal maps and flagged
   (`W.SPEC.XFMR_TMAP_ARITY`); the faithful decomposition into three
   single-phase units is future work.
-- **Generator costs** do not exist in PMD's ENGINEERING model; after conversion
-  only the priced slack source carries a `cost`.
-- **`basefreq` mismatches** between linecodes and the circuit are a
-  parse-time phenomenon (PMD warns during `parse_file`); they are not
-  recoverable from the ENGINEERING dict and hence not visible to
-  BMOPFTools.
 - **RegControl / tap controllers** do not convert; see the
   regulator-pattern detection in the [methodology notes](methodology.md).
 - **Regulator subtypes** (`single_phase_autotransformer`, `open_delta_regulator`)
-  are OPF-native data-model objects but are **not produced by the converters** —
-  `from_dss`/`from_pmd` do not recognise OpenDSS `AutoTrans`/`RegControl` or
-  open-delta banks as these objects, and `to_pmd` does not emit them. They are
-  authored directly in BMOPF JSON. See [conventions](conventions.md) and the
-  [OPF reference](opf.md).
+  are OPF-native data-model objects but are **not produced by `from_dss`** —
+  it does not recognise OpenDSS `AutoTrans`/`RegControl` or open-delta banks as
+  these objects, and `to_pmd` does not emit them. They are authored directly in
+  BMOPF JSON. See [conventions](conventions.md) and the [OPF reference](opf.md).
