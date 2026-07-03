@@ -351,13 +351,13 @@ function _pu_scale_transformers!(net, bases)
             haskey(xfmr, "r_neutral_to")   && (xfmr["r_neutral_to"]   = Float64(xfmr["r_neutral_to"])   / zb_to)
             haskey(xfmr, "x_neutral_to")   && (xfmr["x_neutral_to"]   = Float64(xfmr["x_neutral_to"])   / zb_to)
 
-            # No-load (core-loss) shunt admittance is stamped at the from side, so
-            # it scales by the from-bus base. An admittance goes to p.u. by ×z_base
-            # (= ÷y_base), the reciprocal of an impedance — without this the core
-            # loss silently vanishes in per_unit mode (G in S::S applied to ~1 p.u.
-            # voltages ≈ 0).
-            haskey(xfmr, "g_no_load") && (xfmr["g_no_load"] = Float64(xfmr["g_no_load"]) * zb_fr)
-            haskey(xfmr, "b_no_load") && (xfmr["b_no_load"] = Float64(xfmr["b_no_load"]) * zb_fr)
+            # No-load (magnetising) shunt admittance is stamped across the
+            # winding-2 (to-side) coil, so it scales by the TO-bus base. An
+            # admittance goes to p.u. by ×z_base (= ÷y_base), the reciprocal of
+            # an impedance — without this the core loss silently vanishes in
+            # per_unit mode (G in S applied to ~1 p.u. voltages ≈ 0).
+            haskey(xfmr, "g_no_load") && (xfmr["g_no_load"] = Float64(xfmr["g_no_load"]) * zb_to)
+            haskey(xfmr, "b_no_load") && (xfmr["b_no_load"] = Float64(xfmr["b_no_load"]) * zb_to)
 
             # delta_wye: single wye-side impedance; wye bus determines the base
             wye_bus = subtype == "delta_wye" ? bt : bf
@@ -379,8 +379,8 @@ end
 # ZB matrix referred to winding 1, so it converts to p.u. with a single divide by
 # z_base(bus_1); the result is stashed as `_zb_re`/`_zb_im` (read by
 # `_nw_zb_for_opf`). v_nom is scaled per winding bus so N_j stays the off-nominal
-# ratio; the no-load shunt (referenced at winding 1) scales by ×z_base(bus_1);
-# s_rating by ÷s_base.
+# ratio; the no-load shunt (across winding 2's coil) scales by ×z_base(bus_2);
+# per-winding i_max by ÷i_base(winding bus); s_rating by ÷s_base.
 function _pu_scale_nwinding!(net, bases)
     sb = bases.s_base
     for (_, xfmr) in get(get(net, "transformer", Dict()), "n_winding", Dict())
@@ -404,11 +404,19 @@ function _pu_scale_nwinding!(net, bases)
             w isa AbstractDict || continue
             vbj = get(bases.v_base, ws[j].bus, 1.0)
             haskey(w, "v_nom") && (w["v_nom"] = Float64(w["v_nom"]) / vbj)
+            # Per-winding current limit → p.u. by ÷ i_base of the winding's bus.
+            if haskey(w, "i_max")
+                ibj = get(bases.i_base, ws[j].bus, 1.0)
+                w["i_max"] = Float64(w["i_max"]) / ibj
+            end
         end
 
         haskey(xfmr, "s_rating") && (xfmr["s_rating"] = Float64(xfmr["s_rating"]) / sb)
-        haskey(xfmr, "g_no_load") && (xfmr["_g_no_load_pu"] = Float64(xfmr["g_no_load"]) * zb1)
-        haskey(xfmr, "b_no_load") && (xfmr["_b_no_load_pu"] = Float64(xfmr["b_no_load"]) * zb1)
+        # The no-load shunt is stamped across WINDING 2's coil, so it converts to
+        # p.u. by ×z_base of winding 2's bus (an admittance scales by ×z_base).
+        zb2 = length(ws) >= 2 ? get(bases.z_base, ws[2].bus, 1.0) : zb1
+        haskey(xfmr, "g_no_load") && (xfmr["_g_no_load_pu"] = Float64(xfmr["g_no_load"]) * zb2)
+        haskey(xfmr, "b_no_load") && (xfmr["_b_no_load_pu"] = Float64(xfmr["b_no_load"]) * zb2)
     end
 end
 

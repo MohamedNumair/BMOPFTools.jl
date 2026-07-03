@@ -249,7 +249,7 @@ $-(\tilde{c}^r_{\ell,k} + I^{\text{sh},r}_k(b^\text{to}))$ at the to-bus.
     `vpn_max` together with a neutral-to-ground bound `vn_max`. With only a
     `vpn_max` on a floating neutral (no `vn_max`) the to-ground voltage is
     unbounded, so the series variable is **left free** rather than risk an
-    unsound box. A transformer's from-side winding with a no-load shunt is the
+    unsound box. A transformer's winding with a no-load shunt is the
     one remaining cone-on-an-expression case; it is left cone-only for now (the
     same construction would apply).
 
@@ -661,8 +661,9 @@ the from-winding leakage of an OLTC scales with the winding turns ($\propto
 ($R' = r_\text{to} + r_\text{fr}/N_0^2$, $X' = x_\text{to} + x_\text{fr}/N_0^2$) and
 the drop is $v_\text{fr} - N v_\text{to} = -N\,(R'\,I_\text{to} \mp X'\,I_\text{to})$,
 matching OpenDSS's turns-scaled `Yprim`; at `tap = 1` it is identical to the
-fixed-tap stamping. (The `delta_wye`/`wye_delta` coupled delta-arm currently holds the
-leakage at the nominal ratio — a second-order approximation away from `tap = 1`.) The
+fixed-tap stamping. (The `delta_wye`/`wye_delta` coupled delta-arm carries the same
+exact ``\texttt{tap}^2`` referral — the short-circuit impedance referred to the
+tapped side scales as ``\texttt{tap}^2``, the non-tapped side is held at nominal.) The
 solved tap is reported in the [result dictionary](results.md) as `tap`/`tap_ratio`
 with a `tap_binding` flag. See the
 [tap-optimisation tutorial](@ref tap-optimisation).

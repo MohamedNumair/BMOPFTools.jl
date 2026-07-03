@@ -144,6 +144,26 @@ end
     # A uniform voltage offset draws no current (no shunt-to-ground branch).
     @test maximum(abs.(sum(Y, dims = 2))) < 1e-8
 
+    # The magnetising shunt sits on WINDING 2 (b2), not winding 1 — OpenDSS
+    # places the exciting branch on winding 2 (verified against its Yprim).
+    # Difference against a shunt-free copy isolates the branch: it must land
+    # entirely on the winding-2 (b2) coil, phase-to-neutral.
+    xf0 = _nw_xfmr([("b1", 115.0, 0.3), ("b2", 24.9, 0.4), ("b3", 4.16, 0.4)],
+                   Dict("1_2" => 8.0, "1_3" => 8.0, "2_3" => 6.0))
+    _, Y0 = B.nwinding_yprim(xf0)
+    D = Y .- Y0
+    b2 = [i for (i, nd) in enumerate(nodes) if nd[1] == "b2"]   # winding-2 nodes
+    others = setdiff(1:length(nodes), b2)
+    @test maximum(abs.(D[others, others])) < 1e-12             # nothing off winding 2
+    y = 1e-6 + im*5e-6                                          # per-coil admittance
+    b2ph = [i for i in b2 if nodes[i][2] in ("a","b","c")]
+    b2n  = only(i for i in b2 if nodes[i][2] == "n")
+    for i in b2ph
+        @test isapprox(D[i, i], y;    atol=1e-12)              # phase diagonal
+        @test isapprox(D[i, b2n], -y; atol=1e-12)              # phase→neutral
+    end
+    @test isapprox(D[b2n, b2n], 3y; atol=1e-12)                # neutral diagonal
+
     # Delta tertiary (YNynd): the delta coil is line-to-line (3 phase terminals,
     # no neutral, v_nom = kV_LL). Yprim must still build, be reciprocal & passive.
     xfd = _nw_xfmr([("b1", 115.0, 0.3), ("b2", 24.9, 0.4), ("b3", 4.16, 0.4)],
@@ -192,6 +212,23 @@ if _HAS_JUMP_IPOPT
         lva = abs(res["bus"]["lv"]["a"]["vr"] + im*res["bus"]["lv"]["a"]["vi"])
         @test 0.9 * vpn(24.9) < mva < vpn(24.9)
         @test 0.9 * vpn(4.16) < lva < vpn(4.16)
+
+        # Per-winding current limit `i_max`: the unconstrained winding-2 (MV)
+        # coil current sets the scale; a loose cap (2×) is inert, a tight cap
+        # (0.5×) cannot be met with the fixed load → the solve is infeasible.
+        i2 = res["transformer"]["t1"]["w2"]["1"]["cm"]
+        @test i2 > 0
+        loose = deepcopy(net); loose["transformer"]["n_winding"]["t1"]["windings"][2]["i_max"] = 2 * i2
+        rl = solve_pf(loose; optimizer = Ipopt.Optimizer)
+        @test rl["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test isapprox(rl["transformer"]["t1"]["w2"]["1"]["cm"], i2; rtol = 1e-4)  # inert
+
+        tight = deepcopy(net); tight["transformer"]["n_winding"]["t1"]["windings"][2]["i_max"] = 0.5 * i2
+        rt = solve_pf(tight; optimizer = Ipopt.Optimizer)
+        # Either Ipopt flags infeasibility, or it clamps at the limit — never
+        # returns the unconstrained (over-limit) current as a clean solve.
+        @test rt["termination_status"] ∉ ("LOCALLY_SOLVED", "OPTIMAL") ||
+              rt["transformer"]["t1"]["w2"]["1"]["cm"] <= 0.5 * i2 * (1 + 1e-3)
     end
 
 end
