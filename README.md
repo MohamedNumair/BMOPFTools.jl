@@ -55,10 +55,17 @@ into each generated case's `meta.license` field.
 
 | Dataset (`test/data/…`) | Licence | Commercial use | Source |
 |---|---|---|---|
-| `ENWL`, `ENWLvariants` | CC BY 4.0 | yes | CSIRO four-wire LV dataset, [10.25919/jaae-vc35](https://doi.org/10.25919/jaae-vc35) |
+| `ENWL` | CC BY 4.0 | yes | CSIRO four-wire LV dataset, [10.25919/jaae-vc35](https://doi.org/10.25919/jaae-vc35) |
 | `LV`, `MV`, `Master.dss` (combined), `MVLVmeshed` | **CC BY-NC-SA 4.0** | **no** (non-commercial, share-alike) | CSIRO Australian MV/LV feeder set, [10.25919/ghnz-bk28](https://doi.org/10.25919/ghnz-bk28) |
-| `dsuite_networks_scaled_v1.1` | CC BY 4.0 | yes | D-Suite LV networks (Newcastle University), [10.25405/data.ncl.27175317](https://doi.org/10.25405/data.ncl.27175317) |
 | `SWER`, `pf_comparison`, small fixtures | CC BY 4.0 | yes | authored for BMOPFTools |
+
+The larger benchmark datasets that only feed the output-generation pipeline
+are not bundled here — they live in the companion
+[BMOPFDraftData](https://github.com/frederikgeth/BMOPFDraftData) repository
+alongside the pipeline that consumes them: `ENWLvariants` (CC BY 4.0, same
+CSIRO DOI as `ENWL`) and `dsuite_networks_scaled_v1.1` (CC BY 4.0, D-Suite LV
+networks, Newcastle University,
+[10.25405/data.ncl.27175317](https://doi.org/10.25405/data.ncl.27175317)).
 
 Task force outputs (`docs/taskforce_feedback.md`) are CC BY 4.0. Note that
 CC BY-NC-SA derivatives must be redistributed under the same

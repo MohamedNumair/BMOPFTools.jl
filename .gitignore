@@ -1,5 +1,11 @@
 **/.DS_Store
 docs/build/
+docs/dev/
+
+# Output-generation and benchmark artifacts. Regenerable and now kept in the
+# companion BMOPFDraftData repo; keep them out of this repo's history.
+output/
+benchmarks/
 
 # Code-coverage artifacts emitted by `julia --code-coverage` / Pkg.test(coverage=true)
 *.cov
