@@ -20,6 +20,7 @@ makedocs(
             "Buses & terminals primer" => "terminals_primer.md",
             "Data model conventions"   => "conventions.md",
             "Object identity"          => "semantic_modeling.md",
+            "Line geometry & impedances" => "tutorial_line_geometry.md",
             "Conversion guide"         => "conversion.md",
         ],
         "Analysis & diagnostics"  => [
@@ -37,6 +38,7 @@ makedocs(
         "Optimal power flow"      => [
             "Optimal power flow"       => "opf.md",
             "Transformer models"       => "transformer_models.md",
+            "Impedance models & OPF decisions" => "tutorial_impedance_models.md",
             "OPF result dictionary"    => "results.md",
             "Validating the OPF"       => "validation.md",
             "SWER case study"          => "tutorial_swer.md",

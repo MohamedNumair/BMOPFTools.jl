@@ -137,7 +137,15 @@ const _KNOWN_FIELDS = Dict{String,Set{String}}(
     "generator" => Set(["p_min", "p_max", "q_min", "q_max", "cost",
                         "bus", "configuration", "terminal_map",
                         "i_max", "s_max"]),
-    "linecode" => Set(["i_max", "s_max"]),
+    "linecode" => Set(["i_max", "s_max", "source", "line_geometry", "derivation"]),
+    "wire_data" => Set(["kind", "r_dc", "r_ac", "temperature_ref", "alpha_20",
+                        "gmr", "radius", "cap_radius",
+                        "i_max", "i_max_emergency",
+                        "eps_r", "t_insulation", "d_insulation", "d_cable",
+                        "n_strands", "d_strand", "gmr_strand", "r_strand",
+                        "d_shield", "t_tape", "tape_lap"]),
+    "line_geometry" => Set(["conductors", "earth_model", "earth_resistivity",
+                            "frequency", "temperature"]),
     "switch" => Set(["bus_from", "bus_to", "terminal_map_from",
                      "terminal_map_to", "open_switch", "i_max"]),
     "ibr" => Set(["bus", "terminal_map", "topology", "prime_mover",
@@ -225,6 +233,11 @@ const _KNOWN_PATTERNS = Dict{String,Vector{Regex}}(
     "linecode" => [r"^R_series_\d+_\d+$", r"^X_series_\d+_\d+$",
                    r"^G_from_\d+_\d+$",   r"^G_to_\d+_\d+$",
                    r"^B_from_\d+_\d+$",   r"^B_to_\d+_\d+$"],
+    # inline ABSOLUTE matrices (Ω, S) — units by location: linecode = per
+    # metre, line = total for the section
+    "line"     => [r"^R_series_\d+_\d+$", r"^X_series_\d+_\d+$",
+                   r"^G_from_\d+_\d+$",   r"^G_to_\d+_\d+$",
+                   r"^B_from_\d+_\d+$",   r"^B_to_\d+_\d+$"],
     "shunt"    => [r"^G_\d+_\d+$", r"^B_\d+_\d+$"]
 )
 
@@ -273,6 +286,7 @@ function _catalogue_unknown_fields(net::Dict{String,Any},
     known_top = Set(["name", "meta", "bus", "line", "linecode", "voltage_source",
                      "load", "generator", "shunt", "capacitor", "switch",
                      "transformer", "ibr", "control_profile",
+                     "wire_data", "line_geometry",
                      "time_series", "_meta"])
     unknown_top = [k for k in keys(net) if !(k in known_top) && !startswith(k, "_")]
     isempty(unknown_top) ||
@@ -358,7 +372,7 @@ end
 
 const _META_KNOWN_FIELDS = Set([
     "\$schema", "version", "title", "description",
-    "created", "modified", "license",
+    "created", "modified", "license", "frequency",
     "authors", "sources", "generator", "provenance",
 ])
 const _META_AUTHOR_FIELDS  = Set(["name", "email", "orcid"])
