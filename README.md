@@ -38,9 +38,13 @@ in the broader power systems and optimisation communities.
 BMOPFTools provides the tooling needed to convert real utility-derived OpenDSS
 networks into clean, spec-conformant BMOPF benchmark cases, validate them
 against the data model, and confirm that they are well-posed OPF instances
-before publication.  The companion `/output` directory contains the resulting
-benchmark cases. We will move the accepted test cases to another repository down 
-the line, to enable versioning and control. 
+before publication.  The resulting benchmark cases — together with the larger
+source networks and the generation pipeline that produces them — live in the
+companion
+[BMOPFDraftData](https://github.com/frederikgeth/BMOPFDraftData) repository, so
+they can be versioned and licensed independently of this tooling. This
+repository keeps only the small fixtures the test suite needs (under
+`test/data/`).
 
 ## Licensing
 
@@ -48,23 +52,28 @@ the line, to enable versioning and control.
 
 **Benchmark cases and task force outputs** — the licence is inherited from
 each dataset's upstream source and therefore differs **per dataset**. The
-matching directories under `/output` are derivatives and carry the same
-licence as their source. Every data directory contains a `License.md`/
-`license.md` with the exact terms and citation; the licence is also stamped
-into each generated case's `meta.license` field.
+generated benchmark cases (in [BMOPFDraftData](https://github.com/frederikgeth/BMOPFDraftData))
+are derivatives and carry the same licence as their source. Every data
+directory contains a `License.md`/`license.md` with the exact terms and
+citation; the licence is also stamped into each generated case's `meta.license`
+field.
 
-| Dataset (`test/data/…`) | Licence | Commercial use | Source |
+The only network data bundled in *this* repository is the small set of fixtures
+the test suite runs against, under `test/data/`:
+
+| Fixture (`test/data/…`) | Licence | Commercial use | Source |
 |---|---|---|---|
 | `ENWL` | CC BY 4.0 | yes | CSIRO four-wire LV dataset, [10.25919/jaae-vc35](https://doi.org/10.25919/jaae-vc35) |
 | `LV`, `MV`, `Master.dss` (combined), `MVLVmeshed` | **CC BY-NC-SA 4.0** | **no** (non-commercial, share-alike) | CSIRO Australian MV/LV feeder set, [10.25919/ghnz-bk28](https://doi.org/10.25919/ghnz-bk28) |
 | `SWER`, `pf_comparison`, small fixtures | CC BY 4.0 | yes | authored for BMOPFTools |
 
-The larger benchmark datasets that only feed the output-generation pipeline
-are not bundled here — they live in the companion
+The full benchmark library and the larger source networks that feed the
+output-generation pipeline are **not** bundled here — they live in the
+companion
 [BMOPFDraftData](https://github.com/frederikgeth/BMOPFDraftData) repository
-alongside the pipeline that consumes them: `ENWLvariants` (CC BY 4.0, same
-CSIRO DOI as `ENWL`) and `dsuite_networks_scaled_v1.1` (CC BY 4.0, D-Suite LV
-networks, Newcastle University,
+alongside the pipeline that consumes them, including `ENWLvariants` (CC BY 4.0,
+same CSIRO DOI as `ENWL`) and `dsuite_networks_scaled_v1.1` (CC BY 4.0, D-Suite
+LV networks, Newcastle University,
 [10.25405/data.ncl.27175317](https://doi.org/10.25405/data.ncl.27175317)).
 
 Task force outputs (`docs/taskforce_feedback.md`) are CC BY 4.0. Note that
@@ -200,18 +209,13 @@ tests when `OpenDSSDirect` is absent.
 ```sh
 # full test suite (from the package root)
 julia --project=. -e "using Pkg; Pkg.test()"
-
-# generate analysis reports and simplified variants for all output/ networks
-julia --project=. scripts/generate_output.jl
-
-# regenerate everything under output/ENWLbenchmark/ (reports, OPF results,
-# solution reports). The scripts/ env carries JuMP + Ipopt; instantiate once:
-julia --project=scripts -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
-julia --project=scripts scripts/run_benchmark.jl            # all stages
-julia --project=scripts scripts/run_benchmark.jl opf        # or: outputs / solutions
 ```
 
-One-off data-migration scripts live in `scripts/oneoff/`.
+The benchmark-generation pipeline (`scripts/generate_output.jl`,
+`scripts/run_benchmark.jl` and friends) runs against the full source networks
+and writes the benchmark library, both of which live in
+[BMOPFDraftData](https://github.com/frederikgeth/BMOPFDraftData) — run it from
+there. One-off data-migration scripts live in `scripts/oneoff/`.
 
 ## Documentation
 
@@ -239,8 +243,10 @@ Force draft specification.
 
 ## Case file overview
 
-Converted benchmark cases live in `/output/`.  The original OpenDSS source
-files are in `/test/data/`.
+Converted benchmark cases and their original OpenDSS source networks live in the
+companion [BMOPFDraftData](https://github.com/frederikgeth/BMOPFDraftData)
+repository. The small OpenDSS fixtures this package's test suite runs against
+are in `test/data/`.
 
 ## How to contribute
 
