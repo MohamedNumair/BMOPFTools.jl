@@ -834,7 +834,7 @@ end
               per_unit::Bool=true, s_base::Float64=1e6,
               volt_var_watt_eps::Float64=2e-3,
               verbose::Bool=false, solver_options=(),
-              model_hook!=nothing) -> Dict{String,Any}
+              model_hook!=nothing, solution_hook!=nothing) -> Dict{String,Any}
 
 Solve the four-wire rectangular current-voltage (IVR-EN) optimal power flow
 on a BMOPF network dict. Requires JuMP and Ipopt to be loaded in the calling
@@ -887,6 +887,42 @@ and current bilinearly; pass `per_unit=false` only to reproduce a raw-SI solve.
       JuMP.@constraint(ctx.model,
           vr[(b,"a")]*crg[("g1",1)] + vi[(b,"a")]*cig[("g1",1)] <= 5_000.0 / sb)
   end)
+  ```
+
+- `solution_hook!` is the companion post-solve extraction point: a function
+  `hook!(ctx, result)` called after the solve and the engine's own result
+  extraction, but **before** per-unit unwrapping. The model is still live, so a
+  hook can read `JuMP.value` of the custom variables it declared in a
+  `model_hook!` (capture them in a shared closure) and append its own keys to
+  the `result` dict. Because it runs in the model's units (per-unit by default),
+  the hook must scale its outputs to SI via `ctx.bases` so they sit alongside the
+  engine's SI results; the standard per-unit keys are unwrapped automatically but
+  custom keys are not.
+
+  A hook device that wants to be counted in `profile_solution`'s network
+  power-balance check writes its **net terminal power** (SI, generator sign:
+  positive = into the network) to `result["custom_injection"] =
+  Dict("p"=>…, "q"=>…)`. Without this, a correct solve with a custom device
+  trips a spurious `W.SOL.POWER_BALANCE` because the balance can't see the
+  device's injection.
+
+  Example — extract a battery's dispatch (declared in `model_hook!` and captured
+  in `bat`) and register it for power balance:
+
+  ```julia
+  bat = Dict{Symbol,Any}()   # shared between the two hooks
+  result = solve_opf(net;
+      model_hook! = ctx -> begin
+          # … declare crb/cib, add P/Q constraints, stamp KCL … then:
+          bat[:P] = P_expr; bat[:Q] = Q_expr        # JuMP expressions
+      end,
+      solution_hook! = (ctx, result) -> begin
+          sb = ctx.bases === nothing ? 1.0 : ctx.bases.s_base
+          p_W  = JuMP.value(bat[:P]) * sb           # per-unit → SI watts
+          q_var = JuMP.value(bat[:Q]) * sb
+          result["battery"] = Dict("bat1" => Dict("p"=>p_W, "q"=>q_var))
+          result["custom_injection"] = Dict("p"=>p_W, "q"=>q_var)
+      end)
   ```
 
 ## Smart-IBR Volt-var / Volt-watt
@@ -964,6 +1000,52 @@ Requires JuMP and Ipopt (same as `solve_opf`). The result dict matches
 """
 function solve_pf end
 export solve_pf
+
+"""
+    build_opf_model(net; kwargs...) -> ctx
+    enforce_kcl!(ctx) -> ctx
+    generation_cost(ctx) -> JuMP.QuadExpr
+    extract_result(ctx; solution_hook!=nothing) -> Dict{String,Any}
+
+Staged build/solve/extract API — the composable form of [`solve_opf`](@ref).
+Implemented in the `BMOPFOpfExt` extension (requires JuMP and Ipopt loaded).
+
+`solve_opf` fuses model construction, KCL, the solve, and result extraction into
+one call. These four functions expose the same pipeline as discrete steps so a
+caller can build **several OPF snapshots into one JuMP model**, couple them with
+its own cross-snapshot constraints (e.g. battery state-of-charge dynamics linking
+period `t` to `t+1`), set a single combined objective, `JuMP.optimize!` once, and
+extract each snapshot's result. This is the supported path for multi-period /
+storage formulations that the single-snapshot `solve_opf` cannot express.
+
+Typical multi-period skeleton:
+
+```julia
+using JuMP, Ipopt
+model = JuMP.Model(Ipopt.Optimizer)
+ctxs  = [build_opf_model(net; t_index=t, model=model, add_objective=false,
+                         model_hook! = storage_ports!) for t in 1:T]
+# couple snapshots: SOC[t+1] = SOC[t] + Δt·(charge − discharge) …
+link_soc!(model, ctxs)
+JuMP.@objective(model, Min, sum(generation_cost(c) for c in ctxs) + storage_cost)
+foreach(enforce_kcl!, ctxs)
+JuMP.optimize!(model)
+results = [extract_result(c) for c in ctxs]
+```
+
+See each function's own docstring (in the extension) for the full contract.
+"""
+function build_opf_model end
+export build_opf_model
+
+function enforce_kcl! end
+export enforce_kcl!
+
+function generation_cost end
+export generation_cost
+
+function extract_result end
+export extract_result
 
 # ---------------------------------------------------------------------------
 # Exports
