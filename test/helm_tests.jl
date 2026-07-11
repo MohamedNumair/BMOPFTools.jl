@@ -466,3 +466,110 @@ end
         @test res["coupling"]["sw1"]["1"]["kind"] == "switch"
     end
 end
+
+# ── OpenDSS parity + 3-way oracle (gated) ────────────────────────────────────
+
+@testset "helm: OpenDSS parity" begin
+    if !_HAS_ODS
+        @test_skip "Requires OpenDSSDirect"
+    else
+        # OpenDSS node names use ".1/.2/.3/.4"; from_dss uses a/b/c/n.
+        _TNH = Dict("a" => "1", "b" => "2", "c" => "3", "n" => "4",
+                    "1" => "1", "2" => "2", "3" => "3", "4" => "4")
+
+        # Solve `deck` in OpenDSS and with HELM; compare node-to-earth voltages
+        # over all non-source terminals. Returns the max |ΔV| (V).
+        function _helm_vs_ods(deck::String, srcbus::String; atol::Float64,
+                              kwargs...)
+            path = normpath(abspath(joinpath(@__DIR__, "data", "pf_comparison", deck)))
+            OpenDSSDirect.dss("Clear")
+            OpenDSSDirect.dss("Redirect \"$path\"")
+            OpenDSSDirect.dss("Solve")
+            names = lowercase.(OpenDSSDirect.Circuit.AllNodeNames())
+            volts = OpenDSSDirect.Circuit.AllBusVolts()
+            odsv = Dict(nm => v for (nm, v) in zip(names, volts))
+
+            net = from_dss(path)
+            hr = helm_series(net; kwargs...)
+            @test hr.status == :converged
+
+            maxerr = 0.0
+            for (bid, b) in net["bus"], t in b["terminal_names"]
+                bid == srcbus && continue
+                k = "$(bid).$(get(_TNH, string(t), string(t)))"
+                haskey(odsv, k) || continue
+                maxerr = max(maxerr, abs(hr.V[(bid, string(t))] - odsv[k]))
+            end
+            @test maxerr < atol
+            maxerr
+        end
+
+        # Constant-power decks (lines, explicit neutrals, delta loads, caps):
+        # sub-0.1 V agreement. Excluded, with reasons:
+        #   pf_3ph_line / pf_zip_3ph — the 4-wire-line import quirk (4×4
+        #     linecode but the line terminal_map imports as a/b/c) leaves lb.n
+        #     connected only through loads: structurally singular, and HELM's
+        #     floating-node error correctly refuses it;
+        #   pf_1ph_freeneutral — the load-bus neutral is held ONLY by the load,
+        #     so the no-load germ is genuinely indeterminate (a fundamental
+        #     HELM requirement: every node needs a linear path to a reference);
+        #   pf_1ph_impedanceneutral — same 4-wire-line import quirk: the
+        #     dropped neutral conductor forces ALL return current through the
+        #     0.2 Ω grounding reactor (~2× the true neutral rise). The OPF
+        #     comparisons pass on this deck only because they hand-build the
+        #     net instead of importing it.
+        _helm_vs_ods("pf_1ph_line.dss",   "src"; atol=0.1)
+        _helm_vs_ods("pf_cap_wye.dss",    "src"; atol=0.1)
+        _helm_vs_ods("pf_delta_load.dss", "src"; atol=0.1)
+        # Perfect ground at lb.n hides most of the dropped-neutral quirk; the
+        # ~0.2 V residual on phases b/c is the lost phase-neutral coupling
+        # (import fidelity, not HELM).
+        _helm_vs_ods("pf_1ph_perfectneutral.dss", "src"; atol=0.5)
+        # Transformer decks: import fidelity dominates (same tolerance class as
+        # the feasibility-OPF comparisons in powerflow_comparison_tests.jl).
+        _helm_vs_ods("pf_yd_xfmr.dss", "hv"; atol=0.5)
+        _helm_vs_ods("pf_dy_xfmr.dss", "hv"; atol=0.5)
+
+        # ZIP decks carry constant-current fractions — HELM v1 must refuse them
+        # loudly (documented limitation), not silently mis-solve.
+        @testset "constant-I ZIP deck raises the v1 validation error" begin
+            path = normpath(abspath(joinpath(@__DIR__, "data", "pf_comparison",
+                                             "pf_zip_1ph.dss")))
+            net = from_dss(path)
+            @test_throws ArgumentError helm_series(net)
+        end
+    end
+end
+
+@testset "helm: 3-way oracle (HELM vs Ipopt solve_pf vs OpenDSS)" begin
+    if !(_HAS_ODS && _HAS_JUMP_IPOPT)
+        @test_skip "Requires OpenDSSDirect + JuMP/Ipopt"
+    else
+        path = normpath(abspath(joinpath(@__DIR__, "data", "pf_comparison",
+                                         "pf_1ph_line.dss")))
+        net = from_dss(path)
+
+        hr = helm_series(net)
+        @test hr.status == :converged
+        res = solve_pf(net; optimizer=Ipopt.Optimizer)
+
+        OpenDSSDirect.dss("Clear")
+        OpenDSSDirect.dss("Redirect \"$path\"")
+        OpenDSSDirect.dss("Solve")
+        names = lowercase.(OpenDSSDirect.Circuit.AllNodeNames())
+        volts = OpenDSSDirect.Circuit.AllBusVolts()
+        odsv = Dict(nm => v for (nm, v) in zip(names, volts))
+        _TNH = Dict("a" => "1", "b" => "2", "c" => "3", "n" => "4")
+
+        for (bid, b) in net["bus"], t in b["terminal_names"]
+            bid == "src" && continue
+            tt = string(t)
+            v_helm  = hr.V[(bid, tt)]
+            tv      = res["bus"][bid][tt]
+            v_ipopt = tv["vr"] + im * tv["vi"]
+            @test abs(v_helm - v_ipopt) < 0.1          # HELM ≈ Ipopt PF
+            k = "$(bid).$(get(_TNH, tt, tt))"
+            haskey(odsv, k) && @test abs(v_helm - odsv[k]) < 0.1   # ≈ OpenDSS
+        end
+    end
+end
