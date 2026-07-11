@@ -121,6 +121,29 @@
         @test length(ro.nodes) == 3                 # b1 isolated, b2, b3
     end
 
+    @testset "aliasing onto a grounded terminal grounds the whole group" begin
+        # Grounding is a property of the aliased GROUP: a closed switch to a
+        # perfectly grounded terminal puts the other side at earth too —
+        # regardless of which member the union-find picks as representative.
+        # (Regression: the rep-or-self check left ("b2","n") with its own row.)
+        net = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "b1" => Dict{String,Any}("terminal_names" => ["a", "n"],
+                                         "perfectly_grounded_terminals" => ["n"]),
+                "b2" => Dict{String,Any}("terminal_names" => ["a", "n"]),
+            ),
+            "switch" => Dict{String,Any}(
+                "sw" => Dict{String,Any}("bus_from" => "b1", "bus_to" => "b2",
+                    "terminal_map_from" => ["a", "n"], "terminal_map_to" => ["a", "n"],
+                    "status" => "closed"),
+            ),
+        )
+        r = ybus_passive(net)
+        @test r.index[("b2", "n")] == 0             # grounded through the switch
+        @test r.index[("b1", "a")] == r.index[("b2", "a")] != 0
+        @test length(r.nodes) == 1                  # only the fused phase node
+    end
+
     @testset "negligible-impedance line is aliased, not stamped" begin
         # ‖Z‖_F below z_line_min_ohm (1e-4) → treated as a unity coupling.
         net = Dict{String,Any}(

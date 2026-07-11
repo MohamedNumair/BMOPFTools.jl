@@ -63,7 +63,7 @@
         @test spread > 1e-4      # nothing like the ~1e-8 lock-in of true limits
     end
 
-    @testset "degenerate/guard paths" begin
+    @testset "degenerate/guard paths (pade)" begin
         # Already-converged sequence: zero differences short-circuit safely.
         v, spread = _wynn_epsilon(fill(3.0 + 1.0im, 6))
         @test v == 3.0 + 1.0im
@@ -73,5 +73,204 @@
         @test v == 2.0 + 0.0im && spread == Inf
         @test_throws ArgumentError _wynn_epsilon(ComplexF64[])
         @test_throws ArgumentError _pade_sum(ComplexF64[])
+    end
+end
+
+# ── analytic solver layer ────────────────────────────────────────────────────
+
+@testset "helm: analytic power flow" begin
+
+    # 2-node single-phase 4-wire feeder with a closed-form solution:
+    # source E on src.a (src.n perfectly grounded), line with phase resistance
+    # R_a and neutral resistance R_n, constant-P load across (ld.a, ld.n).
+    # Loop resistance R = R_a + R_n:
+    #   ΔV² − E·ΔV + R·P = 0  ⇒  ΔV = (E + √(E² − 4RP))/2  (operational branch)
+    # with collapse at P* = E²/(4R).
+    function _two_node_net(P::Float64; model::String="constant_power",
+                           E::Float64=230.0, Ra::Float64=0.5, Rn::Float64=0.5)
+        net = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "src" => Dict{String,Any}("terminal_names" => ["a", "n"],
+                                          "perfectly_grounded_terminals" => ["n"]),
+                "ld"  => Dict{String,Any}("terminal_names" => ["a", "n"]),
+            ),
+            "voltage_source" => Dict{String,Any}(
+                "vs" => Dict{String,Any}(
+                    "bus" => "src", "terminal_map" => ["a"],
+                    "configuration" => "WYE",
+                    "v_magnitude" => [E], "v_angle" => [0.0]),
+            ),
+            "line" => Dict{String,Any}(
+                "l1" => Dict{String,Any}(
+                    "bus_from" => "src", "bus_to" => "ld",
+                    "terminal_map_from" => ["a", "n"], "terminal_map_to" => ["a", "n"],
+                    "R_series_1_1" => Ra, "X_series_1_1" => 0.0,
+                    "R_series_2_2" => Rn, "X_series_2_2" => 0.0),
+            ),
+            "load" => Dict{String,Any}(
+                "d1" => Dict{String,Any}(
+                    "bus" => "ld", "terminal_map" => ["a", "n"],
+                    "configuration" => "WYE", "model" => model,
+                    "p_nom" => [P], "q_nom" => [0.0]),
+            ),
+        )
+        model == "constant_power" || (net["load"]["d1"]["v_nom"] = [E])
+        net
+    end
+
+    _dv_closed_form(P; E=230.0, R=1.0) = (E + sqrt(E^2 - 4R * P)) / 2
+
+    # Residual oracle shared with ybus_linearized (the plan's cross-code-path
+    # check): at the HELM solution, ‖Y_lin·V − i_comp(V)‖∞ ≈ 0 off-source.
+    function _lin_residual(net, hr)
+        lin = ybus_linearized(net; fold=:constant_z)
+        n = length(lin.nodes)
+        Vv = zeros(ComplexF64, n)
+        for (nd, gi) in lin.index
+            gi == 0 && continue
+            Vv[gi] = hr.V[nd]
+        end
+        r = lin.Y * Vv .- lin.i_comp(Vv)
+        srcb = Set(string(get(vs, "bus", "")) for (_, vs) in net["voltage_source"])
+        maximum(abs(r[gi]) for (nd, gi) in lin.index if gi != 0 && !(nd[1] in srcb);
+                init=0.0)
+    end
+
+    @testset "constant-P load: closed form + oracle residual" begin
+        P = 2000.0
+        hr = helm_series(_two_node_net(P))
+        @test hr.status == :converged && hr.converged
+        dv = hr.V[("ld", "a")] - hr.V[("ld", "n")]
+        @test dv ≈ _dv_closed_form(P) rtol=1e-9
+        @test abs(imag(dv)) < 1e-9
+        # 4-wire detail: the neutral at the load rises above earth by the
+        # return-path drop (+R_n·I, current flowing ld.n → src.n).
+        Iload = P / real(dv)
+        @test hr.V[("ld", "n")] ≈ 0.5 * Iload rtol=1e-9
+        @test _lin_residual(_two_node_net(P), hr) < 1e-6
+        # Loading margin: collapse at P* = E²/4R = 13225 W ⇒ λ* ≈ 6.61.
+        @test hr.load_margin ≈ (230.0^2 / 4) / P rtol=0.1
+    end
+
+    @testset "constant-P at half the collapse loading: margin ≈ 2" begin
+        Pstar = 230.0^2 / 4
+        hr = helm_series(_two_node_net(Pstar / 2); max_order=60)
+        @test hr.status == :converged
+        @test hr.V[("ld", "a")] - hr.V[("ld", "n")] ≈ _dv_closed_form(Pstar / 2) rtol=1e-7
+        @test hr.load_margin ≈ 2.0 rtol=0.1
+    end
+
+    @testset "past collapse: certified no-solution" begin
+        Pstar = 230.0^2 / 4
+        hr = helm_series(_two_node_net(1.2 * Pstar))
+        @test hr.status == :diverged_no_solution
+        @test !hr.converged
+        @test 0.7 < hr.load_margin < 1.0     # ≈ 1/1.2
+    end
+
+    @testset "just below collapse still converges" begin
+        Pstar = 230.0^2 / 4
+        hr = helm_series(_two_node_net(0.9 * Pstar); max_order=60, tol=1e-6)
+        @test hr.status == :converged
+        @test hr.V[("ld", "a")] - hr.V[("ld", "n")] ≈ _dv_closed_form(0.9 * Pstar) rtol=1e-4
+    end
+
+    @testset "constant-Z load: linear, fast, oracle-exact" begin
+        net = _two_node_net(2000.0; model="constant_impedance")
+        hr = helm_series(net)
+        @test hr.status == :converged
+        @test _lin_residual(net, hr) < 1e-8
+        # Hand check: y = P/Vnom² = 2000/230² S across (ld.a, ld.n).
+        y = 2000.0 / 230.0^2
+        dv = hr.V[("ld", "a")] - hr.V[("ld", "n")]
+        @test dv ≈ 230.0 / (1 + y * 1.0) rtol=1e-9      # E·y_load/(y_load+1/R)… = E/(1+yR)
+    end
+
+    @testset "unbalanced 3-phase 4-wire: germ is not flat, neutral shifts" begin
+        E = [240.0, 230.0, 220.0]
+        net = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "src" => Dict{String,Any}("terminal_names" => ["a", "b", "c", "n"],
+                                          "perfectly_grounded_terminals" => ["n"]),
+                "ld"  => Dict{String,Any}("terminal_names" => ["a", "b", "c", "n"]),
+            ),
+            "voltage_source" => Dict{String,Any}(
+                "vs" => Dict{String,Any}(
+                    "bus" => "src", "terminal_map" => ["a", "b", "c"],
+                    "configuration" => "WYE",
+                    "v_magnitude" => E, "v_angle" => [0.0, -2π/3, 2π/3]),
+            ),
+            "line" => Dict{String,Any}(
+                "l1" => Dict{String,Any}(
+                    "bus_from" => "src", "bus_to" => "ld",
+                    "terminal_map_from" => ["a", "b", "c", "n"],
+                    "terminal_map_to"   => ["a", "b", "c", "n"],
+                    Dict("R_series_$(k)_$(k)" => 0.4 for k in 1:4)...,
+                    Dict("X_series_$(k)_$(k)" => 0.3 for k in 1:4)...),
+            ),
+            "load" => Dict{String,Any}(
+                "d1" => Dict{String,Any}(
+                    "bus" => "ld", "terminal_map" => ["a", "b", "c", "n"],
+                    "configuration" => "WYE",
+                    "p_nom" => [5000.0, 2000.0, 1000.0],
+                    "q_nom" => [1000.0, 500.0, 0.0]),
+            ),
+        )
+        hr = helm_series(net)
+        @test hr.status == :converged
+        # Germ (order-0 coefficients) carries the source unbalance exactly.
+        @test hr.V[("src", "a")] ≈ 240.0 + 0im
+        @test hr.V[("src", "b")] ≈ 230.0 * cis(-2π/3)
+        # Unbalanced load ⇒ the load-bus neutral rises off earth.
+        @test abs(hr.V[("ld", "n")]) > 1.0
+        @test _lin_residual(net, hr) < 1e-5
+    end
+
+    @testset "switch interplay: :alias ≡ :constrain, w = feeder current" begin
+        P = 2000.0
+        net = _two_node_net(P)
+        # Insert a closed switch src—mid, retarget the line mid—ld.
+        net["bus"]["mid"] = Dict{String,Any}("terminal_names" => ["a", "n"])
+        net["switch"] = Dict{String,Any}(
+            "sw1" => Dict{String,Any}(
+                "bus_from" => "src", "bus_to" => "mid", "status" => "closed",
+                "terminal_map_from" => ["a", "n"], "terminal_map_to" => ["a", "n"]))
+        net["line"]["l1"]["bus_from"] = "mid"
+
+        ha = helm_series(net)                        # switches=:alias
+        hc = helm_series(net; switches=:constrain)
+        @test ha.status == :converged && hc.status == :converged
+        for nd in (("ld", "a"), ("ld", "n"), ("mid", "a"))
+            @test hc.V[nd] ≈ ha.V[nd] atol=1e-8
+        end
+        # Phase-conductor switch current = load current P/ΔV.
+        dv = real(hc.V[("ld", "a")] - hc.V[("ld", "n")])
+        iph = P / dv
+        cph = hc.couplings[findfirst(c -> c.conductor == 1, hc.couplings)]
+        wph = cph.scale * hc.w[findfirst(c -> c === cph, hc.couplings)]
+        @test abs(abs(wph) - iph) < 1e-6 * iph
+    end
+
+    @testset "validation errors" begin
+        # Constant-current fraction: not holomorphic in v1 → informative error.
+        net = _two_node_net(2000.0; model="constant_current")
+        @test_throws ArgumentError helm_series(net)
+
+        # DELTA voltage source unsupported.
+        net = _two_node_net(2000.0)
+        net["voltage_source"]["vs"]["configuration"] = "DELTA"
+        @test_throws ArgumentError helm_series(net)
+
+        # No voltage source at all.
+        net = _two_node_net(2000.0)
+        delete!(net, "voltage_source")
+        @test_throws ArgumentError helm_series(net)
+
+        # Islanded bus: singular system, error names the floating node.
+        net = _two_node_net(2000.0)
+        net["bus"]["iso"] = Dict{String,Any}("terminal_names" => ["a"])
+        err = try helm_series(net); nothing catch e; e end
+        @test err isa ErrorException
+        @test occursin("iso", sprint(showerror, err))
     end
 end

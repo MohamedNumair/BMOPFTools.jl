@@ -229,8 +229,13 @@ function _ybus_nodes(net::Dict{String,Any}; config=_DEFAULT_CONFIG,
         end
     end
 
-    # 5. collapse grounded terminals onto the earth reference
+    # 5. collapse grounded terminals onto the earth reference. Grounding is a
+    #    property of the whole aliased GROUP: a terminal fused (via a closed
+    #    switch / negligible-Z line / 1:1 ideal transformer) with a perfectly
+    #    grounded terminal is itself at earth — so membership is checked on the
+    #    group representative, not just the terminal itself.
     grounded = _ybus_grounded_terminals(net)
+    grounded_reps = Set{_Node}(_uf_find(uf, g) for g in grounded)
 
     # 6. assign integer indices to the surviving representative nodes
     reps = Dict{_Node,Int}()   # representative -> index
@@ -239,7 +244,7 @@ function _ybus_nodes(net::Dict{String,Any}; config=_DEFAULT_CONFIG,
     # Deterministic node order: sort terminals, index by representative.
     for n in sort(all_nodes)
         r = _uf_find(uf, n)
-        if r in grounded || n in grounded
+        if r in grounded_reps
             of[n] = 0
             continue
         end
