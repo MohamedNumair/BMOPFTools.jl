@@ -655,6 +655,8 @@ include("io/ybus.jl")
 include("io/ybus_linearized.jl")
 include("io/ybus_augmented.jl")
 
+include("powerflow/pade.jl")
+
 include("lineconstants/wire.jl")
 include("lineconstants/earth.jl")
 include("lineconstants/series.jl")

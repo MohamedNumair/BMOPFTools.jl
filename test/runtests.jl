@@ -4004,6 +4004,12 @@ const IEEE13_FIXTURE = """
     include("ybus_augmented_tests.jl")
 
     # -----------------------------------------------------------------------
+    # HELM power flow: Padé/Wynn-epsilon continuation + solver layers.
+    # Analytic layers always run; OpenDSS parity self-gates on _HAS_ODS.
+    # -----------------------------------------------------------------------
+    include("helm_tests.jl")
+
+    # -----------------------------------------------------------------------
     # General n-winding (3+) transformers — accessors, validation, Yprim, and
     # (gated) OPF/PF + OpenDSS parity.
     # -----------------------------------------------------------------------
