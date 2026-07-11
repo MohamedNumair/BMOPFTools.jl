@@ -274,3 +274,195 @@ end
         @test occursin("iso", sprint(showerror, err))
     end
 end
+
+# ── delta / line-to-line loads + result-dict wrapper ─────────────────────────
+
+@testset "helm: delta and L-L loads, solve_pf_helm" begin
+
+    # 3-phase 3-wire source bus with grounded neutral reference at the source.
+    function _three_phase_net(; load::Dict{String,Any})
+        Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "src" => Dict{String,Any}("terminal_names" => ["a", "b", "c", "n"],
+                                          "perfectly_grounded_terminals" => ["n"]),
+                "ld"  => Dict{String,Any}("terminal_names" => ["a", "b", "c"]),
+            ),
+            "voltage_source" => Dict{String,Any}(
+                "vs" => Dict{String,Any}(
+                    "bus" => "src", "terminal_map" => ["a", "b", "c"],
+                    "configuration" => "WYE",
+                    "v_magnitude" => [230.0, 230.0, 230.0],
+                    "v_angle" => [0.0, -2π/3, 2π/3]),
+            ),
+            "line" => Dict{String,Any}(
+                "l1" => Dict{String,Any}(
+                    "bus_from" => "src", "bus_to" => "ld",
+                    "terminal_map_from" => ["a", "b", "c"],
+                    "terminal_map_to"   => ["a", "b", "c"],
+                    Dict("R_series_$(k)_$(k)" => 0.5 for k in 1:3)...,
+                    Dict("X_series_$(k)_$(k)" => 0.25 for k in 1:3)...),
+            ),
+            "load" => Dict{String,Any}("d1" => load),
+        )
+    end
+
+    _lin_residual3(net, hr) = begin
+        lin = ybus_linearized(net; fold=:constant_z)
+        Vv = zeros(ComplexF64, length(lin.nodes))
+        for (nd, gi) in lin.index
+            gi == 0 && continue
+            Vv[gi] = hr.V[nd]
+        end
+        r = lin.Y * Vv .- lin.i_comp(Vv)
+        maximum(abs(r[gi]) for (nd, gi) in lin.index if gi != 0 && nd[1] != "src";
+                init=0.0)
+    end
+
+    @testset "SINGLE_PHASE line-to-line load: rotated closed form" begin
+        # Load between phases a and b: loop R = 1.0, |E_ab| = 230·√3, and by
+        # rotation invariance ΔV = e^{jθ}·dv with dv from the real quadratic.
+        P = 5000.0
+        net = _three_phase_net(load=Dict{String,Any}(
+            "bus" => "ld", "terminal_map" => ["a", "b"],
+            "configuration" => "SINGLE_PHASE", "p_nom" => [P], "q_nom" => [0.0]))
+        # Make the a/b conductors purely resistive for the closed form.
+        for k in 1:3
+            net["line"]["l1"]["X_series_$(k)_$(k)"] = 0.0
+        end
+        hr = helm_series(net)
+        @test hr.status == :converged
+        Eab = 230.0 - 230.0 * cis(-2π/3)
+        dv = hr.V[("ld", "a")] - hr.V[("ld", "b")]
+        dv_cf = (abs(Eab) + sqrt(abs(Eab)^2 - 4 * 1.0 * P)) / 2
+        @test abs(dv) ≈ dv_cf rtol=1e-9
+        @test angle(dv) ≈ angle(Eab) atol=1e-9
+        @test _lin_residual3(net, hr) < 1e-6
+    end
+
+    @testset "balanced DELTA load: oracle residual + symmetry" begin
+        P = 4000.0
+        net = _three_phase_net(load=Dict{String,Any}(
+            "bus" => "ld", "terminal_map" => ["a", "b", "c"],
+            "configuration" => "DELTA",
+            "p_nom" => [P, P, P], "q_nom" => [500.0, 500.0, 500.0]))
+        hr = helm_series(net)
+        @test hr.status == :converged
+        @test _lin_residual3(net, hr) < 1e-6
+        # Balanced delta on a balanced source: phase voltage magnitudes equal.
+        vms = [abs(hr.V[("ld", t)]) for t in ("a", "b", "c")]
+        @test maximum(vms) - minimum(vms) < 1e-6 * maximum(vms)
+    end
+
+    @testset "unbalanced DELTA load: oracle residual" begin
+        net = _three_phase_net(load=Dict{String,Any}(
+            "bus" => "ld", "terminal_map" => ["a", "b", "c"],
+            "configuration" => "DELTA",
+            "p_nom" => [6000.0, 1500.0, 3000.0], "q_nom" => [1000.0, 0.0, -500.0]))
+        hr = helm_series(net)
+        @test hr.status == :converged
+        @test _lin_residual3(net, hr) < 1e-6
+    end
+
+    @testset "solve_pf_helm result dict + write/read round-trip" begin
+        P = 4000.0
+        net = _three_phase_net(load=Dict{String,Any}(
+            "bus" => "ld", "terminal_map" => ["a", "b", "c"],
+            "configuration" => "DELTA", "p_nom" => [P, P, P],
+            "q_nom" => [0.0, 0.0, 0.0]))
+        res = solve_pf_helm(net)
+        @test res["termination_status"] == "HELM_CONVERGED"
+        @test res["feasible"] === true
+        @test res["solve_time"] >= 0.0
+        hr = helm_series(net)
+        vb = res["bus"]["ld"]["a"]
+        @test vb["vr"] ≈ real(hr.V[("ld", "a")])
+        @test vb["vm"] ≈ abs(hr.V[("ld", "a")])
+        @test vb["va"] ≈ angle(hr.V[("ld", "a")])
+        @test res["bus"]["src"]["n"]["vm"] == 0.0      # grounded reference
+        @test res["helm"]["order"] == hr.n_order
+        @test isfinite(res["helm"]["residual"])
+
+        # Round-trip through the standard result IO.
+        path = joinpath(mktempdir(), "helm_result.json")
+        write_result(res, path)
+        back = read_result(path)
+        @test back["termination_status"] == "HELM_CONVERGED"
+        @test back["bus"]["ld"]["a"]["vm"] ≈ vb["vm"]
+    end
+
+    @testset "solve_pf_helm collapse: NaN-filled + margin < 1" begin
+        Pstar = 230.0^2 / 4
+        net = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "src" => Dict{String,Any}("terminal_names" => ["a", "n"],
+                                          "perfectly_grounded_terminals" => ["n"]),
+                "ld"  => Dict{String,Any}("terminal_names" => ["a", "n"]),
+            ),
+            "voltage_source" => Dict{String,Any}(
+                "vs" => Dict{String,Any}(
+                    "bus" => "src", "terminal_map" => ["a"],
+                    "configuration" => "WYE",
+                    "v_magnitude" => [230.0], "v_angle" => [0.0]),
+            ),
+            "line" => Dict{String,Any}(
+                "l1" => Dict{String,Any}(
+                    "bus_from" => "src", "bus_to" => "ld",
+                    "terminal_map_from" => ["a", "n"], "terminal_map_to" => ["a", "n"],
+                    "R_series_1_1" => 0.5, "X_series_1_1" => 0.0,
+                    "R_series_2_2" => 0.5, "X_series_2_2" => 0.0),
+            ),
+            "load" => Dict{String,Any}(
+                "d1" => Dict{String,Any}(
+                    "bus" => "ld", "terminal_map" => ["a", "n"],
+                    "configuration" => "WYE", "p_nom" => [1.3 * Pstar],
+                    "q_nom" => [0.0]),
+            ),
+        )
+        res = solve_pf_helm(net)
+        @test res["termination_status"] == "HELM_NO_SOLUTION"
+        @test res["feasible"] === false
+        @test isnan(res["bus"]["ld"]["a"]["vm"])
+        @test res["helm"]["load_margin"] < 1.0     # ≈ 1/1.3
+    end
+
+    @testset "coupling currents in the result dict (switch :constrain)" begin
+        P = 2000.0
+        net = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "src" => Dict{String,Any}("terminal_names" => ["a", "n"],
+                                          "perfectly_grounded_terminals" => ["n"]),
+                "mid" => Dict{String,Any}("terminal_names" => ["a", "n"]),
+                "ld"  => Dict{String,Any}("terminal_names" => ["a", "n"]),
+            ),
+            "voltage_source" => Dict{String,Any}(
+                "vs" => Dict{String,Any}(
+                    "bus" => "src", "terminal_map" => ["a"],
+                    "configuration" => "WYE",
+                    "v_magnitude" => [230.0], "v_angle" => [0.0]),
+            ),
+            "switch" => Dict{String,Any}(
+                "sw1" => Dict{String,Any}(
+                    "bus_from" => "src", "bus_to" => "mid", "status" => "closed",
+                    "terminal_map_from" => ["a", "n"], "terminal_map_to" => ["a", "n"])),
+            "line" => Dict{String,Any}(
+                "l1" => Dict{String,Any}(
+                    "bus_from" => "mid", "bus_to" => "ld",
+                    "terminal_map_from" => ["a", "n"], "terminal_map_to" => ["a", "n"],
+                    "R_series_1_1" => 0.5, "X_series_1_1" => 0.0,
+                    "R_series_2_2" => 0.5, "X_series_2_2" => 0.0),
+            ),
+            "load" => Dict{String,Any}(
+                "d1" => Dict{String,Any}(
+                    "bus" => "ld", "terminal_map" => ["a", "n"],
+                    "configuration" => "WYE", "p_nom" => [P], "q_nom" => [0.0]),
+            ),
+        )
+        res = solve_pf_helm(net; switches=:constrain)
+        @test res["termination_status"] == "HELM_CONVERGED"
+        @test haskey(res["coupling"], "sw1")
+        dv = 230.0 * 0 + (res["bus"]["ld"]["a"]["vr"] - res["bus"]["ld"]["n"]["vr"])
+        iph = P / dv
+        @test res["coupling"]["sw1"]["1"]["im"] ≈ iph rtol=1e-6
+        @test res["coupling"]["sw1"]["1"]["kind"] == "switch"
+    end
+end

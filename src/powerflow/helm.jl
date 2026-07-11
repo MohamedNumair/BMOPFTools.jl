@@ -476,3 +476,77 @@ function helm_series(net::Dict{String,Any}; config=_DEFAULT_CONFIG,
     HelmResult(Vdict, w, aug.couplings, Cmat, converged, status,
                residual, n_order, load_margin)
 end
+
+# ── result-dict wrapper ──────────────────────────────────────────────────────
+
+"""
+    solve_pf_helm(net; config=_DEFAULT_CONFIG, switches=:alias,
+                  ideal_xfmrs=:constrain, max_order=40, tol=1e-8)
+        -> Dict{String,Any}
+
+Solve the power flow with HELM ([`helm_series`](@ref)) and return the standard
+result dictionary (SI units, same `"bus"` shape as the OPF results, compatible
+with `write_result`/`read_result`).
+
+Top-level keys:
+- `"termination_status"` — `"HELM_CONVERGED"` | `"HELM_NO_SOLUTION"` (certified
+  voltage collapse: no power-flow solution exists at this loading) |
+  `"HELM_MAX_ORDER"` (series order exhausted before the tolerance was met —
+  retry with a larger `max_order`).
+- `"feasible"` — `true` iff converged.
+- `"solve_time"` — wall-clock seconds.
+- `"bus"` — `bus_id => terminal => {vr, vi, vm [V], va [rad]}`. NaN-filled
+  when no solution exists (the standard infeasible convention).
+- `"coupling"` — `id => conductor => {kind, ir, ii [A], im [A]}`: the PHYSICAL
+  current through each ideal coupling (closed-switch conductor with
+  `switches = :constrain`, ideal-transformer winding core).
+- `"helm"` — diagnostics: `order`, `residual` (A), `load_margin` (collapse
+  loading multiplier, NaN if inestimable), `series_tail_norm`.
+"""
+function solve_pf_helm(net::Dict{String,Any}; config=_DEFAULT_CONFIG,
+                       switches::Symbol=:alias, ideal_xfmrs::Symbol=:constrain,
+                       max_order::Int=40, tol::Float64=1e-8)::Dict{String,Any}
+    t0 = time()
+    hr = helm_series(net; config, switches, ideal_xfmrs, max_order, tol)
+    dt = time() - t0
+
+    ok = hr.converged
+    num(x) = ok ? x : NaN                    # infeasible ⇒ NaN-filled numerics
+
+    bus = Dict{String,Any}()
+    for (nd, v) in hr.V
+        b, t = nd
+        bt = get!(bus, b, Dict{String,Any}())
+        bt[t] = Dict{String,Any}(
+            "vr" => num(real(v)), "vi" => num(imag(v)),
+            "vm" => num(abs(v)),  "va" => num(angle(v)))
+    end
+
+    coupling = Dict{String,Any}()
+    for (j, c) in enumerate(hr.couplings)
+        iw = c.scale * hr.w[j]
+        ct = get!(coupling, c.id, Dict{String,Any}())
+        ct[string(c.conductor)] = Dict{String,Any}(
+            "kind" => string(c.kind),
+            "ir" => num(real(iw)), "ii" => num(imag(iw)), "im" => num(abs(iw)))
+    end
+
+    status = hr.status === :converged            ? "HELM_CONVERGED" :
+             hr.status === :diverged_no_solution ? "HELM_NO_SOLUTION" :
+                                                   "HELM_MAX_ORDER"
+
+    Dict{String,Any}(
+        "termination_status" => status,
+        "feasible"           => ok,
+        "solve_time"         => dt,
+        "bus"                => bus,
+        "coupling"           => coupling,
+        "helm" => Dict{String,Any}(
+            "order"            => hr.n_order,
+            "residual"         => hr.residual,
+            "load_margin"      => hr.load_margin,
+            "series_tail_norm" => maximum(abs, view(hr.coeffs, :, size(hr.coeffs, 2));
+                                          init=0.0),
+        ),
+    )
+end

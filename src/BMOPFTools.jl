@@ -1139,7 +1139,7 @@ export transformer_yprim, export_yprim, write_yprim
 export ybus_passive, YbusResult
 export ybus_linearized, LinearizedYbus
 export ybus_augmented, AugYbusResult, IdealCoupling
-export helm_series, HelmResult
+export helm_series, HelmResult, solve_pf_helm
 export compile_linecode, compile_linecodes!
 
 # ---------------------------------------------------------------------------
