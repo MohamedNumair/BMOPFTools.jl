@@ -147,6 +147,123 @@ function _xfmr_yn(xfmr, side::String)
     1.0 / (rn + im * xn)
 end
 
+# ── ideal-ratio winding incidence (shared seam) ─────────────────────────────
+#
+# Per magnetic core, the SERIES part of a two-winding Yprim is the rank-1 block
+#
+#     Y_core = yt · transpose(c) * c,   c = C_w1 − ratio·C_w2,
+#
+# where C_w1/C_w2 are the pure ±1 coil incidences over the terminal nodes
+# (coil voltage u_i = C_wi·V) and `ratio` is the ideal coil-voltage ratio
+# u1 = ratio·u2 at no load — expanding c'·c gives exactly the familiar
+# yt·[1 −r; −r r²] primitive. This helper is the ONE source of truth for that
+# incidence: the Yprim builders assemble their admittance from it, and
+# `ybus_augmented` stamps the zero-leakage ideal coupling u1 − ratio·u2 = 0 as
+# a constraint row from the very same data, so the two model paths cannot
+# drift apart (Dy roll direction, L-N vs L-L coils, tap in the ratio).
+#
+# Covered subtypes: single_phase, wye_delta, delta_wye — the ideal-capable set
+# `_xfmr_alias_pairs` recognises. center_tap (3-winding star, not rank-1) and
+# the regulator subtypes keep their own builders.
+
+const _WindingIncidence = NamedTuple{
+    (:w1_nodes, :w1_coeffs, :w2_nodes, :w2_coeffs, :ratio),
+    Tuple{Vector{Tuple{String,String}}, Vector{Float64},
+          Vector{Tuple{String,String}}, Vector{Float64}, Float64}}
+
+"""
+    _xfmr_winding_incidence(xfmr, subtype) -> Vector{_WindingIncidence}
+
+Per-core winding incidence of a two-winding transformer: coil node/coefficient
+lists `(w1_nodes, w1_coeffs)` / `(w2_nodes, w2_coeffs)` (pure ±1) and the ideal
+coil-voltage `ratio` (`u1 = ratio·u2` at no load, tap included). The series
+Yprim of core `k` is `yt_k·transpose(c_k)·c_k` with `c_k = C_w1 − ratio·C_w2`;
+the zero-leakage ideal coupling is the constraint `c_k·V = 0`.
+
+Supports `"single_phase"` (w1 = from coil, w2 = to coil, ratio = N_eff),
+`"wye_delta"`/`"delta_wye"` (w1 = wye coil, w2 = delta coil, ratio = 1/n_eff).
+Returns an empty vector for degenerate inputs (missing terminal maps).
+"""
+function _xfmr_winding_incidence(xfmr::Dict{String,Any},
+                                 subtype::AbstractString)::Vector{_WindingIncidence}
+    subtype == "single_phase" && return _winding_incidence_single_phase(xfmr)
+    subtype == "wye_delta"    && return _winding_incidence_yd(xfmr; wye_is_from=true)
+    subtype == "delta_wye"    && return _winding_incidence_yd(xfmr; wye_is_from=false)
+    throw(ArgumentError("no winding incidence for transformer subtype: $(repr(subtype))"))
+end
+
+function _winding_incidence_single_phase(xfmr::Dict{String,Any})
+    b_fr  = get(xfmr, "bus_from", "")
+    b_to  = get(xfmr, "bus_to",   "")
+    tm_fr = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+    tm_to = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+    (isempty(tm_fr) || isempty(tm_to)) && return _WindingIncidence[]
+
+    N = _xfmr_turns_ratio(xfmr) * _xfmr_tap_mult(xfmr)
+    # One coupled winding per terminal pair (p, q): line-to-neutral (q = neutral),
+    # line-to-line (q = second phase), or phase-to-ground (q absent).
+    pairs_fr = _xfmr_winding_pairs(tm_fr)
+    pairs_to = _xfmr_winding_pairs(tm_to)
+
+    out = _WindingIncidence[]
+    for k in 1:min(length(pairs_fr), length(pairs_to))
+        (p_fr, q_fr) = pairs_fr[k]; (p_to, q_to) = pairs_to[k]
+        w1n = Tuple{String,String}[(b_fr, tm_fr[p_fr])]; w1c = Float64[1.0]
+        if q_fr !== nothing
+            push!(w1n, (b_fr, tm_fr[q_fr])); push!(w1c, -1.0)
+        end
+        w2n = Tuple{String,String}[(b_to, tm_to[p_to])]; w2c = Float64[1.0]
+        if q_to !== nothing
+            push!(w2n, (b_to, tm_to[q_to])); push!(w2c, -1.0)
+        end
+        push!(out, (w1_nodes=w1n, w1_coeffs=w1c, w2_nodes=w2n, w2_coeffs=w2c, ratio=N))
+    end
+    out
+end
+
+function _winding_incidence_yd(xfmr::Dict{String,Any}; wye_is_from::Bool)
+    if wye_is_from
+        b_wye  = get(xfmr, "bus_from", "")
+        b_del  = get(xfmr, "bus_to",   "")
+        tm_wye = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+        tm_del = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+    else
+        b_del  = get(xfmr, "bus_from", "")
+        b_wye  = get(xfmr, "bus_to",   "")
+        tm_del = Vector{String}(get(xfmr, "terminal_map_from", String[]))
+        tm_wye = Vector{String}(get(xfmr, "terminal_map_to",   String[]))
+    end
+    (isempty(tm_wye) || isempty(tm_del)) && return _WindingIncidence[]
+
+    N     = _xfmr_turns_ratio(xfmr) * _xfmr_tap_mult(xfmr)
+    # Delta-coil / wye-coil voltage ratio: V_del_coil = n_eff·V_wye_pn
+    # (same convention as the OPF builder `_add_yd_transformer!`), so the
+    # rank-1 ratio with u1 = wye coil, u2 = delta coil is a = 1/n_eff.
+    n_eff = wye_is_from ? sqrt(3.0)/N : N*sqrt(3.0)
+    a     = 1.0 / n_eff
+
+    n_ph   = length(tm_del)
+    n_pos  = _neutral_pos(tm_wye)
+    ph_idx = _phase_positions(tm_wye)
+
+    out = _WindingIncidence[]
+    for k in 1:n_ph
+        # Wye winding k: voltage = V_wye_ph[k] − V_wye_neutral (implicit ground
+        # if the wye side has no neutral terminal).
+        w1n = Tuple{String,String}[(b_wye, tm_wye[ph_idx[k]])]; w1c = Float64[1.0]
+        if n_pos !== nothing
+            push!(w1n, (b_wye, tm_wye[n_pos])); push!(w1c, -1.0)
+        end
+        # Delta winding k: Yd uses k_next; Dy uses k_prev (backward delta
+        # convention from the OPF builder).
+        k_other = wye_is_from ? (k % n_ph) + 1 : ((k - 2 + n_ph) % n_ph) + 1
+        w2n = Tuple{String,String}[(b_del, tm_del[k]), (b_del, tm_del[k_other])]
+        w2c = Float64[1.0, -1.0]
+        push!(out, (w1_nodes=w1n, w1_coeffs=w1c, w2_nodes=w2n, w2_coeffs=w2c, ratio=a))
+    end
+    out
+end
+
 # ── single_phase ────────────────────────────────────────────────────────────
 
 function _yprim_single_phase(xfmr::Dict{String,Any})
@@ -162,9 +279,10 @@ function _yprim_single_phase(xfmr::Dict{String,Any})
     # One coupled winding per terminal pair (p, q): line-to-neutral (q = neutral),
     # line-to-line (q = second phase), or phase-to-ground (q absent). The winding
     # voltage and the no-load shunt are taken across (V_p − V_q) via Y = Cᵀ·prim·C.
-    pairs_fr = _xfmr_winding_pairs(tm_fr)
-    pairs_to = _xfmr_winding_pairs(tm_to)
-    n_c = min(length(pairs_fr), length(pairs_to))
+    # Coil incidences come from the shared seam `_xfmr_winding_incidence`
+    # (w1 = from coil, w2 = to coil, ratio = N).
+    inc = _xfmr_winding_incidence(xfmr, "single_phase")
+    n_c = length(inc)
 
     r1 = Float64(get(xfmr, "r_series_from", 0.0))
     x1 = Float64(get(xfmr, "x_series_from", 0.0))
@@ -202,25 +320,23 @@ function _yprim_single_phase(xfmr::Dict{String,Any})
         push!(nodes, (b, t)); length(nodes)
     end
     # Register nodes in a deterministic order (from-phase, to-phase, then refs).
-    for k in 1:n_c
-        (p_fr, q_fr) = pairs_fr[k]; (p_to, q_to) = pairs_to[k]
-        nidx!(b_fr, tm_fr[p_fr]); nidx!(b_to, tm_to[p_to])
-        q_fr !== nothing && nidx!(b_fr, tm_fr[q_fr])
-        q_to !== nothing && nidx!(b_to, tm_to[q_to])
+    for ent in inc
+        nidx!(ent.w1_nodes[1]...); nidx!(ent.w2_nodes[1]...)
+        length(ent.w1_nodes) > 1 && nidx!(ent.w1_nodes[2]...)
+        length(ent.w2_nodes) > 1 && nidx!(ent.w2_nodes[2]...)
     end
     n_tot = length(nodes)
     Y = zeros(ComplexF64, n_tot, n_tot)
 
-    for k in 1:n_c
-        (p_fr, q_fr) = pairs_fr[k]; (p_to, q_to) = pairs_to[k]
-        ifp = nidx!(b_fr, tm_fr[p_fr]); itp = nidx!(b_to, tm_to[p_to])
-        ifq = q_fr === nothing ? 0 : nidx!(b_fr, tm_fr[q_fr])
-        itq = q_to === nothing ? 0 : nidx!(b_to, tm_to[q_to])
-
-        # C rows: from coil (p_fr − q_fr), to coil (p_to − q_to).
+    for ent in inc
+        # C rows: from coil (w1), to coil (w2).
         C = zeros(ComplexF64, 2, n_tot)
-        C[1, ifp] = 1.0; ifq != 0 && (C[1, ifq] = -1.0)
-        C[2, itp] = 1.0; itq != 0 && (C[2, itq] = -1.0)
+        for (nd, cf) in zip(ent.w1_nodes, ent.w1_coeffs)
+            C[1, nidx!(nd...)] = cf
+        end
+        for (nd, cf) in zip(ent.w2_nodes, ent.w2_coeffs)
+            C[2, nidx!(nd...)] = cf
+        end
 
         if !iszero(Z)
             Y .+= transpose(C) * ((1.0/Z) * [1.0 -N; -N N^2]) * C
@@ -428,26 +544,27 @@ function _yprim_yd(xfmr::Dict{String,Any}; wye_is_from::Bool)
         #   Row k (wye winding k):   C[k, ph_idx[k]] = 1, C[k, neutral] = -1
         #   Row n_ph+k (delta winding k): C[n_ph+k, n_wye+k] = 1, C[n_ph+k, n_wye+k_other] = -1
         #
+        # The coil incidences and ratio a come from the shared seam
+        # `_xfmr_winding_incidence` (w1 = wye coil, w2 = delta coil, ratio = a).
         # Build C and y_prim, then Y = C' * y_prim * C.
+        inc = _xfmr_winding_incidence(xfmr, wye_is_from ? "wye_delta" : "delta_wye")
+        # Node positions, looked up per side (wye slice first, delta slice after).
+        wye_of = Dict{Tuple{String,String},Int}((b_wye, t) => i for (i, t) in enumerate(tm_wye))
+        del_of = Dict{Tuple{String,String},Int}((b_del, t) => n_wye + i for (i, t) in enumerate(tm_del))
+
         n_rows = 2 * n_ph
         C      = zeros(ComplexF64, n_rows, n_tot)
-
-        for k in 1:n_ph
-            ph = ph_idx[k]
-            # Wye winding k: voltage = V_wye_ph[k] - V_wye_neutral
-            C[k, ph] = 1.0
-            if n_pos !== nothing
-                C[k, n_pos] = -1.0
+        for (k, ent) in enumerate(inc)
+            for (nd, cf) in zip(ent.w1_nodes, ent.w1_coeffs)
+                C[k, wye_of[nd]] = cf
             end
-            # Delta winding k:
-            # Yd uses k_next; Dy uses k_prev (backward delta convention from OPF).
-            k_other = wye_is_from ? (k % n_ph) + 1 : ((k - 2 + n_ph) % n_ph) + 1
-            C[n_ph+k, n_wye+k]       =  1.0
-            C[n_ph+k, n_wye+k_other] = -1.0
+            for (nd, cf) in zip(ent.w2_nodes, ent.w2_coeffs)
+                C[n_ph+k, del_of[nd]] = cf
+            end
         end
 
         # y_prim: 2n_ph × 2n_ph block-diagonal, each core's 2×2 in rows [k, n_ph+k].
-        a = 1.0 / n_eff
+        a = inc[1].ratio            # = 1/n_eff, identical for every core
         prim_block = yt * [1.0 -a; -a a^2]
         y_prim = zeros(ComplexF64, n_rows, n_rows)
         for k in 1:n_ph
