@@ -168,14 +168,19 @@ function _line_is_negligible(Z, thresh)
 end
 
 """
-    _ybus_nodes(net; config=_DEFAULT_CONFIG) -> _YbusIndex
+    _ybus_nodes(net; config=_DEFAULT_CONFIG, alias_switches=true) -> _YbusIndex
 
 Assign the deterministic integer node ordering for `net`'s Ybus. Grounded
 terminals map to the earth reference (index `0`); closed switches, negligible-Z
 lines, and unity-ratio zero-leakage transformers alias their terminal pairs onto
 a shared node.
+
+`alias_switches=false` keeps closed-switch terminals as distinct nodes — used by
+`ybus_augmented(...; switches=:constrain)`, which ties them with explicit
+constraint rows instead (yielding the switch currents as solution unknowns).
 """
-function _ybus_nodes(net::Dict{String,Any}; config=_DEFAULT_CONFIG)
+function _ybus_nodes(net::Dict{String,Any}; config=_DEFAULT_CONFIG,
+                     alias_switches::Bool=true)
     thresh = _domain_thresholds(config)
     linecodes = get(net, "linecode", Dict())
 
@@ -192,14 +197,16 @@ function _ybus_nodes(net::Dict{String,Any}; config=_DEFAULT_CONFIG)
         _uf_find(uf, n)   # register
     end
 
-    # 2. alias closed switches
-    for (_, sw) in get(net, "switch", Dict())
-        get(sw, "status", "closed") == "open" && continue
-        bfr = get(sw, "bus_from", ""); bto = get(sw, "bus_to", "")
-        tmf = string.(get(sw, "terminal_map_from", String[]))
-        tmt = string.(get(sw, "terminal_map_to", String[]))
-        for k in 1:min(length(tmf), length(tmt))
-            _uf_union!(uf, (bfr, tmf[k]), (bto, tmt[k]))
+    # 2. alias closed switches (skipped when they become constraint rows)
+    if alias_switches
+        for (_, sw) in get(net, "switch", Dict())
+            get(sw, "status", "closed") == "open" && continue
+            bfr = get(sw, "bus_from", ""); bto = get(sw, "bus_to", "")
+            tmf = string.(get(sw, "terminal_map_from", String[]))
+            tmt = string.(get(sw, "terminal_map_to", String[]))
+            for k in 1:min(length(tmf), length(tmt))
+                _uf_union!(uf, (bfr, tmf[k]), (bto, tmt[k]))
+            end
         end
     end
 
@@ -392,9 +399,9 @@ lines, and 1:1 zero-leakage transformers are node-aliased (not stamped). See the
 module header for the sign/symmetry convention.
 
 A zero-leakage transformer with a non-unity ratio has no finite admittance form;
-it is stamped via `transformer_yprim` as the existing (singular, shunt-only)
-block with that function's warning — regularizing it to the `xfmr_z_min_pu`
-floor is a documented follow-up.
+here it is stamped via `transformer_yprim` as the (singular, shunt-only) block
+with that function's warning. [`ybus_augmented`](@ref) models it exactly instead,
+as an ideal-coupling constraint row.
 """
 function ybus_passive(net::Dict{String,Any}; config=_DEFAULT_CONFIG)::YbusResult
     idx = _ybus_nodes(net; config)
@@ -405,9 +412,11 @@ function ybus_passive(net::Dict{String,Any}; config=_DEFAULT_CONFIG)::YbusResult
 end
 
 # Stamp every passive element (lines, shunts, capacitors, transformers) into the
-# COO accumulators for node index `idx`. Shared by ybus_passive and
-# ybus_linearized (which appends the load-admittance stamps on top).
-function _stamp_passive!(I, J, V, net::Dict{String,Any}, idx::_YbusIndex, config)
+# COO accumulators for node index `idx`. Shared by ybus_passive, ybus_linearized
+# (which appends the load-admittance stamps on top) and ybus_augmented (which
+# passes `skip_transformers` for the units promoted to ideal-coupling rows).
+function _stamp_passive!(I, J, V, net::Dict{String,Any}, idx::_YbusIndex, config;
+                         skip_transformers::Set{Tuple{String,String}}=Set{Tuple{String,String}}())
     linecodes = get(net, "linecode", Dict())
     thresh = _domain_thresholds(config)
 
@@ -432,20 +441,23 @@ function _stamp_passive!(I, J, V, net::Dict{String,Any}, idx::_YbusIndex, config
     end
 
     # transformers (reuse the per-element Yprim; 1:1 ideal ones already aliased)
-    _scatter_transformers!(I, J, V, net, idx, config)
+    _scatter_transformers!(I, J, V, net, idx, config; skip=skip_transformers)
     return
 end
 
 # Stamp every transformer's Yprim, except the 1:1 zero-leakage ones handled by
-# node aliasing in the index (those would produce a spurious singular block).
-function _scatter_transformers!(I, J, V, net, idx::_YbusIndex, config)
+# node aliasing in the index (those would produce a spurious singular block) and
+# any `(subtype, id)` in `skip` (units ybus_augmented promotes to constraint rows).
+function _scatter_transformers!(I, J, V, net, idx::_YbusIndex, config;
+                                skip::Set{Tuple{String,String}}=Set{Tuple{String,String}}())
     thresh = _domain_thresholds(config)
     zmin = _ybus_xfmr_z_min(thresh)
     xfmrs = get(net, "transformer", Dict())
     xfmrs isa Dict || return
     for (subtype, sub) in xfmrs
         sub isa Dict && !isempty(sub) || continue
-        for (_, x) in sub
+        for (xid, x) in sub
+            (string(subtype), string(xid)) in skip && continue
             # 1:1 zero-leakage two-winding transformers are aliased, not stamped.
             if subtype in ("single_phase", "wye_delta", "delta_wye") &&
                _xfmr_is_ideal(x, zmin) &&

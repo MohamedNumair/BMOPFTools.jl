@@ -3997,6 +3997,13 @@ const IEEE13_FIXTURE = """
     include("ybus_linearized_tests.jl")
 
     # -----------------------------------------------------------------------
+    # Augmented nodal admittance (ybus_augmented): ideal switch/transformer
+    # constraint rows — switch invariant, dedupe, ideal-limit checks. Analytic,
+    # always runs.
+    # -----------------------------------------------------------------------
+    include("ybus_augmented_tests.jl")
+
+    # -----------------------------------------------------------------------
     # General n-winding (3+) transformers — accessors, validation, Yprim, and
     # (gated) OPF/PF + OpenDSS parity.
     # -----------------------------------------------------------------------
