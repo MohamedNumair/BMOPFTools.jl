@@ -11,6 +11,10 @@ the network at each node. Two matrices are exposed:
   folded in**, following the OpenDSS solution model (constant-impedance part
   folded into ``\mathbf{Y}``; constant-current / constant-power part returned as
   a compensation-current closure).
+- [`ybus_augmented`](@ref) — the passive matrix **bordered with ideal-coupling
+  constraint rows** (closed switches, zero-leakage transformers of any ratio),
+  `K = [Y Aᵀ; A 0]`. The exact model for elements with no finite admittance
+  form, and the substrate of the [HELM power flow](helm.md).
 
 Both build on the per-element [transformer primitive admittance](transformer-admittance.md)
 and reuse the same convention.
@@ -56,9 +60,10 @@ represents and avoids a conditioning artifact.
 
 !!! note "Ideal transformers with a non-unity ratio"
     A zero-leakage transformer with ``N \neq 1`` cannot be node-aliased (the two
-    sides are not identical) and has no finite ``Y_{\text{prim}}``. It currently
-    stamps the existing singular, shunt-only block with a warning; regularizing
-    it to the `xfmr_z_min_pu` floor is a planned refinement.
+    sides are not identical) and has no finite ``Y_{\text{prim}}``. In
+    `ybus_passive` it stamps the singular, shunt-only block with a warning;
+    [`ybus_augmented`](@ref) models it **exactly** instead, as an ideal-coupling
+    constraint row — see [HELM power flow](helm.md).
 
 ## Folding nonlinear loads
 

@@ -67,6 +67,17 @@ ybus_passive
 YbusResult
 ybus_linearized
 LinearizedYbus
+ybus_augmented
+AugYbusResult
+IdealCoupling
+```
+
+## HELM power flow
+
+```@docs
+solve_pf_helm
+helm_series
+HelmResult
 ```
 
 ## Line constants

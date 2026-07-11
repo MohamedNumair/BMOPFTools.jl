@@ -134,7 +134,7 @@ Keywords:
 - `ideal_xfmrs = :constrain | :stamp` — `:constrain` (default) models every
   zero-leakage, NON-unity-ratio two-winding transformer (`single_phase`,
   `wye_delta`, `delta_wye`) exactly, as ideal winding-core constraints
-  `u_w1 − ratio·u_w2 = 0` from [`_xfmr_winding_incidence`](@ref); `:stamp`
+  `u_w1 − ratio·u_w2 = 0` from `_xfmr_winding_incidence`; `:stamp`
   falls back to `ybus_passive`'s singular shunt-only block (with its warning).
   Unity-ratio zero-leakage transformers stay node-aliased in either mode
   (an exact identity — strictly better than a constraint).
