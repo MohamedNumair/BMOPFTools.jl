@@ -1,5 +1,5 @@
 """
-    write_bmopf(net::Dict{String,Any}, dest; meta=nothing)
+    write_bmopf(net::Dict{String,Any}, dest; meta=nothing, indent=2)
 
 Serialise a BMOPF network dict to JSON.
 
@@ -18,11 +18,17 @@ the `"_meta"` key is persisted under `meta.provenance`, and non-spec bus fields
 `additionalProperties: false` on bus objects. Dropping the coordinates is lossy
 by design: they are not recoverable on read.
 
-# Keyword argument
+Output is newline-terminated in both modes, so files round-trip through `diff`
+and shell pipelines without a "\\ No newline at end of file" marker.
+
+# Keyword arguments
 - `meta`: a `Dict` of fields to include or override in the written `meta` block.
   All fields are optional; common ones are `title`, `description`, `license`,
   `authors`, `data_sources`, and `version`. See `docs/src/conventions.md` for the
   full field reference.
+- `indent`: number of spaces for pretty-printing (default `2`). Pass
+  `indent=nothing` for compact single-line output — one line of JSON plus the
+  trailing newline.
 
 # Example
 ```julia
@@ -69,6 +75,7 @@ function write_bmopf(net::Dict{String,Any}, io::IO;
     out["meta"] = out_meta
     if isnothing(indent)
         JSON3.write(io, out)
+        write(io, '\n')
     else
         JSON3.pretty(io, out, JSON3.AlignmentContext(; indent=UInt16(indent)))
     end
