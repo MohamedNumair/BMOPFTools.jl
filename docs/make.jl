@@ -21,6 +21,7 @@ makedocs(
         ],
         "Data model"              => [
             "Buses & terminals primer" => "terminals_primer.md",
+            "Ground, neutral & earth return" => "tutorial_grounding.md",
             "Data model conventions"   => "conventions.md",
             "Units, bases & economics" => "tutorial_units.md",
             "Object identity"          => "semantic_modeling.md",
@@ -36,6 +37,7 @@ makedocs(
         "Case preparation"        => [
             "Case augmentation"        => "augmentation.md",
             "From nameplate data to a model" => "tutorial_nameplate.md",
+            "From test report to transformer model" => "tutorial_transformer_tests.md",
             "Simplification tutorial"  => "tutorial_simplify.md",
             "DER placement tutorial"   => "tutorial_ders.md",
             "VVWO tutorial"            => "tutorial_vvwo.md",
@@ -45,6 +47,7 @@ makedocs(
             "Optimal power flow"       => "opf.md",
             "Transformer models"       => "transformer_models.md",
             "Impedance models & OPF decisions" => "tutorial_impedance_models.md",
+            "Choosing & identifying a load model" => "tutorial_load_models.md",
             "OPF result dictionary"    => "results.md",
             "Validating the OPF"       => "validation.md",
             "SWER case study"          => "tutorial_swer.md",
