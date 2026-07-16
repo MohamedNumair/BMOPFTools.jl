@@ -286,3 +286,11 @@ code you agree to the BSD-3-Clause licence.
 This repository is not static; please include the version number when citing
 it in scholarly work.  Case files carry original-source attribution in their
 headers — cite those sources when using specific networks.
+
+## Special thanks to 
+(in alphabetic order)
+Archie Chapman
+Mohamed Numair
+Samuel Talkington
+Sleiman Mhanna
+Tomislav Antić 
