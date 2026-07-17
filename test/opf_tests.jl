@@ -2848,6 +2848,116 @@
     end
 
     # ─────────────────────────────────────────────────────────────────────────
+    # PF5b: INLINE line limits are ignored too (issue #354). An inline i_max /
+    # s_max on the line dict overrides the linecode's in the OPF (branch.jl),
+    # so the PF must strip the line component itself, not just linecodes.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "PF5b: inline line i_max/s_max are ignored by solve_pf (#354)" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0,
+             "i_max":[1.0e-3],"s_max":[1.0e-3]}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[100000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_pf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["line"]["l1"]["1"]["cm_fr"] > 1.0
+        # The caller's net must be untouched.
+        @test net["line"]["l1"]["i_max"] == [1.0e-3]
+        @test net["line"]["l1"]["s_max"] == [1.0e-3]
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PF5c: the strip contract, unit-tested — line and dc_branch limit fields
+    # are removed; generator p_min/p_max are NOT (they are the PF's fixed
+    # setpoint, not an operational limit).
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "PF5c: _strip_operational_limits! covers line + dc_branch, keeps gen setpoints" begin
+        ext = Base.get_extension(BMOPFTools, :BMOPFOpfExt)
+        net = Dict{String,Any}(
+            "linecode"  => Dict{String,Any}("lc" => Dict{String,Any}(
+                "R_series_1_1" => 0.5, "i_max" => [10.0], "s_max" => [1.0e4])),
+            "line"      => Dict{String,Any}("l1" => Dict{String,Any}(
+                "linecode" => "lc", "i_max" => [10.0], "s_max" => [1.0e4])),
+            "switch"    => Dict{String,Any}("sw" => Dict{String,Any}("i_max" => [10.0])),
+            "generator" => Dict{String,Any}("g1" => Dict{String,Any}(
+                "i_max" => [10.0], "s_max" => [1.0e4],
+                "p_min" => [5.0e3], "p_max" => [5.0e3])),
+            "dc_branch" => Dict{String,Any}("dcb" => Dict{String,Any}(
+                "r" => 0.1, "i_max" => [10.0], "p_max" => 1.0e4)),
+            "transformer" => Dict{String,Any}("single_phase" => Dict{String,Any}(
+                "t1" => Dict{String,Any}(
+                    "i_max_from" => [10.0], "i_max_to" => [100.0],
+                    "s_rating" => 5.0e4))))
+        ext._strip_operational_limits!(net)
+
+        for (comp, fields) in (net["linecode"]["lc"]        => ("i_max", "s_max"),
+                               net["line"]["l1"]            => ("i_max", "s_max"),
+                               net["switch"]["sw"]          => ("i_max",),
+                               net["generator"]["g1"]       => ("i_max", "s_max"),
+                               net["dc_branch"]["dcb"]      => ("i_max", "p_max"),
+                               net["transformer"]["single_phase"]["t1"] =>
+                                   ("i_max_from", "i_max_to"))
+            for f in fields
+                @test !haskey(comp, f)
+            end
+        end
+        # Fixed generator setpoints survive; the transformer nameplate contract
+        # (always enforced) survives.
+        @test net["generator"]["g1"]["p_min"] == [5.0e3]
+        @test net["generator"]["g1"]["p_max"] == [5.0e3]
+        @test net["transformer"]["single_phase"]["t1"]["s_rating"] == 5.0e4
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PF5d: the s_rating exception, pinned both ways (issue #355). The nameplate
+    # coil cap IS enforced in a power flow — a load beyond s_rating is
+    # LOCALLY_INFEASIBLE, not an overload report — and deleting s_rating from
+    # the input net is the documented escape hatch.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "PF5d: transformer s_rating stays enforced in solve_pf (#355)" begin
+        mknet() = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "lv": {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "transformer":{"single_phase":{"t1":{
+             "bus_from":"src","bus_to":"lv",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "v_nom_from":1000.0,"v_nom_to":1000.0,"s_rating":5000.0,
+             "r_series_from":0.05,"x_series_from":0.1}}},
+         "load":{"ld1":{"bus":"lv","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[10000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        # 10 kW load through a 5 kVA nameplate: the coil cap binds → infeasible.
+        res = solve_pf(mknet())
+        @test res["termination_status"] ∉ ("LOCALLY_SOLVED", "OPTIMAL")
+
+        # The documented escape hatch: delete s_rating → the same PF solves and
+        # reports the overloaded state.
+        net = mknet()
+        delete!(net["transformer"]["single_phase"]["t1"], "s_rating")
+        res2 = solve_pf(net)
+        @test res2["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test sum(ph["pd"] for ph in values(res2["load"]["ld1"])) ≈ 10000.0  rtol=1e-3
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
     # Single-phase autotransformer / step voltage regulator
     #
     # Lossless ideal regulator collapses to V_to = n_eff·V_fr_pn.
