@@ -22,14 +22,16 @@ sep(t) = println("\n" * "="^72 * "\n  " * t * "\n" * "="^72)
 sep("1. MVLVmeshed: a combined MV+LV network with deliberate mesh ties")
 path = joinpath(pkgdir(BMOPFTools), "test", "data", "MVLVmeshed", "Master.dss")
 net  = from_dss(path)
-println(length(net["bus"]), " buses, ", length(net["line"]), " lines, ",
-        length(net["switch"]), " switches, ", length(net["load"]), " loads")
+println(length(get(net, "bus", Dict())), " buses, ",
+        length(get(net, "line", Dict())), " lines, ",
+        length(get(net, "switch", Dict())), " switches, ",
+        length(get(net, "load", Dict())), " loads")
 
 # ── 2. Layer one: the import ledger ──────────────────────────────────────────
 sep("2. powerio_warnings — what the import could not carry")
-pw = net["_meta"]["powerio_warnings"]
+pw = get(get(net, "_meta", Dict()), "powerio_warnings", String[])
 println(length(pw), " import warnings; first three:")
-for w in pw[1:3]; println("  • ", w); end
+for w in first(pw, 3); println("  • ", w); end
 
 # ── 3. Layer two: analyze severities ─────────────────────────────────────────
 sep("3. analyze: errors / warnings / infos")
@@ -44,10 +46,16 @@ for (c, n) in sort(collect(wcount)); println("  ", rpad(c, 26), n); end
 
 # ── 4. Verdicts ───────────────────────────────────────────────────────────────
 sep("4. Reading warnings like a reviewer")
+warns = warnings(report)
 for code in ("W.CONN.MESHED", "W.CONN.DANGLING", "W.DOM.XFMR_STEP_UP",
              "W.OPS.XFMR_OVERLOADED")
-    f = first(f for f in warnings(report) if String(f.code) == code)
-    println(f.code, ": ", f.message, "\n")
+    i = findfirst(f -> String(f.code) == code, warns)
+    if isnothing(i)
+        println(code, ": (not emitted for this network)\n")
+    else
+        f = warns[i]
+        println(f.code, ": ", f.message, "\n")
+    end
 end
 
 # ── 5. fix_case + manifest ────────────────────────────────────────────────────

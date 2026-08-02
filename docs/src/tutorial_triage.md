@@ -32,9 +32,12 @@ using BMOPFTools
 
 path = joinpath(pkgdir(BMOPFTools), "test", "data", "MVLVmeshed", "Master.dss")
 net  = from_dss(path)
-println(length(net["bus"]), " buses, ", length(net["line"]), " lines, ",
-        length(net["switch"]), " switches, ", length(net["load"]), " loads, ",
-        sum(length(d) for d in values(net["transformer"])), " transformers")
+println(length(get(net, "bus", Dict())), " buses, ",
+        length(get(net, "line", Dict())), " lines, ",
+        length(get(net, "switch", Dict())), " switches, ",
+        length(get(net, "load", Dict())), " loads, ",
+        sum((length(d) for d in values(get(net, "transformer", Dict()))); init=0),
+        " transformers")
 ```
 
 Two independent layers of messages describe what you just loaded, and they
@@ -48,9 +51,9 @@ or reinterpret in `net["_meta"]["powerio_warnings"]` — the import's fidelity
 ledger:
 
 ```@example triage
-pw = net["_meta"]["powerio_warnings"]
+pw = get(get(net, "_meta", Dict()), "powerio_warnings", String[])
 println(length(pw), " import warnings; a sample:")
-for w in pw[1:3]
+for w in first(pw, 3)
     println("  • ", w)
 end
 ```
@@ -100,10 +103,16 @@ accept and document), or **disclose** (true of this network by design — keep
 the finding as part of the case's record).
 
 ```@example triage
+warns = warnings(report)
 for code in ("W.CONN.MESHED", "W.CONN.DANGLING", "W.DOM.XFMR_STEP_UP",
              "W.OPS.XFMR_OVERLOADED")
-    f = first(f for f in warnings(report) if String(f.code) == code)
-    println(f.code, "\n   ", f.message, "\n")
+    i = findfirst(f -> String(f.code) == code, warns)
+    if isnothing(i)
+        println(code, "\n   (not emitted for this network)\n")
+    else
+        f = warns[i]
+        println(f.code, "\n   ", f.message, "\n")
+    end
 end
 ```
 
