@@ -46,6 +46,7 @@ makedocs(
         ],
         "Optimal power flow"      => [
             "Optimal power flow"       => "opf.md",
+            "Parameterized & differentiable extensions" => "differentiable_extensions.md",
             "Transformer models"       => "transformer_models.md",
             "Impedance models & OPF decisions" => "tutorial_impedance_models.md",
             "Choosing & identifying a load model" => "tutorial_load_models.md",

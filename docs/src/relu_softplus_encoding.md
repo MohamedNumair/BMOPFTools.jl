@@ -165,6 +165,28 @@ be tightened per study. The same paper presents a **quadratic Bézier spline** a
 an alternative smoothing with an equivalent $\Delta U$ tolerance; BMOPFTools ships
 the softplus form, which has the cheaper gradient/Hessian evaluation.
 
+### Parameterized curve points
+
+When a coefficient provider supplies breakpoints or ordinates, the model keeps
+the curve's nominal point count, hinge structure, and smoothing width fixed.
+This is essential for repeated parameter updates: the JuMP graph cannot grow or
+branch according to a parameter value. The engine retains every segment whose
+ordinate may change in the symbolic hinge sum. A segment with two fixed equal
+ordinates is omitted, avoiding a live zero-over-parameterized-gap expression.
+It also stamps strict
+ordering guards using a small gap derived from the nominal curve. Crossing two
+breakpoints therefore yields an infeasible solve rather than a different curve
+topology and an untrustworthy derivative.
+
+DiffOpt's nonlinear wrapper may reject JuMP user-defined operators. Select
+`softplus=:builtin` explicitly when building that model to use the equivalent
+native `log1p(exp(⋅))` expression and keep parameters visible to
+differentiation. BMOPFTools does not silently switch encodings after an
+optimizer error. Unlike the default StatsFuns-backed operator, the built-in
+expression does not have the same regime-split overflow protection; studies
+using extreme voltage-to-smoothing ratios should treat the report qualification
+as a numerical warning and test the relevant range.
+
 ## 6. Provenance and related work
 
 The encoding above is the composition of two well-established ideas; naming them
