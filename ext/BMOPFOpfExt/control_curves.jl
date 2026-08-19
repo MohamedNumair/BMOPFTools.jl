@@ -36,24 +36,8 @@ reproduces the characteristic and clamps flat outside `[xs[1], xs[end]]`.
 contribute no triples.
 """
 function breakpoints_to_triples(xs::AbstractVector{<:Real}, ys::AbstractVector{<:Real})
-    n = length(xs)
-    n == length(ys) ||
-        throw(ArgumentError("breakpoints xs and values ys must have equal length"))
-    n >= 2 || throw(ArgumentError("need at least 2 breakpoints, got $n"))
-    for i in 1:(n - 1)
-        xs[i + 1] > xs[i] ||
-            throw(ArgumentError("breakpoints xs must be strictly increasing"))
-    end
-
-    baseline = Float64(ys[1])
-    triples = Tuple{Float64,Float64}[]   # (slope a, shift x̄)
-    for i in 1:(n - 1)
-        s = (Float64(ys[i + 1]) - Float64(ys[i])) / (Float64(xs[i + 1]) - Float64(xs[i]))
-        s == 0.0 && continue
-        push!(triples, (s,  Float64(xs[i])))
-        push!(triples, (-s, Float64(xs[i + 1])))
-    end
-    return (baseline = baseline, triples = triples)
+    curve = BMOPFTools._piecewise_linear_hinges(xs, ys)
+    return (baseline=curve.baseline, triples=curve.hinges)
 end
 
 "Exact (kinked) evaluation of a ReLU-sum curve — used for testing the encoding."
@@ -90,6 +74,15 @@ function relu_operator(model, ε::Float64; name::Symbol)
     return JuMP.add_nonlinear_operator(model, 1, f, df, d2f; name = name)
 end
 
+# DiffOpt's optimizer wrapper currently rejects MOI.UserDefinedFunction even
+# when the wrapped nonlinear solver supports it. This callable emits only native
+# MOI nonlinear operators, which DiffOpt can transform and differentiate.
+struct BuiltinSoftplus
+    eps::Float64
+end
+(op::BuiltinSoftplus)(x::Real) = op.eps * log1pexp(x / op.eps)
+(op::BuiltinSoftplus)(x) = op.eps * log1p(exp(x / op.eps))
+
 """
     relu_operator_for!(cache, model, ε) -> op
 
@@ -98,10 +91,29 @@ first time a given `ε` is requested and caching it in `cache`
 (`Dict{Float64,Any}`). Lets IBRs at different voltage bases share operators
 while keeping each registration unique.
 """
-function relu_operator_for!(cache::Dict{Float64,Any}, model, ε::Float64)
+function relu_operator_for!(cache::Dict{Float64,Any}, model, ε::Float64;
+                            mode::Symbol=:user_defined)
     haskey(cache, ε) && return cache[ε]
-    name = Symbol("op_reluε_$(length(cache) + 1)")
-    op = relu_operator(model, ε; name = name)
+    mode in (:user_defined, :builtin) || throw(ArgumentError(
+        "softplus must be :user_defined or :builtin, got :$mode"))
+    op = if mode == :builtin
+        BuiltinSoftplus(ε)
+    else
+        try
+            relu_operator(model, ε;
+                name=Symbol("op_reluε_$(length(cache) + 1)"))
+        catch err
+            if err isa JuMP.MOI.SetAttributeNotAllowed{
+                    JuMP.MOI.UserDefinedFunction}
+                throw(ArgumentError(
+                    "the model backend rejects user-defined nonlinear " *
+                    "operators required by softplus=:user_defined; pass " *
+                    "softplus=:builtin explicitly (required by current " *
+                    "DiffOpt nonlinear wrappers)"))
+            end
+            rethrow()
+        end
+    end
     cache[ε] = op
     return op
 end
@@ -113,8 +125,8 @@ Build the JuMP expression `baseline + Σ a·op(U − x̄)` for a ReLU-sum curve,
 `op` is a registered smooth-ReLU operator and `U` is a voltage-magnitude
 expression. Returns `baseline` unchanged when `triples` is empty.
 """
-function curve_expr(op, U, baseline::Real, triples)
-    acc = Float64(baseline)
+function curve_expr(op, U, baseline, triples)
+    acc = baseline
     isempty(triples) && return acc
     expr = acc + sum(a * op(U - x̄) for (a, x̄) in triples)
     return expr
@@ -133,7 +145,7 @@ node), so the singular corner is reachable and would poison Ipopt's Jacobian.
 The `u²`-equality has a bounded Jacobian everywhere. This mirrors the load
 model's `W`/`s` implicit-magnitude variables.
 """
-function umag_var(model, dvr, dvi)
+function umag_var(model, dvr, dvi; on_variable::Union{Nothing,Function}=nothing)
     u = @variable(model, lower_bound = 0.0, base_name = "umag")
     @constraint(model, u^2 == dvr^2 + dvi^2)
     # Seed the start from the voltage warm-start, so Ipopt does not begin at the
@@ -143,5 +155,6 @@ function umag_var(model, dvr, dvi)
     sv(v) = something(JuMP.start_value(v), 0.0)
     mag0 = sqrt(JuMP.value(sv, dvr)^2 + JuMP.value(sv, dvi)^2)
     JuMP.set_start_value(u, max(mag0, 1e-6))
+    !isnothing(on_variable) && on_variable(u)
     return u
 end

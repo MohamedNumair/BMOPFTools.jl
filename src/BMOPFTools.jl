@@ -23,10 +23,12 @@ module BMOPFTools
 
 using Dates
 using LinearAlgebra
+using SparseArrays
 using Logging
 using Statistics
 using Graphs
 using JSON3
+using StatsFuns: log1pexp
 import PowerIO
 
 # Stable URI for the BMOPF JSON schema. Will become a versioned path once the
@@ -36,6 +38,72 @@ const _BMOPF_SCHEMA_URI =
 
 # Package version, read once at load time from the Project.toml.
 const _BMOPFTOOLS_VERSION = string(pkgversion(BMOPFTools))
+
+"""
+    COMPONENT_COLLECTIONS
+
+Canonical tuple of top-level component collections — the keys of `net` that hold
+a string-keyed dict of named component instances placed in the network
+(`net["load"]["ld1"]`, `net["dc_bus"]["d1"]`, …).
+
+This is the single source of truth for any function that must iterate every
+component type. Generic loops should use it (as
+`BMOPFTools.COMPONENT_COLLECTIONS`; it is module-internal, like
+`TRANSFORMER_SUBTYPES`) rather than repeating the tuple inline, so a new
+component type flows through IO, validation and analysis for free. Current
+consumers: `each_terminal_array`, `_any_component_has_ts_ref` and `get_snapshot`
+— which each used to keep their own inline list, and had already drifted apart.
+
+**Adding a component type:** add its schema key here. Nothing else needs to
+change. `test/registry_tests.jl` fails CI if a schema key is neither registered
+here nor listed as a known non-component, and also if this tuple names a type the
+schema no longer defines.
+
+Deliberately *not* component collections:
+
+| key | why |
+|:--|:--|
+| `transformer` | subtype-dispatched via `TRANSFORMER_SUBTYPES`; `net["transformer"]` is keyed by subtype, not by instance |
+| `linecode`, `wire_data`, `line_geometry` | shared catalogs referenced *by* components; they define no terminals of their own |
+| `time_series` | data store keyed by series id |
+| `name`, `meta`, `extras`, `terminal_conventions` | scalars and document metadata |
+
+See also `TS_COMPONENT_COLLECTIONS` for the time-series-capable subset.
+"""
+const COMPONENT_COLLECTIONS = (
+    "bus", "line", "load", "generator", "voltage_source",
+    "shunt", "switch", "ibr", "capacitor", "control_profile",
+    "dc_bus", "dc_branch", "dc_grounding", "dc_load", "dc_source",
+)
+
+"""
+    TS_COMPONENT_COLLECTIONS
+
+Subset of `COMPONENT_COLLECTIONS` whose instances may carry a
+`"time_series"` sub-dict that `get_snapshot` can actually materialise. Consumed
+by `_any_component_has_ts_ref` (which decides whether a network counts as a
+time-series network) and by `get_snapshot` (which resolves the references).
+
+Currently this is every component collection except `control_profile`.
+
+!!! note "Why control_profile is excluded"
+    A control profile's scalable quantities (`volt_var.breakpoints`, `q_limits`,
+    …) are nested *inside* control-law sub-objects, but `_resolve_component_ts!`
+    only scales top-level numeric or vector params on a component. A
+    `time_series` reference on a control profile therefore has no top-level value
+    to scale, and resolving it would throw rather than materialise a snapshot.
+
+    Including `control_profile` here is the natural fix once the resolver grows
+    nested-path support (e.g. a `"volt_var.breakpoints"` key); until then it is
+    held out deliberately, and a control-profile time-series reference is ignored
+    exactly as it was before the registry existed.
+
+`transformer` is absent for a different reason: it is not in
+`COMPONENT_COLLECTIONS` at all. Its time-series references *are* resolved,
+by a dedicated subtype-aware pass in `get_snapshot` and `_any_component_has_ts_ref`.
+"""
+const TS_COMPONENT_COLLECTIONS =
+    Tuple(c for c in COMPONENT_COLLECTIONS if c != "control_profile")
 
 # Canonical list of transformer subtype keys under `net["transformer"][subtype]`.
 # Generic loops that iterate every subtype should use this constant (visible to
@@ -65,6 +133,28 @@ const WINDING_LIST_SUBTYPES = ("n_winding",)
 # zone (and orphan it from its voltage reference).
 const GALVANIC_CONTINUOUS_SUBTYPES =
     ("single_phase_autotransformer", "open_delta_regulator")
+
+"""
+    _xfmr_from_to_buses(subtype, t) -> (from::Vector{String}, to::Vector{String})
+
+The "from" and "to" bus references of a transformer, unifying the two-bus and
+winding-list (`n_winding`) shapes so generic downstream / connectivity loops can
+handle both. Two-bus subtypes → `([bus_from], [bus_to])`; `n_winding` →
+winding 1's bus as the from side and every other winding's bus as the to side.
+Absent references drop out (empty vectors).
+"""
+function _xfmr_from_to_buses(subtype, t)::Tuple{Vector{String},Vector{String}}
+    if subtype in WINDING_LIST_SUBTYPES
+        ws = _nw_windings(t)
+        isempty(ws) && return (String[], String[])
+        return (isempty(ws[1].bus) ? String[] : String[ws[1].bus],
+                String[w.bus for w in ws[2:end] if !isempty(w.bus)])
+    end
+    f  = get(t, "bus_from", nothing)
+    tt = get(t, "bus_to",   nothing)
+    (f  isa AbstractString ? String[f]  : String[],
+     tt isa AbstractString ? String[tt] : String[])
+end
 
 # ---------------------------------------------------------------------------
 # Finding — the one struct in the library.
@@ -193,15 +283,135 @@ infos(r::SummaryReport)    = infos(r.findings)
 # ---------------------------------------------------------------------------
 
 """
-    _neutral_terminal(bus) -> Union{String,Nothing}
+    TerminalRoles
 
-Identify the neutral terminal of a bus. Checks the explicit `neutral_terminal`
-field first (spec-authoritative), then falls back to the documented naming
-convention: a terminal named `"n"` or `"N"` (any case) is treated as neutral.
+Resolved case-wide classification of terminal-name labels into `phase`,
+`neutral` and `earth` roles (see [`_terminal_roles`](@ref)). `inferred` is
+`true` when the roles were derived from the naming convention because the case
+carried no explicit `terminal_conventions` block, and `false` when they were
+read from that block.
+"""
+struct TerminalRoles
+    phase::Set{String}
+    neutral::Set{String}
+    earth::Set{String}
+    inferred::Bool
+end
+
+# Terminal-name label treated as neutral by the fallback naming convention
+# (case-insensitive `"n"`/`"N"`). This is the single definition of the guess we
+# make when a case declares no `terminal_conventions`.
+_is_convention_neutral(name) = lowercase(string(name)) == "n"
+
+"""
+    _terminal_roles(net) -> TerminalRoles
+
+Resolve the case-wide terminal-role classification for an AC network.
+
+If `net["terminal_conventions"]` is present it is authoritative: the `phase`,
+`neutral` and `earth` label lists are taken verbatim (matched exactly, including
+case). Otherwise the roles are **inferred** from every bus's `terminal_names`
+using the naming convention (`"n"`/`"N"` → neutral, everything else → phase, no
+earth) and the returned value is flagged `inferred=true` — which
+`W.CONV.TERMINAL_ROLES_INFERRED` reports during validation.
+
+`dc_bus` terminals are out of scope (DC carries its own pole roles) and are not
+scanned.
+"""
+function _terminal_roles(net::Dict{String,Any})::TerminalRoles
+    tc = get(net, "terminal_conventions", nothing)
+    if tc isa Dict
+        strs(k) = Set{String}(string(x) for x in get(tc, k, String[]))
+        return TerminalRoles(strs("phase"), strs("neutral"), strs("earth"), false)
+    end
+    phase = Set{String}()
+    neutral = Set{String}()
+    for (_, bus) in get(net, "bus", Dict())
+        bus isa Dict || continue
+        for t in get(bus, "terminal_names", String[])
+            s = string(t)
+            push!(_is_convention_neutral(s) ? neutral : phase, s)
+        end
+    end
+    TerminalRoles(phase, neutral, Set{String}(), true)
+end
+
+"""
+    _neutral_labels(net) -> Set{String}
+
+The set of terminal-name labels that denote a neutral conductor for this case,
+from the resolved [`TerminalRoles`](@ref). Pass this to the terminal-map helpers
+(`_neutral_terminal`, `_neutral_pos`, `_phase_positions`, …) so they resolve the
+neutral by the case's declared label(s) rather than the hard-wired `"n"` guess.
+"""
+_neutral_labels(net::Dict{String,Any})::Set{String} = _terminal_roles(net).neutral
+
+"""
+    _terminal_conventions_dict(net) -> Dict{String,Any}
+
+Build an exportable `terminal_conventions` block for `net`. If the case already
+declares one it is returned verbatim (sorted for a stable serialisation);
+otherwise the roles are inferred from the naming convention and promoted to an
+explicit block (`phase`/`neutral` populated from the bus terminal names, `earth`
+empty). Used by `from_dss` to record the convention it knows at ingest and by
+`write_bmopf` to guarantee the field is always exported.
+"""
+function _terminal_conventions_dict(net::Dict{String,Any})::Dict{String,Any}
+    roles = _terminal_roles(net)
+    Dict{String,Any}(
+        "phase"   => sort!(collect(roles.phase)),
+        "neutral" => sort!(collect(roles.neutral)),
+        "earth"   => sort!(collect(roles.earth)),
+    )
+end
+
+"""
+    _materialize_terminal_roles!(net) -> net
+
+Stamp each AC bus with a derived `neutral_terminal` field resolved from the
+case's [`TerminalRoles`](@ref), so the per-bus `_neutral_terminal(bus)` accessor
+returns the right terminal even when the case declares a non-`"n"` neutral label
+via `terminal_conventions`. This is an in-memory convenience only — the field is
+stripped on write (see `write_bmopf`) since it is re-derivable from the exported
+`terminal_conventions`.
+
+A bus that resolves to no neutral is left untouched; a bus that resolves to more
+than one neutral terminal keeps only the first (the redundancy is reported as
+`W.CONV.MULTIPLE_NEUTRALS` during validation). Buses that already carry an
+explicit `neutral_terminal` are left as-is.
+"""
+function _materialize_terminal_roles!(net::Dict{String,Any})
+    roles = _terminal_roles(net)
+    # Only stamp when the case declares its convention: with no declaration the
+    # neutral label is the `"n"` naming convention, which `_neutral_terminal`
+    # already resolves per-bus, so stamping would only pollute bus dicts.
+    roles.inferred && return net
+    isempty(roles.neutral) && return net
+    for (_, bus) in get(net, "bus", Dict())
+        bus isa Dict || continue
+        haskey(bus, "neutral_terminal") && continue
+        names = get(bus, "terminal_names", nothing)
+        names isa AbstractVector || continue
+        nt = _neutral_terminal(names, roles.neutral)
+        nt === nothing || (bus["neutral_terminal"] = nt)
+    end
+    net
+end
+
+"""
+    _neutral_terminal(bus) -> Union{String,Nothing}
+    _neutral_terminal(names[, neutral_labels]) -> Union{String,Nothing}
+
+Identify the neutral terminal of a bus (or of a terminal-name/`terminal_map`
+vector). For a bus, the explicit `neutral_terminal` field is checked first
+(materialised from `terminal_conventions` at ingest). Otherwise, when a
+`neutral_labels` set is supplied (typically `_neutral_labels(net)`), a terminal
+whose label is in that set is the neutral; when it is omitted, the fallback
+naming convention applies — a terminal named `"n"`/`"N"` (any case) is neutral.
 Returns `nothing` if no neutral can be identified.
 
-The OpenDSS numeric convention ["1","2","3","4"] is resolved at import time by
-`from_dss` (remapped to ["a","b","c","n"]) rather than here.
+The OpenDSS numeric convention `["1","2","3","4"]` is resolved at import time by
+`from_dss` (remapped to `["a","b","c","n"]`) rather than here.
 """
 function _neutral_terminal(bus::Dict{String,Any})::Union{String,Nothing}
     nt = get(bus, "neutral_terminal", nothing)
@@ -211,16 +421,24 @@ end
 
 function _neutral_terminal(names::AbstractVector)::Union{String,Nothing}
     for nm in names
-        lowercase(string(nm)) == "n" && return string(nm)
+        _is_convention_neutral(nm) && return string(nm)
+    end
+    nothing
+end
+
+function _neutral_terminal(names::AbstractVector, neutral_labels)::Union{String,Nothing}
+    for nm in names
+        string(nm) in neutral_labels && return string(nm)
     end
     nothing
 end
 
 """
-    _neutral_pos(terminal_map) -> Union{Int,Nothing}
+    _neutral_pos(terminal_map[, neutral_labels]) -> Union{Int,Nothing}
 
 Return the 1-based position of the neutral terminal in `terminal_map`,
-or `nothing` if none is identified.
+or `nothing` if none is identified. See [`_neutral_terminal`](@ref) for how
+`neutral_labels` selects the resolution strategy.
 """
 function _neutral_pos(terminal_map::AbstractVector)::Union{Int,Nothing}
     nt = _neutral_terminal(terminal_map)
@@ -228,14 +446,71 @@ function _neutral_pos(terminal_map::AbstractVector)::Union{Int,Nothing}
     findfirst(==(nt), string.(terminal_map))
 end
 
+function _neutral_pos(terminal_map::AbstractVector, neutral_labels)::Union{Int,Nothing}
+    nt = _neutral_terminal(terminal_map, neutral_labels)
+    nt === nothing && return nothing
+    findfirst(==(nt), string.(terminal_map))
+end
+
 """
-    _phase_positions(terminal_map) -> Vector{Int}
+    _phase_positions(terminal_map[, neutral_labels]) -> Vector{Int}
 
 Return the 1-based positions of the non-neutral conductors in `terminal_map`.
 """
 function _phase_positions(terminal_map::AbstractVector)::Vector{Int}
     np = _neutral_pos(terminal_map)
     [k for k in eachindex(terminal_map) if k != np]
+end
+
+function _phase_positions(terminal_map::AbstractVector, neutral_labels)::Vector{Int}
+    np = _neutral_pos(terminal_map, neutral_labels)
+    [k for k in eachindex(terminal_map) if k != np]
+end
+
+"""
+    _infer_ibr_topology(terminal_map) -> String
+
+Infer an IBR/STATCOM topology from its terminal map by NEUTRAL PRESENCE and
+phase count (not terminal count alone), matching the `_IBR_ARITY` contract:
+
+  * a neutral terminal present → `SINGLE_PHASE` (2 terminals) or `FOUR_LEG` (≥3);
+  * no neutral                 → `THREE_LEG` (≥3 terminals, a delta / 3-wire
+    connection) or `SINGLE_PHASE` (a phase-to-phase pair).
+
+Counting terminals alone mislabels a 3-wire delta `[a,b,c]` as `FOUR_LEG`.
+"""
+function _infer_ibr_topology(terminal_map::AbstractVector)::String
+    _infer_ibr_topology(terminal_map, _neutral_terminal(terminal_map))
+end
+
+function _infer_ibr_topology(terminal_map::AbstractVector, neutral_labels)::String
+    _infer_ibr_topology(terminal_map, _neutral_terminal(terminal_map, neutral_labels))
+end
+
+function _infer_ibr_topology(terminal_map::AbstractVector,
+                             neutral::Union{String,Nothing})::String
+    n = length(terminal_map)
+    if neutral !== nothing
+        return n <= 2 ? "SINGLE_PHASE" : "FOUR_LEG"
+    end
+    n >= 3 ? "THREE_LEG" : "SINGLE_PHASE"
+end
+
+"""
+    _ibr_phase_count(topology, terminal_map) -> (n_phase::Int, has_neutral::Bool)
+
+Number of phase currents and whether a neutral conductor is present for an IBR,
+given its `topology` and terminal map. Single source of truth mirrored by the
+OPF stamp (`ext/BMOPFOpfExt/ibr.jl`) and integrity's per-conductor `i_max`
+check: `THREE_LEG` carries one current per terminal with no neutral;
+`SINGLE_PHASE` one phase current (with a return when ≥2 terminals); `FOUR_LEG`
+one per non-neutral phase plus a neutral.
+"""
+function _ibr_phase_count(topology, terminal_map::AbstractVector)::Tuple{Int,Bool}
+    n = length(terminal_map)
+    topology == "THREE_LEG"    && return (n, false)
+    topology == "SINGLE_PHASE" && return (1, n >= 2)
+    return (max(n - 1, 0), true)   # FOUR_LEG (and unknown → default)
 end
 
 """
@@ -255,13 +530,23 @@ This lets the builders treat both `["1","n"]` (L-N) and `["1","2"]` (L-L) maps
 uniformly — the return current always closes at `q`.
 """
 function _xfmr_winding_pairs(terminal_map::AbstractVector)::Vector{Tuple{Int,Union{Int,Nothing}}}
-    np = _neutral_pos(terminal_map)
+    _xfmr_winding_pairs(terminal_map, _neutral_pos(terminal_map))
+end
+
+function _xfmr_winding_pairs(terminal_map::AbstractVector,
+                             neutral_labels)::Vector{Tuple{Int,Union{Int,Nothing}}}
+    _xfmr_winding_pairs(terminal_map, _neutral_pos(terminal_map, neutral_labels))
+end
+
+function _xfmr_winding_pairs(terminal_map::AbstractVector,
+                             np::Union{Int,Nothing})::Vector{Tuple{Int,Union{Int,Nothing}}}
+    phases = [k for k in eachindex(terminal_map) if k != np]
     if np !== nothing
-        return [(p, np) for p in _phase_positions(terminal_map)]
+        return [(p, np) for p in phases]
     elseif length(terminal_map) == 2
         return [(1, 2)]
     else
-        return [(p, nothing) for p in _phase_positions(terminal_map)]
+        return [(p, nothing) for p in phases]
     end
 end
 
@@ -433,12 +718,16 @@ include("io/sideload_coordinates.jl")
 include("io/nwinding.jl")
 include("io/capacitor.jl")
 include("io/to_ybus.jl")
+include("io/ybus.jl")
+include("io/ybus_linearized.jl")
+include("io/ybus_augmented.jl")
 
 include("lineconstants/wire.jl")
 include("lineconstants/earth.jl")
 include("lineconstants/series.jl")
 include("lineconstants/shunt.jl")
 include("lineconstants/kron.jl")
+include("lineconstants/overhead.jl")
 include("lineconstants/compile.jl")
 
 include("analysis/inventory.jl")
@@ -612,12 +901,104 @@ end
 # JuMP and Ipopt are both available in the calling environment).
 # ---------------------------------------------------------------------------
 
+function _piecewise_linear_hinges(breakpoints::AbstractVector{<:Real},
+                                   values::AbstractVector{<:Real})
+    n = length(breakpoints)
+    n == length(values) || throw(ArgumentError(
+        "breakpoints and values must have equal length"))
+    n >= 2 || throw(ArgumentError("need at least 2 breakpoints, got $n"))
+
+    xs = Float64.(breakpoints)
+    ys = Float64.(values)
+    all(isfinite, xs) || throw(ArgumentError("breakpoints must be finite"))
+    all(isfinite, ys) || throw(ArgumentError("values must be finite"))
+    all(i -> xs[i + 1] > xs[i], 1:(n - 1)) || throw(ArgumentError(
+        "breakpoints must be strictly increasing"))
+
+    hinges = Tuple{Float64,Float64}[]
+    for i in 1:(n - 1)
+        slope = (ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i])
+        iszero(slope) && continue
+        push!(hinges, (slope, xs[i]))
+        push!(hinges, (-slope, xs[i + 1]))
+    end
+    return (baseline=ys[1], hinges=hinges)
+end
+
+"""
+    piecewise_linear_value(input, breakpoints, values; epsilon=nothing)
+
+Evaluate the continuous piecewise-linear function through corresponding
+`breakpoints` and `values`, clamped flat outside the breakpoint interval.
+Breakpoints must be finite and strictly increasing and both vectors must have
+the same length of at least two.
+
+With the default `epsilon=nothing`, evaluation is exact and retains the PWL
+kinks. Passing a finite `epsilon > 0` replaces every hinge with the smooth
+softplus `epsilon * log1pexp(z / epsilon)`, matching
+[`opf_piecewise_linear_expression`](@ref). `input`, `breakpoints`, and `epsilon`
+must use the same units; `values` determine the output units.
+
+This numeric method is suitable as an exact control-law oracle outside an
+optimisation model and as a reference for quantifying smoothing error.
+"""
+function piecewise_linear_value(input::Real,
+                                breakpoints::AbstractVector{<:Real},
+                                values::AbstractVector{<:Real};
+                                epsilon::Union{Nothing,Real}=nothing)
+    u = Float64(input)
+    isfinite(u) || throw(ArgumentError("input must be finite"))
+    curve = _piecewise_linear_hinges(breakpoints, values)
+    if isnothing(epsilon)
+        return curve.baseline + sum(
+            slope * max(0.0, u - knot) for (slope, knot) in curve.hinges;
+            init=0.0)
+    end
+
+    eps = Float64(epsilon)
+    isfinite(eps) && eps > 0 || throw(ArgumentError(
+        "epsilon must be finite and positive, got $epsilon"))
+    return curve.baseline + sum(
+        slope * eps * log1pexp((u - knot) / eps)
+        for (slope, knot) in curve.hinges; init=0.0)
+end
+export piecewise_linear_value
+
+"""
+    opf_piecewise_linear_expression(ctx, input, breakpoints, values;
+                                    epsilon) -> expression
+
+Build a smooth JuMP expression for the continuous PWL function through
+`breakpoints` and `values`, clamped flat outside the breakpoint interval. The
+method is implemented by the OPF extension and requires JuMP and Ipopt to be
+loaded.
+
+`input` may be a JuMP variable or scalar expression. All curve data are fixed,
+finite real numbers; `breakpoints` must be strictly increasing. The finite,
+positive `epsilon` is the absolute softplus width in the same working units as
+`input` and `breakpoints`. `values` determine the expression's output units.
+
+Operator registration is cached by `epsilon` in `ctx`, so any number of curves
+in one staged OPF context can share the same analytic softplus operator. The
+expression follows the context's `softplus` build mode: the numerically stable
+registered operator by default, or the native JuMP expression selected with
+`softplus=:builtin` for DiffOpt compatibility. Curve construction does not add
+constraints or modify the staged OPF lifecycle.
+
+Use [`opf_bases`](@ref) to convert physical breakpoints and values to model
+working units before calling this function. Use [`piecewise_linear_value`](@ref)
+for exact numeric evaluation or for the corresponding smooth numeric oracle.
+"""
+function opf_piecewise_linear_expression end
+export opf_piecewise_linear_expression
+
 """
     solve_opf(net::Dict{String,Any}; optimizer=Ipopt.Optimizer, t_index::Int=1,
               per_unit::Bool=true, s_base::Float64=1e6,
               volt_var_watt_eps::Float64=2e-3,
+              softplus::Symbol=:user_defined, build_spec=OpfBuildSpec(),
               verbose::Bool=false, solver_options=(),
-              model_hook!=nothing) -> Dict{String,Any}
+              model_hook!=nothing, solution_hook!=nothing) -> Dict{String,Any}
 
 Solve the four-wire rectangular current-voltage (IVR-EN) optimal power flow
 on a BMOPF network dict. Requires JuMP and Ipopt to be loaded in the calling
@@ -636,40 +1017,77 @@ and current bilinearly; pass `per_unit=false` only to reproduce a raw-SI solve.
 - `solver_options` is an iterable of `name => value` pairs applied as raw
   solver attributes, e.g. `solver_options = ["max_iter" => 3000, "tol" => 1e-9]`
   for Ipopt. Applied after the problem's own defaults, so user options win.
+- `build_spec` assigns typed native/custom device ownership and coefficient
+  providers. See [`OpfBuildSpec`](@ref) and the differentiable-extensions guide.
+- `softplus=:user_defined` uses the stable registered nonlinear operator.
+  Pass `softplus=:builtin` explicitly for wrappers such as DiffOpt that reject
+  `MOI.UserDefinedFunction`; the native expression has a narrower safe range.
 - `model_hook!` is the formulation extension point: a function `hook!(ctx)`
   called after the standard model is built and **before** KCL is enforced and
-  the model is solved. `ctx` carries the JuMP model and every index structure
-  a build recipe uses — the stable fields are:
-  `ctx.model` (JuMP model), `ctx.net` (the engine's working copy of the
-  network), `ctx.vars` (variable dict keyed by `:vr`, `:vi`, `:crg`, `:cig`,
-  `:cr_fr`, …, each mapping `(id, terminal)`-style keys to JuMP variables),
-  `ctx.bus_terminals` (bus → ordered terminal names), `ctx.grounded`
-  (set of perfectly-grounded `(bus, terminal)` pairs), and `ctx.kcl_r`/`ctx.kcl_i`
-  (per-`(bus, terminal)` KCL accumulator expressions — add to these to inject
-  current from a custom device). A hook can add constraints
-  (`JuMP.@constraint(ctx.model, …)`), replace the objective
-  (`JuMP.@objective(ctx.model, …)`), or stamp new devices into the KCL
-  accumulators.
+  the model is solved. Use [`opf_model`](@ref), [`opf_network`](@ref),
+  [`opf_bases`](@ref), semantic key constructors plus [`opf_object`](@ref), and
+  [`add_terminal_injection!`](@ref). The concrete context fields are internal.
 
   **Units.** With `per_unit=true` (the default) the model — and therefore every
-  `ctx.vars` variable — is in per-unit, so any physical-unit literal in a hook
-  must be scaled by the matching base. `ctx.bases` carries these: it is a
+  native model variable is in per-unit, so any physical-unit literal in a hook
+  must be scaled by the matching base. `opf_bases(ctx)` returns these as a
   NamedTuple with `s_base` (VA), per-bus `v_base`/`i_base`/`z_base`/`y_base`
   Dicts and the DC `v_dc_base`/`i_dc_base`/`z_dc_base`, or `nothing` in SI mode
   (`per_unit=false`), where no scaling is needed. A watt cap, for instance,
-  becomes `expr <= P_watts / (ctx.bases === nothing ? 1.0 : ctx.bases.s_base)`.
+  becomes `expr <= P_watts / (bases === nothing ? 1.0 : bases.s_base)`.
 
   Example — cap one generator's phase-a active power at 5 kW:
 
   ```julia
   result = solve_opf(net; model_hook! = ctx -> begin
-      vr = ctx.vars[:vr]; vi = ctx.vars[:vi]
-      crg = ctx.vars[:crg]; cig = ctx.vars[:cig]
-      b  = net["generator"]["g1"]["bus"]
-      sb = ctx.bases === nothing ? 1.0 : ctx.bases.s_base   # W → per-unit power
-      JuMP.@constraint(ctx.model,
-          vr[(b,"a")]*crg[("g1",1)] + vi[(b,"a")]*cig[("g1",1)] <= 5_000.0 / sb)
+      model = opf_model(ctx)
+      vr = opf_object(ctx, opf_bus_voltage_key("bus1", "a"))
+      vi = opf_object(ctx,
+          opf_bus_voltage_key("bus1", "a"; component=:imag))
+      crg = opf_object(ctx, opf_generator_current_key("g1", 1))
+      cig = opf_object(ctx,
+          opf_generator_current_key("g1", 1; component=:imag))
+      bases = opf_bases(ctx)
+      sb = bases === nothing ? 1.0 : bases.s_base
+      JuMP.@constraint(model, vr*crg + vi*cig <= 5_000.0 / sb)
   end)
+  ```
+
+- `solution_hook!` is the companion post-solve extraction point: a function
+  `hook!(ctx, result)` called after the solve and the engine's own result
+  extraction, but **before** per-unit unwrapping. The model is still live, so a
+  hook can read `JuMP.value` of the custom variables it declared in a
+  `model_hook!` (capture them in a shared closure) and append its own keys to
+  the `result` dict. Because it runs in the model's units (per-unit by default),
+  the hook must scale its outputs to SI via `opf_bases(ctx)` so they sit alongside the
+  engine's SI results; the standard per-unit keys are unwrapped automatically but
+  custom keys are not.
+
+  A hook device that wants to be counted in `profile_solution`'s network
+  power-balance check writes its **net terminal power** (SI, generator sign:
+  positive = into the network) to `result["custom_injection"] =
+  Dict("p"=>…, "q"=>…)`. Without this, a correct solve with a custom device
+  trips a spurious `W.SOL.POWER_BALANCE` because the balance can't see the
+  device's injection.
+
+  Example — extract a battery's dispatch (declared in `model_hook!` and captured
+  in `bat`) and register it for power balance:
+
+  ```julia
+  bat = Dict{Symbol,Any}()   # shared between the two hooks
+  result = solve_opf(net;
+      model_hook! = ctx -> begin
+          # … declare crb/cib, add P/Q constraints, stamp KCL … then:
+          bat[:P] = P_expr; bat[:Q] = Q_expr        # JuMP expressions
+      end,
+      solution_hook! = (ctx, result) -> begin
+          bases = opf_bases(ctx)
+          sb = bases === nothing ? 1.0 : bases.s_base
+          p_W  = JuMP.value(bat[:P]) * sb           # per-unit → SI watts
+          q_var = JuMP.value(bat[:Q]) * sb
+          result["battery"] = Dict("bat1" => Dict("p"=>p_W, "q"=>q_var))
+          result["custom_injection"] = Dict("p"=>p_W, "q"=>q_var)
+      end)
   ```
 
 ## Smart-IBR Volt-var / Volt-watt
@@ -689,7 +1107,8 @@ via the `[augment.smart_ibr]` config section.
 
 Returns a results dict with keys:
 - `"termination_status"` — JuMP termination status string
-- `"objective"` — optimal objective value (total generation cost, W·\\\$/W)
+- `"objective"` — optimal default-objective cost rate (currency/hour); custom
+  `model_hook!` objectives retain whatever units the caller defines
 - `"solve_time"` — wall-clock solve time (s)
 - `"bus"` — per-bus voltage results: `"vr"`, `"vi"`, `"vm"`, `"va"` per terminal
 - `"line"` — per-line from/to current results per conductor
@@ -703,20 +1122,31 @@ function solve_opf end
 export solve_opf
 
 """
-    solve_feasibility_opf(net::Dict{String,Any}; optimizer=nothing, t_index::Int=1)
+    solve_feasibility_opf(net::Dict{String,Any}; optimizer=nothing, t_index::Int=1,
+                          softplus::Symbol=:user_defined,
+                          build_spec=OpfBuildSpec())
         -> Dict{String,Any}
 
 Feasibility-relaxed variant of [`solve_opf`](@ref). Adds elastic slack current
 injections at every non-source bus terminal so that KCL can always be satisfied,
 then minimises the L2² norm of those slacks.
 
-Because the problem is always feasible, the solver always converges. Non-zero
-slacks in the result indicate where the network cannot satisfy its physical
-constraints. Use [`diagnose_infeasibility`](@ref) to interpret the result.
+The added variables can absorb KCL residuals at the terminals where they are
+present, but they do not relax contradictory hard bounds or guarantee convergence
+of the nonconvex NLP. For a converged solve, non-zero slacks identify where that
+relaxed solution paid to violate KCL; they are diagnostic evidence rather than a
+global infeasibility certificate. Use [`diagnose_infeasibility`](@ref) to
+interpret the result.
 
 Requires JuMP and Ipopt (same as `solve_opf`).
+For cases with Volt-var/Volt-watt profiles, pass `softplus=:builtin` explicitly
+when using a DiffOpt nonlinear wrapper; its current backend rejects the stable
+default's user-defined nonlinear operator.
 
 Additional result keys beyond `solve_opf`:
+- `"objective"`                  — squared-slack metric in solver working
+  coordinates (plus the transformer tie-break); use the SI slack fields below
+  for physical interpretation
 - `"slack_injections"`        — per-bus, per-terminal `cs_r`, `cs_i`, `cs_mag` (A)
 - `"total_slack_magnitude_A"` — L2 norm of all slack injections (A)
 - `"is_feasibility_opf"`      — always `true`, used by `diagnose_infeasibility`
@@ -726,7 +1156,9 @@ export solve_feasibility_opf
 
 """
     solve_pf(net::Dict{String,Any}; optimizer=Ipopt.Optimizer, t_index::Int=1,
-             per_unit::Bool=true, s_base::Float64=1e6) -> Dict{String,Any}
+             per_unit::Bool=true, s_base::Float64=1e6,
+             softplus::Symbol=:user_defined,
+             build_spec=OpfBuildSpec()) -> Dict{String,Any}
 
 Determined four-wire rectangular current-voltage (IVR-EN) power flow on a BMOPF
 network dict. Same device models as [`solve_opf`](@ref) but with **no operational
@@ -744,9 +1176,873 @@ dependent and remain determined.
 
 Requires JuMP and Ipopt (same as `solve_opf`). The result dict matches
 `solve_opf`'s structure plus `"is_power_flow" => true`.
+For cases with Volt-var/Volt-watt profiles, pass `softplus=:builtin` explicitly
+when using a DiffOpt nonlinear wrapper; its current backend rejects the stable
+default's user-defined nonlinear operator.
 """
 function solve_pf end
 export solve_pf
+
+"""
+    OpfModelKey(kind, family, index=nothing)
+
+Stable semantic identifier for an object in a staged OPF model. `kind` is
+typically `:variable`, `:expression`, or `:constraint`; `family` identifies the
+physical/model quantity (for example `:vr`, `:tap`, or a downstream package's
+own symbol); and `index` identifies the component/terminal/phase.
+
+Keys are intentionally independent of JuMP and extensible by downstream
+packages. Use [`register_opf_object!`](@ref) and [`opf_object`](@ref) rather than
+depending on the internal layout of `ctx.vars`.
+"""
+struct OpfModelKey
+    kind::Symbol
+    family::Symbol
+    index
+end
+
+OpfModelKey(kind::Symbol, family::Symbol) = OpfModelKey(kind, family, nothing)
+
+Base.:(==)(a::OpfModelKey, b::OpfModelKey) =
+    a.kind == b.kind && a.family == b.family && a.index == b.index
+Base.isequal(a::OpfModelKey, b::OpfModelKey) =
+    isequal(a.kind, b.kind) && isequal(a.family, b.family) &&
+    isequal(a.index, b.index)
+Base.hash(key::OpfModelKey, h::UInt) =
+    hash(key.index, hash(key.family, hash(key.kind, h)))
+
+function _opf_rectangular_family(component::Symbol, real_family::Symbol,
+                                 imaginary_family::Symbol)
+    component == :real && return real_family
+    component == :imag && return imaginary_family
+    throw(ArgumentError("component must be :real or :imag"))
+end
+
+function _opf_positive_position(position::Integer, label::AbstractString)
+    position isa Bool && throw(ArgumentError(
+        "$label must be a positive integer, not Bool"))
+    position >= 1 || throw(ArgumentError("$label must be a positive integer"))
+    return Int(position)
+end
+
+"""Return the native real/imaginary bus-terminal voltage key."""
+function opf_bus_voltage_key(bus::AbstractString, terminal::AbstractString;
+                             component::Symbol=:real)
+    family = _opf_rectangular_family(component, :vr, :vi)
+    return OpfModelKey(:variable, family, (String(bus), String(terminal)))
+end
+
+"""Return the native real/imaginary perfect-ground current key."""
+function opf_ground_current_key(bus::AbstractString, terminal::AbstractString;
+                                component::Symbol=:real)
+    family = _opf_rectangular_family(component, :cr_gnd, :ci_gnd)
+    return OpfModelKey(:variable, family, (String(bus), String(terminal)))
+end
+
+"""Return the native line-current key for a conductor and branch side."""
+function opf_line_current_key(line::AbstractString, conductor::Integer;
+                              side::Symbol=:from, component::Symbol=:real)
+    side in (:from, :to) || throw(ArgumentError("side must be :from or :to"))
+    families = side == :from ? (:cr_fr, :ci_fr) : (:cr_to, :ci_to)
+    family = _opf_rectangular_family(component, families...)
+    index = (String(line), _opf_positive_position(conductor, "conductor"))
+    return OpfModelKey(:variable, family, index)
+end
+
+"""Return the native switch-current key for a conductor."""
+function opf_switch_current_key(switch_id::AbstractString, conductor::Integer;
+                                component::Symbol=:real)
+    family = _opf_rectangular_family(component, :cr_sw, :ci_sw)
+    index = (String(switch_id), _opf_positive_position(conductor, "conductor"))
+    return OpfModelKey(:variable, family, index)
+end
+
+"""Return the native load-current key for a phase/conductor position."""
+function opf_load_current_key(load::AbstractString, conductor::Integer;
+                              component::Symbol=:real)
+    family = _opf_rectangular_family(component, :crd, :cid)
+    index = (String(load), _opf_positive_position(conductor, "conductor"))
+    return OpfModelKey(:variable, family, index)
+end
+
+"""Return the native generator-current key for a phase/conductor position."""
+function opf_generator_current_key(generator::AbstractString,
+                                   conductor::Integer;
+                                   component::Symbol=:real)
+    family = _opf_rectangular_family(component, :crg, :cig)
+    index = (String(generator), _opf_positive_position(conductor, "conductor"))
+    return OpfModelKey(:variable, family, index)
+end
+
+"""Return the native voltage-source current key for a conductor position."""
+function opf_voltage_source_current_key(source::AbstractString,
+                                        conductor::Integer;
+                                        component::Symbol=:real)
+    family = _opf_rectangular_family(component, :cr_src, :ci_src)
+    index = (String(source), _opf_positive_position(conductor, "conductor"))
+    return OpfModelKey(:variable, family, index)
+end
+
+"""Return the native two-winding transformer-current key."""
+function opf_transformer_current_key(transformer::AbstractString, side::Symbol,
+                                     conductor::Integer;
+                                     component::Symbol=:real)
+    side in (:from, :to) || throw(ArgumentError("side must be :from or :to"))
+    family = _opf_rectangular_family(component, :cr_xf, :ci_xf)
+    side_index = side == :from ? "fr" : "to"
+    index = (String(transformer), side_index,
+             _opf_positive_position(conductor, "conductor"))
+    return OpfModelKey(:variable, family, index)
+end
+
+"""Return the native scalar transformer-tap key."""
+opf_transformer_tap_key(transformer::AbstractString) =
+    OpfModelKey(:variable, :tap, String(transformer))
+
+"""Return the native per-regulator transformer-tap key."""
+function opf_transformer_tap_key(transformer::AbstractString,
+                                 regulator::Integer)
+    index = (String(transformer),
+             _opf_positive_position(regulator, "regulator"))
+    return OpfModelKey(:variable, :tap, index)
+end
+
+"""Return the native n-winding transformer-current key."""
+function opf_nwinding_current_key(transformer::AbstractString,
+                                  winding::Integer, conductor::Integer;
+                                  component::Symbol=:real)
+    family = _opf_rectangular_family(component, :cr_nw, :ci_nw)
+    index = (String(transformer),
+             _opf_positive_position(winding, "winding"),
+             _opf_positive_position(conductor, "conductor"))
+    return OpfModelKey(:variable, family, index)
+end
+
+"""Return the native inverter/IBR current key for a phase position."""
+function opf_ibr_current_key(ibr::AbstractString, conductor::Integer;
+                             component::Symbol=:real)
+    family = _opf_rectangular_family(component, :cri, :cii)
+    index = (String(ibr), _opf_positive_position(conductor, "conductor"))
+    return OpfModelKey(:variable, family, index)
+end
+
+"""Return the native active/reactive power auxiliary key for one IBR phase."""
+function opf_ibr_power_key(ibr::AbstractString, phase::Integer;
+                           component::Symbol=:active)
+    family = component == :active ? :p_ibr :
+             component == :reactive ? :q_ibr :
+             throw(ArgumentError("component must be :active or :reactive"))
+    return OpfModelKey(:variable, family,
+                       (String(ibr), _opf_positive_position(phase, "phase")))
+end
+
+"""Return the native monitored-voltage-magnitude auxiliary key for one IBR phase.
+
+`reference` may be `:pg`, `:pn`, or `:pp` for the per-phase monitored
+magnitude, or the corresponding `:_averaged` form for the actual shared
+controller input when phase magnitudes are averaged. The averaged key refers
+to a registered expression rather than a per-phase voltage variable.
+"""
+function opf_ibr_voltage_magnitude_key(
+    ibr::AbstractString,
+    phase::Integer;
+    reference::Symbol,
+    controller::Symbol,
+)
+    reference in (:pg, :pn, :pp, :pg_averaged, :pn_averaged, :pp_averaged,
+                  :single_pg, :single_diff) ||
+        throw(ArgumentError("unsupported voltage-magnitude reference '$reference'"))
+    kind = reference in (:pg_averaged, :pn_averaged, :pp_averaged) ?
+           :expression : :variable
+    return OpfModelKey(kind, :u_ibr,
+                       (String(ibr), _opf_positive_position(phase, "phase"),
+                        String(reference), String(controller)))
+end
+
+"""Return the native signed DC bus-terminal voltage key."""
+opf_dc_voltage_key(bus::AbstractString, terminal::AbstractString) =
+    OpfModelKey(:variable, :v_dc, (String(bus), String(terminal)))
+
+"""Return the native perfect-ground DC-current key."""
+opf_dc_ground_current_key(bus::AbstractString, terminal::AbstractString) =
+    OpfModelKey(:variable, :idc_gnd, (String(bus), String(terminal)))
+
+"""Return the native DC branch-current key for a conductor."""
+function opf_dc_branch_current_key(branch::AbstractString, conductor::Integer)
+    index = (String(branch), _opf_positive_position(conductor, "conductor"))
+    return OpfModelKey(:variable, :idc_br, index)
+end
+
+"""Return the native AC/DC converter DC-port current key."""
+opf_converter_dc_current_key(ibr::AbstractString) =
+    OpfModelKey(:variable, :idc_conv, String(ibr))
+
+"""Return the native constant-power DC-load current key."""
+opf_dc_load_current_key(load::AbstractString) =
+    OpfModelKey(:variable, :idc_load, String(load))
+
+"""Return the native DC-source current key."""
+opf_dc_source_current_key(source::AbstractString) =
+    OpfModelKey(:variable, :idc_src, String(source))
+
+"""Return the native dispatched DC-source power key."""
+opf_dc_source_power_key(source::AbstractString) =
+    OpfModelKey(:variable, :pdc_src, String(source))
+
+"""
+    OpfParameterScope(kind, id=nothing)
+
+Research-facing scope attached to an [`OpfParameterBinding`](@ref). `kind` is
+one of `:global`, `:snapshot`, or `:scenario`. `id` is deliberately untyped so
+an extension can use its own stable time/scenario identifier without BMOPFTools
+prescribing a multi-period data model.
+"""
+struct OpfParameterScope
+    kind::Symbol
+    id
+    function OpfParameterScope(kind::Symbol, id=nothing)
+        kind in (:global, :snapshot, :scenario) || throw(ArgumentError(
+            "OPF parameter scope must be :global, :snapshot, or :scenario"))
+        kind == :global && id !== nothing && throw(ArgumentError(
+            "a global OPF parameter scope cannot have an id"))
+        return new(kind, id)
+    end
+end
+
+"""
+    OpfParameterBinding
+
+Immutable metadata for a caller-owned JuMP parameter linked to one or more
+semantic OPF decision variables. The link convention is
+`target = to_working_scale * parameter`; consequently a reverse derivative
+with respect to the input parameter includes this scale by the ordinary chain
+rule. `input_unit` and `working_unit` are descriptive symbols, not an implicit
+unit-conversion system.
+
+The vectors contain live JuMP constraint references and are defensively copied
+by [`opf_parameter_binding`](@ref) and [`opf_parameter_bindings`](@ref).
+"""
+struct OpfParameterBinding
+    key::OpfModelKey
+    parameter
+    targets::Vector{OpfModelKey}
+    links::Vector{Any}
+    scope::OpfParameterScope
+    aliases::Vector{Symbol}
+    input_unit::Symbol
+    working_unit::Symbol
+    to_working_scale::Float64
+    owner::Symbol
+end
+
+"""
+    OpfRegularization
+
+Explicit downstream declaration that a registered semantic objective term is a
+regularization. `weight` and `units` describe its reported coefficient;
+`term_key` identifies the objective contribution, `targets` identify the
+regularized model quantities, and `purpose` records why the mathematical
+problem was changed. BMOPFTools records this declaration but does not infer it
+from arbitrary JuMP expressions or verify that the term is included in the
+current model objective.
+"""
+struct OpfRegularization
+    name::Symbol
+    method::Symbol
+    weight::Float64
+    units::Symbol
+    term_key::OpfModelKey
+    targets::Vector{OpfModelKey}
+    purpose::String
+    owner::Symbol
+    metadata::Dict{String,Any}
+end
+
+"""
+    OpfBuildManifest
+
+Provenance for a staged OPF construction. `problem` identifies the recipe,
+`formulation` the network formulation, `per_unit` and `s_base` record the
+working-unit choice, `stages` records completed construction stages in order,
+and `component_owners` records which package owns each stamped device family.
+
+[`opf_build_manifest`](@ref) returns a defensive snapshot: mutating the returned
+vector or dictionary does not alter the context's internal construction record.
+"""
+struct OpfBuildManifest
+    problem::Symbol
+    formulation::Symbol
+    per_unit::Bool
+    s_base::Float64
+    stages::Vector{Symbol}
+    component_owners::Dict{Any,Symbol}
+end
+
+"""
+    OpfDeviceBuilder(owner, build!)
+
+A downstream device-formulation callback and its provenance owner. `owner` is a
+stable package/research-code symbol. BMOPFTools calls `build!(ctx, ids)`, where
+`ids` is the deterministically ordered vector of component identifiers assigned
+to this builder. The callback must use public context, registry, and KCL helpers.
+"""
+struct OpfDeviceBuilder
+    owner::Symbol
+    build!::Function
+end
+
+"""
+    OpfCoefficientKey(category, family, component, field, index=nothing)
+
+Stable identifier for a non-structural coefficient consumed while a device
+builder stamps equations. `category` is normally `:load`, `:availability`,
+`:setpoint`, `:cost`, `:limit`, `:controller`, or `:physics`; downstream
+packages may introduce additional semantic categories. Values returned for a
+key are in the model's working units.
+"""
+struct OpfCoefficientKey
+    category::Symbol
+    family::Symbol
+    component::String
+    field::Symbol
+    index
+    function OpfCoefficientKey(category::Symbol, family::Symbol,
+                               component::AbstractString, field::Symbol,
+                               index=nothing)
+        category == :structural && throw(ArgumentError(
+            "structural data cannot be an OPF coefficient; rebuild the model"))
+        return new(category, family, String(component), field, index)
+    end
+end
+
+"""
+    OpfCoefficientProvider(owner, provide)
+
+Typed coefficient callback with package provenance. A custom device builder
+calls [`opf_coefficient`](@ref) with a semantic key and native/default value;
+when registered, `provide(ctx, key, default)` returns the number, JuMP
+parameter, or scalar expression to stamp instead. Providers must return values
+in model working units.
+"""
+struct OpfCoefficientProvider
+    owner::Symbol
+    provide::Function
+end
+
+"""
+    OpfDifferentiabilityAnnotation
+
+Explicit audit declaration for a differentiability hazard that cannot be
+reliably inferred from a completed JuMP graph. `kind` is one of
+`:nonsmooth_operator`, `:dynamic_branch`, or
+`:unsupported_parameter_location`; `key` optionally identifies the affected
+semantic object or coefficient. A blocking annotation makes
+[`opf_differentiability_report`](@ref) return `ready=false`. Nonblocking
+annotations remain visible as qualifications and in research provenance.
+"""
+struct OpfDifferentiabilityAnnotation
+    name::Symbol
+    kind::Symbol
+    description::String
+    owner::Symbol
+    key::Union{Nothing,OpfModelKey,OpfCoefficientKey}
+    blocking::Bool
+    metadata::Dict{String,Any}
+end
+
+"""
+    OpfKKTDiagnostic
+
+Result recorded by [`opf_checked_kkt_factorization`](@ref). `pivot_ratio` is a
+global-scale-invariant LU pivot proxy, not a condition-number certificate. A
+`:rejected` status means differentiation was stopped before a regularized or
+zero sensitivity could be mistaken for a valid implicit derivative.
+"""
+struct OpfKKTDiagnostic
+    status::Symbol
+    dimension::Int
+    pivot_ratio::Union{Nothing,Float64}
+    tolerance::Float64
+    message::String
+end
+
+"""Error thrown when the checked KKT factorization rejects a derivative."""
+struct OpfDifferentiationError <: Exception
+    message::String
+end
+
+Base.showerror(io::IO, error::OpfDifferentiationError) =
+    print(io, error.message)
+
+"""
+    OpfDifferentiabilityReport
+
+Conservative diagnostic snapshot for a staged OPF model. `ready` requires
+finalized construction, a successful solve, no discrete variables or unused
+providers, and no detected near-active, weakly-active, violated, or rejected-KKT
+conditions or blocking differentiability annotations. The three annotation
+vectors disclose extension-declared nonsmooth operators, parameter-dependent
+construction branches, and unsupported parameter locations. Active-set fields
+use caller-configurable numerical tolerances. This remains a diagnostic rather
+than a proof of LICQ, second-order sufficiency, or global solution-branch
+stability.
+"""
+struct OpfDifferentiabilityReport
+    ready::Bool
+    lifecycle::Symbol
+    termination_status::String
+    parameter_keys::Vector{OpfModelKey}
+    coefficient_keys::Vector{OpfCoefficientKey}
+    unused_coefficient_keys::Vector{OpfCoefficientKey}
+    discrete_variables::Vector{String}
+    inequality_constraints::Int
+    active_constraints::Vector{String}
+    near_active_constraints::Vector{String}
+    weakly_active_constraints::Vector{String}
+    violated_constraints::Vector{String}
+    nonsmooth_operators::Vector{OpfDifferentiabilityAnnotation}
+    dynamic_branches::Vector{OpfDifferentiabilityAnnotation}
+    unsupported_parameter_locations::Vector{OpfDifferentiabilityAnnotation}
+    minimum_inactive_slack::Union{Nothing,Float64}
+    kkt_diagnostic::Union{Nothing,OpfKKTDiagnostic}
+    qualifications::Vector{String}
+end
+
+"""
+    OpfBuildSpec(; family_builders, component_builders, coefficient_providers)
+
+Typed ownership specification for staged device construction. A
+`family_builders` entry replaces the native formulation for the complete family.
+A `component_builders[(family, id)]` entry replaces one component while leaving
+unassigned components native. Mixed per-component ownership is currently
+supported for flat device collections such as `:ibr`; unsupported combinations
+are rejected before the device-physics stage mutates the model. In particular,
+`:line`, `:transformer`, and `:dc_network` family replacement is rejected until
+their branch-result or DC-KCL ledgers have public extension seams;
+per-component `:line` replacement is rejected for the same reason.
+"""
+struct OpfBuildSpec
+    family_builders::Dict{Symbol,OpfDeviceBuilder}
+    component_builders::Dict{Tuple{Symbol,String},OpfDeviceBuilder}
+    coefficient_providers::Dict{OpfCoefficientKey,OpfCoefficientProvider}
+    function OpfBuildSpec(
+            family_builders::Dict{Symbol,OpfDeviceBuilder},
+            component_builders::Dict{Tuple{Symbol,String},OpfDeviceBuilder},
+            coefficient_providers::Dict{OpfCoefficientKey,OpfCoefficientProvider})
+        overlap = intersect(Set(keys(family_builders)),
+                            Set(family for (family, _) in keys(component_builders)))
+        isempty(overlap) || throw(ArgumentError(
+            "a device family cannot have both a family builder and component " *
+            "builders: $(sort!(collect(overlap)))"))
+        return new(family_builders, component_builders, coefficient_providers)
+    end
+end
+
+function OpfBuildSpec(; family_builders=Dict(), component_builders=Dict(),
+                      coefficient_providers=Dict())
+    families = Dict{Symbol,OpfDeviceBuilder}(family_builders)
+    components = Dict{Tuple{Symbol,String},OpfDeviceBuilder}(
+        (Symbol(family), String(id)) => builder
+        for ((family, id), builder) in component_builders)
+    providers = Dict{OpfCoefficientKey,OpfCoefficientProvider}(
+        coefficient_providers)
+    return OpfBuildSpec(families, components, providers)
+end
+
+"""
+    opf_model(ctx)
+    opf_network(ctx)
+    opf_bases(ctx)
+    opf_lifecycle(ctx)
+
+Stable accessors for a context returned by [`build_opf_model`](@ref). They
+return, respectively, the live JuMP model, the prepared working network, the
+per-unit base metadata (`nothing` in SI mode), and the current construction
+lifecycle state.
+"""
+function opf_model end
+
+"""Return the prepared working network owned by a staged OPF context."""
+function opf_network end
+
+"""Return per-unit base metadata, or `nothing` for an SI staged model."""
+function opf_bases end
+
+"""Return the declared neutral terminal labels for one staged OPF context."""
+function opf_neutral_labels end
+
+"""Return the staged OPF construction lifecycle (`:building` or `:kcl_finalized`)."""
+function opf_lifecycle end
+
+"""Return the construction provenance for a staged OPF context."""
+function opf_build_manifest end
+
+"""Return a defensive copy of the typed build specification owned by a context."""
+function opf_build_spec end
+
+"""Return whether construction stage `stage` has completed for this context."""
+function opf_stage_completed end
+
+"""
+    initialize_opf_model(net; kwargs...) -> ctx
+
+Prepare one OPF snapshot, create its native variables, and return a context
+without adding start values, operational limits, device equations, an objective,
+or KCL. This is the low-level entry point for composing the public construction
+stages. [`build_opf_model`](@ref) remains the standard all-stage recipe.
+"""
+function initialize_opf_model end
+
+"""Apply the standard IVR-EN voltage start-value stage."""
+function set_opf_start_values! end
+
+"""Add the standard OPF voltage and bus operational-limit stage."""
+function add_opf_operational_limits! end
+
+"""Add build-spec-selected native/custom device physics and terminal currents."""
+function add_opf_device_constraints! end
+
+"""Set the standard generation-cost objective on a staged OPF model."""
+function set_opf_objective! end
+
+"""
+    register_opf_result_extractor!(ctx, owner, extract!; replace=false)
+
+Register a deterministic post-solve callback `extract!(ctx, result)`. It runs
+before a caller-supplied `solution_hook!` and before native per-unit results are
+unwrapped. The callback must place physical-unit downstream outputs in `result`.
+Duplicate owners are rejected unless `replace=true`.
+"""
+function register_opf_result_extractor! end
+
+"""
+    register_opf_object!(ctx, key::OpfModelKey, object; replace=false)
+    opf_object(ctx, key::OpfModelKey)
+    opf_object_keys(ctx; kind=nothing)
+
+Register and retrieve stable semantic references to JuMP variables,
+expressions, constraints, or downstream objects. Duplicate keys are rejected
+unless `replace=true`. Native JuMP variables are registered automatically using
+their existing variable-family symbol and raw index.
+"""
+function register_opf_object! end
+
+"""Retrieve a JuMP/downstream object registered under an [`OpfModelKey`](@ref)."""
+function opf_object end
+
+"""List registered [`OpfModelKey`](@ref)s, optionally filtered by `kind`."""
+function opf_object_keys end
+
+"""
+    register_opf_objective_term!(ctx, key::OpfModelKey, term; replace=false)
+
+Register a scalar objective contribution under a stable semantic key. `key`
+must have `kind == :objective`; `term` may be a real constant or a scalar JuMP
+variable/expression belonging to the context model. Registration identifies a
+contribution but does not change the model's objective.
+"""
+function register_opf_objective_term! end
+
+"""
+    opf_primal(ctx, key::OpfModelKey; result=1)
+
+Return the solved value of a registered variable, parameter, expression, or
+objective term. Constraint keys are deliberately rejected; use
+[`opf_constraint_value`](@ref) for the function value of a constraint.
+"""
+function opf_primal end
+
+"""
+    opf_constraint_value(ctx, key::OpfModelKey; result=1)
+
+Return the solved function value on the left-hand side of a registered
+constraint. This is not a residual: interpret it together with the constraint's
+JuMP set, or use [`opf_constraint_slack`](@ref) for scalar inequalities.
+"""
+function opf_constraint_value end
+
+"""
+    opf_constraint_slack(ctx, key::OpfModelKey; result=1)
+
+Return signed slack for a registered scalar `LessThan`, `GreaterThan`, or
+`Interval` constraint. Positive values are feasible, zero is active, and
+negative values indicate violation. Returns `nothing` for equality and
+non-scalar/conic sets.
+"""
+function opf_constraint_slack end
+
+"""
+    opf_dual(ctx, key::OpfModelKey; result=1)
+
+Return the solver dual of a registered constraint, preserving JuMP/MOI's sign
+convention and scalar or vector shape. No economic sign reinterpretation or
+unit conversion is applied.
+"""
+function opf_dual end
+
+"""Return the solved value of the model's current objective."""
+function opf_objective_value end
+
+"""
+    register_opf_regularization!(ctx, name; method, weight, term_key,
+        targets=[], purpose, units=:dimensionless, owner=:downstream,
+        metadata=Dict(), replace=false)
+
+Declare a downstream regularization without modifying the JuMP model. The
+objective `term_key` and every target must already be registered semantic
+objects. Duplicate names are rejected unless `replace=true`.
+"""
+function register_opf_regularization! end
+
+"""Return defensive copies of all explicit regularization declarations."""
+function opf_regularizations end
+
+"""
+    register_opf_differentiability_annotation!(ctx, name; kind, description,
+        owner=:downstream, key=nothing, blocking=true, metadata=Dict(),
+        replace=false)
+
+Declare a differentiability hazard without changing the JuMP model. Use this
+for extension-defined nonsmooth operators, Julia control flow that depends on a
+parameter value, or formulation-specific locations that cannot safely accept a
+parameter. Duplicate names are rejected unless `replace=true`.
+"""
+function register_opf_differentiability_annotation! end
+
+"""Return defensive copies of all explicit differentiability annotations."""
+function opf_differentiability_annotations end
+
+"""
+    opf_research_hashes(ctx) -> Dict{String,Any}
+
+Return versioned SHA-256 fingerprints for the prepared working network, JuMP
+model structure, current parameter state, regularization declarations, and
+differentiability annotations.
+These are construction/reproduction fingerprints, not certificates of
+algebraic equivalence between independently formulated models.
+"""
+function opf_research_hashes end
+
+"""
+    bind_opf_parameter!(ctx, key, parameter, targets; kwargs...)
+
+Bind a caller-created JuMP `Parameter` to one or more registered native or
+downstream decision variables. `key` must have `kind == :parameter`; every
+target must be a registered `OpfModelKey(:variable, ...)` in the same model.
+The generated equality is `target = to_working_scale * parameter`.
+
+Bindings may only be added before KCL finalization. `role=:structural` is
+rejected because topology, terminal maps, and dimensions require rebuilding
+the model. Supported roles are `:decision` and `:coefficient`.
+"""
+function bind_opf_parameter! end
+
+"""Return the live JuMP parameter identified by its canonical key or alias."""
+function opf_parameter end
+
+"""Return a defensive metadata copy for one canonical parameter key or alias."""
+function opf_parameter_binding end
+
+"""Return defensive metadata copies for all registered parameter bindings."""
+function opf_parameter_bindings end
+
+"""
+    opf_coefficient(ctx, key::OpfCoefficientKey, default)
+
+Resolve a coefficient for a custom device builder. Returns `default` when no
+provider is registered; otherwise calls the typed provider with
+`(ctx, key, default)`. The returned scalar is in model working units.
+"""
+function opf_coefficient end
+
+"""Return the registered coefficient provider, or `nothing` when absent."""
+function opf_coefficient_provider end
+
+"""Return a defensive copy of the coefficient-provider registry."""
+function opf_coefficient_providers end
+
+"""Return provider-consumption counts keyed by [`OpfCoefficientKey`](@ref)."""
+function opf_coefficient_usage end
+
+"""
+    opf_differentiability_report(ctx; active_tolerance=1e-7,
+        transition_tolerance=1e-5, dual_tolerance=1e-7)
+        -> OpfDifferentiabilityReport
+
+Return a conservative readiness and qualification report for downstream
+implicit differentiation. Scalar inequalities are classified as active,
+near-active, weakly active, or violated using normalized primal slack and dual
+magnitude. Explicit extension annotations classify graph-invisible nonsmooth
+operators, dynamic branches, and unsupported parameter locations. This function
+computes diagnostics only; JVP/VJP operations remain the responsibility of
+DiffOpt or another downstream package.
+"""
+function opf_differentiability_report end
+
+"""
+    opf_checked_kkt_factorization(ctx; pivot_tolerance=1e-10)
+
+Return a factorization callback suitable for DiffOpt's nonlinear KKT
+factorization attribute. It records an [`OpfKKTDiagnostic`](@ref) on `ctx` and
+throws [`OpfDifferentiationError`](@ref) when LU fails or its pivot-ratio proxy
+is at or below `pivot_tolerance`. This API has no DiffOpt dependency; the
+downstream package remains responsible for installing and invoking the callback.
+"""
+function opf_checked_kkt_factorization end
+
+"""Return the most recent checked KKT diagnostic, or `nothing`."""
+function opf_kkt_diagnostic end
+
+"""
+    opf_research_provenance(ctx; kwargs...) -> Dict{String,Any}
+
+Return a defensive, JSON-compatible experiment snapshot for a staged OPF
+context. The record includes software and solver versions, formulation and
+construction choices, statuses, objective and residual summaries, parameter
+and coefficient maps, initialization/smoothing metadata, active-set diagnostics,
+regularizations, differentiability annotations, reproducibility hashes, and the
+latest checked-KKT result. Active-set tolerance keywords are forwarded to
+[`opf_differentiability_report`](@ref).
+"""
+function opf_research_provenance end
+
+"""
+    extension_state!(ctx, owner[, init])
+
+Return the state namespace owned by `owner`, creating it from the zero-argument
+function `init` when absent (`Dict{Symbol,Any}` by default). `owner` should
+normally be the downstream package module or a package-specific singleton type;
+namespaces prevent independent extensions from colliding in one OPF context.
+"""
+function extension_state! end
+
+"""
+    add_terminal_injection!(ctx, bus, terminal, cr, ci) -> ctx
+
+Add a real/imaginary current expression injected **into** a bus terminal to the
+staged model's KCL accumulator. This is the supported low-level seam for custom
+devices. It must be called before [`enforce_kcl!`](@ref); unknown buses or
+terminals and post-finalization mutation are rejected.
+
+Currents use the model's working units (per-unit by default). A WYE device must
+also add the negative return current at its neutral terminal.
+"""
+function add_terminal_injection! end
+
+export OpfModelKey, OpfParameterScope, OpfParameterBinding, OpfRegularization
+export OpfDifferentiabilityAnnotation
+export opf_bus_voltage_key, opf_ground_current_key, opf_line_current_key
+export opf_switch_current_key, opf_load_current_key
+export opf_generator_current_key, opf_voltage_source_current_key
+export opf_transformer_current_key, opf_transformer_tap_key
+export opf_nwinding_current_key, opf_ibr_current_key
+export opf_ibr_power_key
+export opf_ibr_voltage_magnitude_key
+export opf_dc_voltage_key, opf_dc_ground_current_key
+export opf_dc_branch_current_key, opf_converter_dc_current_key
+export opf_dc_load_current_key, opf_dc_source_current_key
+export opf_dc_source_power_key
+export OpfDifferentiabilityReport, OpfKKTDiagnostic, OpfDifferentiationError
+export OpfBuildManifest, OpfDeviceBuilder, OpfBuildSpec
+export OpfCoefficientKey, OpfCoefficientProvider
+export opf_model, opf_network, opf_bases, opf_lifecycle
+export opf_neutral_labels
+export opf_build_manifest, opf_build_spec, opf_stage_completed
+export initialize_opf_model, set_opf_start_values!
+export add_opf_operational_limits!, add_opf_device_constraints!
+export set_opf_objective!
+export register_opf_object!, opf_object, opf_object_keys
+export register_opf_objective_term!, opf_primal, opf_constraint_value
+export opf_constraint_slack, opf_dual, opf_objective_value
+export register_opf_regularization!, opf_regularizations, opf_research_hashes
+export register_opf_differentiability_annotation!
+export opf_differentiability_annotations
+export bind_opf_parameter!, opf_parameter, opf_parameter_binding
+export opf_parameter_bindings
+export opf_coefficient, opf_coefficient_provider, opf_coefficient_providers
+export opf_coefficient_usage, opf_differentiability_report
+export opf_checked_kkt_factorization, opf_kkt_diagnostic
+export opf_research_provenance
+export extension_state!, add_terminal_injection!, register_opf_result_extractor!
+
+"""
+    build_opf_model(net; kwargs...) -> ctx
+    enforce_kcl!(ctx) -> ctx
+    generation_cost(ctx) -> JuMP.QuadExpr
+    extract_result(ctx; solution_hook!=nothing) -> Dict{String,Any}
+
+Staged build/solve/extract API — the composable form of [`solve_opf`](@ref).
+Implemented in the `BMOPFOpfExt` extension (requires JuMP and Ipopt loaded).
+
+`solve_opf` fuses model construction, KCL, the solve, and result extraction into
+one call. These four functions expose the same pipeline as discrete steps so a
+caller can build **several OPF snapshots into one JuMP model**, couple them with
+its own cross-snapshot constraints (e.g. battery state-of-charge dynamics linking
+period `t` to `t+1`), set a single combined objective, `JuMP.optimize!` once, and
+extract each snapshot's result. This is the supported path for multi-period /
+storage formulations that the single-snapshot `solve_opf` cannot express.
+
+Typical multi-period skeleton:
+
+```julia
+using JuMP, Ipopt
+model = JuMP.Model(Ipopt.Optimizer)
+duration_hours = fill(1.0, T)  # replace with each period's actual duration
+ctxs  = [build_opf_model(net; t_index=t, model=model, add_objective=false,
+                         model_hook! = storage_ports!) for t in 1:T]
+# couple snapshots: SOC[t+1] = SOC[t] + Δt·(charge − discharge) …
+link_soc!(model, ctxs)
+JuMP.@objective(model, Min,
+    sum(duration_hours[t] * generation_cost(ctxs[t]) for t in 1:T) + storage_cost)
+foreach(enforce_kcl!, ctxs)
+JuMP.optimize!(model)
+results = [extract_result(c) for c in ctxs]
+```
+
+The full per-argument contract for each function is documented on its own entry
+below.
+"""
+function build_opf_model end
+export build_opf_model
+
+"""
+    enforce_kcl!(ctx) -> ctx
+
+Enforce Kirchhoff's current law for one snapshot's accumulators (AC nodal balance
++ DC network), after every device constraint and `model_hook!` injection for that
+snapshot has contributed. Second step of the staged API (see
+[`build_opf_model`](@ref)); call once per snapshot `ctx` before `JuMP.optimize!`.
+Implemented in the `BMOPFOpfExt` extension.
+"""
+function enforce_kcl! end
+export enforce_kcl!
+
+"""
+    generation_cost(ctx) -> JuMP.QuadExpr
+
+The snapshot's total active-power generation-cost-rate expression (currency/hour) — the
+quantity [`solve_opf`](@ref) minimises — returned WITHOUT setting it on the
+model. For a multi-period monetary objective, multiply each expression by that
+period's duration in hours before summing it with any custom cost terms; a bare
+sum is only valid when all periods have the same duration and only the optimizer,
+not the reported currency total, matters. Pairs with
+`build_opf_model(...; add_objective=false)`.
+Implemented in the `BMOPFOpfExt` extension.
+"""
+function generation_cost end
+export generation_cost
+
+"""
+    extract_result(ctx; solution_hook!=nothing) -> Dict{String,Any}
+
+Extract one snapshot's SI result dict from the solved model (call
+`JuMP.optimize!(opf_model(ctx))` first). Mirrors [`solve_opf`](@ref)'s output for that
+snapshot: runs the optional `solution_hook!(ctx, result)`, attaches `opt_profile`,
+and unwraps per-unit back to SI. Final step of the staged API (see
+[`build_opf_model`](@ref)). Implemented in the `BMOPFOpfExt` extension.
+"""
+function extract_result end
+export extract_result
 
 # ---------------------------------------------------------------------------
 # Exports
@@ -802,7 +2098,10 @@ export merge_series_lines, remove_dangling_lines
 export remove_open_switches, collapse_closed_switches
 export simplify_network
 export transformer_yprim, export_yprim, write_yprim
-export compile_linecode, compile_linecodes!
+export ybus_passive, YbusResult, line_yprim
+export ybus_linearized, LinearizedYbus
+export ybus_augmented, AugYbusResult, IdealCoupling
+export overhead_line_constants, compile_linecode, compile_linecodes!
 
 # ---------------------------------------------------------------------------
 # Error hints

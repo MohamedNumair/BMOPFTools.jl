@@ -13,12 +13,17 @@ makedocs(
     pages = [
         "Home"                    => "index.md",
         "Getting started"         => [
+            "Installation & first steps" => "installation.md",
             "End-to-end tutorial"      => "tutorial_end_to_end.md",
+            "Choose your tutorial"     => "choose_tutorial.md",
             "Positioning & ecosystem"  => "positioning.md",
+            "Why benchmarks matter"    => "benchmarking_gap.md",
         ],
         "Data model"              => [
             "Buses & terminals primer" => "terminals_primer.md",
+            "Ground, neutral & earth return" => "tutorial_grounding.md",
             "Data model conventions"   => "conventions.md",
+            "Units, bases & economics" => "tutorial_units.md",
             "Object identity"          => "semantic_modeling.md",
             "Line geometry & impedances" => "tutorial_line_geometry.md",
             "Conversion guide"         => "conversion.md",
@@ -26,10 +31,14 @@ makedocs(
         "Analysis & diagnostics"  => [
             "Analysis & reports"       => "analysis.md",
             "Finding-code reference"   => "findings.md",
+            "Findings triage tutorial" => "tutorial_triage.md",
+            "Trust but verify: validating a solve" => "tutorial_trust_but_verify.md",
             "Methodology notes"        => "methodology.md",
         ],
         "Case preparation"        => [
             "Case augmentation"        => "augmentation.md",
+            "From nameplate data to a model" => "tutorial_nameplate.md",
+            "From test report to transformer model" => "tutorial_transformer_tests.md",
             "Simplification tutorial"  => "tutorial_simplify.md",
             "DER placement tutorial"   => "tutorial_ders.md",
             "VVWO tutorial"            => "tutorial_vvwo.md",
@@ -37,8 +46,10 @@ makedocs(
         ],
         "Optimal power flow"      => [
             "Optimal power flow"       => "opf.md",
+            "Parameterized & differentiable extensions" => "differentiable_extensions.md",
             "Transformer models"       => "transformer_models.md",
             "Impedance models & OPF decisions" => "tutorial_impedance_models.md",
+            "Choosing & identifying a load model" => "tutorial_load_models.md",
             "OPF result dictionary"    => "results.md",
             "Validating the OPF"       => "validation.md",
             "SWER case study"          => "tutorial_swer.md",
@@ -46,6 +57,7 @@ makedocs(
             "MVDC/LVDC converter stations" => "tutorial_mvdc.md",
             "Transformer tap optimisation" => "tutorial_tap.md",
             "Time series: a day on an LV feeder" => "tutorial_timeseries.md",
+            "Custom formulations: CVR, envelopes & hooks" => "tutorial_custom_formulations.md",
         ],
         "Bounds & feasibility"    => [
             "bounds/index.md",
@@ -86,6 +98,7 @@ makedocs(
             "Transformers"      => "spec/transformer.md",
             "Regulators"        => "spec/regulator.md",
             "Transformer primitive admittance" => "spec/transformer-admittance.md",
+            "System nodal admittance" => "spec/nodal-admittance.md",
             "IBRs"              => "spec/ibr.md",
             "DC networks"       => "spec/dc.md",
             "Objective & feasibility" => "spec/objective.md",

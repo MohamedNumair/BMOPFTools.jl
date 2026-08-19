@@ -12,6 +12,10 @@
 #   - diagonal or resistive-only linecodes to enable closed-form derivations
 #   - grounded neutral where not under test
 
+include(joinpath(@__DIR__, "fixtures", "MockOpfExtension", "src",
+                 "MockOpfExtension.jl"))
+using .MockOpfExtension
+
 @testset "OPF — solve_opf extension" begin
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -134,13 +138,13 @@
         @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
         @test res["bus"]["bus1"]["1"]["vm"]          ≈ V_exp         atol=0.01
         @test res["generator"]["gen1"]["1"]["pg"]   ≈ P_gen         atol=1.0
-        @test res["objective"]                      ≈ cost * P_gen  atol=0.1
+        @test res["objective"]                      ≈ cost * P_gen / 1000  atol=1e-4
     end
 
     # ─────────────────────────────────────────────────────────────────────────
     # T4: Cost-optimal dispatch — negative unit cost drives output to p_max
     #
-    # cost = −1 $/W → minimising the objective maximises Pg → each phase
+    # cost = −1 $/kWh → minimising the objective maximises Pg → each phase
     # should hit its p_max bound.  A near-zero-impedance line ensures the
     # voltage constraint does not interfere.
     # ─────────────────────────────────────────────────────────────────────────
@@ -177,13 +181,13 @@
         for ph in ("1","2","3")
             @test res["generator"]["gen1"][ph]["pg"] ≈ P_max_ph   atol=1.0
         end
-        @test res["objective"] ≈ -3.0 * P_max_ph   atol=10.0
+        @test res["objective"] ≈ -3.0 * P_max_ph / 1000   atol=0.01
     end
 
     # ─────────────────────────────────────────────────────────────────────────
     # T4b: Uniform cost convention — voltage source ≡ generator
     #
-    # The `cost` field is `$/W of active power INJECTED into the network`, with the
+    # The `cost` field is `$/kWh of active energy INJECTED into the network`, with the
     # SAME sign convention for generators and the voltage source (both stamp +I
     # into KCL; both report power as +injection). So a POSITIVE cost minimises that
     # element's injection in both cases:
@@ -556,7 +560,7 @@
     # g1 injects 200 kW; load is 100 kW → net 100 kW exported to sourcebus.
     # V_bus1 rises above V_s (reverse current direction).
     # Analytical: V² − V_s·V − R·P_net = 0 → V = (V_s + √(V_s²+4·R·P_net))/2 ≈ 1047.7 V
-    # cost = -0.05 $/W → objective = -0.05 × 200 000 = -10 000 $/s
+    # cost = -0.05 $/kWh → objective rate = -0.05 × 200 kW = -10 $/h
     _pu_net() = parse_bmopf("""
     {"bus":{
         "sourcebus":{"terminal_names":["1","n"],
@@ -595,9 +599,9 @@
         V_exp = (V_s + sqrt(V_s^2 + 4*R*P_net)) / 2   # ≈ 1047.7 V
         @test res["bus"]["bus1"]["1"]["vm"] ≈ V_exp   atol=0.5
 
-        # Profit-seeking generator (cost=-0.05 $/W) binds at p_max=200 000 W.
-        # objective = -0.05 × 200 000 = -10 000; pg in W, not PU.
-        @test res["objective"] ≈ -10_000.0   rtol=1e-3
+        # Profit-seeking generator (cost=-0.05 $/kWh) binds at p_max=200 000 W.
+        # objective rate = -0.05 × 200 kW = -10 $/h; pg remains in W.
+        @test res["objective"] ≈ -10.0   rtol=1e-3
         @test res["generator"]["g1"]["1"]["pg"] ≈ 200_000.0   rtol=1e-3
     end
 
@@ -655,7 +659,7 @@
         net = _pu_net()
 
         # model_hook! can replace the objective — the standard cost objective
-        # (−10 000, see T11) is overridden with a feasibility objective.
+        # (−10 $/h, see T11) is overridden with a feasibility objective.
         res = solve_opf(net; model_hook! = ctx -> JuMP.@objective(ctx.model, Min, 0.0))
         @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
         @test abs(res["objective"]) < 1e-6
@@ -676,7 +680,7 @@
                 vi[("bus1","1")]*cig[("g1",1)] <= 150_000.0 / sb)
         end)
         @test res2["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
-        @test res2["objective"] ≈ -0.05 * 150_000.0   rtol=1e-3
+        @test res2["objective"] ≈ -0.05 * 150_000.0 / 1000   rtol=1e-3
         @test res2["generator"]["g1"]["1"]["pg"] ≈ 150_000.0   rtol=1e-3
 
         # solver_options are applied as raw solver attributes.
@@ -686,6 +690,1313 @@
         # verbose=true streams the solver log (smoke: still solves).
         res4 = solve_opf(net; verbose=true)
         @test res4["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+    end
+
+    @testset "T-SOLHOOK: solution_hook! extraction + custom_injection balance" begin
+        # A custom device (battery) added ONLY via hooks — never in the JSON
+        # spec. model_hook! stamps a single-phase P/Q injection into KCL with a
+        # revenue price so it dispatches to its p_max bound; solution_hook! reads
+        # its solved power (model still live) and registers it for power balance.
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
+                         "v_min":[900.0],"v_max":[1100.0]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],"linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_nom":[100000.0],"q_nom":[0.0]}},
+         "generator":{"g1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_min":[0.0],"p_max":[30000.0],
+             "q_min":[0.0],"q_max":[0.0],"cost":[0.10]}},
+         "battery":{"bat1":{"bus":"bus1","terminal_map":["1","n"],
+             "p_min":0.0,"p_max":80000.0,"q_min":-40000.0,"q_max":40000.0,
+             "discharge_price":-0.05}}}
+        """; from_string=true)
+        p_max_bat = 80000.0
+
+        shared = Dict{Symbol,Any}()   # bridges the two hooks
+        function bat_model_hook!(ctx)
+            model = ctx.model
+            vr = ctx.vars[:vr]; vi = ctx.vars[:vi]
+            sb = ctx.bases === nothing ? 1.0 : ctx.bases.s_base
+            base_obj = JuMP.objective_function(model)
+            price = zero(JuMP.QuadExpr)
+            for (bid, b) in get(ctx.net, "battery", Dict())
+                bus = b["bus"]; tm = Vector{String}(b["terminal_map"])
+                t_ph = tm[1]; t_n = length(tm) >= 2 ? tm[2] : nothing
+                crb = JuMP.@variable(model, base_name = "crb_$bid")
+                cib = JuMP.@variable(model, base_name = "cib_$bid")
+                dvr = t_n === nothing ? vr[(bus,t_ph)] : JuMP.@expression(model, vr[(bus,t_ph)] - vr[(bus,t_n)])
+                dvi = t_n === nothing ? vi[(bus,t_ph)] : JuMP.@expression(model, vi[(bus,t_ph)] - vi[(bus,t_n)])
+                P = JuMP.@expression(model, dvr*crb + dvi*cib)
+                Q = JuMP.@expression(model, dvi*crb - dvr*cib)
+                JuMP.@constraint(model, P >= Float64(b["p_min"]) / sb)
+                JuMP.@constraint(model, P <= Float64(b["p_max"]) / sb)
+                JuMP.@constraint(model, Q >= Float64(b["q_min"]) / sb)
+                JuMP.@constraint(model, Q <= Float64(b["q_max"]) / sb)
+                JuMP.add_to_expression!(ctx.kcl_r[(bus,t_ph)], crb)
+                JuMP.add_to_expression!(ctx.kcl_i[(bus,t_ph)], cib)
+                t_n === nothing || JuMP.add_to_expression!(ctx.kcl_r[(bus,t_n)], -crb)
+                t_n === nothing || JuMP.add_to_expression!(ctx.kcl_i[(bus,t_n)], -cib)
+                price += Float64(b["discharge_price"]) * P
+                shared[Symbol("P_", bid)] = P
+                shared[Symbol("Q_", bid)] = Q
+            end
+            JuMP.@objective(model, Min, base_obj + price)
+        end
+        # solution_hook! that DOES register custom_injection.
+        function bat_sol_hook!(ctx, result)
+            sb = ctx.bases === nothing ? 1.0 : ctx.bases.s_base
+            p_tot = 0.0; q_tot = 0.0; bat_res = Dict{String,Any}()
+            for (bid, _) in get(ctx.net, "battery", Dict())
+                P_W  = JuMP.value(shared[Symbol("P_", bid)]) * sb
+                Q_var = JuMP.value(shared[Symbol("Q_", bid)]) * sb
+                bat_res[bid] = Dict{String,Any}("p"=>P_W, "q"=>Q_var)
+                p_tot += P_W; q_tot += Q_var
+            end
+            result["battery"] = bat_res
+            result["custom_injection"] = Dict{String,Any}("p"=>p_tot, "q"=>q_tot)
+        end
+
+        res = solve_opf(net; model_hook! = bat_model_hook!, solution_hook! = bat_sol_hook!)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+
+        # solution_hook! wrote the custom result block, in SI.
+        @test haskey(res, "battery")
+        @test haskey(res["battery"], "bat1")
+        p_bat = res["battery"]["bat1"]["p"]
+        @test p_bat ≈ p_max_bat   rtol=1e-3        # dispatched to bound (revenue)
+        @test haskey(res, "custom_injection")
+        @test res["custom_injection"]["p"] ≈ p_bat  rtol=1e-9
+
+        # With custom_injection registered, profile_solution's balance closes:
+        # no spurious W.SOL.POWER_BALANCE for the hook device.
+        rep = profile_solution(net, res)
+        @test !any(f.code == "W.SOL.POWER_BALANCE" for f in rep.findings)
+        sol = rep.results[:solution]
+        @test sol["p_custom_injection"] ≈ p_bat   rtol=1e-3
+
+        # Negative control: a hook device NOT registered via custom_injection is
+        # invisible to the balance and MUST trip W.SOL.POWER_BALANCE — proving the
+        # registration is exactly what closes the balance.
+        res2 = solve_opf(net; model_hook! = bat_model_hook!,
+                              solution_hook! = (ctx, result) -> nothing)
+        @test !haskey(res2, "custom_injection")
+        rep2 = profile_solution(net, res2)
+        @test any(f.code == "W.SOL.POWER_BALANCE" for f in rep2.findings)
+    end
+
+    @testset "T-STAGED: build_opf_model matches solve_opf (single snapshot)" begin
+        # The staged API run as one snapshot must reproduce solve_opf exactly:
+        # same construction/KCL/extract path, just unfused.
+        net = _pu_net()
+        fused = solve_opf(net)
+
+        ctx = build_opf_model(net)
+        enforce_kcl!(ctx)
+        JuMP.optimize!(ctx.model)
+        staged = extract_result(ctx)
+
+        @test staged["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test staged["objective"] ≈ fused["objective"]  rtol=1e-8
+        @test staged["bus"]["bus1"]["1"]["vm"] ≈ fused["bus"]["bus1"]["1"]["vm"]  rtol=1e-8
+        @test staged["generator"]["g1"]["1"]["pg"] ≈ fused["generator"]["g1"]["1"]["pg"]  rtol=1e-8
+
+        # add_objective=false leaves the model with no objective; generation_cost
+        # returns the same expression solve_opf would have minimised.
+        ctx2 = build_opf_model(net; add_objective=false)
+        @test JuMP.objective_function(ctx2.model) == JuMP.AffExpr(0.0)  # unset ⇒ 0
+        JuMP.@objective(ctx2.model, Min, generation_cost(ctx2))
+        enforce_kcl!(ctx2)
+        JuMP.optimize!(ctx2.model)
+        staged2 = extract_result(ctx2)
+        @test staged2["objective"] ≈ fused["objective"]  rtol=1e-8
+    end
+
+    @testset "T-STAGES: composable construction and manifest invariants" begin
+        net = _pu_net()
+        ctx = initialize_opf_model(net; s_base=2e6)
+        manifest = opf_build_manifest(ctx)
+
+        @test manifest isa OpfBuildManifest
+        @test manifest.problem == :opf
+        @test manifest.formulation == :ivr_en
+        @test manifest.per_unit
+        @test manifest.s_base == 2e6
+        @test manifest.stages == [:variables]
+        @test opf_stage_completed(ctx, :variables)
+        @test !opf_stage_completed(ctx, :device_physics)
+        push!(manifest.stages, :forged)
+        manifest.component_owners[:line] = :Forged
+        @test !opf_stage_completed(ctx, :forged)
+        @test isempty(opf_build_manifest(ctx).component_owners)
+
+        # Dependencies are checked before mutating the JuMP model.
+        nvar0 = JuMP.num_variables(opf_model(ctx))
+        @test_throws ArgumentError add_opf_operational_limits!(ctx)
+        @test_throws ArgumentError add_opf_device_constraints!(ctx)
+        @test_throws ArgumentError set_opf_objective!(ctx)
+        @test_throws ArgumentError enforce_kcl!(ctx)
+        @test opf_build_manifest(ctx).stages == [:variables]
+        @test JuMP.num_variables(opf_model(ctx)) == nvar0
+
+        set_opf_start_values!(ctx)
+        @test_throws ArgumentError set_opf_start_values!(ctx)
+        add_opf_operational_limits!(ctx)
+        add_opf_device_constraints!(ctx)
+        set_opf_objective!(ctx)
+        @test opf_build_manifest(ctx).stages ==
+            [:variables, :start_values, :operational_limits,
+             :device_physics, :objective]
+        owners = opf_build_manifest(ctx).component_owners
+        @test owners[:voltage_source] == :BMOPFTools
+        @test owners[:line] == :BMOPFTools
+        @test owners[:load] == :BMOPFTools
+        @test owners[:generator] == :BMOPFTools
+        @test owners[:grounding] == :BMOPFTools
+
+        enforce_kcl!(ctx)
+        @test opf_build_manifest(ctx).stages[end] == :kcl
+        @test opf_lifecycle(ctx) == :kcl_finalized
+        @test_throws ArgumentError add_opf_operational_limits!(ctx)
+        @test_throws ArgumentError add_opf_device_constraints!(ctx)
+        @test_throws ArgumentError set_opf_objective!(ctx)
+
+        JuMP.optimize!(opf_model(ctx))
+        manual = extract_result(ctx)
+        wrapped_ctx = build_opf_model(net; s_base=2e6)
+        @test opf_build_manifest(wrapped_ctx).stages ==
+            [:variables, :start_values, :operational_limits,
+             :device_physics, :objective]
+        enforce_kcl!(wrapped_ctx)
+        JuMP.optimize!(opf_model(wrapped_ctx))
+        wrapped = extract_result(wrapped_ctx)
+        @test manual["objective"] ≈ wrapped["objective"] rtol=1e-9
+        @test manual["bus"]["bus1"]["1"]["vm"] ≈
+              wrapped["bus"]["bus1"]["1"]["vm"] rtol=1e-9
+
+        # Operational limits may be deliberately omitted, but cannot be added
+        # after device physics because stage order would no longer be reproducible.
+        unbounded = initialize_opf_model(net)
+        set_opf_start_values!(unbounded)
+        add_opf_device_constraints!(unbounded)
+        @test_throws ArgumentError add_opf_operational_limits!(unbounded)
+        @test opf_build_manifest(unbounded).stages ==
+            [:variables, :start_values, :device_physics]
+
+        seen_stages = Ref{Vector{Symbol}}()
+        hooked = build_opf_model(net; add_objective=false,
+            model_hook! = c -> (seen_stages[] = copy(opf_build_manifest(c).stages)))
+        @test seen_stages[] ==
+            [:variables, :start_values, :operational_limits, :device_physics]
+        @test !opf_stage_completed(hooked, :objective)
+    end
+
+    @testset "T-BUILD-SPEC: downstream device ownership without double stamping" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "b1":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
+                  "v_min":[200.0],"v_max":[260.0]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[230.0],"v_angle":[0.0],"cost":[1.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.01}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "ibr":{
+             "pv_native":{"bus":"b1","terminal_map":["1","n"],
+                 "topology":"SINGLE_PHASE","prime_mover":"PV",
+                 "s_max":[1000.0],"p_min":[500.0],"p_max":[500.0],
+                 "q_min":[0.0],"q_max":[0.0],"cost":[0.0]},
+             "pv_custom":{"bus":"b1","terminal_map":["1","n"],
+                 "topology":"SINGLE_PHASE","prime_mover":"PV",
+                 "s_max":[100.0],"p_min":[1500.0],"p_max":[1500.0],
+                 "q_min":[0.0],"q_max":[0.0],"cost":[0.0]}}}
+        """; from_string=true)
+
+        builder = MockOpfExtension.builder()
+        mixed_spec = OpfBuildSpec(component_builders=Dict(
+            (:ibr, "pv_custom") => builder))
+        ctx = build_opf_model(net; per_unit=false, build_spec=mixed_spec)
+        @test opf_build_spec(ctx).component_builders[(:ibr, "pv_custom")].owner ==
+              :MockOpfExtension
+        @test opf_object(ctx,
+            OpfModelKey(:expression, :mock_ibr_active_power, "pv_custom")) !== nothing
+        @test_throws KeyError opf_object(ctx,
+            OpfModelKey(:expression, :mock_ibr_active_power, "pv_native"))
+
+        owners = opf_build_manifest(ctx).component_owners
+        @test owners[(:ibr, "pv_native")] == :BMOPFTools
+        @test owners[(:ibr, "pv_custom")] == :MockOpfExtension
+        @test !haskey(owners, :ibr)
+
+        enforce_kcl!(ctx)
+        JuMP.optimize!(opf_model(ctx))
+        result = extract_result(ctx)
+        @test result["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test result["ibr"]["pv_native"]["1"]["pg"] ≈ 500.0 atol=1e-4
+        @test result["ibr"]["pv_custom"]["1"]["pg"] ≈ 1500.0 atol=1e-4
+        @test result["mock_ibr"]["pv_custom"]["p"] ≈ 1500.0 atol=1e-4
+        # pv_custom deliberately exceeds its declared s_max. Feasibility proves
+        # the native IBR capability constraint was not stamped a second time.
+        @test result["mock_ibr"]["pv_custom"]["p"] >
+              net["ibr"]["pv_custom"]["s_max"][1]
+        report = profile_solution(net, result)
+        @test !any(f.code == "W.SOL.POWER_BALANCE" for f in report.findings)
+
+        # A typed provider changes a custom builder coefficient without changing
+        # the network dict or relying on the context's private representation.
+        coefficient_key = OpfCoefficientKey(
+            :setpoint, :ibr, "pv_custom", :active_power, 1)
+        provider_calls = Ref(0)
+        provider = OpfCoefficientProvider(:ForecastExtension,
+            (c, key, default) -> begin
+                provider_calls[] += 1
+                @test key == coefficient_key
+                @test default == 1500.0
+                return 1750.0
+            end)
+        unused_key = OpfCoefficientKey(
+            :controller, :ibr, "pv_custom", :deadband, 1)
+        provider_spec = OpfBuildSpec(
+            component_builders=Dict((:ibr, "pv_custom") => builder),
+            coefficient_providers=Dict(
+                coefficient_key => provider,
+                unused_key => OpfCoefficientProvider(
+                    :UnusedExtension, (c, key, default) -> default)))
+        provider_ctx = build_opf_model(net; per_unit=false,
+            build_spec=provider_spec, add_objective=false)
+        @test provider_calls[] == 1
+        @test opf_coefficient_usage(provider_ctx)[coefficient_key] == 1
+        @test opf_coefficient_provider(provider_ctx, coefficient_key) === provider
+        @test opf_coefficient(provider_ctx,
+            OpfCoefficientKey(:cost, :ibr, "pv_custom", :linear, 1), 42.0) == 42.0
+        returned_providers = opf_coefficient_providers(provider_ctx)
+        empty!(returned_providers)
+        @test length(opf_coefficient_providers(provider_ctx)) == 2
+        enforce_kcl!(provider_ctx)
+        JuMP.optimize!(opf_model(provider_ctx))
+        provider_result = extract_result(provider_ctx)
+        @test provider_result["mock_ibr"]["pv_custom"]["p"] ≈ 1750.0 atol=1e-4
+        provider_report = opf_differentiability_report(provider_ctx)
+        @test !provider_report.ready
+        @test provider_report.unused_coefficient_keys == [unused_key]
+        @test any(q -> occursin("not consumed", q),
+                  provider_report.qualifications)
+        @test_throws ArgumentError OpfCoefficientKey(
+            :structural, :ibr, "pv_custom", :terminal_map)
+
+        pu_result = solve_opf(net; build_spec=mixed_spec)
+        @test pu_result["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test pu_result["mock_ibr"]["pv_custom"]["p"] ≈ 1500.0 atol=1e-3
+        pf_result = solve_pf(net; per_unit=false, build_spec=mixed_spec)
+        @test pf_result["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test pf_result["mock_ibr"]["pv_custom"]["p"] ≈ 1500.0 atol=1e-3
+        feasibility_result = solve_feasibility_opf(
+            net; per_unit=false, build_spec=mixed_spec)
+        @test feasibility_result["termination_status"] in
+              ("LOCALLY_SOLVED", "OPTIMAL")
+        @test feasibility_result["mock_ibr"]["pv_custom"]["p"] ≈
+              1500.0 atol=1e-3
+
+        # Whole-family replacement calls the downstream builder once with all
+        # deterministically sorted identifiers and records one family owner.
+        called_ids = Ref{Vector{String}}()
+        family_builder = OpfDeviceBuilder(:FamilyOwner, (c, ids) -> begin
+            called_ids[] = copy(ids)
+            MockOpfExtension.build_fixed_power_ibrs!(c, ids)
+        end)
+        family_ctx = build_opf_model(net; per_unit=false,
+            build_spec=OpfBuildSpec(family_builders=Dict(:ibr => family_builder)),
+            add_objective=false)
+        @test called_ids[] == ["pv_custom", "pv_native"]
+        @test opf_build_manifest(family_ctx).component_owners[:ibr] == :FamilyOwner
+
+        # Specs and returned copies cannot be mutated behind a live context.
+        returned = opf_build_spec(ctx)
+        empty!(returned.component_builders)
+        @test haskey(opf_build_spec(ctx).component_builders,
+                     (:ibr, "pv_custom"))
+
+        @test_throws ArgumentError OpfBuildSpec(
+            family_builders=Dict(:ibr => builder),
+            component_builders=Dict((:ibr, "pv_custom") => builder))
+        typed_families = Dict{Symbol,OpfDeviceBuilder}(:ibr => builder)
+        typed_components = Dict{Tuple{Symbol,String},OpfDeviceBuilder}(
+            (:ibr, "pv_custom") => builder)
+        typed_providers = Dict{OpfCoefficientKey,OpfCoefficientProvider}()
+        @test_throws ArgumentError OpfBuildSpec(
+            typed_families, typed_components, typed_providers)
+
+        # Native IBR ownership includes converter/DC coupling and isolated-link
+        # power balance. Until that coupled seam is public, replacement fails
+        # closed instead of leaving pre-created DC variables unconstrained.
+        coupled_net = deepcopy(net)
+        coupled_net["ibr"]["pv_custom"]["dc_link_coupled"] = true
+        coupled_ctx = initialize_opf_model(coupled_net;
+            build_spec=OpfBuildSpec(component_builders=Dict(
+                (:ibr, "pv_custom") => builder)))
+        set_opf_start_values!(coupled_ctx)
+        @test_throws ArgumentError add_opf_device_constraints!(coupled_ctx)
+        @test !opf_stage_completed(coupled_ctx, :device_physics)
+
+        # These ownership transfers require private DC-KCL or branch-result
+        # ledgers today. Reject them before device physics rather than building
+        # a model with missing coupling or silently incomplete flow/loss output.
+        for family in (:line, :transformer, :dc_network)
+            unsupported_ctx = initialize_opf_model(net;
+                build_spec=OpfBuildSpec(
+                    family_builders=Dict(family => builder)))
+            set_opf_start_values!(unsupported_ctx)
+            err = try
+                add_opf_device_constraints!(unsupported_ctx)
+                nothing
+            catch caught
+                caught
+            end
+            @test err isa ArgumentError
+            @test occursin("result-ledger seams", sprint(showerror, err))
+            @test !opf_stage_completed(unsupported_ctx, :device_physics)
+        end
+
+        line_component_ctx = initialize_opf_model(net;
+            build_spec=OpfBuildSpec(component_builders=Dict(
+                (:line, "l1") => builder)))
+        set_opf_start_values!(line_component_ctx)
+        line_error = try
+            add_opf_device_constraints!(line_component_ctx)
+            nothing
+        catch caught
+            caught
+        end
+        @test line_error isa ArgumentError
+        @test occursin("omit the line from the network", sprint(showerror, line_error))
+        @test !opf_stage_completed(line_component_ctx, :device_physics)
+
+        bad_family = initialize_opf_model(net;
+            build_spec=OpfBuildSpec(family_builders=Dict(:unknown => builder)))
+        set_opf_start_values!(bad_family)
+        family_error = try
+            add_opf_device_constraints!(bad_family)
+            nothing
+        catch caught
+            caught
+        end
+        @test family_error isa ArgumentError
+        @test occursin("[:capacitor, :generator, :grounding, :ibr, :load, :shunt, :switch, :voltage_source]",
+                       sprint(showerror, family_error))
+        @test !opf_stage_completed(bad_family, :device_physics)
+
+        bad_id = initialize_opf_model(net;
+            build_spec=OpfBuildSpec(component_builders=Dict(
+                (:ibr, "missing") => builder)))
+        set_opf_start_values!(bad_id)
+        @test_throws ArgumentError add_opf_device_constraints!(bad_id)
+        @test !opf_stage_completed(bad_id, :device_physics)
+
+        unsupported_mixed = initialize_opf_model(net;
+            build_spec=OpfBuildSpec(component_builders=Dict(
+                (:transformer, "x") => builder)))
+        set_opf_start_values!(unsupported_mixed)
+        @test_throws ArgumentError add_opf_device_constraints!(unsupported_mixed)
+
+        extractor_ctx = initialize_opf_model(net)
+        f = (c, r) -> nothing
+        @test register_opf_result_extractor!(extractor_ctx, :owner, f) === f
+        @test_throws ArgumentError register_opf_result_extractor!(
+            extractor_ctx, :owner, f)
+        @test register_opf_result_extractor!(extractor_ctx, :owner, f;
+                                             replace=true) === f
+
+        nothing_provider = OpfCoefficientProvider(:BrokenProvider,
+            (c, key, default) -> nothing)
+        nothing_key = OpfCoefficientKey(:setpoint, :ibr, "pv_custom",
+                                        :active_power, 1)
+        nothing_ctx = initialize_opf_model(net;
+            build_spec=OpfBuildSpec(
+                component_builders=Dict((:ibr, "pv_custom") => builder),
+                coefficient_providers=Dict(nothing_key => nothing_provider)))
+        set_opf_start_values!(nothing_ctx)
+        @test_throws ArgumentError add_opf_device_constraints!(nothing_ctx)
+        @test !opf_stage_completed(nothing_ctx, :device_physics)
+    end
+
+    @testset "T-PHYSICS-PROVIDER: line matrix entries retain structure" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","n"],
+                   "perfectly_grounded_terminals":["n"]},
+            "b1":{"terminal_names":["1","n"],
+                  "perfectly_grounded_terminals":["n"],
+                  "v_min":[900.0],"v_max":[999.0]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5,"X_series_1_1":0.0}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0}},
+         "load":{"ld":{"bus":"b1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_nom":[100000.0],
+             "q_nom":[0.0]}}}
+        """; from_string=true)
+        rkey = OpfCoefficientKey(:physics, :line, "l1", :R_series, (1, 1))
+        xkey = OpfCoefficientKey(:physics, :line, "l1", :X_series, (1, 1))
+        calls = Dict(rkey => 0, xkey => 0)
+        providers = Dict(
+            rkey => OpfCoefficientProvider(:PhysicsTest,
+                (ctx, key, default) -> begin
+                    @test default == 0.5
+                    calls[key] += 1
+                    0.75
+                end),
+            xkey => OpfCoefficientProvider(:PhysicsTest,
+                (ctx, key, default) -> begin
+                    @test default == 0.0
+                    calls[key] += 1
+                    0.1
+                end),
+        )
+        ctx = build_opf_model(net; per_unit=false, add_objective=false,
+            build_spec=OpfBuildSpec(coefficient_providers=providers))
+        nvar = JuMP.num_variables(opf_model(ctx))
+        enforce_kcl!(ctx)
+        JuMP.optimize!(opf_model(ctx))
+        @test JuMP.termination_status(opf_model(ctx)) in
+              (JuMP.MOI.LOCALLY_SOLVED, JuMP.MOI.OPTIMAL)
+        @test calls == Dict(rkey => 1, xkey => 1)
+        @test opf_coefficient_usage(ctx) == Dict(rkey => 1, xkey => 1)
+        @test JuMP.num_variables(opf_model(ctx)) == nvar
+        report = opf_differentiability_report(ctx)
+        @test report.ready
+        @test any(q -> occursin("passivity", q), report.qualifications)
+    end
+
+    @testset "T-PROFILE-PROVIDER: shared profile coefficients are shared" begin
+        net = parse_bmopf("""
+        {"bus":{"b":{"terminal_names":["1","n"],
+                           "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"grid":{"bus":"b","terminal_map":["1"],
+             "v_magnitude":[240.0],"v_angle":[0.0]}},
+         "control_profile":{"shared":{"volt_var":{
+             "voltage_reference":"PN_PER_PHASE",
+             "breakpoints":[230.0,235.0,245.0,250.0],
+             "q_limits":[-1.0,1.0],"q_unit":"VA_FRACTION",
+             "q_ref":"VAR_MAX"}}},
+         "ibr":{
+             "pv1":{"bus":"b","terminal_map":["1","n"],
+                 "topology":"SINGLE_PHASE","prime_mover":"PV",
+                 "s_max":[1000.0],"p_min":[0.0],"p_max":[0.0],
+                 "q_min":[-1000.0],"q_max":[1000.0],
+                 "control_profile":"shared"},
+             "pv2":{"bus":"b","terminal_map":["1","n"],
+                 "topology":"SINGLE_PHASE","prime_mover":"PV",
+                 "s_max":[1000.0],"p_min":[0.0],"p_max":[0.0],
+                 "q_min":[-1000.0],"q_max":[1000.0],
+                 "control_profile":"shared"}}}
+        """; from_string=true)
+        model = JuMP.Model(Ipopt.Optimizer)
+        keys = [OpfCoefficientKey(:controller, :control_profile, "shared",
+                                  :volt_var_breakpoints, i)
+                for i in 1:4]
+        defaults = [230.0, 235.0, 245.0, 250.0]
+        parameters = Dict(key => JuMP.@variable(
+            model, set=JuMP.Parameter(default), base_name="shared_knot_$i")
+            for (i, (key, default)) in enumerate(zip(keys, defaults)))
+        calls = Dict(key => 0 for key in keys)
+        providers = Dict(key => OpfCoefficientProvider(:ProfileTest,
+            (ctx, seen, default) -> begin
+                calls[seen] += 1
+                parameters[seen]
+            end) for key in keys)
+        ctx = build_opf_model(net; model, per_unit=false,
+            build_spec=OpfBuildSpec(coefficient_providers=providers),
+            add_objective=false)
+        @test calls == Dict(key => 1 for key in keys)
+        @test opf_coefficient_usage(ctx) == Dict(key => 1 for key in keys)
+        order_names = [JuMP.name(c)
+            for (F, S) in JuMP.list_of_constraint_types(model)
+            for c in JuMP.all_constraints(model, F, S)
+            if startswith(JuMP.name(c), "volt_var_order_shared_")]
+        @test sort(order_names) == ["volt_var_order_shared_$i" for i in 1:3]
+
+        malformed = deepcopy(net)
+        malformed["control_profile"]["shared"]["volt_var"]["breakpoints"] =
+            [230.0, 245.0, 240.0, 250.0]
+        malformed_model = JuMP.Model(Ipopt.Optimizer)
+        malformed_parameter = JuMP.@variable(
+            malformed_model, set=JuMP.Parameter(230.0),
+            base_name="malformed_profile_knot")
+        first_key = first(keys)
+        malformed_spec = OpfBuildSpec(coefficient_providers=Dict(
+            first_key => OpfCoefficientProvider(
+                :ProfileTest, (ctx, key, default) -> malformed_parameter)))
+        @test_throws ArgumentError build_opf_model(
+            malformed; model=malformed_model, per_unit=false,
+            build_spec=malformed_spec, add_objective=false)
+    end
+
+    @testset "T-PROFILE-BASES: parameterized profiles guard voltage bases" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "mv":{"terminal_names":["1","n"],
+                  "perfectly_grounded_terminals":["n"]},
+            "lv":{"terminal_names":["1","n"],
+                  "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"grid":{"bus":"mv","terminal_map":["1"],
+             "v_magnitude":[11000.0],"v_angle":[0.0]}},
+         "transformer":{"single_phase":{"tx":{
+             "bus_from":"mv","bus_to":"lv",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "s_rating":100000.0,"v_nom_from":11000.0,"v_nom_to":230.0,
+             "r_series_from":1.0,"x_series_from":5.0}}},
+         "control_profile":{"shared":{"volt_watt":{
+             "voltage_reference":"PN_PER_PHASE",
+             "breakpoints":[230.0,250.0],"p_limits":[0.2,1.0],
+             "p_unit":"VA_FRACTION","p_ref":"S_MAX"}}},
+         "ibr":{
+             "mv_pv":{"bus":"mv","terminal_map":["1","n"],
+                 "topology":"SINGLE_PHASE","prime_mover":"PV",
+                 "s_max":[1000.0],"p_min":[0.0],"p_max":[1000.0],
+                 "q_min":[0.0],"q_max":[0.0],"control_profile":"shared"},
+             "lv_pv":{"bus":"lv","terminal_map":["1","n"],
+                 "topology":"SINGLE_PHASE","prime_mover":"PV",
+                 "s_max":[1000.0],"p_min":[0.0],"p_max":[1000.0],
+                 "q_min":[0.0],"q_max":[0.0],"control_profile":"shared"}}}
+        """; from_string=true)
+        key = OpfCoefficientKey(:controller, :control_profile, "shared",
+                                :volt_watt_breakpoints, 1)
+        spec = OpfBuildSpec(coefficient_providers=Dict(
+            key => OpfCoefficientProvider(
+                :ProfileTest, (ctx, seen, default) -> default)))
+        err = try
+            build_opf_model(net; build_spec=spec, add_objective=false)
+            nothing
+        catch caught
+            caught
+        end
+        @test err isa ArgumentError
+        @test occursin("across different voltage bases", sprint(showerror, err))
+
+        # Arithmetic-equivalent nominal bases are accepted and canonicalized;
+        # materially different levels remain distinct.
+        ext = Base.get_extension(BMOPFTools, :BMOPFOpfExt)
+        @test ext._same_working_voltage_base(230.0, nextfloat(230.0))
+        @test !ext._same_working_voltage_base(230.0, 230.01)
+    end
+
+    @testset "T-EXT-API: semantic registry, lifecycle, state, and KCL injection" begin
+        net = _pu_net()
+        ctx = build_opf_model(net; add_objective=false)
+        reordered_net = Dict{String,Any}(reverse(collect(net)))
+        reordered_ctx = build_opf_model(reordered_net; add_objective=false)
+        initial_hashes = opf_research_hashes(ctx)
+        reordered_hashes = opf_research_hashes(reordered_ctx)
+        @test reordered_hashes["prepared_working_network_sha256"] ==
+              initial_hashes["prepared_working_network_sha256"]
+        @test reordered_hashes["model_structure_sha256"] ==
+              initial_hashes["model_structure_sha256"]
+
+        # Stable accessors do not expose the extension module or require callers
+        # to know how OpfContext stores these objects.
+        @test opf_model(ctx) === ctx.model
+        @test opf_network(ctx) === ctx.net
+        @test opf_bases(ctx) === ctx.bases
+        @test opf_lifecycle(ctx) == :building
+
+        # Public constructors cover every native ctx.vars family without
+        # exposing its dictionary layout or abbreviated tuple conventions.
+        native_key_cases = [
+            opf_bus_voltage_key("b", "1") =>
+                OpfModelKey(:variable, :vr, ("b", "1")),
+            opf_bus_voltage_key("b", "1"; component=:imag) =>
+                OpfModelKey(:variable, :vi, ("b", "1")),
+            opf_ground_current_key("b", "n") =>
+                OpfModelKey(:variable, :cr_gnd, ("b", "n")),
+            opf_ground_current_key("b", "n"; component=:imag) =>
+                OpfModelKey(:variable, :ci_gnd, ("b", "n")),
+            opf_line_current_key("l", 1) =>
+                OpfModelKey(:variable, :cr_fr, ("l", 1)),
+            opf_line_current_key("l", 1; side=:from, component=:imag) =>
+                OpfModelKey(:variable, :ci_fr, ("l", 1)),
+            opf_line_current_key("l", 1; side=:to) =>
+                OpfModelKey(:variable, :cr_to, ("l", 1)),
+            opf_line_current_key("l", 1; side=:to, component=:imag) =>
+                OpfModelKey(:variable, :ci_to, ("l", 1)),
+            opf_switch_current_key("s", 2) =>
+                OpfModelKey(:variable, :cr_sw, ("s", 2)),
+            opf_switch_current_key("s", 2; component=:imag) =>
+                OpfModelKey(:variable, :ci_sw, ("s", 2)),
+            opf_load_current_key("d", 1) =>
+                OpfModelKey(:variable, :crd, ("d", 1)),
+            opf_load_current_key("d", 1; component=:imag) =>
+                OpfModelKey(:variable, :cid, ("d", 1)),
+            opf_generator_current_key("g", 1) =>
+                OpfModelKey(:variable, :crg, ("g", 1)),
+            opf_generator_current_key("g", 1; component=:imag) =>
+                OpfModelKey(:variable, :cig, ("g", 1)),
+            opf_voltage_source_current_key("src", 1) =>
+                OpfModelKey(:variable, :cr_src, ("src", 1)),
+            opf_voltage_source_current_key("src", 1; component=:imag) =>
+                OpfModelKey(:variable, :ci_src, ("src", 1)),
+            opf_transformer_current_key("t", :from, 1) =>
+                OpfModelKey(:variable, :cr_xf, ("t", "fr", 1)),
+            opf_transformer_current_key(
+                "t", :to, 1; component=:imag) =>
+                OpfModelKey(:variable, :ci_xf, ("t", "to", 1)),
+            opf_transformer_tap_key("t") =>
+                OpfModelKey(:variable, :tap, "t"),
+            opf_transformer_tap_key("odr", 2) =>
+                OpfModelKey(:variable, :tap, ("odr", 2)),
+            opf_nwinding_current_key("nt", 2, 3) =>
+                OpfModelKey(:variable, :cr_nw, ("nt", 2, 3)),
+            opf_nwinding_current_key("nt", 2, 3; component=:imag) =>
+                OpfModelKey(:variable, :ci_nw, ("nt", 2, 3)),
+            opf_ibr_current_key("pv", 1) =>
+                OpfModelKey(:variable, :cri, ("pv", 1)),
+            opf_ibr_current_key("pv", 1; component=:imag) =>
+                OpfModelKey(:variable, :cii, ("pv", 1)),
+            opf_ibr_power_key("pv", 1) =>
+                OpfModelKey(:variable, :p_ibr, ("pv", 1)),
+            opf_ibr_power_key("pv", 1; component=:reactive) =>
+                OpfModelKey(:variable, :q_ibr, ("pv", 1)),
+            opf_ibr_voltage_magnitude_key(
+                "pv", 1; reference=:pn, controller=:volt_var) =>
+                OpfModelKey(:variable, :u_ibr, ("pv", 1, "pn", "volt_var")),
+            opf_dc_voltage_key("db", "+") =>
+                OpfModelKey(:variable, :v_dc, ("db", "+")),
+            opf_dc_ground_current_key("db", "m") =>
+                OpfModelKey(:variable, :idc_gnd, ("db", "m")),
+            opf_dc_branch_current_key("dl", 1) =>
+                OpfModelKey(:variable, :idc_br, ("dl", 1)),
+            opf_converter_dc_current_key("conv") =>
+                OpfModelKey(:variable, :idc_conv, "conv"),
+            opf_dc_load_current_key("load") =>
+                OpfModelKey(:variable, :idc_load, "load"),
+            opf_dc_source_current_key("source") =>
+                OpfModelKey(:variable, :idc_src, "source"),
+            opf_dc_source_power_key("source") =>
+                OpfModelKey(:variable, :pdc_src, "source"),
+        ]
+        @test all(first(case) == last(case) for case in native_key_cases)
+        constructor_families = Set(last(case).family for case in native_key_cases)
+        @test Set(keys(ctx.vars)) ⊆ constructor_families
+        @test all(last(case).kind == :variable for case in native_key_cases)
+        @test opf_object(ctx, opf_bus_voltage_key("bus1", "1")) ===
+              ctx.vars[:vr][("bus1", "1")]
+        @test_throws ArgumentError opf_bus_voltage_key(
+            "bus1", "1"; component=:magnitude)
+        @test_throws ArgumentError opf_line_current_key("l", 1; side=:sending)
+        @test_throws ArgumentError opf_transformer_current_key("t", :bad, 1)
+        @test_throws ArgumentError opf_ibr_current_key("pv", 0)
+        @test_throws ArgumentError opf_ibr_power_key("pv", 1; component=:apparent)
+        @test_throws ArgumentError opf_ibr_voltage_magnitude_key(
+            "pv", 1; reference=:line_to_line, controller=:volt_var)
+        @test_throws ArgumentError opf_ibr_voltage_magnitude_key(
+            "pv", 0; reference=:pn, controller=:volt_var)
+        @test_throws ArgumentError opf_dc_branch_current_key("dl", true)
+
+        # Native variables are registered automatically. A newly constructed
+        # equal key must retrieve the object (guards hash/equality semantics).
+        vrkey = OpfModelKey(:variable, :vr, ("bus1", "1"))
+        @test opf_object(ctx, vrkey) === ctx.vars[:vr][("bus1", "1")]
+        @test vrkey in opf_object_keys(ctx; kind=:variable)
+        @test_throws KeyError opf_object(ctx,
+            OpfModelKey(:variable, :vr, ("missing", "1")))
+        @test_throws ArgumentError opf_object_keys(ctx; kind="variable")
+
+        # Downstream expressions use the same collision-checked registry.
+        exprkey = OpfModelKey(:expression, :mock_power, ("battery", "bat1"))
+        expr = JuMP.@expression(ctx.model, 2 * ctx.vars[:vr][("bus1", "1")])
+        @test register_opf_object!(ctx, exprkey, expr) === expr
+        @test opf_object(ctx, exprkey) === expr
+        @test_throws ArgumentError register_opf_object!(ctx, exprkey, expr)
+        replacement = JuMP.@expression(ctx.model,
+            3 * ctx.vars[:vr][("bus1", "1")])
+        register_opf_object!(ctx, exprkey, replacement; replace=true)
+        @test opf_object(ctx, exprkey) === replacement
+
+        # Objective contributions share the semantic registry but use a checked
+        # wrapper. Registering a term does not overwrite the model objective.
+        objective_key = OpfModelKey(:objective, :mock_battery_cost, "bat1")
+        objective_before = JuMP.objective_function(ctx.model)
+        @test register_opf_objective_term!(
+            ctx, objective_key, replacement) === replacement
+        @test opf_object(ctx, objective_key) === replacement
+        @test JuMP.objective_function(ctx.model) == objective_before
+        @test_throws ArgumentError register_opf_objective_term!(
+            ctx, exprkey, replacement)
+        @test_throws ArgumentError register_opf_objective_term!(
+            ctx, OpfModelKey(:objective, :vector), [replacement])
+        foreign_model = JuMP.Model()
+        foreign_variable = JuMP.@variable(foreign_model)
+        @test_throws ArgumentError register_opf_objective_term!(
+            ctx, OpfModelKey(:objective, :foreign), foreign_variable)
+
+        regularization = register_opf_regularization!(ctx, :battery_tie_break;
+            method=:tikhonov, weight=1e-6, units=:currency_per_ampere2,
+            term_key=objective_key, targets=[exprkey],
+            purpose="Select one local battery dispatch branch",
+            owner=:MockExtensionA,
+            metadata=Dict("study_protocol" => "v1", "reported" => true))
+        @test regularization.name == :battery_tie_break
+        @test regularization.term_key == objective_key
+        @test regularization.targets == [exprkey]
+        @test regularization.metadata["reported"] == true
+        first_hashes = opf_research_hashes(ctx)
+        @test first_hashes["algorithm"] == "SHA-256"
+        @test all(length(first_hashes[key]) == 64 for key in (
+            "prepared_working_network_sha256", "model_structure_sha256",
+            "parameter_state_sha256",
+            "regularization_declarations_sha256",
+            "differentiability_annotations_sha256"))
+        @test opf_research_hashes(ctx) == first_hashes
+        returned_regularizations = opf_regularizations(ctx)
+        empty!(returned_regularizations[:battery_tie_break].targets)
+        returned_regularizations[:battery_tie_break].metadata["reported"] = false
+        @test opf_regularizations(ctx)[:battery_tie_break].targets == [exprkey]
+        @test opf_regularizations(ctx)[:battery_tie_break].metadata[
+            "reported"] == true
+        @test_throws ArgumentError register_opf_regularization!(
+            ctx, :battery_tie_break; method=:tikhonov, weight=1e-6,
+            term_key=objective_key, purpose="duplicate")
+        @test_throws ArgumentError register_opf_regularization!(
+            ctx, :bad_weight; method=:tikhonov, weight=-1.0,
+            term_key=objective_key, purpose="invalid")
+        @test_throws ArgumentError register_opf_regularization!(
+            ctx, :bad_term; method=:tikhonov, weight=1e-6,
+            term_key=exprkey, purpose="invalid")
+        @test_throws ArgumentError register_opf_regularization!(
+            ctx, :bad_target; method=:tikhonov, weight=1e-6,
+            term_key=objective_key,
+            targets=[OpfModelKey(:variable, :missing)], purpose="invalid")
+        @test_throws ArgumentError register_opf_regularization!(
+            ctx, :bad_metadata; method=:tikhonov, weight=1e-6,
+            term_key=objective_key, purpose="invalid",
+            metadata=Dict("callback" => identity))
+        cyclic_metadata = Dict{String,Any}()
+        cyclic_metadata["self"] = cyclic_metadata
+        @test_throws ArgumentError register_opf_regularization!(
+            ctx, :cyclic_metadata; method=:tikhonov, weight=1e-6,
+            term_key=objective_key, purpose="invalid",
+            metadata=cyclic_metadata)
+        replacement_regularization = register_opf_regularization!(
+            ctx, :battery_tie_break; method=:tikhonov, weight=2e-6,
+            term_key=objective_key, targets=[exprkey],
+            purpose="Updated declared tie-break weight", replace=true)
+        @test replacement_regularization.weight == 2e-6
+        @test opf_research_hashes(ctx)[
+            "regularization_declarations_sha256"] !=
+            first_hashes["regularization_declarations_sha256"]
+        regularized_provenance = opf_research_provenance(ctx)
+        @test regularized_provenance["regularizations"][1]["name"] ==
+              "battery_tie_break"
+        @test regularized_provenance["regularizations"][1]["weight"] == 2e-6
+        @test JSON3.write(regularized_provenance) isa String
+
+        # Finished JuMP graphs cannot reveal arbitrary extension-side Julia
+        # branches or bespoke hard operators. Their owners declare those
+        # hazards explicitly, with typed semantic locations where available.
+        branch_annotation = register_opf_differentiability_annotation!(
+            ctx, :forecast_regime_selection; kind=:dynamic_branch,
+            description="Forecast regime selected before model stamping",
+            owner=:MockExtensionA, key=exprkey, blocking=false,
+            metadata=Dict("protocol" => "fixed-regime-v1"))
+        unsupported_key = OpfCoefficientKey(
+            :controller, :ibr, "pv", :priority_mode)
+        register_opf_differentiability_annotation!(
+            ctx, :priority_mode_location;
+            kind=:unsupported_parameter_location,
+            description="Priority mode changes equation structure",
+            owner=:MockExtensionA, key=unsupported_key)
+        register_opf_differentiability_annotation!(
+            ctx, :hard_battery_projection; kind=:nonsmooth_operator,
+            description="Downstream projection contains a hard maximum",
+            owner=:MockExtensionB)
+        @test branch_annotation.blocking == false
+        annotation_hashes = opf_research_hashes(ctx)
+        @test length(annotation_hashes[
+            "differentiability_annotations_sha256"]) == 64
+        @test annotation_hashes["model_structure_sha256"] ==
+              first_hashes["model_structure_sha256"]
+        annotations = opf_differentiability_annotations(ctx)
+        annotations[:forecast_regime_selection].metadata["protocol"] = "bad"
+        @test opf_differentiability_annotations(ctx)[
+            :forecast_regime_selection].metadata["protocol"] ==
+              "fixed-regime-v1"
+        annotation_report = opf_differentiability_report(ctx)
+        @test only(annotation_report.dynamic_branches).name ==
+              :forecast_regime_selection
+        @test only(annotation_report.unsupported_parameter_locations).key ==
+              unsupported_key
+        @test only(annotation_report.nonsmooth_operators).name ==
+              :hard_battery_projection
+        @test_throws ArgumentError register_opf_differentiability_annotation!(
+            ctx, :forecast_regime_selection; kind=:dynamic_branch,
+            description="duplicate")
+        @test_throws ArgumentError register_opf_differentiability_annotation!(
+            ctx, :bad_kind; kind=:unknown, description="invalid")
+        @test_throws ArgumentError register_opf_differentiability_annotation!(
+            ctx, :bad_description; kind=:dynamic_branch, description="  ")
+        @test_throws ArgumentError register_opf_differentiability_annotation!(
+            ctx, :bad_key; kind=:dynamic_branch, description="invalid",
+            key=identity)
+        @test_throws ArgumentError register_opf_differentiability_annotation!(
+            ctx, :bad_metadata; kind=:dynamic_branch, description="invalid",
+            metadata=Dict("callback" => identity))
+        cyclic_annotation_metadata = Dict{String,Any}()
+        cyclic_annotation_metadata["self"] = cyclic_annotation_metadata
+        @test_throws ArgumentError register_opf_differentiability_annotation!(
+            ctx, :cyclic_annotation; kind=:dynamic_branch,
+            description="invalid", metadata=cyclic_annotation_metadata)
+        replaced_annotation = register_opf_differentiability_annotation!(
+            ctx, :forecast_regime_selection; kind=:dynamic_branch,
+            description="Regime fixed by a preregistered study protocol",
+            owner=:MockExtensionA, blocking=false, replace=true)
+        @test replaced_annotation.key === nothing
+        @test opf_research_hashes(ctx)[
+            "differentiability_annotations_sha256"] !=
+            annotation_hashes["differentiability_annotations_sha256"]
+        annotated_provenance = opf_research_provenance(ctx)
+        @test length(annotated_provenance[
+            "differentiability_annotations"]) == 3
+        @test annotated_provenance["differentiability"][
+            "nonsmooth_operators"] == ["hard_battery_projection"]
+        @test JSON3.write(annotated_provenance) isa String
+
+        # State belonging to independent extension owners cannot collide and is
+        # stable across repeated retrieval.
+        state_a = extension_state!(ctx, :MockExtensionA)
+        state_a[:token] = 1
+        state_b = extension_state!(ctx, :MockExtensionB) do
+            Dict{Symbol,Any}(:token => 2)
+        end
+        @test extension_state!(ctx, :MockExtensionA) === state_a
+        @test state_a[:token] == 1
+        @test state_b[:token] == 2
+        @test state_a !== state_b
+
+        # A custom WYE current is injected at the phase and returned at neutral.
+        # Verify signs on the symbolic KCL accumulator before solving.
+        cr = JuMP.@variable(ctx.model, base_name="mock_cr")
+        ci = JuMP.@variable(ctx.model, base_name="mock_ci")
+        add_terminal_injection!(ctx, "bus1", "1", cr, ci)
+        add_terminal_injection!(ctx, "bus1", "n", -cr, -ci)
+        @test JuMP.coefficient(ctx.kcl_r[("bus1", "1")], cr) == 1.0
+        @test JuMP.coefficient(ctx.kcl_i[("bus1", "1")], ci) == 1.0
+        @test JuMP.coefficient(ctx.kcl_r[("bus1", "n")], cr) == -1.0
+        @test JuMP.coefficient(ctx.kcl_i[("bus1", "n")], ci) == -1.0
+        @test_throws ArgumentError add_terminal_injection!(ctx, "missing", "1", cr, ci)
+        @test_throws ArgumentError add_terminal_injection!(ctx, "bus1", "missing", cr, ci)
+
+        enforce_kcl!(ctx)
+        @test opf_lifecycle(ctx) == :kcl_finalized
+        @test opf_object(ctx,
+            OpfModelKey(:constraint, :kcl_r, ("bus1", "1"))) isa JuMP.ConstraintRef
+        @test opf_object(ctx,
+            OpfModelKey(:constraint, :kcl_i, ("bus1", "1"))) isa JuMP.ConstraintRef
+        @test_throws ArgumentError enforce_kcl!(ctx)
+        @test_throws ArgumentError add_terminal_injection!(ctx, "bus1", "1", cr, ci)
+    end
+
+    @testset "T-PARAMETERS: scoped, unit-aware native decision bindings" begin
+        # The native single-phase tap variable stores the effective turns ratio
+        # N = N0*tap. The caller-facing parameter stores the dimensionless tap,
+        # making this a real SI/working-coordinate chain rather than x == theta.
+        net = parse_bmopf("""
+        {"bus":{
+            "hv":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "lv":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"src":{"bus":"hv","terminal_map":["1"],
+             "v_magnitude":[11000.0],"v_angle":[0.0],"cost":[1.0]}},
+         "load":{"ld":{"bus":"lv","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_nom":[5000.0],"q_nom":[0.0]}},
+         "transformer":{"single_phase":{"t1":{
+             "bus_from":"hv","bus_to":"lv",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "v_nom_from":11000.0,"v_nom_to":240.0,"s_rating":50000.0,
+             "tap":1.0,"tap_min":0.9,"tap_max":1.1}}}}
+        """; from_string=true)
+
+        ctx = build_opf_model(net; per_unit=false)
+        model = opf_model(ctx)
+        tap_input = JuMP.@variable(model, tap_input in JuMP.Parameter(0.96))
+        pkey = OpfModelKey(:parameter, :transformer_tap, "t1")
+        tkey = OpfModelKey(:variable, :tap, "t1")
+        n0 = 11000.0 / 240.0
+        binding = bind_opf_parameter!(ctx, pkey, tap_input, tkey;
+            scope=OpfParameterScope(:scenario, "low_voltage"),
+            aliases=[:tap_t1, "regulated_tap"],
+            input_unit=:tap_multiplier, working_unit=:effective_turns_ratio,
+            to_working_scale=n0, owner=:ParameterTests)
+        cap_key = OpfModelKey(:constraint, :research_tap_cap, "t1")
+        cap = JuMP.@constraint(model, opf_object(ctx, tkey) <= 2n0)
+        register_opf_object!(ctx, cap_key, cap)
+
+        @test binding.key == pkey
+        @test binding.targets == [tkey]
+        @test binding.scope.kind == :scenario
+        @test binding.scope.id == "low_voltage"
+        @test binding.to_working_scale == n0
+        @test binding.owner == :ParameterTests
+        @test opf_parameter(ctx, pkey) === tap_input
+        @test opf_parameter(ctx, :tap_t1) === tap_input
+        @test opf_parameter(ctx, "regulated_tap") === tap_input
+        @test opf_object(ctx, pkey) === tap_input
+        @test_throws ArgumentError register_opf_object!(
+            ctx, pkey, tap_input; replace=true)
+        @test length(binding.links) == 1
+        @test opf_object(ctx, OpfModelKey(
+            :constraint, :parameter_link, (pkey, tkey))) === binding.links[1]
+
+        # Returned metadata is defensive even though the JuMP objects remain live.
+        empty!(binding.targets)
+        empty!(binding.aliases)
+        all_bindings = opf_parameter_bindings(ctx)
+        empty!(all_bindings[pkey].links)
+        @test opf_parameter_binding(ctx, pkey).targets == [tkey]
+        @test opf_parameter_binding(ctx, pkey).aliases ==
+              [:tap_t1, :regulated_tap]
+        @test length(opf_parameter_binding(ctx, pkey).links) == 1
+
+        enforce_kcl!(ctx)
+        JuMP.optimize!(model)
+        @test JuMP.termination_status(model) in
+              (JuMP.MOI.LOCALLY_SOLVED, JuMP.MOI.OPTIMAL)
+        first_result = extract_result(ctx)
+        @test first_result["transformer"]["t1"]["tap"] ≈ 0.96 atol=1e-8
+        first_hashes = opf_research_hashes(ctx)
+
+        # Updating a parameter changes the solve without adding variables or
+        # constraints, which is essential for scenario sweeps and DiffOpt use.
+        nvar = JuMP.num_variables(model)
+        ncon = sum(JuMP.num_constraints(model, F, S)
+                   for (F, S) in JuMP.list_of_constraint_types(model))
+        JuMP.set_parameter_value(tap_input, 1.04)
+        JuMP.optimize!(model)
+        second_result = extract_result(ctx)
+        @test second_result["transformer"]["t1"]["tap"] ≈ 1.04 atol=1e-8
+        @test JuMP.num_variables(model) == nvar
+        @test sum(JuMP.num_constraints(model, F, S)
+                  for (F, S) in JuMP.list_of_constraint_types(model)) == ncon
+        second_hashes = opf_research_hashes(ctx)
+        @test second_hashes["prepared_working_network_sha256"] ==
+              first_hashes["prepared_working_network_sha256"]
+        @test second_hashes["model_structure_sha256"] ==
+              first_hashes["model_structure_sha256"]
+        @test second_hashes["parameter_state_sha256"] !=
+              first_hashes["parameter_state_sha256"]
+
+        # Stable solution queries preserve JuMP's values, shapes, units, and
+        # dual sign convention; they add semantic-key and result validation.
+        link_key = OpfModelKey(:constraint, :parameter_link, (pkey, tkey))
+        generation_cost_key = OpfModelKey(:objective, :generation_cost)
+        @test opf_primal(ctx, pkey) == 1.04
+        @test opf_primal(ctx, tkey) ≈ n0 * 1.04 atol=1e-8
+        @test abs(opf_constraint_value(ctx, link_key)) < 1e-7
+        @test opf_constraint_slack(ctx, link_key) === nothing
+        @test opf_constraint_slack(ctx, cap_key) > n0 / 2
+        @test isfinite(opf_dual(ctx, link_key))
+        @test opf_primal(ctx, generation_cost_key) ≈
+              opf_objective_value(ctx) atol=1e-8
+        @test opf_objective_value(ctx) == JuMP.objective_value(model)
+        @test_throws ArgumentError opf_primal(ctx, link_key)
+        @test_throws ArgumentError opf_dual(ctx, tkey)
+        @test_throws ArgumentError opf_primal(ctx, tkey; result=0)
+        @test_throws KeyError opf_primal(ctx,
+            OpfModelKey(:expression, :missing))
+
+        provenance = opf_research_provenance(ctx)
+        @test provenance["schema"] ==
+              "BMOPFTools.opf_research_provenance/v1"
+        @test provenance["software"]["BMOPFTools"] ==
+              string(Base.pkgversion(BMOPFTools))
+        @test provenance["formulation"]["formulation"] == "ivr_en"
+        @test provenance["formulation"]["per_unit"] == false
+        @test occursin("Ipopt", provenance["solver"]["name"])
+        @test provenance["solver"]["result_count"] == 1
+        @test provenance["model"]["variables"] == nvar
+        @test provenance["model"]["constraints"] == ncon
+        @test provenance["model"]["residuals"][
+            "max_normalized_primal_violation"] < 1e-6
+        @test length(provenance["parameters"]) == 1
+        @test provenance["parameters"][1]["value"] == 1.04
+        @test provenance["parameters"][1]["input_unit"] == "tap_multiplier"
+        @test provenance["parameters"][1]["to_working_scale"] == n0
+        @test provenance["semantic_references"]["counts_by_kind"][
+            "objective"] == 1
+        @test provenance["semantic_references"]["counts_by_kind"][
+            "constraint"] >= 2
+        @test provenance["semantic_references"]["objective_terms"][1][
+            "key"]["family"] == "generation_cost"
+        @test provenance["semantic_references"]["objective_terms"][1][
+            "value"] ≈ opf_objective_value(ctx) atol=1e-8
+        @test isempty(provenance["regularizations"])
+        @test provenance["hashes"] == second_hashes
+        @test JSON3.write(provenance) isa String
+        provenance["parameters"][1]["value"] = -99.0
+        @test opf_research_provenance(ctx)["parameters"][1]["value"] == 1.04
+
+        # One-to-many mappings are useful for shared scenario parameters.
+        many = initialize_opf_model(net; per_unit=false)
+        many_model = opf_model(many)
+        shared = JuMP.@variable(many_model, shared in JuMP.Parameter(2.0))
+        x1 = JuMP.@variable(many_model, base_name="shared_target_1")
+        x2 = JuMP.@variable(many_model, base_name="shared_target_2")
+        x1key = OpfModelKey(:variable, :custom_setpoint, "a")
+        x2key = OpfModelKey(:variable, :custom_setpoint, "b")
+        register_opf_object!(many, x1key, x1)
+        register_opf_object!(many, x2key, x2)
+        shared_binding = bind_opf_parameter!(many,
+            OpfModelKey(:parameter, :shared_setpoint), shared, [x1key, x2key];
+            scope=:global, to_working_scale=0.5)
+        @test length(shared_binding.links) == 2
+
+        unfinished_report = opf_differentiability_report(many)
+        @test !unfinished_report.ready
+        @test unfinished_report.lifecycle == :building
+        @test unfinished_report.termination_status == "OPTIMIZE_NOT_CALLED"
+        @test any(q -> occursin("KCL construction", q),
+                  unfinished_report.qualifications)
+        @test opf_kkt_diagnostic(many) === nothing
+        @test_throws ArgumentError opf_differentiability_report(many;
+            active_tolerance=1e-4, transition_tolerance=1e-5)
+        @test_throws ArgumentError opf_differentiability_report(many;
+            dual_tolerance=-1.0)
+        @test_throws ArgumentError opf_checked_kkt_factorization(many;
+            pivot_tolerance=-1.0)
+        @test opf_checked_kkt_factorization(many) isa Function
+        unfinished_provenance = opf_research_provenance(many)
+        @test unfinished_provenance["solver"]["result_count"] == 0
+        @test unfinished_provenance["solver"]["objective_value"] === nothing
+        @test unfinished_provenance["model"]["residuals"][
+            "max_primal_violation"] === nothing
+
+        # Validation is atomic: every error below leaves model structure and
+        # registries unchanged. Structural quantities require a rebuild.
+        before_constraints = sum(JuMP.num_constraints(many_model, F, S)
+            for (F, S) in JuMP.list_of_constraint_types(many_model))
+        badkey = OpfModelKey(:parameter, :bad)
+        @test_throws ArgumentError bind_opf_parameter!(many, badkey, shared,
+            OpfModelKey(:variable, :missing))
+        @test_throws ArgumentError bind_opf_parameter!(many,
+            OpfModelKey(:variable, :wrong_kind), shared, x1key)
+        @test_throws ArgumentError bind_opf_parameter!(many, badkey, shared,
+            [x1key, x1key])
+        @test_throws ArgumentError bind_opf_parameter!(many, badkey, shared,
+            x1key; to_working_scale=0.0)
+        @test_throws ArgumentError bind_opf_parameter!(many, badkey, shared,
+            x1key; role=:structural)
+        @test_throws ArgumentError bind_opf_parameter!(many, badkey, shared,
+            x1key; aliases=[:tap_t1, :tap_t1])
+        @test sum(JuMP.num_constraints(many_model, F, S)
+                  for (F, S) in JuMP.list_of_constraint_types(many_model)) ==
+              before_constraints
+        @test_throws KeyError opf_parameter(many, badkey)
+
+        other_model = JuMP.Model()
+        foreign = JuMP.@variable(other_model, foreign in JuMP.Parameter(1.0))
+        @test_throws ArgumentError bind_opf_parameter!(many, badkey, foreign, x1key)
+
+        # Lifecycle mutation is forbidden after KCL finalization.
+        @test_throws ArgumentError bind_opf_parameter!(ctx,
+            OpfModelKey(:parameter, :late), tap_input, tkey)
+        @test_throws ArgumentError OpfParameterScope(:invalid)
+        @test_throws ArgumentError OpfParameterScope(:global, 1)
+    end
+
+    @testset "T-MULTIPERIOD: SOC-coupled battery across two snapshots, one model" begin
+        # Two snapshots co-optimised in ONE JuMP model with an inter-temporal
+        # state-of-charge link — the formulation solve_opf cannot express. The
+        # slack import price is high in period 1, low in period 2; a cyclic
+        # battery must discharge into the expensive period and recharge in the
+        # cheap one. Proves the staged public API supports storage/EV models.
+        netj(src_cost) = """
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
+                         "v_min":[900.0],"v_max":[1100.0]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0],"cost":[$src_cost]}},
+         "linecode":{"lc":{"R_series_1_1":0.1}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],"linecode":"lc","length":1.0}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE","p_nom":[100000.0],"q_nom":[0.0]}}}
+        """
+        prices  = [0.20, 0.05]
+        nets    = [parse_bmopf(netj(p); from_string=true) for p in prices]
+        T       = length(nets)
+        pmax_W  = 40_000.0
+        emax_Wh = 100_000.0
+        soc0_Wh = 40_000.0
+        dt_h    = 1.0
+
+        Pex = Dict{Int,Any}()
+        port!(t) = ctx -> begin
+            m = ctx.model
+            vr = ctx.vars[:vr]; vi = ctx.vars[:vi]
+            sb = ctx.bases === nothing ? 1.0 : ctx.bases.s_base
+            crb = JuMP.@variable(m, base_name = "crb_t$t")
+            cib = JuMP.@variable(m, base_name = "cib_t$t")
+            P = JuMP.@expression(m, vr[("bus1","1")]*crb + vi[("bus1","1")]*cib)
+            Q = JuMP.@expression(m, vi[("bus1","1")]*crb - vr[("bus1","1")]*cib)
+            JuMP.@constraint(m, P <=  pmax_W / sb)
+            JuMP.@constraint(m, P >= -pmax_W / sb)
+            JuMP.@constraint(m, Q == 0.0)
+            JuMP.add_to_expression!(ctx.kcl_r[("bus1","1")], crb)
+            JuMP.add_to_expression!(ctx.kcl_i[("bus1","1")], cib)
+            JuMP.add_to_expression!(ctx.kcl_r[("bus1","n")], -crb)
+            JuMP.add_to_expression!(ctx.kcl_i[("bus1","n")], -cib)
+            Pex[t] = P
+        end
+
+        model = JuMP.Model(Ipopt.Optimizer); JuMP.set_silent(model)
+        ctxs = [build_opf_model(nets[t]; model=model, add_objective=false,
+                                model_hook! = port!(t)) for t in 1:T]
+        sb = ctxs[1].bases.s_base
+        Δpu(x) = x / sb
+
+        JuMP.@variable(model, soc[1:T+1])
+        JuMP.@constraint(model, soc[1] == Δpu(soc0_Wh))
+        for t in 1:T
+            JuMP.@constraint(model, soc[t+1] == soc[t] - Pex[t] * dt_h)
+            JuMP.@constraint(model, 0.0 <= soc[t+1])
+            JuMP.@constraint(model, soc[t+1] <= Δpu(emax_Wh))
+        end
+        JuMP.@constraint(model, soc[T+1] == Δpu(soc0_Wh))     # cyclic
+        JuMP.@objective(model, Min,
+            sum(dt_h * generation_cost(ctxs[t]) for t in 1:T))
+        foreach(enforce_kcl!, ctxs)
+        JuMP.optimize!(model)
+
+        @test JuMP.termination_status(model) in (JuMP.MOI.LOCALLY_SOLVED, JuMP.MOI.OPTIMAL)
+
+        P1 = JuMP.value(Pex[1]) * sb
+        P2 = JuMP.value(Pex[2]) * sb
+        @test P1 ≈  pmax_W  rtol=1e-2      # discharge into the expensive period
+        @test P2 ≈ -pmax_W  rtol=1e-2      # recharge in the cheap period
+
+        soc_Wh = [JuMP.value(soc[k]) * sb for k in 1:T+1]
+        @test soc_Wh[1] ≈ soc0_Wh  rtol=1e-6
+        @test soc_Wh[T+1] ≈ soc0_Wh  rtol=1e-6         # cyclic closure
+        for t in 1:T                                    # SOC dynamics conserved
+            @test soc_Wh[t+1] ≈ soc_Wh[t] - (JuMP.value(Pex[t])*sb)*dt_h  rtol=1e-6
+            @test -1.0 <= soc_Wh[t+1] <= emax_Wh + 1.0
+        end
+
+        # Per-snapshot extraction yields independent, in-band SI voltages.
+        results = [extract_result(ctxs[t]) for t in 1:T]
+        for t in 1:T
+            @test 900.0 <= results[t]["bus"]["bus1"]["1"]["vm"] <= 1100.0
+        end
+    end
+
+    @testset "T-STATE-EST: WLS state estimation via the staged API (different problem spec)" begin
+        # The staged API is problem-agnostic: the same device physics underlies a
+        # DIFFERENT problem specification — weighted-least-squares state estimation.
+        # No operational bounds, no fixed loads, a measurement-residual objective.
+        # This guards that build_opf_model(add_objective=false) + model_hook! can
+        # host an estimator (bounds are added only where the net declares them,
+        # so a bounds-free net yields a pure physics model with free voltages).
+
+        # Ground truth from a determined power flow on a 3-bus resistive feeder.
+        truejson = """
+        {"bus":{
+            "src": {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "bus1":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "bus2":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5}},
+         "line":{
+            "l1":{"bus_from":"src","bus_to":"bus1","terminal_map_from":["1"],"terminal_map_to":["1"],"linecode":"lc","length":1.0},
+            "l2":{"bus_from":"bus1","bus_to":"bus2","terminal_map_from":["1"],"terminal_map_to":["1"],"linecode":"lc","length":1.0}},
+         "load":{
+            "d1":{"bus":"bus1","terminal_map":["1","n"],"configuration":"SINGLE_PHASE","p_nom":[20000.0],"q_nom":[0.0]},
+            "d2":{"bus":"bus2","terminal_map":["1","n"],"configuration":"SINGLE_PHASE","p_nom":[20000.0],"q_nom":[0.0]}}}
+        """
+        pf = solve_pf(parse_bmopf(truejson; from_string=true); per_unit=false)
+        true_vm = Dict(b => hypot(pf["bus"][b]["1"]["vr"], pf["bus"][b]["1"]["vi"])
+                       for b in ("bus1","bus2"))
+        # Constant-power loads draw exactly nominal ⇒ injection = −20 kW, 0 var.
+        true_pinj = Dict("bus1" => -20000.0, "bus2" => -20000.0)
+
+        # Estimator net: physics only — source + lines, NO loads, NO limits.
+        estjson = """
+        {"bus":{
+            "src": {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "bus1":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "bus2":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5}},
+         "line":{
+            "l1":{"bus_from":"src","bus_to":"bus1","terminal_map_from":["1"],"terminal_map_to":["1"],"linecode":"lc","length":1.0},
+            "l2":{"bus_from":"bus1","bus_to":"bus2","terminal_map_from":["1"],"terminal_map_to":["1"],"linecode":"lc","length":1.0}}}
+        """
+        # meas :: Vector of (kind, bus, value, sigma), kind ∈ (:vm,:pinj,:qinj).
+        function estimate(meas)
+            est_net = parse_bmopf(estjson; from_string=true)
+            buses = unique(b for (_, b, _, _) in meas)
+            function wls!(ctx)
+                m = ctx.model
+                vr = ctx.vars[:vr]; vi = ctx.vars[:vi]
+                cr = Dict{String,Any}(); ci = Dict{String,Any}()
+                for b in buses         # free injection so KCL closes; voltages stay free
+                    cr[b] = JuMP.@variable(m, base_name="cinj_r_$b")
+                    ci[b] = JuMP.@variable(m, base_name="cinj_i_$b")
+                    JuMP.add_to_expression!(ctx.kcl_r[(b,"1")],  cr[b])
+                    JuMP.add_to_expression!(ctx.kcl_i[(b,"1")],  ci[b])
+                    JuMP.add_to_expression!(ctx.kcl_r[(b,"n")], -cr[b])
+                    JuMP.add_to_expression!(ctx.kcl_i[(b,"n")], -ci[b])
+                end
+                obj = zero(JuMP.QuadExpr)
+                for (kind, b, z, σ) in meas
+                    w = 1.0 / σ^2; vrb = vr[(b,"1")]; vib = vi[(b,"1")]
+                    if kind == :vm
+                        r = JuMP.@expression(m, vrb^2 + vib^2 - z^2)
+                        obj += (w / (2z)^2) * r^2
+                    elseif kind == :pinj
+                        obj += w * JuMP.@expression(m, vrb*cr[b] + vib*ci[b] - z)^2
+                    elseif kind == :qinj
+                        obj += w * JuMP.@expression(m, vib*cr[b] - vrb*ci[b] - z)^2
+                    end
+                end
+                JuMP.@objective(m, Min, obj)
+            end
+            ctx = build_opf_model(est_net; per_unit=false, add_objective=false, model_hook! = wls!)
+            enforce_kcl!(ctx)
+            JuMP.optimize!(ctx.model)
+            extract_result(ctx)
+        end
+
+        σv = 2.0; σp = 400.0
+        mk(nz) = vcat([[(:vm, b, true_vm[b] + nz[b][1], σv),
+                        (:pinj, b, true_pinj[b] + nz[b][2], σp),
+                        (:qinj, b, 0.0 + nz[b][3], σp)] for b in ("bus1","bus2")]...)
+
+        # (1) Noiseless measurements ⇒ estimate recovers the true state exactly.
+        zero_nz = Dict(b => (0.0,0.0,0.0) for b in ("bus1","bus2"))
+        res0 = estimate(mk(zero_nz))
+        @test res0["termination_status"] in ("LOCALLY_SOLVED","OPTIMAL")
+        for b in ("bus1","bus2")
+            @test res0["bus"][b]["1"]["vm"] ≈ true_vm[b]  atol=1e-2
+        end
+
+        # (2) Fixed, deterministic perturbation ⇒ estimate stays within a few σ of
+        # truth (graceful degradation; no reliance on an RNG in the suite).
+        pert = Dict("bus1" => ( 1.5, -300.0, 0.0),
+                    "bus2" => (-2.5,  350.0, 0.0))
+        resN = estimate(mk(pert))
+        @test resN["termination_status"] in ("LOCALLY_SOLVED","OPTIMAL")
+        for b in ("bus1","bus2")
+            @test abs(resN["bus"][b]["1"]["vm"] - true_vm[b]) <= 3σv
+        end
     end
 
     @testset "T-WSTART: warm start honours a/b/c terminal naming" begin
@@ -733,7 +2044,7 @@
             @test isapprox(va_si, va_pu; atol=1e-6)
         end
 
-        # Objective (in W·$/W = SI) must match; both should be ≈ -10 000.
+        # Objective cost rate ($/h) must match; both should be ≈ -10.
         @test isapprox(r_si["objective"], r_pu["objective"]; rtol=1e-3)
 
         # Line current magnitude at from-end must match.
@@ -1616,6 +2927,10 @@
             # Sanity: PU-mode dispatch is in SI watts, near p_max (cheaper than slack)
             @test pu["pg"] ≈ 2700.0   atol=5.0
         end
+        # Cost coefficients on both the source and IBR must scale with s_base;
+        # otherwise the PU solve has a different economic objective even if this
+        # simple merit order happens to return the same dispatch.
+        @test res_pu["objective"] ≈ res_si["objective"] rtol=1e-4
     end
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -2010,10 +3325,10 @@
     # ─────────────────────────────────────────────────────────────────────────
     # T-PCOST: non-uniform per-phase cost. A generator is forced (p_min=p_max)
     # to distinct per-phase outputs that exactly serve the per-phase load, so
-    # the objective is the deterministic Σ cost_k · P_k:
-    #   0.1·10000 + 0.2·20000 + 0.3·30000 = 14 000.
+    # the objective is the deterministic cost rate Σ cost_k · P_k/1000:
+    #   0.1·10 + 0.2·20 + 0.3·30 = 14 $/h.
     # The old polynomial reading ([c2,c1,c0]) would have applied a single c1 to
-    # every phase (0.2·60000 = 12 000), so this value distinguishes the two.
+    # every phase (0.2·60 = 12 $/h), so this value distinguishes the two.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "T-PCOST: per-phase linear cost → objective" begin
         net = parse_bmopf("""
@@ -2034,7 +3349,7 @@
         """; from_string=true)
         res = solve_opf(net)
         @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
-        @test res["objective"] ≈ 14_000.0   atol=1.0
+        @test res["objective"] ≈ 14.0   atol=1e-3
     end
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -2526,6 +3841,116 @@
         @test res["line"]["l1"]["1"]["cm_fr"] > 1.0
         # The caller's net must be untouched (limit stripping happens on a copy).
         @test net["linecode"]["lc"]["i_max"] == [1.0e-3]
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PF5b: INLINE line limits are ignored too (issue #354). An inline i_max /
+    # s_max on the line dict overrides the linecode's in the OPF (branch.jl),
+    # so the PF must strip the line component itself, not just linecodes.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "PF5b: inline line i_max/s_max are ignored by solve_pf (#354)" begin
+        net = parse_bmopf("""
+        {"bus":{
+            "sourcebus":{"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]},
+            "bus1":     {"terminal_names":["1","n"],
+                         "perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"sourcebus","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.5}},
+         "line":{"l1":{"bus_from":"sourcebus","bus_to":"bus1",
+             "terminal_map_from":["1"],"terminal_map_to":["1"],
+             "linecode":"lc","length":1.0,
+             "i_max":[1.0e-3],"s_max":[1.0e-3]}},
+         "load":{"ld1":{"bus":"bus1","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[100000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        res = solve_pf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test res["line"]["l1"]["1"]["cm_fr"] > 1.0
+        # The caller's net must be untouched.
+        @test net["line"]["l1"]["i_max"] == [1.0e-3]
+        @test net["line"]["l1"]["s_max"] == [1.0e-3]
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PF5c: the strip contract, unit-tested — line and dc_branch limit fields
+    # are removed; generator p_min/p_max are NOT (they are the PF's fixed
+    # setpoint, not an operational limit).
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "PF5c: _strip_operational_limits! covers line + dc_branch, keeps gen setpoints" begin
+        ext = Base.get_extension(BMOPFTools, :BMOPFOpfExt)
+        net = Dict{String,Any}(
+            "linecode"  => Dict{String,Any}("lc" => Dict{String,Any}(
+                "R_series_1_1" => 0.5, "i_max" => [10.0], "s_max" => [1.0e4])),
+            "line"      => Dict{String,Any}("l1" => Dict{String,Any}(
+                "linecode" => "lc", "i_max" => [10.0], "s_max" => [1.0e4])),
+            "switch"    => Dict{String,Any}("sw" => Dict{String,Any}("i_max" => [10.0])),
+            "generator" => Dict{String,Any}("g1" => Dict{String,Any}(
+                "i_max" => [10.0], "s_max" => [1.0e4],
+                "p_min" => [5.0e3], "p_max" => [5.0e3])),
+            "dc_branch" => Dict{String,Any}("dcb" => Dict{String,Any}(
+                "r" => 0.1, "i_max" => [10.0], "p_max" => 1.0e4)),
+            "transformer" => Dict{String,Any}("single_phase" => Dict{String,Any}(
+                "t1" => Dict{String,Any}(
+                    "i_max_from" => [10.0], "i_max_to" => [100.0],
+                    "s_rating" => 5.0e4))))
+        ext._strip_operational_limits!(net)
+
+        for (comp, fields) in (net["linecode"]["lc"]        => ("i_max", "s_max"),
+                               net["line"]["l1"]            => ("i_max", "s_max"),
+                               net["switch"]["sw"]          => ("i_max",),
+                               net["generator"]["g1"]       => ("i_max", "s_max"),
+                               net["dc_branch"]["dcb"]      => ("i_max", "p_max"),
+                               net["transformer"]["single_phase"]["t1"] =>
+                                   ("i_max_from", "i_max_to"))
+            for f in fields
+                @test !haskey(comp, f)
+            end
+        end
+        # Fixed generator setpoints survive; the transformer nameplate contract
+        # (always enforced) survives.
+        @test net["generator"]["g1"]["p_min"] == [5.0e3]
+        @test net["generator"]["g1"]["p_max"] == [5.0e3]
+        @test net["transformer"]["single_phase"]["t1"]["s_rating"] == 5.0e4
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PF5d: the s_rating exception, pinned both ways (issue #355). The nameplate
+    # coil cap IS enforced in a power flow — a load beyond s_rating is
+    # LOCALLY_INFEASIBLE, not an overload report — and deleting s_rating from
+    # the input net is the documented escape hatch.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "PF5d: transformer s_rating stays enforced in solve_pf (#355)" begin
+        mknet() = parse_bmopf("""
+        {"bus":{
+            "src":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+            "lv": {"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],
+             "v_magnitude":[1000.0],"v_angle":[0.0]}},
+         "transformer":{"single_phase":{"t1":{
+             "bus_from":"src","bus_to":"lv",
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"],
+             "v_nom_from":1000.0,"v_nom_to":1000.0,"s_rating":5000.0,
+             "r_series_from":0.05,"x_series_from":0.1}}},
+         "load":{"ld1":{"bus":"lv","terminal_map":["1","n"],
+             "configuration":"SINGLE_PHASE",
+             "p_nom":[10000.0],"q_nom":[0.0]}}}
+        """; from_string=true)
+
+        # 10 kW load through a 5 kVA nameplate: the coil cap binds → infeasible.
+        res = solve_pf(mknet())
+        @test res["termination_status"] ∉ ("LOCALLY_SOLVED", "OPTIMAL")
+
+        # The documented escape hatch: delete s_rating → the same PF solves and
+        # reports the overloaded state.
+        net = mknet()
+        delete!(net["transformer"]["single_phase"]["t1"], "s_rating")
+        res2 = solve_pf(net)
+        @test res2["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        @test sum(ph["pd"] for ph in values(res2["load"]["ld1"])) ≈ 10000.0  rtol=1e-3
     end
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -3159,6 +4584,80 @@
         @test p["n_active"] == 0
         rep = profile_solution(net, res)
         @test rep.results[:optimization]["is_opf"] == false
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # solution_check coverage gaps (#290): power balance must account shunts and
+    # capacitors; scalar (non-vector) thermal limits must be honoured; the NaN
+    # scan must reach nested (transformer-winding) results; IBR violations must
+    # count in the binding summary.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "solution_check coverage — balance/scalar/NaN/IBR (#290)" begin
+        net = parse_bmopf("""
+        {"bus":{"src":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
+                "b1":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1","2","3","n"],
+             "v_magnitude":[230.0,230.0,230.0,0.0],"v_angle":[0.0,-2.0943951,2.0943951,0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.05,"R_series_2_2":0.05,"R_series_3_3":0.05,
+             "R_series_4_4":0.05,"i_max":100.0}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1","linecode":"lc","length":100.0,
+             "terminal_map_from":["1","2","3","n"],"terminal_map_to":["1","2","3","n"]}},
+         "load":{"ld":{"bus":"b1","terminal_map":["1","2","3","n"],"configuration":"WYE",
+             "model":"constant_power","p_nom":[2000.0,2000.0,2000.0],"q_nom":[800.0,800.0,800.0]}},
+         "capacitor":{"c1":{"bus":"b1","terminal_map":["1","2","3","n"],"configuration":"WYE",
+             "q_rated":[1000.0,1000.0,1000.0],"v_nom":230.0}},
+         "shunt":{"sh":{"bus":"b1","terminal_map":["1"],"G_1_1":0.02,"B_1_1":0.0}}}
+        """; from_string=true)
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+
+        # (a) Balance accounts the capacitor's reactive injection and the phase
+        # shunt's real draw — no spurious W.SOL.POWER_BALANCE.
+        f = Finding[]
+        out = solution_check(net, res, f)
+        @test !any(x -> x.code == "W.SOL.POWER_BALANCE", f)
+        @test out["q_capacitor"] > 0.0        # ≈ 3 × B·|V|²
+        @test out["p_shunt"] > 100.0          # G·|V|² on the phase shunt (SI W)
+
+        # (b) A SCALAR linecode i_max (not a vector) is honoured — a very tight
+        # value fires a thermal finding that the vector-only check would miss.
+        net_s = deepcopy(net); net_s["linecode"]["lc"]["i_max"] = 0.5
+        fs = Finding[]
+        solution_check(net_s, res, fs)
+        @test any(x -> x.code in ("E.SOL.THERMAL_VIOLATION", "W.SOL.THERMAL_ACTIVE"), fs)
+
+        # (c) A NaN buried in a transformer per-winding result is caught by the
+        # recursive scan (a fixed bus[id][terminal].field descent missed it).
+        res_nan = deepcopy(res)
+        res_nan["transformer"] = Dict{String,Any}("t" => Dict{String,Any}(
+            "fr" => Dict{String,Any}("1" => Dict{String,Any}("cm" => NaN))))
+        fn = Finding[]
+        on = solution_check(net, res_nan, fn)
+        @test on["n_nan_fields"] >= 1
+        @test any(x -> x.code == "E.SOL.NAN_IN_RESULT", fn)
+
+        # (d) IBR capability violations count toward the binding-summary total.
+        netv = parse_bmopf("""
+        {"bus":{"src":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"]},
+                "b1":{"terminal_names":["1","n"],"perfectly_grounded_terminals":["n"],
+                      "v_min":[215.0],"v_max":[245.0]}},
+         "voltage_source":{"vs":{"bus":"src","terminal_map":["1"],"v_magnitude":[230.0],"v_angle":[0.0]}},
+         "linecode":{"lc":{"R_series_1_1":0.05,"R_series_2_2":0.05}},
+         "line":{"l1":{"bus_from":"src","bus_to":"b1","linecode":"lc","length":100.0,
+             "terminal_map_from":["1","n"],"terminal_map_to":["1","n"]}},
+         "ibr":{"pv":{"bus":"b1","terminal_map":["1","n"],"topology":"SINGLE_PHASE","prime_mover":"PV",
+             "s_max":[20000.0],"p_max":[20000.0],"p_min":[0.0],"q_min":[0.0],"q_max":[0.0],
+             "cost":[-1.0]}}}
+        """; from_string=true)
+        rv = solve_opf(netv)
+        @test rv["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        cm = hypot(rv["ibr"]["pv"]["1"]["cri"], rv["ibr"]["pv"]["1"]["cii"])
+        netv2 = deepcopy(netv); netv2["ibr"]["pv"]["i_max"] = [0.5 * cm]  # tightened below solve
+        fv = Finding[]
+        solution_check(netv2, rv, fv)
+        bs = only(x for x in fv if x.code == "I.SOL.BINDING_SUMMARY")
+        @test bs.detail["n_inv_violations"] >= 1
+        @test occursin("IBR:", bs.message)
     end
 
 end  # @testset "OPF — solve_opf extension"

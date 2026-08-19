@@ -322,7 +322,9 @@ nothing # hide
 
 The OPF **co-optimises the droop and the network limits**: the voltage is held at
 *exactly* 1.10 pu by curtailing a little more PV. This binding constraint —
-impossible in a simulation-only tool — is the whole point of an OPF.
+enforced directly as a hard limit here, rather than approached by trial-and-error
+setpoints or outer iteration in a fixed-setpoint simulation — is the whole point
+of an OPF.
 
 ### Summary
 
@@ -345,6 +347,22 @@ constrained centralized optimum — the dispatch a fleet of purely local
 controllers cannot reach on its own, because the balanced-network equivalence
 that would license it no longer holds on a four-wire feeder under active
 curtailment.
+
+!!! note "What VV/VW control costs in this model"
+    There is **no explicit price on reactive support or on curtailment** here.
+    The only term in the objective is priced grid import; PV active power is
+    priced at zero, and reactive power is not priced at all. So the economic cost
+    of the droop is entirely *implicit* — it shows up as **foregone export
+    revenue** (Volt-watt curtailment lowers the exported active power, and the
+    reactive absorption of Volt-var consumes VA headroom that would otherwise
+    carry active export), which is exactly the objective increase from A→B→C in
+    the table. Note the native `cost` field prices **active power only**
+    (`cost[k]·P_k/1000`, a \$/h rate with `P_k` in W); there is no built-in reactive-power price or curtailment
+    penalty. To model an *explicit* ancillary-service payment for reactive
+    support — or a compensation for curtailed active power — extend the objective
+    with a [`model_hook!`](opf.md) that adds the corresponding term (a cost on
+    `|Q|`, or a penalty on `p_avail − P`); the objective then prices those
+    services directly rather than only through lost export.
 
 ## Appendix: the monitored voltage — quantity and aggregation
 

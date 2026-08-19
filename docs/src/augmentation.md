@@ -230,12 +230,19 @@ are skipped — the offset is never guessed. Enable with
 
 ### Pass 2 — Thermal limits
 
-Infers `i_max` for linecodes that lack it by matching the diagonal series
-resistance R₁₁ against an IEC 60228:2004 / IEC 60364-5-52:2009 lookup table.
+Infers a heuristic `i_max` for linecodes that lack it by matching the diagonal
+series resistance R₁₁ against a lookup table of representative conductor
+cross-sections and their ampacities. This is a **synthetic estimate**, not a
+standards lookup: R₁₁ is the *series* resistance (the conductor's AC resistance
+**plus** the Carson earth-return coupling), so on its own it does not uniquely
+identify a conductor's material, construction class, cross-section, or
+installation method. Treat the result as a plausible default; a high-confidence
+rating requires the conductor material/class and installation method to be known
+independently.
 
-The table covers cross-sections from 4 mm² to 240 mm²:
+The table spans representative cross-sections from 4 mm² to 240 mm²:
 
-| Cross-section (mm²) | R₁₁ (mΩ/m at 20 °C) | Underground XLPE (A) | Overhead AAC (A) |
+| Cross-section (mm²) | R₁₁ (mΩ/m at 20 °C) | Underground XLPE (A) | Overhead (illustrative, A) |
 |---|---|---|---|
 | 4   | 4.950 | 34  | —   |
 | 6   | 3.300 | 41  | —   |
@@ -251,9 +258,16 @@ The table covers cross-sections from 4 mm² to 240 mm²:
 | 185 | 0.107 | 451 | 490 |
 | 240 | 0.082 | 541 | 600 |
 
-Sources: IEC 60228:2004 (AC resistance at 20 °C), IEC 60364-5-52:2009
-Table B.52 (ampacity at 70 °C conductor temperature, single-circuit
-in-ground or in-air installation).
+On the columns: the R₁₁ values are representative **maximum DC resistances at
+20 °C** for standard conductor sizes — the quantity IEC 60228:2004 actually
+specifies (its procedure measures DC resistance), used here only as a size
+fingerprint, not an AC or earth-return-inclusive value. The underground column
+is loosely calibrated to IEC 60364-5-52:2009 Table B.52 installation ampacity
+(70 °C conductor, single circuit, in-ground or in-air); the overhead column is
+an illustrative overhead rating, **not** an IEC 60364-5-52 value (that standard
+covers LV installation ampacity, not an overhead-AAC catalogue). The table as a
+whole is a heuristic default, not a standards-derived rating, and is
+deliberately *not* tagged as an IEC-conformant result.
 
 The match uses a 15 % relative tolerance on R₁₁.  If no table row falls
 within tolerance the linecode is skipped and the manifest records
@@ -299,9 +313,10 @@ transformation manifest.
 **Slack cost.**  The voltage source is itself the network's current slack, so no
 slack *generator* is created. If a source has no `cost`, a per-phase cost is
 written onto the `voltage_source` (default 1.0 \$/kWh) so imported power is
-priced in the objective. No
-flow bounds are added, so the slack stays unconstrained and the OPF can always
-find a feasible point. Controlled by the recipe's `apply_slack_generator` /
+priced in the objective. No flow bounds are added, so the source can absorb the
+network's net active/reactive imbalance. This removes one common cause of
+infeasibility, but does not override voltage, thermal, device, or other hard
+constraints. Controlled by the recipe's `apply_slack_generator` /
 `slack_cost` fields (names kept for backwards compatibility).
 
 **Reactive bounds.**  For each generator that has `p_max` defined but lacks
@@ -522,10 +537,61 @@ with these IBR-specific additions:
 - **`inverter_topology`** — `:infer` (FOUR_LEG when the host load has a neutral
   terminal, else SINGLE_PHASE), or a forced `:FOUR_LEG` / `:THREE_LEG` /
   `:SINGLE_PHASE`.
-- **sizing targets `s_max`**, not `p_max`: `size_basis` (same four bases as
-  generators) with `s_fraction` sets the apparent-power nameplate, and
-  `s_to_p_ratio` sets `p_avail = s_to_p_ratio × s_max` (1.0 = unity-rated PV;
-  below 1.0 leaves reactive headroom at full irradiance).
+- **sizing targets `s_max`**, not `p_max`: `size_basis` selects *how* the
+  nameplate is derived. The `:fraction_of_*` bases (`:fraction_of_local_load`,
+  `:fraction_of_transformer_rating`, `:fraction_of_downstream_load`) multiply a
+  network quantity by `s_fraction`; `:fixed_tiers` instead reads an **absolute
+  nameplate in VA** from the `fixed_tier_va` dict (per voltage-level family,
+  default `Dict(:LV => 30_000.0, :MV => 1_000_000.0)`). `s_to_p_ratio` then sets
+  `p_avail = s_to_p_ratio × s_max` (1.0 = unity-rated PV; below 1.0 leaves
+  reactive headroom at full irradiance).
+
+!!! tip "Sizing in absolute kVA, and placing at zero-load buses"
+    The default `:fraction_of_local_load` basis is convenient for scaling the
+    fleet to a feeder, but it has two awkward edges the reviewer-style questions
+    keep hitting:
+
+    - **You want to think in kVA, not "× local load."** Use
+      `size_basis = :fixed_tiers` and set the absolute nameplate directly:
+      `IBRRecipe(strategy = :load_following, size_basis = :fixed_tiers,
+      fixed_tier_va = Dict(:LV => 50_000.0))` places a 50 kVA unit on every LV
+      load bus regardless of that bus's load. (The generator analogue is
+      `GeneratorRecipe(size_basis = :fixed_tiers, fixed_tier_w = Dict(:LV => …))`,
+      in **W**.)
+    - **The bus has no local load but you still want a DER there.** A
+      `:fraction_of_local_load` size is *zero* at a zero-load bus, and
+      `min_local_load_va` will skip a low-load bus entirely. Two fixes: size with
+      `:fixed_tiers` (absolute, so load-independent), and/or choose candidates by
+      *topology* rather than by load —
+      `strategy = :topology_targeted, topology_mode = :leaves` (feeder ends) or
+      `:near_source`, which place at buses selected from the graph, not from where
+      demand happens to sit.
+
+!!! note "Modelling PV, batteries, EVs, and other DER technologies"
+    Two knobs are orthogonal and easy to conflate:
+
+    - **`strategy`** decides *where and how many* DERs are placed
+      (`:load_following` = one per load bus, `:topology_targeted`,
+      `:hosting_capacity`). The comment "one PV IBR per load bus" describes the
+      `:load_following` *strategy* — it is not a statement that IBRs are only PV.
+    - **`prime_mover`** decides *what technology* the converter is (`:PV`,
+      `:BATTERY`, `:GENERIC`, `:STATCOM`). `:PV` is the current placement default
+      (and the reason `p_min = 0` is injected — PV cannot absorb active power).
+
+    Mapping technologies onto objects: **PV, battery, or any converter-interfaced
+    DER → an `ibr`** with the matching `prime_mover`; a **synchronous / simple
+    dispatchable unit → a `generator`**. An **EV charger is demand, so it is a
+    `load`** (optionally time-varying via a charging profile — see the
+    [time-series tutorial](tutorial_timeseries.md)); model it as an `ibr` with
+    `prime_mover = "BATTERY"` only for a vehicle-to-grid (V2G) study where it
+    *injects*. `EV` is therefore not a `prime_mover` value — it is either a load
+    or a bidirectional battery, depending on the physics you mean.
+
+    One caveat on *automatic* placement: `add_ibrs` currently emits `:PV`
+    nameplates (the augment pass's `p_min = 0` is PV-specific; battery and
+    grid-forming placement is planned). To study other technologies today, author
+    the `ibr` with the intended `prime_mover` directly — the OPF engine models it
+    once the P/Q box is set — rather than relying on the placement recipe.
 
 Every field written is recorded as a `:synthetic` `TransformEntry` with rule
 `IBR_PLACEMENT/<strategy>`, and the run emits
@@ -535,7 +601,7 @@ manifest's `findings_after`.
 !!! note "I/O converter support"
     `solve_opf` dispatches placed IBRs once `augment_case` has filled their
     P/Q box — the OPF engine fully models IBRs (apparent-power circle,
-    topology-dependent voltage reference, constant-PF coupling). PowerIO v0.6.2
+    topology-dependent voltage reference, constant-PF coupling). PowerIO v0.7
     can import IBR/control data where the source carries it. BMOPFTools still
     treats `to_pmd` and `to_dss` IBR export as an explicit follow up.
 
@@ -627,13 +693,15 @@ explicit to be reproducible ([ref. 4](#augrefs)).
 
 **Standards as the source of defaults.** Where a value *can* be grounded in a
 published standard, it should be — so the default is auditable rather than
-arbitrary. Voltage windows follow EN 50160:2010, conductor ampacities follow
-IEC 60364-5-52:2009 over IEC 60228:2004 resistances, and DER reactive capability
+arbitrary. Voltage windows follow EN 50160:2010 and DER reactive capability
 follows EN 50549-1:2019 (with IEEE 1547-2018 as the ANSI alternative, whose
 minimum 44 % injecting / 44 % absorbing reactive capability motivates the
 `q_capability_pf = 0.95` preset) ([ref. 5](#augrefs)). This is why
 `augment_case` separates standards-derived fills from synthetic ones in the
-manifest.
+manifest. Conductor ampacities are the deliberate exception: the thermal pass is
+a **heuristic estimate** loosely calibrated to IEC 60364-5-52:2009 / IEC 60228:2004
+tables, not a conformant derivation (a bare R₁₁ does not identify the conductor
+material, class, or installation), and is tagged as such.
 
 **DER scenarios as designed inputs.** Where a value *cannot* be standardised —
 chiefly where to place generation and how large to make it — the literature

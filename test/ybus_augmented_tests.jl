@@ -1,0 +1,283 @@
+# Tests for the augmented (bordered, MNA-style) nodal admittance matrix
+# (ybus_augmented).
+#
+# All analytic, no OpenDSS: the augmented matrix is validated against the
+# aliased ybus_passive solve (switch invariant), against hand solutions
+# (ideal transformer), and against the leakage→0 limit of the ordinary
+# admittance stamp (the constraint row IS the exact ideal limit).
+
+@testset "ybus_augmented" begin
+    using LinearAlgebra, SparseArrays
+
+    denseK(r) = Matrix(r.K)
+
+    # Bordered solve: pad the nodal injection with zero constraint RHS.
+    solveK(r, inj) = denseK(r) \ vcat(inj, zeros(ComplexF64, length(r.couplings)))
+
+    # ── switch invariant: :constrain ≡ :alias, current is exact ──────────────
+
+    @testset "closed switch: constrain ≡ alias, w = branch current" begin
+        y = 0.5 - 0.25im   # shunt at b2.a (S)
+        net = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "b1" => Dict{String,Any}("terminal_names" => ["a"]),
+                "b2" => Dict{String,Any}("terminal_names" => ["a"]),
+            ),
+            "switch" => Dict{String,Any}(
+                "s1" => Dict{String,Any}(
+                    "bus_from" => "b1", "bus_to" => "b2", "status" => "closed",
+                    "terminal_map_from" => ["a"], "terminal_map_to" => ["a"]),
+            ),
+            "shunt" => Dict{String,Any}(
+                "sh1" => Dict{String,Any}(
+                    "bus" => "b2", "terminal_map" => ["a"],
+                    "G_1_1" => real(y), "B_1_1" => imag(y)),
+            ),
+        )
+
+        # Aliased (default): one fused node.
+        ra = ybus_augmented(net)                      # switches=:alias
+        @test length(ra.nodes) == 1
+        @test isempty(ra.couplings)
+        Iinj = 1.0 + 0.0im
+        Va = solveK(ra, [Iinj])[1]
+        @test Va ≈ Iinj / y
+
+        # Constrained: two nodes + one coupling row; voltages identical.
+        rc = ybus_augmented(net; switches=:constrain)
+        @test length(rc.nodes) == 2
+        @test length(rc.couplings) == 1
+        K = denseK(rc)
+        @test maximum(abs.(K .- transpose(K))) < 1e-15
+        c = rc.couplings[1]
+        @test c.kind == :switch && c.id == "s1" && c.conductor == 1
+
+        x = solveK(rc, [Iinj, 0.0im])                 # inject at b1.a
+        i1 = rc.index[("b1", "a")]; i2 = rc.index[("b2", "a")]
+        @test x[i1] ≈ Va atol=1e-12
+        @test x[i2] ≈ Va atol=1e-12
+        # All injected current flows through the switch: the coupling draws
+        # scale·w·coeff from each node; at b1.a (coeff +1) that must equal Iinj.
+        w = x[end]
+        k1 = findfirst(==(i1), c.nodes)
+        @test c.scale * w * c.coeffs[k1] ≈ Iinj atol=1e-12
+    end
+
+    @testset "open switch stays open in :constrain mode" begin
+        net = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "b1" => Dict{String,Any}("terminal_names" => ["a"]),
+                "b2" => Dict{String,Any}("terminal_names" => ["a"]),
+            ),
+            "switch" => Dict{String,Any}(
+                "s1" => Dict{String,Any}(
+                    "bus_from" => "b1", "bus_to" => "b2", "status" => "open",
+                    "terminal_map_from" => ["a"], "terminal_map_to" => ["a"]),
+            ),
+        )
+        r = ybus_augmented(net; switches=:constrain)
+        @test length(r.nodes) == 2
+        @test isempty(r.couplings)
+    end
+
+    # ── dedupe: switch in parallel with an aliased negligible-Z line ─────────
+
+    @testset "redundant switch constraint is deduped" begin
+        net = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "b1" => Dict{String,Any}("terminal_names" => ["a"]),
+                "b2" => Dict{String,Any}("terminal_names" => ["a"]),
+            ),
+            "switch" => Dict{String,Any}(
+                "s1" => Dict{String,Any}(
+                    "bus_from" => "b1", "bus_to" => "b2", "status" => "closed",
+                    "terminal_map_from" => ["a"], "terminal_map_to" => ["a"]),
+            ),
+            # ‖Z‖ far below z_line_min_ohm → node-aliased unconditionally.
+            "line" => Dict{String,Any}(
+                "l0" => Dict{String,Any}(
+                    "bus_from" => "b1", "bus_to" => "b2",
+                    "terminal_map_from" => ["a"], "terminal_map_to" => ["a"],
+                    "R_series_1_1" => 1e-6, "X_series_1_1" => 0.0),
+            ),
+            "shunt" => Dict{String,Any}(
+                "sh1" => Dict{String,Any}(
+                    "bus" => "b2", "terminal_map" => ["a"],
+                    "G_1_1" => 1.0, "B_1_1" => 0.0),
+            ),
+        )
+        r = ybus_augmented(net; switches=:constrain)
+        # The line fused b1.a/b2.a already: the switch row cancels to nothing.
+        @test length(r.nodes) == 1
+        @test isempty(r.couplings)
+        @test abs(solveK(r, [1.0 + 0im])[1] - 1.0) < 1e-12
+    end
+
+    # ── ideal single_phase transformer: hand solution + leakage→0 limit ──────
+
+    function _sp_xfmr_net(; x_to::Float64=0.0)
+        # LV shunt fixed at 0.05 S (the `y` the hand solutions below use).
+        Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "hv" => Dict{String,Any}("terminal_names" => ["a", "n"],
+                                         "perfectly_grounded_terminals" => ["n"]),
+                "lv" => Dict{String,Any}("terminal_names" => ["a", "n"],
+                                         "perfectly_grounded_terminals" => ["n"]),
+            ),
+            "transformer" => Dict{String,Any}(
+                "single_phase" => Dict{String,Any}(
+                    "t1" => Dict{String,Any}(
+                        "bus_from" => "hv", "bus_to" => "lv",
+                        "terminal_map_from" => ["a", "n"],
+                        "terminal_map_to"   => ["a", "n"],
+                        "v_nom_from" => 11000.0, "v_nom_to" => 400.0,
+                        "r_series_from" => 0.0, "x_series_from" => 0.0,
+                        "r_series_to"   => 0.0, "x_series_to"   => x_to),
+                ),
+            ),
+            "shunt" => Dict{String,Any}(
+                "sh1" => Dict{String,Any}(
+                    "bus" => "lv", "terminal_map" => ["a"],
+                    "G_1_1" => 0.05, "B_1_1" => 0.0),
+            ),
+        )
+    end
+
+    @testset "ideal single_phase: constraint solution is exact" begin
+        y = 0.05
+        N = 11000.0 / 400.0
+        net = _sp_xfmr_net()
+        r = ybus_augmented(net)
+        @test length(r.couplings) == 1
+        c = r.couplings[1]
+        @test c.kind == :ideal_xfmr && c.id == "single_phase/t1"
+        K = denseK(r)
+        @test maximum(abs.(K .- transpose(K))) < 1e-12
+
+        Iinj = 2.0 + 0.0im
+        inj = zeros(ComplexF64, length(r.nodes)); inj[r.index[("hv", "a")]] = Iinj
+        x = solveK(r, inj)
+        V_hv = x[r.index[("hv", "a")]]; V_lv = x[r.index[("lv", "a")]]
+        # Ideal transformer, LV shunt y: V_lv = N·I/y, V_hv = N·V_lv = N²·I/y,
+        # and the coil constraint V_hv = N·V_lv holds identically.
+        @test V_lv ≈ N * Iinj / y  rtol=1e-12
+        @test V_hv ≈ N * V_lv     rtol=1e-12
+        # Winding currents: LV coil current = N × HV coil current.
+        w = x[end]
+        i_hv = c.scale * w * c.coeffs[findfirst(==(r.index[("hv", "a")]), c.nodes)]
+        i_lv = c.scale * w * c.coeffs[findfirst(==(r.index[("lv", "a")]), c.nodes)]
+        @test i_hv ≈ Iinj      atol=1e-12
+        @test i_lv ≈ -N * Iinj rtol=1e-12
+    end
+
+    @testset "ideal single_phase = leakage→0 limit of ybus_passive" begin
+        Iinj = 2.0 + 0.0im
+        # Ideal (constraint) reference solution. With a current injection the
+        # LV voltage is leakage-INdependent (the coil current is forced), so
+        # the limit shows up at the HV node: V_hv(x_to) = V_hv(0) + Z_ref·I.
+        r0 = ybus_augmented(_sp_xfmr_net())
+        inj0 = zeros(ComplexF64, length(r0.nodes)); inj0[r0.index[("hv", "a")]] = Iinj
+        x0 = solveK(r0, inj0)
+        Vhv0 = x0[r0.index[("hv", "a")]]
+        Vlv0 = x0[r0.index[("lv", "a")]]
+
+        errs = Float64[]
+        for x_to in (1e-1, 1e-3, 1e-5)     # Ω, all above xfmr_z_min_ohm = 1e-6
+            rp = ybus_passive(_sp_xfmr_net(; x_to))
+            inj = zeros(ComplexF64, length(rp.nodes)); inj[rp.index[("hv", "a")]] = Iinj
+            x = Matrix(rp.Y) \ inj
+            push!(errs, abs(x[rp.index[("hv", "a")]] - Vhv0))
+            # LV voltage matches the ideal solution at every leakage (up to the
+            # conditioning noise of the near-singular stamp).
+            @test x[rp.index[("lv", "a")]] ≈ Vlv0 atol=1e-5
+        end
+        @test issorted(errs; rev=true)          # monotone approach to the limit
+        @test errs[end] < 1e-6 * abs(Vhv0)      # and it converges to the constraint
+    end
+
+    # ── ideal delta_wye: leakage→0 limit, per-phase couplings ─────────────────
+
+    function _dy_xfmr_net(; x_to::Float64=0.0)
+        net = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "hv" => Dict{String,Any}("terminal_names" => ["a", "b", "c"]),
+                "lv" => Dict{String,Any}("terminal_names" => ["a", "b", "c", "n"],
+                                         "perfectly_grounded_terminals" => ["n"]),
+            ),
+            "transformer" => Dict{String,Any}(
+                "delta_wye" => Dict{String,Any}(
+                    "t1" => Dict{String,Any}(
+                        "bus_from" => "hv", "bus_to" => "lv",
+                        "terminal_map_from" => ["a", "b", "c"],
+                        "terminal_map_to"   => ["a", "b", "c", "n"],
+                        "v_nom_from" => 11000.0, "v_nom_to" => 400.0,
+                        "r_series_from" => 0.0, "x_series_from" => 0.0,
+                        "r_series_to"   => 0.0, "x_series_to"   => x_to),
+                ),
+            ),
+            # Wye shunt loads on the LV phases; small HV shunts pin the delta
+            # side's common mode (otherwise it is a genuine floating reference).
+            "shunt" => Dict{String,Any}(
+                "lv_load" => Dict{String,Any}(
+                    "bus" => "lv", "terminal_map" => ["a", "b", "c"],
+                    "G_1_1" => 0.05, "G_2_2" => 0.04, "G_3_3" => 0.06),
+                "hv_ref" => Dict{String,Any}(
+                    "bus" => "hv", "terminal_map" => ["a", "b", "c"],
+                    "G_1_1" => 1e-3, "G_2_2" => 1e-3, "G_3_3" => 1e-3),
+            ),
+        )
+        net
+    end
+
+    @testset "ideal delta_wye = leakage→0 limit of ybus_passive" begin
+        # Unbalanced complex injection on the HV phases.
+        α = cis(-2π/3)
+        inj_of(index) = begin
+            inj = Dict(("hv","a") => 1.0 + 0im, ("hv","b") => 0.8α, ("hv","c") => 1.1α^2)
+            v = zeros(ComplexF64, maximum(values(index)))
+            for (nd, i) in inj; v[index[nd]] = i; end
+            v
+        end
+
+        r0 = ybus_augmented(_dy_xfmr_net())
+        @test length(r0.couplings) == 3
+        @test all(c -> c.kind == :ideal_xfmr, r0.couplings)
+        K = denseK(r0)
+        @test maximum(abs.(K .- transpose(K))) < 1e-12
+        x0 = solveK(r0, inj_of(r0.index))
+        V0 = [x0[r0.index[("lv", t)]] for t in ("a", "b", "c")]
+
+        errs = Float64[]
+        for x_to in (1e-1, 1e-3, 1e-5)
+            rp = ybus_passive(_dy_xfmr_net(; x_to))
+            x = Matrix(rp.Y) \ inj_of(rp.index)
+            V = [x[rp.index[("lv", t)]] for t in ("a", "b", "c")]
+            push!(errs, maximum(abs.(V .- V0)))
+        end
+        @test issorted(errs; rev=true)
+        @test errs[end] < 1e-6 * maximum(abs.(V0))
+    end
+
+    # ── unity-ratio zero-leakage transformers stay aliased ───────────────────
+
+    @testset "unity-ratio ideal transformer stays node-aliased" begin
+        net = _sp_xfmr_net()
+        x1 = net["transformer"]["single_phase"]["t1"]
+        x1["v_nom_from"] = 400.0     # ratio 1:1 → exact node identity
+        r = ybus_augmented(net)
+        @test isempty(r.couplings)
+        @test r.index[("hv", "a")] == r.index[("lv", "a")]
+    end
+
+    # ── validation ────────────────────────────────────────────────────────────
+
+    @testset "argument validation" begin
+        net = _sp_xfmr_net()
+        @test_throws ArgumentError ybus_augmented(net; switches=:bogus)
+        @test_throws ArgumentError ybus_augmented(net; ideal_xfmrs=:bogus)
+
+        # Degenerate coil ratio (tap = 0 ⇒ ratio 0) must error, not stamp.
+        net["transformer"]["single_phase"]["t1"]["tap"] = 0.0
+        @test_throws ArgumentError ybus_augmented(net)
+    end
+end

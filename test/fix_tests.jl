@@ -227,10 +227,12 @@ end
 
     @testset "T2: Simplify — dangling line removed" begin
         net = _fix_lv_net()
-        # Add a stub line with no load at its far end
+        # Add a stub line with no load at its far end. The stub bus is left
+        # ungrounded: remove_dangling_lines deliberately keeps a grounded leaf
+        # (removing it would drop a ground — see simplify_tests.jl #277), so a
+        # grounded stub would not be pruned.
         net["bus"]["stub"] = Dict{String,Any}(
             "terminal_names" => ["1","2","3","n"],
-            "perfectly_grounded_terminals" => ["n"],
         )
         net["line"]["lstub"] = Dict{String,Any}(
             "bus_from" => "b2", "bus_to" => "stub",
@@ -709,6 +711,52 @@ end
         @test cap["terminal_map"] == ["a","n"]
         f = Finding[]; spec_conformance_check(net′, f)   # conformant arity
         @test !any(x -> x.code == "W.SPEC.CONFIG_ARITY" && x.component_id == "cap_sh", f)
+    end
+
+    @testset "T11: fix_case robustness (#286)" begin
+        # (a) A disconnected network with NO voltage source must not be wiped by
+        # the largest-component pass (every component would look unsourced).
+        net = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "a"=>Dict{String,Any}("terminal_names"=>["1","n"]),
+                "b"=>Dict{String,Any}("terminal_names"=>["1","n"]),
+                "c"=>Dict{String,Any}("terminal_names"=>["1","n"]),
+                "d"=>Dict{String,Any}("terminal_names"=>["1","n"])),
+            "linecode" => Dict{String,Any}("lc"=>Dict{String,Any}("R_series_1_1"=>0.1)),
+            "line" => Dict{String,Any}(
+                "l1"=>Dict{String,Any}("bus_from"=>"a","bus_to"=>"b","linecode"=>"lc","length"=>10.0,
+                    "terminal_map_from"=>["1","n"],"terminal_map_to"=>["1","n"]),
+                "l2"=>Dict{String,Any}("bus_from"=>"c","bus_to"=>"d","linecode"=>"lc","length"=>10.0,
+                    "terminal_map_from"=>["1","n"],"terminal_map_to"=>["1","n"])))
+        net′, mf = fix_case(net; recipe=FixRecipe(apply_simplify_network=false,
+            apply_remove_zero_loads=false, apply_low_impedance_to_switch=false,
+            apply_source_bus_bounds=false))
+        @test length(net′["bus"]) == 4                                # not wiped
+        @test any(e -> occursin("No voltage source", e.note), mf.entries)
+        # The manifest records the actual FixRecipe, not a placeholder recipe.
+        @test mf.recipe isa FixRecipe
+
+        # (b) A generated switch id that collides with an existing element does
+        # not overwrite it — the new switch gets a unique id.
+        net2 = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "src"=>Dict{String,Any}("terminal_names"=>["1","n"],"perfectly_grounded_terminals"=>["n"]),
+                "b1"=>Dict{String,Any}("terminal_names"=>["1","n"],"perfectly_grounded_terminals"=>["n"]),
+                "b2"=>Dict{String,Any}("terminal_names"=>["1","n"],"perfectly_grounded_terminals"=>["n"])),
+            "voltage_source" => Dict{String,Any}("vs"=>Dict{String,Any}("bus"=>"src",
+                "terminal_map"=>["1"],"v_magnitude"=>[230.0],"v_angle"=>[0.0])),
+            "linecode" => Dict{String,Any}("lc0"=>Dict{String,Any}("R_series_1_1"=>1e-10)),
+            "line" => Dict{String,Any}("l1"=>Dict{String,Any}("bus_from"=>"src","bus_to"=>"b1",
+                "linecode"=>"lc0","length"=>1.0,"terminal_map_from"=>["1","n"],"terminal_map_to"=>["1","n"])),
+            "switch" => Dict{String,Any}("_sw_l1"=>Dict{String,Any}("bus_from"=>"b1","bus_to"=>"b2",
+                "open_switch"=>false,"terminal_map_from"=>["1","n"],"terminal_map_to"=>["1","n"])),
+            "load" => Dict{String,Any}("ld"=>Dict{String,Any}("bus"=>"b2","terminal_map"=>["1","n"],
+                "configuration"=>"SINGLE_PHASE","p_nom"=>[1e3],"q_nom"=>[0.0])))
+        n2, _ = fix_case(net2; recipe=FixRecipe(apply_largest_component=false,
+            apply_simplify_network=false, apply_remove_zero_loads=false,
+            apply_source_bus_bounds=false))
+        @test haskey(n2["switch"], "_sw_l1")          # existing switch preserved
+        @test length(n2["switch"]) == 2               # new switch got a unique id
     end
 
     @testset "T10: Snap placeholder transformer leakage (opt-in)" begin

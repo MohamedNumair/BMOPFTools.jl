@@ -44,6 +44,7 @@ function domain_rules_check(net::Dict{String,Any},
     _check_line_geometry(net, findings, n_checks)
     _check_frequency_consistency(net, findings, n_checks)
     _check_inline_line_impedance(net, findings, n_checks)
+    _check_terminal_conventions(net, findings, n_checks)
 
     result["n_checks_run"] = n_checks[]
     result
@@ -275,15 +276,33 @@ function _check_dc_network(net, findings, n_checks)
         end
     end
 
-    # --- islanded DC bus (no converter attached) ---
-    ibr_dc_buses = Set(string(get(inv, "dc_bus", "")) for (_, inv) in
-                       get(net, "ibr", Dict()) if inv isa Dict && haskey(inv, "dc_bus"))
-    for (id, _) in dc_buses
-        id in ibr_dc_buses && continue
-        push!(findings, Finding(WARNING, "W.DOM.DC_BUS_NO_CONVERTER",
-            :domain_rules, :dc_bus, id,
-            "dc_bus '$id' has no converter (IBR) attached — islanded DC node.",
-            nothing))
+    # --- islanded DC bus (no energizing element reachable in the DC island) ---
+    # A dc_bus is islanded only when NO converter (IBR) or dc_source sits anywhere
+    # in its DC island (dc_buses joined by dc_branches). A junction bus, or a
+    # dc_load bus fed through a dc_branch from a converter/source elsewhere, is not
+    # islanded — the previous check required a DIRECTLY-attached IBR and mislabeled
+    # both.
+    if !isempty(dc_buses)
+        dc_set   = Set(string(k) for k in keys(dc_buses))
+        par      = Dict(b => b for b in dc_set)
+        fnd(x)   = (par[x] == x ? x : (par[x] = fnd(par[x])))
+        for (_, br) in get(net, "dc_branch", Dict())
+            br isa Dict || continue
+            a = string(get(br, "dc_bus_from", "")); c = string(get(br, "dc_bus_to", ""))
+            (a in dc_set && c in dc_set) && (par[fnd(a)] = fnd(c))
+        end
+        _src_buses(comp) = Set(string(get(e, "dc_bus", "")) for (_, e) in
+                               get(net, comp, Dict()) if e isa Dict && haskey(e, "dc_bus"))
+        energizing = union(_src_buses("ibr"), _src_buses("dc_source"))
+        energized_islands = Set(fnd(b) for b in energizing if b in dc_set)
+        for (id, _) in dc_buses
+            fnd(string(id)) in energized_islands && continue
+            push!(findings, Finding(WARNING, "W.DOM.DC_BUS_NO_CONVERTER",
+                :domain_rules, :dc_bus, id,
+                "dc_bus '$id' is in a DC island with no converter (IBR) or dc_source — " *
+                "islanded DC node (no element can energize it).",
+                nothing))
+        end
     end
 
     # --- droop control consistent with the converter's P/Q/S capability ---
@@ -393,7 +412,7 @@ function _check_generator_cost(net, findings, thresh, n_checks)
     for (id, g) in get(net, "generator", Dict())
         haskey(g, "cost") || continue
         n_checks[] += 1
-        # cost is a per-phase linear-coefficient vector ($/W); a scalar is
+        # cost is a per-phase energy-price vector ($/kWh); a scalar is
         # tolerated here for validation only (the OPF requires the vector form)
         c = g["cost"]
         costs = c isa AbstractVector ? Float64.(c) : [Float64(c)]
@@ -415,7 +434,7 @@ end
     _check_cost_phase_uniformity(net, findings, n_checks)
 
 Warn when a dispatchable element's per-phase `cost` vector is non-uniform across
-phases. Costs usually represent a single \$/W price applied symmetrically; a
+phases. Costs usually represent a single \$/kWh price applied symmetrically; a
 vector with differing entries is more often a data-entry slip than an intended
 per-phase price signal. Covers `generator` and `voltage_source` today; extend the
 `elements` list as further dispatchable element types gain a `cost` field.
@@ -954,17 +973,12 @@ function _check_ibr_capability(net, findings, n_checks)
 
         smax = get(inv, "s_max", nothing)
         smax_arr = smax isa AbstractVector ? [Float64(x) for x in smax if x isa Number] : nothing
-        smax_total = nothing
-        if smax_arr !== nothing
-            if any(<=(0), smax_arr)
-                push!(findings, Finding(ERROR, "E.DOM.INV_SMAX_NONPOSITIVE", :domain_rules,
-                    :ibr, id,
-                    "IBR '$id' has a non-positive entry in s_max $(smax_arr) VA; " *
-                    "all per-phase apparent-power ratings must be strictly positive.",
-                    Dict{String,Any}("s_max" => smax_arr)))
-            else
-                smax_total = sum(smax_arr)
-            end
+        if smax_arr !== nothing && any(<=(0), smax_arr)
+            push!(findings, Finding(ERROR, "E.DOM.INV_SMAX_NONPOSITIVE", :domain_rules,
+                :ibr, id,
+                "IBR '$id' has a non-positive entry in s_max $(smax_arr) VA; " *
+                "all per-phase apparent-power ratings must be strictly positive.",
+                Dict{String,Any}("s_max" => smax_arr)))
         end
 
         imax = get(inv, "i_max", nothing)
@@ -977,54 +991,68 @@ function _check_ibr_capability(net, findings, n_checks)
                 Dict{String,Any}("i_max" => imax_arr)))
         end
 
-        pmin = get(inv, "p_min", nothing)
-        pmax = get(inv, "p_max", nothing)
-        if pmin isa Number && pmax isa Number && Float64(pmin) > Float64(pmax)
-            push!(findings, Finding(ERROR, "E.DOM.INV_P_BOUNDS", :domain_rules,
-                :ibr, id,
-                "IBR '$id' has p_min = $(pmin) W > p_max = $(pmax) W; " *
-                "the active-power range is empty.",
-                Dict{String,Any}("p_min" => pmin, "p_max" => pmax)))
+        # p_min/p_max/q_min/q_max are per-phase arrays per the spec (a scalar is
+        # tolerated as a 1-vector). The capability checks operate elementwise;
+        # comparing scalars only (the previous behaviour) made all four dead on
+        # spec-conformant vector data.
+        pmin_v = _ibr_boundvec(get(inv, "p_min", nothing))
+        pmax_v = _ibr_boundvec(get(inv, "p_max", nothing))
+        qmin_v = _ibr_boundvec(get(inv, "q_min", nothing))
+        qmax_v = _ibr_boundvec(get(inv, "q_max", nothing))
+
+        # Empty active/reactive range on any phase (min > max).
+        for (lo, hi, code, name, unit) in
+                ((pmin_v, pmax_v, "E.DOM.INV_P_BOUNDS", "active",   "W"),
+                 (qmin_v, qmax_v, "E.DOM.INV_Q_BOUNDS", "reactive", "var"))
+            n = min(length(lo), length(hi))
+            bad = [k for k in 1:n if lo[k] > hi[k]]
+            if !isempty(bad)
+                lo_f = name == "active" ? "p_min" : "q_min"
+                hi_f = name == "active" ? "p_max" : "q_max"
+                push!(findings, Finding(ERROR, code, :domain_rules, :ibr, id,
+                    "IBR '$id' has $lo_f > $hi_f on phase(s) $(bad) " *
+                    "($lo_f=$(lo) $unit, $hi_f=$(hi) $unit); the $name-power range is empty.",
+                    Dict{String,Any}(lo_f => lo, hi_f => hi, "phases" => bad)))
+            end
         end
 
-        qmin = get(inv, "q_min", nothing)
-        qmax = get(inv, "q_max", nothing)
-        if qmin isa Number && qmax isa Number && Float64(qmin) > Float64(qmax)
-            push!(findings, Finding(ERROR, "E.DOM.INV_Q_BOUNDS", :domain_rules,
-                :ibr, id,
-                "IBR '$id' has q_min = $(qmin) var > q_max = $(qmax) var; " *
-                "the reactive-power range is empty.",
-                Dict{String,Any}("q_min" => qmin, "q_max" => qmax)))
-        end
-
-        # Bounds that exceed the total apparent-power nameplate are unreachable.
-        if smax_total !== nothing
-            for (field, v) in (("p_min", pmin), ("p_max", pmax),
-                               ("q_min", qmin), ("q_max", qmax))
-                v isa Number || continue
-                if abs(Float64(v)) > smax_total
+        # Per-phase bounds larger than that phase's apparent-power rating are
+        # unreachable inside the capability circle p² + q² ≤ s_max².
+        if smax_arr !== nothing && all(>(0), smax_arr)
+            for (field, vv) in (("p_min", pmin_v), ("p_max", pmax_v),
+                                ("q_min", qmin_v), ("q_max", qmax_v))
+                n = min(length(vv), length(smax_arr))
+                bad = [k for k in 1:n if abs(vv[k]) > smax_arr[k]]
+                if !isempty(bad)
                     push!(findings, Finding(WARNING, "W.DOM.INV_BOUND_EXCEEDS_SMAX",
                         :domain_rules, :ibr, id,
-                        "IBR '$id': |$field| = $(abs(Float64(v))) exceeds the " *
-                        "total apparent-power nameplate sum(s_max) = $(smax_total) VA; " *
-                        "this bound is unreachable inside the capability circle (unit error?).",
-                        Dict{String,Any}("field" => field, "value" => v,
-                                         "s_max_total" => smax_total)))
+                        "IBR '$id': |$field| exceeds the per-phase apparent-power rating " *
+                        "s_max on phase(s) $(bad) ($field=$(vv), s_max=$(smax_arr) VA); " *
+                        "unreachable inside the capability circle (unit error?).",
+                        Dict{String,Any}("field" => field, "value" => vv,
+                                         "s_max" => smax_arr, "phases" => bad)))
                 end
             end
         end
 
         # PV prime movers inject only; a negative active-power floor is unphysical.
-        if get(inv, "prime_mover", nothing) == "PV" &&
-           pmin isa Number && Float64(pmin) < 0
+        if get(inv, "prime_mover", nothing) == "PV" && any(<(0.0), pmin_v)
             push!(findings, Finding(WARNING, "W.DOM.INV_PV_ABSORBS", :domain_rules,
                 :ibr, id,
-                "IBR '$id' is prime_mover=PV but has p_min = $(pmin) W < 0 — " *
-                "PV cannot absorb active power; use prime_mover=BATTERY for " *
-                "bidirectional devices.",
-                Dict{String,Any}("p_min" => pmin)))
+                "IBR '$id' is prime_mover=PV but has p_min < 0 on some phase " *
+                "(p_min=$(pmin_v) W) — PV cannot absorb active power; use " *
+                "prime_mover=BATTERY for bidirectional devices.",
+                Dict{String,Any}("p_min" => pmin_v)))
         end
     end
+end
+
+# Coerce an IBR power-bound field to a Float64 vector: a per-phase array as-is,
+# a scalar as a 1-element vector, anything else (absent/malformed) to empty.
+function _ibr_boundvec(v)
+    v isa AbstractVector && return Float64[Float64(x) for x in v if x isa Number]
+    v isa Number && return Float64[Float64(v)]
+    return Float64[]
 end
 
 function _check_transformer_ratings(net, findings, thresh, n_checks)
@@ -1552,4 +1580,88 @@ function _check_adjacent_line_impedance_spread(net, findings, thresh, n_checks, 
                          "ratio"  => worst_ratio,
                          "threshold_info" => z_info,
                          "threshold_warn" => z_warn)))
+end
+
+# ---------------------------------------------------------------------------
+# Terminal-role conventions (phase / neutral / earth)
+# ---------------------------------------------------------------------------
+
+"""
+    _check_terminal_conventions(net, findings, n_checks)
+
+Validate the case-wide terminal-role classification (see
+[`BMOPFTools._terminal_roles`](@ref)). Raises:
+
+- `W.CONV.TERMINAL_ROLES_INFERRED` — no `terminal_conventions` block, so the
+  phase/neutral/earth roles were guessed from the naming convention;
+- `E.CONV.ROLE_OVERLAP` — a label declared in more than one role list;
+- `W.CONV.TERMINAL_UNCLASSIFIED` — a bus terminal that no role list covers
+  (it is treated as a phase conductor downstream);
+- `W.CONV.MULTIPLE_NEUTRALS` — a bus carrying more than one neutral terminal.
+
+DC buses carry their own pole roles and are out of scope here.
+"""
+function _check_terminal_conventions(net, findings, n_checks)
+    haskey(net, "bus") || return
+    n_checks[] += 1
+    tc = get(net, "terminal_conventions", nothing)
+
+    if !(tc isa Dict)
+        push!(findings, Finding(WARNING, "W.CONV.TERMINAL_ROLES_INFERRED",
+            :domain_rules, :network, nothing,
+            "No `terminal_conventions` block: phase/neutral/earth terminal roles " *
+            "were inferred from the naming convention (a terminal named \"n\"/\"N\" " *
+            "is neutral, all others phase). Declare `terminal_conventions` to make " *
+            "the classification explicit and self-documenting.",
+            Dict{String,Any}()))
+        return
+    end
+
+    labels_of(k) = Set(string(x) for x in get(tc, k, String[]))
+    phase, neutral, earth = labels_of("phase"), labels_of("neutral"), labels_of("earth")
+
+    # A label must have a single role.
+    for (ra, rb, sa, sb) in (("phase", "neutral", phase, neutral),
+                             ("phase", "earth",   phase, earth),
+                             ("neutral", "earth", neutral, earth))
+        both = sort!(collect(intersect(sa, sb)))
+        isempty(both) && continue
+        push!(findings, Finding(ERROR, "E.CONV.ROLE_OVERLAP",
+            :domain_rules, :network, nothing,
+            "Terminal label(s) $(join(both, ", ")) are declared in both the " *
+            "`$ra` and `$rb` role lists of `terminal_conventions`; each label " *
+            "must have a single role.",
+            Dict{String,Any}("labels" => both, "roles" => [ra, rb])))
+    end
+
+    classified = union(phase, neutral, earth)
+    unclassified = Dict{String,Vector{String}}()
+    for (bus_id, bus) in get(net, "bus", Dict())
+        bus isa Dict || continue
+        names = get(bus, "terminal_names", nothing)
+        names isa AbstractVector || continue
+        strs = string.(names)
+        miss = [t for t in strs if !(t in classified)]
+        isempty(miss) || (unclassified[bus_id] = sort!(unique(miss)))
+        neuts = [t for t in strs if t in neutral]
+        if length(neuts) > 1
+            push!(findings, Finding(WARNING, "W.CONV.MULTIPLE_NEUTRALS",
+                :domain_rules, :bus, bus_id,
+                "Bus '$bus_id' has $(length(neuts)) terminals classified as " *
+                "neutral ($(join(neuts, ", "))); a bus is expected to carry at " *
+                "most one neutral conductor.",
+                Dict{String,Any}("terminals" => neuts)))
+        end
+    end
+    if !isempty(unclassified)
+        labels = sort!(unique(reduce(vcat, values(unclassified))))
+        buses  = sort!(collect(keys(unclassified)))
+        push!(findings, Finding(WARNING, "W.CONV.TERMINAL_UNCLASSIFIED",
+            :domain_rules, :bus, length(buses) == 1 ? buses[1] : nothing,
+            "Terminal label(s) $(join(labels, ", ")) appear on $(length(buses)) " *
+            "bus(es) but are in none of the phase/neutral/earth role lists of " *
+            "`terminal_conventions`; they are treated as phase conductors. Add " *
+            "them to the appropriate role list.",
+            Dict{String,Any}("labels" => labels, "buses" => buses)))
+    end
 end

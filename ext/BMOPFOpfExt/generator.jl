@@ -26,9 +26,11 @@ related to the phase-to-neutral voltage and the current variables by:
 with `p_min[k] ≤ P_k ≤ p_max[k]` and `q_min[k] ≤ Q_k ≤ q_max[k]`.
 DELTA generators use the same bilinear form with line-to-line voltage.
 """
-function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
+function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i;
+                                     coefficient=nothing)
     vr = vars[:vr]; vi = vars[:vi]
     crg = vars[:crg]; cig = vars[:cig]
+    nlabels = BMOPFTools._neutral_labels(net)
 
     for (gid, gen) in get(net, "generator", Dict())
         bus       = get(gen, "bus", "")
@@ -42,8 +44,8 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
         s_max_g   = Float64.(get(gen, "s_max", Float64[]))
 
         if cfg in ("WYE", "SINGLE_PHASE")
-            ph_pos    = _phase_positions(tm)
-            n_pos_idx = _neutral_pos(tm)
+            ph_pos    = _phase_positions(tm, nlabels)
+            n_pos_idx = _neutral_pos(tm, nlabels)
             t_n       = n_pos_idx !== nothing ? tm[n_pos_idx] : nothing
             n_ph      = length(ph_pos)
 
@@ -77,15 +79,22 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
                 p_expr = @expression(model, dvr*crg[(gid,idx)] + dvi*cig[(gid,idx)])
                 q_expr = @expression(model, dvi*crg[(gid,idx)] - dvr*cig[(gid,idx)])
 
-                length(p_min) >= idx && @constraint(model, p_expr >= p_min[idx])
-                length(p_max) >= idx && @constraint(model, p_expr <= p_max[idx])
-                length(q_min) >= idx && @constraint(model, q_expr >= q_min[idx])
-                length(q_max) >= idx && @constraint(model, q_expr <= q_max[idx])
+                length(p_min) >= idx && @constraint(model, p_expr >=
+                    (coefficient === nothing ? p_min[idx] : coefficient(
+                        :limit, :generator, gid, :p_min, idx, p_min[idx])))
+                length(p_max) >= idx && @constraint(model, p_expr <=
+                    (coefficient === nothing ? p_max[idx] : coefficient(
+                        :availability, :generator, gid, :p_max, idx, p_max[idx])))
+                length(q_min) >= idx && @constraint(model, q_expr >=
+                    (coefficient === nothing ? q_min[idx] : coefficient(
+                        :limit, :generator, gid, :q_min, idx, q_min[idx])))
+                length(q_max) >= idx && @constraint(model, q_expr <=
+                    (coefficient === nothing ? q_max[idx] : coefficient(
+                        :limit, :generator, gid, :q_max, idx, q_max[idx])))
 
                 # Current magnitude limit (per conductor; single-phase collapsed)
                 if phase_ilim[idx] !== nothing
-                    @constraint(model,
-                        crg[(gid,idx)]^2 + cig[(gid,idx)]^2 <= phase_ilim[idx]^2)
+                    _soc_norm!(model, crg[(gid,idx)], cig[(gid,idx)], phase_ilim[idx])
                     _limit_current_box!(crg[(gid,idx)], cig[(gid,idx)], phase_ilim[idx])
                 end
 
@@ -95,7 +104,7 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
                     qg_v = @variable(model, base_name = "qg_$(gid)_$(idx)")
                     @constraint(model, pg_v == p_expr)
                     @constraint(model, qg_v == q_expr)
-                    @constraint(model, pg_v^2 + qg_v^2 <= s_max_g[idx]^2)
+                    _soc_norm!(model, pg_v, qg_v, s_max_g[idx])
                 end
 
                 _kcl_add!(kcl_r, kcl_i, bus, t_ph,  crg[(gid,idx)],  cig[(gid,idx)])
@@ -122,15 +131,22 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
                 p_expr = @expression(model, dvr*crg[(gid,k)] + dvi*cig[(gid,k)])
                 q_expr = @expression(model, dvi*crg[(gid,k)] - dvr*cig[(gid,k)])
 
-                length(p_min) >= k && @constraint(model, p_expr >= p_min[k])
-                length(p_max) >= k && @constraint(model, p_expr <= p_max[k])
-                length(q_min) >= k && @constraint(model, q_expr >= q_min[k])
-                length(q_max) >= k && @constraint(model, q_expr <= q_max[k])
+                length(p_min) >= k && @constraint(model, p_expr >=
+                    (coefficient === nothing ? p_min[k] : coefficient(
+                        :limit, :generator, gid, :p_min, k, p_min[k])))
+                length(p_max) >= k && @constraint(model, p_expr <=
+                    (coefficient === nothing ? p_max[k] : coefficient(
+                        :availability, :generator, gid, :p_max, k, p_max[k])))
+                length(q_min) >= k && @constraint(model, q_expr >=
+                    (coefficient === nothing ? q_min[k] : coefficient(
+                        :limit, :generator, gid, :q_min, k, q_min[k])))
+                length(q_max) >= k && @constraint(model, q_expr <=
+                    (coefficient === nothing ? q_max[k] : coefficient(
+                        :limit, :generator, gid, :q_max, k, q_max[k])))
 
                 # Current magnitude limit
                 if length(i_max_g) >= k
-                    @constraint(model,
-                        crg[(gid,k)]^2 + cig[(gid,k)]^2 <= i_max_g[k]^2)
+                    _soc_norm!(model, crg[(gid,k)], cig[(gid,k)], i_max_g[k])
                     _limit_current_box!(crg[(gid,k)], cig[(gid,k)], i_max_g[k])
                 end
 
@@ -140,7 +156,7 @@ function _add_generator_constraints!(model, net, vars, kcl_r, kcl_i)
                     qg_v = @variable(model, base_name = "qg_$(gid)_$(k)")
                     @constraint(model, pg_v == p_expr)
                     @constraint(model, qg_v == q_expr)
-                    @constraint(model, pg_v^2 + qg_v^2 <= s_max_g[k]^2)
+                    _soc_norm!(model, pg_v, qg_v, s_max_g[k])
                 end
 
                 _kcl_add!(kcl_r, kcl_i, bus, t_pos,  crg[(gid,k)],  cig[(gid,k)])

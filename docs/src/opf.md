@@ -4,10 +4,13 @@ Despite the name, the ambition of this Task Force extends well beyond the
 classical OPF problem of minimising generation cost subject to network
 constraints.  The unifying theme of the benchmark problems targeted here is
 the need to **accurately represent distribution network physics** rather than
-any particular objective function.  Generation cost minimisation is a
-convenient and well-posed starting point — it admits a unique solution, is
-straightforward to compare across solvers, and is equivalent to loss
-minimisation under mild conditions — but the same network physics underpins a
+any particular objective function. Generation cost minimisation with explicit
+operational bounds is a convenient starting point: its objective and feasibility
+conditions are straightforward to compare across solvers. With fixed demand and
+one uniform non-negative price on every real-power injection, minimizing total
+injection is equivalent to minimizing real losses. That special case does
+**not** imply uniqueness or global optimality in this
+nonconvex formulation. The same network physics underpins a
 much broader class of distribution-network-constrained optimisation problems
 of practical relevance: maximum load delivery, conservation voltage reduction
 (CVR), Dynamic Operating Envelopes (DOEs) for distributed energy resources,
@@ -105,6 +108,41 @@ explicitly:
     zero nominal voltage (undefined `1/v_nom`), a zero winding turns-ratio, or two
     zero-impedance branches shorting the same terminals (an undetermined current
     split) are refused up front, not solved into nonsense.
+11. **Prefer a hard variable bound; scale the constraint that is left.**
+    Interior-point solvers enforce *variable bounds* far more tightly than general
+    nonlinear constraints — Ipopt holds a bound to its `bound_relax_factor`
+    (effectively exactly), but a constraint only to the absolute `constr_viol_tol`.
+    So wherever a valid — if looser — box bound on a variable exists, it is stamped
+    *in addition to* the exact constraint: it backstops the soft constraint and
+    bounds the search region from the start. A current-magnitude limit `|I| ≤ i_max`
+    is written both as a second-order cone and as a box on each rectangular current
+    component. The magnitude and power cones that have no such backstop — apparent
+    power, sequence voltage, neutral current — are instead written in **normalized**
+    form `(a/lim)² + (b/lim)² ≤ 1` rather than `a² + b² ≤ lim²`, so the constraint
+    value is order ≈ 1 regardless of the per-unit base and the solver's absolute
+    tolerance stays meaningful. (Un-normalized, a current cone at a large `s_base`
+    can sit near `1e-6` — below `constr_viol_tol` — so a limit that ought to force
+    infeasibility is silently accepted.) This is the constraint-scaling companion to
+    the variable scaling in [Units and scaling](#Units-and-scaling).
+12. **The formulation is non-convex — determinism comes from the warm start.**
+    Rectangular AC power flow is non-convex: the feasible set has multiple local
+    optima (a voltage-collapsed root, phase-rotated roots), and the interior-point
+    solver returns whichever is nearest its starting point. Every variable is
+    therefore initialised from a physically-motivated, deterministic guess —
+    canonical 120° phase angles, anti-phase split-phase legs, delta-loop voltage
+    propagation, and `I = conj(S)/conj(V)` current seeding — to steer the solve to
+    the *operational* root rather than a spurious one. The warm start is not a
+    performance nicety; it is what makes the returned solution reproducible and
+    physically meaningful (see [Warm-start initialisation](#Warm-start-initialisation)).
+13. **One sign convention, and results are recomputed with it.** A single
+    convention is fixed and applied to *every* element type — current into a bus is
+    positive in KCL, apparent power is `S = V · conj(I)`. The result writer derives
+    every reported quantity (per-element power, losses, terminal currents) from the
+    *same* expressions the constraints are built from, never from an independent
+    re-derivation that could drift out of sync with the model. This consistency is a
+    correctness invariant, not a convenience: a quantity reported with the opposite
+    sign to its own constraint is a silent error that a feasible solve will never
+    catch.
 
 These principles were inspired by the IVR-EN formulation in
 [PowerModelsDistribution](positioning.md) and by Claeys et al.'s four-wire OPF
@@ -181,20 +219,31 @@ modes are provided precisely so this can be **benchmarked** rather than assumed 
 the SI data model (a representation choice, [ref. 16](methodology.md#refs)) does
 not commit the solver to computing in SI.
 
+The [units, bases & economics tutorial](tutorial_units.md) works both modes on
+one feeder — deriving the bases by hand and demonstrating the SI ≡ per-unit
+equality live.
+
 ---
 
 ### Objective
 
-Minimise total active-power generation cost (linear in current variables):
+Minimise total active-power generation cost **rate** (linear in active power;
+bilinear in generator/IBR voltage-current variables):
 
 $$\min \sum_{g \in \mathcal{G}} \sum_{k=1}^{|\mathcal{T}_g^\phi|}
-  c^g_k \cdot \bigl(\Delta v^r_k \, c^{r,g}_{g,k} + \Delta v^i_k \, c^{i,g}_{g,k}\bigr)$$
+  \frac{c^g_k}{1000} \cdot
+  \bigl(\Delta v^r_k \, c^{r,g}_{g,k} + \Delta v^i_k \, c^{i,g}_{g,k}\bigr)$$
 
-where $c^g_k$ (currency/W) is the **per-phase** linear cost coefficient — the
-`cost` field is a vector with one entry per phase term, indexed by $k$ — and
+where $c^g_k$ (currency/kWh) is the **per-phase** energy price — the `cost`
+field is a vector with one entry per phase term, indexed by $k$ — and
 $\Delta v_k$ is the phase-to-neutral (WYE) or line-to-line (DELTA) voltage at
 generator $g$'s $k$-th phase terminal (see [Generators](@ref generators-section)
-below). The same per-phase `cost` vector prices the voltage source and IBRs.
+below). Division by 1000 converts the active-power expression from W to kW, so
+the snapshot objective has units currency/h. The same per-phase `cost` vector
+prices the voltage source and IBRs. To obtain currency over a time interval,
+multiply this rate by the interval duration in hours — the
+[units, bases & economics tutorial](tutorial_units.md) reconstructs this
+objective by hand from a solved result and prices a full day.
 
 ---
 
@@ -923,7 +972,7 @@ $V_\text{hv}/N$ and the relations above route the currents.
     ```
     Using the 2-winding shortcut (full `XHL` on the HV side, `x_series_to = 0`)
     drops the LV-side leakage and spreads the legs apart under load.
-    PowerIO v0.6.2's BMOPF export carries the correct star split for
+    PowerIO v0.7's BMOPF export carries the correct star split for
     [`from_dss`](@ref); BMOPFTools normalizes the no-load shunt convention.
 
 ---
@@ -1078,7 +1127,7 @@ windings — only the coil↔terminal incidence differs. The coil voltage $U_{j,
 is **phase-to-neutral** for a `WYE` winding and **line-to-line** (phase $k$ minus
 its delta partner $k^{\pm}$, selected by the winding's `delta_roll`) for a
 `DELTA` winding, whose $V^\text{ref}$ is its line-to-line coil voltage — so the
-$\sqrt3$/coil-base factor lives entirely in $N_j$ and $V^r_j$ stays consistent
+$\sqrt{3}$ coil-base factor lives entirely in $N_j$, and $V^r_j$ stays consistent
 (per-unit needs no $\sqrt3$ correction, since the bus base is line-to-neutral).
 A `WYE` coil injects $-c^{w}_{x,j,k}$ at its phase and $+\sum_k c^{w}_{x,j,k}$ at
 its neutral; a `DELTA` coil injects $-c^{w}_{x,j,k}$ at phase $k$ and
@@ -1173,40 +1222,48 @@ centre-tap secondary starts with a 60° leg error.
 
 `solve_feasibility_opf` adds an **elastic slack current**
 $(c^{r,\varepsilon}_{b,t},\, c^{i,\varepsilon}_{b,t})$ at every ungrounded,
-non-source terminal, making KCL always satisfiable:
+non-source terminal. These variables can absorb any KCL residual at those
+terminals, but they do not relax contradictory source fixes, inconsistent hard
+bounds, or other hard equalities:
 
 ```math
 \kappa^r_{b,t} + c^{r,\varepsilon}_{b,t} = 0, \qquad
 \kappa^i_{b,t} + c^{i,\varepsilon}_{b,t} = 0
 ```
 
-The cost objective is replaced by the $\ell_2^2$ norm of all slack injections:
+The primary cost objective is replaced by the $\ell_2^2$ norm of all slack
+injections:
 
 ```math
 \min \sum_{(b,t)} \Bigl[\bigl(c^{r,\varepsilon}_{b,t}\bigr)^2
                        + \bigl(c^{i,\varepsilon}_{b,t}\bigr)^2\Bigr]
 ```
 
-All device models — load, generator, **IBR**, shunt, transformer, switch,
-and the voltage-source slack — are built identically to `solve_opf`. The only
-differences are the deliberate ones: operational **network** bounds (voltage
-magnitude/sequence, line thermal-angle, bus limits) are **not** hard constraints
-here, and the objective is the slack norm rather than cost. Voltage bounds are
-evaluated post-solve by `diagnose_infeasibility`.
+The implementation adds a tiny linear transformer-current tie-break to select a
+numerical representative when Yd/Dy delta circulation is unobservable. Therefore
+the raw solver `objective` is an implementation metric; interpret the SI-valued
+slack fields instead.
 
-A zero-slack solution certifies physical feasibility.  Non-zero slacks at
-$(b, t)$ reveal where the network cannot balance KCL without external
-intervention.
+All device models and non-KCL hard constraints — including voltage, sequence,
+thermal, and angle limits — are built identically to `solve_opf`. The deliberate
+changes are the elastic KCL currents and the slack-norm objective. Thus the
+relaxed feasible set contains the original feasible set; it is not identical to
+it, and contradictory remaining hard constraints can still make it empty.
+
+A converged, independently residual-checked zero-slack point demonstrates
+numerical feasibility. Non-zero slacks at $(b,t)$ show where that local relaxed
+solution uses external current; they do not prove that no zero-slack solution
+exists elsewhere.
 
 ```julia
 fopf   = solve_feasibility_opf(net)
 diag   = diagnose_infeasibility(fopf, net)
 
-println(diag["is_feasible"])            # false if network is overloaded
+println(diag["is_feasible"])            # local classification from status/slack
 println(diag["total_infeasibility_A"])  # L2 norm of all slacks (A)
 ```
 
-## Solver control and extending the formulation
+## [Solver control and extending the formulation](@id extending-the-formulation)
 
 All three entry points (`solve_opf`, `solve_pf`, `solve_feasibility_opf`)
 accept:
@@ -1224,32 +1281,123 @@ Researchers who need to modify the formulation — add a constraint, swap the
 objective, or stamp a new device — can pass a **`model_hook!`** without
 forking the package. The hook is called as `hook!(ctx)` after the standard
 model is built and *before* Kirchhoff's current law is enforced and the model
-is solved. `ctx` exposes:
+is solved. Use the public extension interface:
 
-| field | contents |
+| API | contents |
 |---|---|
-| `ctx.model` | the JuMP model — `@constraint`/`@objective` work directly |
-| `ctx.net` | the engine's working copy of the network (snapshot + per-unit applied) |
-| `ctx.vars` | variable dict: `:vr`/`:vi` keyed `(bus, terminal)`, `:crg`/`:cig` keyed `(gen_id, conductor)`, `:cr_fr`/`:ci_fr`/… (see the module docstring of `BMOPFOpfExt` for the full list) |
-| `ctx.bus_terminals` | bus id → ordered terminal names |
-| `ctx.grounded` | set of perfectly-grounded `(bus, terminal)` pairs |
-| `ctx.kcl_r` / `ctx.kcl_i` | per-`(bus, terminal)` KCL accumulator expressions — `JuMP.add_to_expression!` into these to inject current from a custom device |
+| `opf_model(ctx)` | the JuMP model — `@constraint`/`@objective` work directly |
+| `opf_network(ctx)` | the engine's working copy (snapshot + per-unit applied) |
+| `opf_bases(ctx)` | SI↔working-coordinate bases, or `nothing` in SI mode |
+| `opf_object(ctx, key)` | a native or extension-owned object under a semantic key |
+| `add_terminal_injection!(ctx, …)` | supported KCL contribution seam |
 
 Example — cap one generator's phase active power below its box bound:
 
 ```julia
 using JuMP
 result = solve_opf(net; model_hook! = ctx -> begin
-    vr, vi   = ctx.vars[:vr],  ctx.vars[:vi]
-    crg, cig = ctx.vars[:crg], ctx.vars[:cig]
-    # P = (v_ph − v_n)·crg + … ; with a grounded neutral this reduces to:
-    @constraint(ctx.model,
-        vr[("bus1","1")]*crg[("g1",1)] + vi[("bus1","1")]*cig[("g1",1)] <= 150e3)
+    vr = opf_object(ctx, opf_bus_voltage_key("bus1", "1"))
+    vi = opf_object(ctx, opf_bus_voltage_key("bus1", "1"; component=:imag))
+    crg = opf_object(ctx, opf_generator_current_key("g1", 1))
+    cig = opf_object(ctx,
+        opf_generator_current_key("g1", 1; component=:imag))
+    bases = opf_bases(ctx)
+    scale = bases === nothing ? 1.0 : bases.s_base
+    @constraint(opf_model(ctx), vr*crg + vi*cig <= 150e3 / scale)
 end)
 ```
 
 The model is solved in the model's working units: SI by default, per-unit
 when `per_unit=true` — scale hand-written constants accordingly.
+
+A `solution_hook!(ctx, result)` runs after the solve and before per-unit
+unwrapping, with the model still live: read `JuMP.value` of the variables a
+`model_hook!` created and append your own keys to `result` (scale to SI via
+`opf_bases(ctx)`). A hook device that writes its net terminal power to
+`result["custom_injection"] = Dict("p"=>…, "q"=>…)` (SI, generator sign) is
+counted by `profile_solution`'s power-balance check, so a correct solve no
+longer trips a spurious `W.SOL.POWER_BALANCE`.
+
+### [Multi-period and storage: the staged API](@id staged-api)
+
+`solve_opf` builds, solves, and extracts one snapshot in a single fused call —
+it cannot express constraints that couple one time step to the next, such as a
+battery's state of charge. For that, the same pipeline is exposed as four
+composable steps that let you build **several snapshots into one JuMP model**,
+add your own inter-temporal constraints, solve once, and extract each snapshot:
+
+| function | role |
+|---|---|
+| `build_opf_model(net; model, add_objective, model_hook!, …)` | build one snapshot's devices/bounds into a (shared) model; no KCL, no solve |
+| `generation_cost(ctx)` | that snapshot's cost-rate expression (\$/h), unset — duration-weight and sum across snapshots for one monetary objective |
+| `enforce_kcl!(ctx)` | pin KCL for one snapshot (call once per snapshot before solving) |
+| `extract_result(ctx; solution_hook!)` | extract one snapshot's SI result after the shared solve |
+
+Pass the same `model` to every `build_opf_model` call and `add_objective=false`
+so the snapshots share one optimisation and one objective. Each `ctx` keeps its
+own variable/KCL dicts, so snapshots coexist without collision; couple them
+through the variables a `model_hook!` publishes.
+
+```julia
+using JuMP, Ipopt
+model = JuMP.Model(Ipopt.Optimizer)
+ctxs  = [build_opf_model(nets[t]; model=model, add_objective=false,
+                         model_hook! = battery_port!(t)) for t in 1:T]
+
+# inter-temporal state of charge: SOC[t+1] = SOC[t] − P[t]·Δt, cyclic
+duration_hours = fill(1.0, T)  # use the actual duration of every period
+@variable(model, soc[1:T+1]); @constraint(model, soc[1] == soc[T+1])
+for t in 1:T
+    @constraint(model, soc[t+1] == soc[t] - Pexpr[t]*duration_hours[t])
+    @constraint(model, 0 <= soc[t+1] <= E_max)
+end
+
+@objective(model, Min,
+    sum(duration_hours[t] * generation_cost(ctxs[t]) for t in 1:T))
+foreach(enforce_kcl!, ctxs)
+JuMP.optimize!(model)
+results = [extract_result(c) for c in ctxs]
+```
+
+`generation_cost(ctx)` is a **rate**, not an interval total. A bare sum of rates
+preserves the same optimizer only when all periods have equal duration; it does
+not report a monetary total. Duration weighting is required when periods differ
+or when the objective value will be interpreted as currency.
+
+Everything a snapshot exposes for coupling is the same context object a
+`model_hook!` receives, so custom devices are declared exactly as in the
+single-snapshot case. Downstream packages should prefer the stable accessors
+[`opf_model`](@ref), [`opf_network`](@ref), [`opf_bases`](@ref),
+[`opf_object`](@ref), and [`add_terminal_injection!`](@ref) over depending on the
+raw context dictionaries. See [Parameterized and differentiable
+extensions](differentiable_extensions.md) for the compatibility contract and
+scientific limitations.
+
+When an extension must intervene before native device physics is stamped, start
+with [`initialize_opf_model`](@ref) and compose the public start-value, limit,
+device, and objective stages explicitly. [`opf_build_manifest`](@ref) records
+the exact stage order and native component ownership; the differentiable-
+extensions guide documents this lower-level path.
+
+### [Beyond OPF: other problem specifications](@id beyond-opf)
+
+The staged API is problem-agnostic — it exposes the network physics, not just
+the dispatch problem. Because `build_opf_model` adds operational limits only
+where the net *declares* them (`v_min`/`v_max`/`i_max`), a net that omits them
+yields a pure physics model with the bus voltages left free. Combined with
+`add_objective=false` and a `model_hook!` that supplies its own objective, this
+hosts estimation and fitting problems that are not dispatch optimisation at all.
+
+For example, **weighted-least-squares state estimation** is: build the physics
+of a bounds-free, load-free net (`source` + `line`s), add a free injection
+current at each measured bus via a `model_hook!` (so KCL closes with the
+voltages free to fit the data), and set the objective to the weighted sum of
+squared measurement residuals `∑ wᵢ (zᵢ − hᵢ(state))²` for voltage-magnitude and
+power-injection measurements. The solve returns the state that best explains the
+measurements; with measurement redundancy it filters noise the raw readings
+cannot. The same seam supports parameter estimation and other model-fitting
+formulations — the device physics, per-unit handling, and multi-instance
+coupling are reused unchanged.
 
 ---
 
@@ -1260,4 +1408,8 @@ solve_opf
 solve_pf
 solve_feasibility_opf
 diagnose_infeasibility
+build_opf_model
+enforce_kcl!
+generation_cost
+extract_result
 ```

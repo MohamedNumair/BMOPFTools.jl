@@ -24,7 +24,9 @@ neutral reactors.
     A Julia session with BMOPFTools plus **JuMP** and **Ipopt** for the solve
     step: `using Pkg; Pkg.add(["JuMP", "Ipopt"])` in your own environment. If
     you are working from a clone of the repository, the docs environment
-    already has everything: `julia --project=docs`.
+    already has everything: `julia --project=docs`. First time with Julia, or
+    unsure what any of that means? Start with
+    [Installation & first steps](installation.md).
 
 !!! note "Two deep-dive tutorials branch off this one"
     Once the pipeline makes sense, [DER placement](tutorial_ders.md) explores the
@@ -55,8 +57,10 @@ println(rpad("transformer", 16), ": ", sum(length(v) for v in values(xfmr) if v 
 
 `from_dss` is loud about fidelity: the `Warning` it prints above lists every
 piece of OpenDSS information that has no BMOPF representation and was dropped
-(here mostly cosmetic fields such as linecode `units`); the full list stays
-inspectable at `net["_meta"]["powerio_warnings"]`.
+(here mostly cosmetic fields such as linecode `units`). The console preview is
+capped at five items — the full, untruncated list stays inspectable at
+`net["_meta"]["powerio_warnings"]` (see
+[Ingest warnings](@ref ingest-warnings)).
 
 ## 2. Analyze & diagnose
 
@@ -145,8 +149,9 @@ render_manifest(der_mf)
 [`augment_case`](@ref) fills the bounds and costs an OPF needs, **without
 overwriting any value already present**. Each fill is tagged in the manifest as
 `:standard` (derived from a cited standard) or `:synthetic` (a design choice).
-The passes draw on EN 50160 (voltage bounds), IEC 60228 (thermal limits from
-conductor cross-sections), and EN 50549-1 / IEEE 1547 (reactive capability). See
+The passes draw on EN 50160 (voltage bounds), a heuristic conductor-size →
+ampacity estimate (thermal limits, loosely IEC-60228/60364-calibrated), and
+EN 50549-1 / IEEE 1547 (reactive capability). See
 [Case augmentation](augmentation.md) for the full pass-by-pass rationale.
 
 ```@example e2e
@@ -154,6 +159,27 @@ net_ready, aug_mf = augment_case(net_der; recipe = AugmentationRecipe())
 
 render_manifest(aug_mf)
 ```
+
+**Where the thermal limits landed.** The thermal pass writes a heuristic
+per-conductor ampacity `i_max` (in A) onto each linecode that lacked one — this
+is the line/cable thermal limit the OPF enforces, and it is tagged `:synthetic`
+in the manifest above. Read it straight off the prepared linecodes:
+
+```@example e2e
+for (lc_id, lc) in sort(collect(net_ready["linecode"]); by = first)
+    imax = get(lc, "i_max", nothing)
+    println(rpad(lc_id, 16),
+            imax === nothing ? "no i_max (skipped — see manifest)" :
+                               string("i_max = ", imax, " A"))
+end
+```
+
+A **transformer's** thermal limit is a different mechanism: its nameplate
+`s_rating` (kVA) already plays that role and the OPF enforces it directly, so
+`augment_case` never adds a separate transformer thermal limit. The full
+pass-by-pass rationale — the R₁₁ → ampacity lookup table, its confidence gating,
+and the neutral-conductor rating — is in
+[Case augmentation](augmentation.md).
 
 ## 6. Re-validate
 
@@ -199,7 +225,7 @@ optimizer = optimizer_with_attributes(Ipopt.Optimizer, "print_level" => 0)
 result = solve_opf(net_ready; optimizer = optimizer, per_unit = true)
 
 println("Termination : ", result["termination_status"])
-println("Objective   : ", round(result["objective"]; sigdigits = 6))
+println("Cost rate   : ", round(result["objective"]; sigdigits = 6), " \$/h")
 ```
 
 The **negative objective is correct**: the PV fleet placed in step 4 is priced

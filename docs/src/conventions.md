@@ -38,7 +38,9 @@ further scaling is applied on ingest.
     reference OPF can solve directly in SI or in an internally-scaled per-unit
     copy and return SI results either way (see
     [Units & scaling](opf.md#Units-and-scaling)). The representation choice and
-    the numerical-scaling choice are independent.
+    the numerical-scaling choice are independent. The
+    [units, bases & economics tutorial](tutorial_units.md) works both layers —
+    and the cost units — on one feeder.
 
 ## Terminal names
 
@@ -52,10 +54,42 @@ convention `"1", "2", "3", "n"` and understands these conventions on read:
 | Letter | `"a" "b" "c"` (any case) | `"n"`/`"N"` |
 | IEC 60445 | `"L1" "L2" "L3"` | `"N"` |
 
-**Neutral identification** is heuristic (the spec carries no explicit
-marker): a terminal named `n`/`N` is the neutral; failing that, terminal
-`"4"` of a bus whose terminal set is exactly `{"1","2","3","4"}`. Anything
-else is treated as all-phase.
+### Terminal-role conventions
+
+Because the label strings alone do not say which conductor is a phase and
+which is the neutral, a case may declare the classification **once, for the
+whole network**, in a top-level `terminal_conventions` block:
+
+```json
+"terminal_conventions": {
+  "phase":   ["a", "b", "c"],
+  "neutral": ["n"],
+  "earth":   []
+}
+```
+
+- All three lists are optional arrays of the label strings used across the
+  case's AC buses. When the block is present it is **authoritative**: labels
+  are matched exactly (including case), and ingestion, validation and the OPF
+  resolve roles from it rather than guessing.
+- `earth` names dedicated earth-/PE-**wire** terminals only. The ground
+  *reference* stays implicit — grounding is still modelled via
+  `perfectly_grounded_terminals` and grounding shunts — so `earth` is empty
+  for standard cases (the OpenDSS earth node is routed to the neutral, not
+  kept as a terminal).
+- `dc_bus` is out of scope; it carries its own pole roles.
+- The block is **always written** on export ([`write_bmopf`](@ref)): a case
+  that never declared one gets the inferred classification promoted to an
+  explicit block, so saved files are self-documenting. [`from_dss`](@ref)
+  writes `{phase:[a,b,c], neutral:[n], earth:[]}` directly.
+
+**When the block is absent**, roles are **inferred** from the naming
+convention (a terminal `n`/`N` is neutral; terminal `"4"` of a bus whose
+terminal set is exactly `{"1","2","3","4"}`; everything else phase), and
+validation raises `W.CONV.TERMINAL_ROLES_INFERRED` to nudge you to make the
+classification explicit. Inconsistent declarations raise `E.CONV.ROLE_OVERLAP`
+(a label in two role lists), `W.CONV.TERMINAL_UNCLASSIFIED` (a bus terminal in
+none — treated as a phase), or `W.CONV.MULTIPLE_NEUTRALS`.
 
 **Ingest normalisation**: JSON files with non-string terminal entries (e.g.
 `[1,2,3,4]`) are coerced by [`parse_bmopf`](@ref). If every numeric token is
@@ -63,7 +97,43 @@ covered by the alias table (default `1→"1", 2→"2", 3→"3", 4→"n"`,
 overridable via `terminal_aliases`), the aliases apply; otherwise — the
 profiling guard, e.g. a 5th conductor present — everything becomes its
 verbatim decimal string. Coercion is recorded in
-`_meta["terminal_coercions"]` and flagged as `W.SPEC.TERMINAL_TYPES`.
+`_meta["terminal_coercions"]` and flagged as `W.SPEC.TERMINAL_TYPES`. When the
+case declares `terminal_conventions`, the default `4→"n"` rename is suppressed
+so a *declared* neutral label like `"4"` survives verbatim.
+
+### Device terminals: lining up phases and the neutral
+
+Every connected device — `load`, `generator`, `ibr`, `voltage_source`,
+`capacitor`, `shunt` — references named bus terminals through its
+`terminal_map` (lines, switches and transformers use `terminal_map_from` /
+`terminal_map_to`). A device map is a mix of **phase terminals** and, for
+wye/four-leg wiring, **one neutral terminal** — classified by the same
+`terminal_conventions`. This has a concrete consequence for the data:
+
+> A device's **per-phase parameter arrays line up with the phase terminals of
+> its `terminal_map`, in map order, with the neutral excluded.**
+
+So a WYE load on `terminal_map = ["a","b","c","n"]` has **three** phase
+conductors, and `p_nom`/`q_nom` are length-3 vectors whose entries correspond
+to `a`, `b`, `c` respectively; the `n` terminal is the return, not a fourth
+element. Concretely:
+
+| Element | Per-phase arrays | Length (WYE / FOUR_LEG) | Neutral entry |
+|---|---|---|---|
+| `load` | `p_nom`, `q_nom` | # phase terminals | — (return only) |
+| `generator` | `p_min/p_max`, `q_min/q_max`, `s_max`, `cost` | # phase terminals | `i_max` may carry a trailing neutral entry (phases+1) |
+| `ibr` | `p_min/p_max`, `q_min/q_max`, `s_max`, `cost` | # phase terminals (`THREE_LEG`: all terminals; `SINGLE_PHASE`: 1) | `i_max` may carry a trailing neutral entry |
+| `voltage_source` | `v_magnitude`, `v_angle` | # phase terminals in the map | — |
+
+The neutral is singled out because currents on the phase conductors return
+through it: the OPF writes each phase quantity across the phase-to-neutral
+terminal pair, and (where rated) the neutral return current is bounded by the
+extra trailing `i_max` entry. A `DELTA` map has no neutral — its arrays are
+per phase-pair. Mismatches between an array's length and the phase-terminal
+count are reported as `W.SPEC.CONFIG_ARITY` (see
+[Validation findings](findings.md)); making the phase/neutral split explicit
+via `terminal_conventions` is what lets these checks be exact rather than
+heuristic.
 
 ## Buses, bounds and grounding
 
@@ -167,9 +237,12 @@ FAQ: a "wye" in the BMOPF sense always has the neutral return — a
 2-terminal load is `SINGLE_PHASE`, not a degenerate wye.
 
 Generators additionally carry `cost` and optional `p_min/p_max/q_min/q_max`.
-`cost` is a **per-phase vector of linear coefficients** (\$/W), one element per
-phase term; the objective contribution of phase `k` is `cost[k]·P_k`. (There is
-no polynomial/quadratic cost form.) A generator without bounds is an unbounded
+`cost` is a **per-phase vector of energy prices** (\$/kWh), one element per
+phase term. For a snapshot, the objective contribution of phase $k$ is the cost
+rate $c_k \, P_k / 1000$ (\$/h), because $P_k$ is stored in watts. A multi-period
+monetary objective must additionally multiply each rate by the period duration
+in hours. (There is no polynomial/quadratic cost form.) A generator without
+bounds is an unbounded
 (slack-style) unit.
 
 **Voltage source as slack.** The `voltage_source` fixes its terminal voltages
@@ -200,6 +273,28 @@ currents under unbalance compensation; a phases-only vector warns). A
 to a single limit; a length-1 vector is standardised to 2). Generators take the
 same per-conductor `i_max` convention.
 
+!!! note "Why both a `generator` and an `ibr` object?"
+    Most distributed generation in an unbalanced LV study *is* inverter-based, so
+    the reasonable question is why keep a separate `generator` at all. The two
+    objects sit at different modelling altitudes:
+
+    - **`generator`** is the *minimal* active-power dispatch object — `p_min/p_max`,
+      reactive box `q_min/q_max`, and a per-phase linear `cost`. It is the right
+      model for a synchronous/diesel unit, or wherever you want a dispatchable
+      active-power injection *without* committing to converter physics (no
+      apparent-power circle, no topology, no droop control).
+    - **`ibr`** adds exactly that converter physics: an apparent-power nameplate
+      `s_max` with the $P^2 + Q^2 \le (S^{\max})^2$ circle, a `topology`
+      (`SINGLE_PHASE`/`THREE_LEG`/`FOUR_LEG`) that fixes the voltage reference, a
+      `prime_mover`, and reference-able `control_profile` droop laws.
+
+    Both are kept because benchmark cases span both, and because a thin
+    `generator` avoids forcing the full converter model (and its extra variables)
+    onto a resource that does not need it. For a PV, battery, STATCOM, or any
+    converter-interfaced DER, prefer `ibr`; reach for `generator` for
+    non-converter or deliberately abstract dispatch. The placement passes mirror
+    this split: [`add_generators`](@ref) versus [`add_ibrs`](@ref).
+
 IBR control laws are attached by reference: `control_profile` names a
 shared [`control_profile`](#Control-profiles) entry carrying `volt_var`,
 `volt_watt`, or `power_factor`. Each droop law's `voltage_reference` selects the
@@ -219,12 +314,13 @@ they set a converter's active/reactive power from its *AC* terminal voltage (the
 DC-port counterpart is configured separately; see below). Each profile holds one or
 more optional sub-objects, and the *presence* of a sub-object activates that law:
 
-- **`volt_var`** — reactive-power droop `Q = f(U)`. Fields: `breakpoints`
-  `[U1,U2,U3,U4]` (V, non-decreasing); `q_limits` `[q_absorb ≤ 0, q_inject ≥ 0]`;
+- **`volt_var`** — reactive-power droop $Q = f(U)$. Fields: `breakpoints`
+  `[U1,U2,U3,U4]` (V, non-decreasing); `q_limits` `[q_absorb, q_inject]`
+  ($q_\text{absorb} \le 0 \le q_\text{inject}$);
   `q_unit` (`VA_FRACTION` of `s_max`, or `VAR`); `q_ref` (`VAR_MAX`, or
-  `VAR_AVAILABLE` scaling with `√(s_max² − P²)`); and `voltage_reference`.
+  `VAR_AVAILABLE` scaling with $\sqrt{(S^{\max})^2 - P^2}$); and `voltage_reference`.
   Optional `p_min_for_q` / `p_min_for_q_max` mirror OpenDSS's low-power cut-ins.
-- **`volt_watt`** — active-power curtailment cap `P ≤ f(U)`. Fields: `breakpoints`
+- **`volt_watt`** — active-power curtailment cap $P \le f(U)$. Fields: `breakpoints`
   `[U5,U6]`; `p_limits` `[p_low, p_high]`; `p_unit` (`VA_FRACTION` or `W`); `p_ref`
   (`S_MAX` / `P_MAX` / `P_AVAILABLE`); and `voltage_reference`.
 - **`power_factor`** — constant power factor: a signed `pf` (positive = lagging,
@@ -248,7 +344,8 @@ smooth constraint, and the [VVWO tutorial](tutorial_vvwo.md) for a worked exampl
 acts on the **signed DC-port voltage** rather than an AC magnitude, so it lives on
 the `ibr` directly via `dc_control` — not in a `control_profile`. Its `"droop"`
 mode is a **power–voltage (V–P) droop** stamped as an equality
-`P = dc_p_ref + (v_dc − dc_v_set)/dc_droop` (saturated at the converter limits)
+$P = P^\text{ref} + (v_\text{dc} - v_\text{dc}^\text{set})/k_\text{droop}$
+(fields `dc_p_ref`, `dc_v_set`, `dc_droop`; saturated at the converter limits)
 using the same smooth-ReLU machinery as `volt_var`/`volt_watt`. See the
 [DC network](@ref dc-network) section's `dc_control`.
 
@@ -256,9 +353,9 @@ using the same smooth-ReLU machinery as `volt_var`/`volt_watt`. See the
 
 A `capacitor` is a fixed shunt capacitor bank with fields `bus`, `terminal_map`,
 `configuration` (`WYE` / `SINGLE_PHASE` / `DELTA`), `q_rated` (var) and `v_nom`
-(V). It is a **constant susceptance** `B = q_rated / v_nom²` delivering the
-voltage-dependent reactive power `Q = B·V²` (= the nameplate `q_rated` only at
-`v_nom`). `q_rated` is a per-phase array for WYE, per-pair for DELTA, length 1
+(V). It is a **constant susceptance** $B = Q^\text{rated}/(V^\text{nom})^2$
+delivering the voltage-dependent reactive power $Q = B\,V^2$ (equal to the
+nameplate `q_rated` only at `v_nom`). `q_rated` is a per-phase array for WYE, per-pair for DELTA, length 1
 for SINGLE_PHASE; `v_nom` is phase-to-neutral (WYE/SINGLE_PHASE) or
 line-to-line (DELTA). It is electrically a connection-aware `shunt` and adds **no
 OPF variables** (fixed). A `shunt` remains the general constant-admittance
@@ -291,23 +388,24 @@ bounds are measured against.
 `perfectly_grounded_terminals` entry on the `dc_bus`) sets the signed-voltage
 reference and provides the earth-return path. `r = 0`/omitted is **perfect**
 grounding (the terminal's `v_dc` is fixed to 0, with a free earth-return current);
-`r > 0` is grounding **through impedance** (earth current `= v_dc / r`, with the
-electrode floating to the ground-potential rise `I·r`). Every connected DC island
+`r > 0` is grounding **through impedance** (earth current $i = v_\text{dc}/r$,
+with the electrode floating to the ground-potential rise $i\,r$). Every connected DC island
 needs at least one grounding, else `E.INT.NO_DC_VOLTAGE_REFERENCE` fires.
 
 **Converters are lossless** at this fidelity: a converter's DC-port power equals
 its AC active power, so a back-to-back SOP conserves power exactly and an MVDC tie
-loses only the `I²R` of its DC line.
+loses only the $I^2 R$ of its DC line.
 
 **DC-voltage control (`dc_control`).** Like an AC network needs a slack/reference,
 an MVDC zone needs a converter that sets the DC voltage — otherwise `v_dc` is
 underdetermined. Mirroring HVDC/MVDC practice (master–slave and droop):
 - `"P"` (default) — constant power; the OPF dispatches the converter's power.
-- `"V"` — DC-voltage **master**: holds `v_dc(pole−return) = dc_v_set` (a fixed
-  setpoint, like an AC source's `v_magnitude`); its AC power floats to balance the
-  zone.
+- `"V"` — DC-voltage **master**: holds the pole-to-return $v_\text{dc}$ at
+  `dc_v_set` (a fixed setpoint, like an AC source's `v_magnitude`); its AC power
+  floats to balance the zone.
 - `"droop"` — **saturated** V–P droop: the AC power follows
-  `P = dc_p_ref + (v_dc − dc_v_set)/dc_droop` inside an optional `±dc_deadband`,
+  $P = P^\text{ref} + (v_\text{dc} - v_\text{dc}^\text{set})/k_\text{droop}$
+  inside an optional `±dc_deadband`,
   and **clamps to the converter's power limits** outside the droop band (a
   piecewise-linear P–V curve, implemented with the smooth-ReLU machinery so it is
   Ipopt-friendly). Higher `dc_droop` = softer droop; `dc_droop → 0` is the stiff
@@ -353,7 +451,7 @@ loading correctly produces different voltages on the two legs.
     leakage values, not `XHL/2` — the OpenDSS pair-wise values must be converted
     via the Steinmetz star formula. Using the 2-winding shortcut (e.g. all of
     `XHL` on the HV side, `x_series_to = 0`) drops the LV-side leakage and spreads
-    the leg voltages apart under load. PowerIO v0.6.2's BMOPF export carries the
+    the leg voltages apart under load. PowerIO v0.7's BMOPF export carries the
     correct star split for [`from_dss`](@ref); BMOPFTools normalizes the no-load
     shunt convention. See
     [Conversion guide § Transformer impedance bases](conversion.md#Transformer-impedance-bases)
@@ -384,7 +482,8 @@ base across the galvanic tie (no voltage-level change).
 single-phase autotransformer windings connected line-to-line across the phase
 pairs implied by `connection` (`ABBC`/`BCAC`/`CABA`, GridLAB-D convention),
 with per-regulator taps `tap_ratio = [a1, a2]`.  The phase common to both
-regulators is a **galvanic straight-through** (`V_shared,from = V_shared,to`),
+regulators is a **galvanic straight-through**
+($V^\text{shared}_\text{from} = V^\text{shared}_\text{to}$),
 the physically-correct "common neutral" model of Yan et al. (2018); the two
 regulated line-to-line voltages are boosted by their taps while the shared phase
 passes through unchanged.  See the [OPF reference](opf.md) and
@@ -527,13 +626,13 @@ error) so callers can add project-specific keys freely.
 | `modified` | String | ISO 8601 datetime of most recent edit. Not auto-filled; set explicitly when updating a file. |
 | `license` | String | SPDX identifier (e.g. `"CC-BY-4.0"`) or full URI. |
 | `authors` | Array of objects | List of contributors; each object may have `name`, `email`, `orcid`. |
-| `sources` | Array of objects | Origin datasets; each object may have `name`, `url`, `format`, `doi`, `version`. |
-| `generator` | Object | Tool provenance: `{"tool": "BMOPFTools.jl", "version": "x.y.z"}`. Auto-filled by `write_bmopf`. |
+| `data_sources` | Array of objects | Origin datasets; each object may have `name`, `url`, `format`, `doi`, `version`. |
+| `case_study_generator` | Object | Tool provenance: `{"tool": "BMOPFTools.jl", "version": "x.y.z"}`. Auto-filled by `write_bmopf`. |
 
 **Auto-generation on write.** [`write_bmopf`](@ref) always emits a `meta`
 block.  It merges fields in priority order: the `meta` keyword argument
 → `net["meta"]` → auto-generated defaults.  Auto-generation fills three
-fields if they are absent: `$schema`, `generator`, and `created`.
+fields if they are absent: `$schema`, `case_study_generator`, and `created`.
 Caller-supplied values are never overwritten.
 
 **On parse.** [`parse_bmopf`](@ref) and [`from_dss`](@ref)
@@ -552,7 +651,7 @@ write_bmopf(net, "lv_feeder1.json";
         "license"     => "https://creativecommons.org/licenses/by/4.0/",
         "authors"     => [Dict("name" => "Frederik Geth",
                                "orcid" => "0000-0001-9534-2265")],
-        "sources"     => [Dict("name" => "ENWL dataset",
+        "data_sources" => [Dict("name" => "ENWL dataset",
                                "format" => "OpenDSS",
                                "url"    => "https://www.enwl.co.uk/")],
     ))

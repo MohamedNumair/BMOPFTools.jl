@@ -98,10 +98,10 @@ Symmetries in data create symmetric optima and degrade NLP convergence
 | `E.DOM.NEGATIVE_VALUE` | E | Negative value in an inherently nonnegative field (length, diagonal resistance). |
 | `W.DOM.LOAD_PF_LOW` | W | Load power factor below 0.70 — plausible but unusual for aggregated demand; often a P/Q unit mix-up. |
 | `W.DOM.GEN_COST_NEGATIVE` | W | Negative generation cost — the optimizer will dispatch it to its bound; verify it is intended (e.g. must-run subsidy). |
-| `W.DOM.GEN_COST_HIGH` | W | Cost above 10 \$/kWh — beyond any realistic tariff; suspect units. |
+| `W.DOM.GEN_COST_HIGH` | W | Cost above 10 \$/kWh — outside the package's default plausibility threshold; check units and whether an extreme scarcity/subsidy scenario is intentional. |
 | `E.DOM.GEN_SMAX_NONPOSITIVE` | E | Generator `s_max` (optional per-phase apparent-power rating) has a non-positive entry — the apparent-power circle is empty, so no operating point exists. |
 | `E.DOM.GEN_IMAX_NONPOSITIVE` | E | Generator `i_max` (optional per-phase current limit) has a non-positive entry — the current circle is empty, so no operating point exists. |
-| `W.DOM.COST_PHASE_NONUNIFORM` | W | A dispatchable element (`generator` or `voltage_source`) has a per-phase `cost` vector whose entries differ across phases. Costs are normally a single \$/W price applied symmetrically; a non-uniform vector is more often a data-entry slip than an intended per-phase price signal. Scalar costs are uniform by definition and never flag. |
+| `W.DOM.COST_PHASE_NONUNIFORM` | W | A dispatchable element (`generator` or `voltage_source`) has a per-phase `cost` vector whose entries differ across phases. Costs are normally a single \$/kWh price applied symmetrically; a non-uniform vector is more often a data-entry slip than an intended per-phase price signal. Scalar costs are uniform by definition and never flag. |
 | `W.DOM.LC_ZERO_R` | W | Near-zero or negative self-resistance on **any** linecode diagonal — a superconducting conductor, usually a placeholder. |
 | `E.DOM.XFMR_VREF_INVALID` | E | A transformer has `v_nom_from ≤ 0` or `v_nom_to ≤ 0`. The turns ratio N = v\_ref\_from / v\_ref\_to is undefined or infinite; the OPF cannot be built. Usually caused by a missing field defaulting to zero or a unit error (kV entered as 0.0). |
 | `W.DOM.XFMR_RATIO_OOB` | W | Direction-agnostic transformer step ratio `max(r, 1/r)` above 1000:1. Calibrated so standard distribution step-downs (e.g. 11 kV/433 V ≈ 25:1) do **not** flag. |
@@ -149,7 +149,7 @@ IEC 60287.
 | `W.DOM.WIRE_GMR_RATIO` | W | `gmr/radius < 0.2` — real conductors span ~0.35 (ACSR 6/1, steel core carries little flux) to 0.826 (61-strand, Kersting tables); usually a units or transcription slip. |
 | `W.DOM.WIRE_RAC_BELOW_RDC` | W | `r_ac < r_dc` — skin and proximity effects can only increase resistance at any f > 0. |
 | `W.DOM.WIRE_IMPLIED_RESISTIVITY` | W | Implied resistivity ρ = r_dc·π·radius² outside [8·10⁻⁹, 3·10⁻⁷] Ω·m — the metallic range (annealed Cu 1.724·10⁻⁸ per IEC 60228 … steel ~1.4·10⁻⁷, widened for stranding/fill and temperature). **The unit-error catcher**: an Ω/km value entered in the Ω/m field lands three decades outside. |
-| `W.DOM.WIRE_EPS_R_RANGE` | W | Insulation `eps_r` outside [1.5, 10] (XLPE 2.3, EPR ~3, PVC 3–8; IEC 60287-1-1). |
+| `W.DOM.WIRE_EPS_R_RANGE` | W | Insulation `eps_r` outside [1.5, 10] — XLPE 2.3, EPR ~3, PVC 3–8; IEC 60287-1-1. |
 | `I.DOM.WIRE_CURRENT_DENSITY` | I | `i_max` implies a current density outside [0.5, 10] A/mm² — typical continuous ratings are 1–6 A/mm². |
 | `E.DOM.GEOM_CONDUCTOR_OVERLAP` | E | Two conductors' circles overlap (centre distance < sum of radii) — physically impossible cross-section. |
 | `W.DOM.GEOM_CLEARANCE` | W | An overhead conductor sits below 4 m (under distribution statutory clearances) or above 100 m — usually a feet-as-metres slip. |
@@ -213,7 +213,7 @@ The largest family; full derivations in the
 
 | Code | Sev | Trigger & rationale |
 |---|---|---|
-| `E.PROV.NONRECIPROCAL` | E | An impedance/admittance block (linecode R/X/G/B, inline line R/X, or bus-shunt G/B) is not symmetric — reciprocity is violated; passive RLC networks cannot do that. Catches, e.g., delta-bank admittances built from the incidence matrix instead of `Y·(M∆)ᵀM∆`. Reported with `component_type = :line` for inline absolute line matrices. |
+| `E.PROV.NONRECIPROCAL` | E | An impedance/admittance block (linecode R/X/G/B, inline line R/X/G/B, or bus-shunt G/B) is not symmetric — reciprocity is violated; passive RLC networks cannot do that. Catches, e.g., delta-bank admittances built from the incidence matrix instead of `Y·(M∆)ᵀM∆`. Reported with `component_type = :line` for inline absolute line matrices. |
 | `E.PROV.NONPASSIVE` | E | The R block has a negative eigenvalue — the line would generate power. PSD of R is invariant under Kron reduction (Schur complements of accretive matrices stay accretive), so this is always an error. Applies to linecodes and inline line matrices alike. |
 | `W.PROV.X_NONINDUCTIVE` | W | Non-positive series self-reactance — series compensation does not exist inside linecodes; almost always a sign flip or X/B confusion. |
 | `W.PROV.X_NOT_PSD` | W | The X block has a negative eigenvalue — the implied inductance matrix is not realisable (energy argument; also Kron-invariant via sectorial Schur closure). |
@@ -226,6 +226,30 @@ The largest family; full derivations in the
 | `W.PROV.LINE_BRIDGES_VOLTAGE_LEVELS` | W | A `line`'s two endpoint buses are assigned different nominal voltage levels (ratio beyond 5 %). A line cannot change voltage level — this is a transformer elided into the per-unit line model (the textbook "the transformer vanishes in per-unit"), or a data error. Model it as a `transformer`. |
 | `W.PROV.GEOMETRY_MISMATCH` | W | A linecode carrying a `line_geometry` back-reference no longer matches a re-derivation from that geometry (beyond 10⁻⁶ relative). The stored matrices are stale or hand-edited — recompile with `compile_linecode(net, id; force=true)` or drop the back-reference. The geometry analogue of the transformer Yprim cross-check. |
 | `W.PROV.GEOMETRY_UNCOMPILABLE` | W | A linecode references a `line_geometry` that fails to compile (broken wire data, invalid earth model, missing frequency, …) — the provenance link cannot be verified. |
+
+### Line model topology
+
+Every line and linecode stores a two-sided nominal-π: a series impedance with a
+shunt admittance half-block at the from-end (`G_from`/`B_from`) and the to-end
+(`G_to`/`B_to`). Which blocks are populated, and whether the two ends are equal,
+determines the **model topology**. The taxonomy makes the modelling assumption
+auditable and flags the parameterisations that are suspicious in distribution
+networks.
+
+| Topology | Meaning | Expected in distribution? |
+|---|---|---|
+| **series** | No shunt on either end — pure series `Z`. | Yes — the default for LV / short-cable feeders, where line charging is negligible. |
+| **symmetric π** | Shunt on both ends with `Y_from ≈ Y_to`. | Yes — the canonical nominal-π; a uniform reciprocal line splits its charging equally. Expected once charging matters (longer MV/HV overhead, underground cable). |
+| **asymmetric π** | Shunt on both ends but `Y_from ≠ Y_to`. | **Suspicious** — a uniform line is symmetric; unequal halves usually mean a reduction artefact or data error. |
+| **Γ (gamma)** | Shunt on exactly one end. | **Review** — a valid deliberate lumping of charging at one terminal, but it breaks the physical from/to symmetry. |
+
+| Code | Sev | Trigger & rationale |
+|---|---|---|
+| `I.PROV.LINE_MODEL_UNIFORM` | I | Every line-model definition (linecode or inline line) uses a single topology — series-only, symmetric-π, etc. The network is internally consistent; the message states which model and whether it is the expected one. |
+| `I.PROV.LINE_MODEL_MIXED` | I | The case study mixes topologies (e.g. some branches series-only, others π). Legitimate when short spurs are modelled as series and long trunks as π, but flagged so the mix can be reviewed for consistency — especially any asymmetric-π or Γ members. Replaces the former `I.PROV.NO_PI_SHUNT` / `I.PROV.PARTIAL_PI_SHUNT`. |
+| `W.PROV.ASYMMETRIC_PI` | W | A line/linecode has shunts on both ends but the from-side and to-side admittances differ. A uniform reciprocal line splits its charging equally; unequal halves indicate a network-reduction artefact or a data error. |
+| `I.PROV.GAMMA_SECTION` | I | A line/linecode carries shunt admittance on exactly one end (a Γ-section). Valid as a deliberate lumping of charging at one terminal, but it breaks the from/to symmetry of a physical line — confirm it is intended. |
+| `I.PROV.SHUNT_CONDUCTANCE` | I | A line/linecode π-shunt carries non-zero conductance (`G_from`/`G_to`) — dielectric loss / leakage is modelled. Unusual in distribution, where the line shunt is normally purely capacitive; confirm it is not an X/B or units confusion. |
 
 ### Parameterisation provenance
 
@@ -313,8 +337,6 @@ the table).
 
 | Code | Sev | Trigger & rationale |
 |---|---|---|
-| `I.PROV.NO_PI_SHUNT` | I | All linecodes have π-shunt admittance keys present but every entry is zero — the shunt capacitance/conductance of every cable was not populated. Line charging is absent from the model; this is common for short LV cables but is worth confirming for longer MV feeders. |
-| `I.PROV.PARTIAL_PI_SHUNT` | I | Some linecodes have non-zero π-shunt admittance and others do not — mixed shunt population. May be intentional (e.g. short spurs vs long trunk cables) but is worth reviewing for consistency. |
 | `W.PROV.REGULATOR_PATTERN` | W | A transformer that looks like a voltage-regulator/autotransformer encoding: either both windings on one bus (the explicit EPRI autotransformer form) or a near-1:1 wye unit with same-level endpoints / very low impedance / non-unity tap. The data model has no regulator object — a control device has been frozen into a fixed branch. |
 
 ## INT — structural integrity
@@ -348,6 +370,19 @@ Motivated by the benchmark-pitfall catalogue of ([ref. 2](methodology.md#refs)).
 | `W.INT.UNUSED_BUS_TERMINAL` | W | A bus declares a terminal in `terminal_names` that is not referenced by any component at that bus (no branch end, load, generator, shunt, or voltage source uses it). The terminal adds a free voltage variable with no KCL constraint — pure numeric overhead. Almost always a conversion artifact or a missing connection. Voltage-source buses are excluded (the source pins every declared terminal regardless). |
 | `W.INT.LOW_IMPEDANCE_LINE` | W | Lines whose total series impedance is below 10⁻³× the network median — they degrade conditioning; the spec's lossless switch object is the intended model ([ref. 2](methodology.md#refs)). |
 | `I.INT.UNIFORM_GEN_COST` | I | Groups of generators with identical cost vectors — any dispatch split among them is optimal (degeneracy); diversify costs for benchmark use. |
+
+## CONV — terminal-role conventions
+
+Checks on the case-wide `terminal_conventions` block that classifies terminal
+labels into phase/neutral/earth roles (see
+[Terminal-role conventions](conventions.md#Terminal-role-conventions)).
+
+| Code | Sev | Trigger & rationale |
+|---|---|---|
+| `W.CONV.TERMINAL_ROLES_INFERRED` | W | The case declares no `terminal_conventions` block, so phase/neutral/earth roles were inferred from the naming convention (a terminal `n`/`N` is neutral, all others phase). Declare the block to make the classification explicit and self-documenting; it is written for you on the next [`write_bmopf`](@ref). |
+| `E.CONV.ROLE_OVERLAP` | E | A terminal label appears in more than one of the `phase`/`neutral`/`earth` role lists. Each label must have a single role. |
+| `W.CONV.TERMINAL_UNCLASSIFIED` | W | A bus terminal is in none of the declared role lists. It is treated as a phase conductor downstream; add it to the appropriate list (a common cause is a split-phase secondary leg not listed under `phase`). |
+| `W.CONV.MULTIPLE_NEUTRALS` | W | A single bus carries more than one terminal classified as neutral — a bus is expected to have at most one neutral conductor. |
 
 ## TMAP — terminal-map conventions
 

@@ -7,6 +7,14 @@ ships a reference four-wire rectangular current–voltage OPF ([`solve_opf`](opf
 cases and profile solutions, the product is the model and the tooling around it,
 not the optimizer.
 
+The reference engine is nevertheless a reusable research substrate: downstream
+packages can stage the JuMP build, replace selected device formulations, bind
+semantic parameters and coefficients, and place the model behind DiffOpt. This
+does not reposition BMOPFTools as a differentiable-optimization service;
+outer-level semantics, sensitivity execution, and bespoke study logic remain in
+the downstream package. See
+[Parameterized and differentiable extensions](differentiable_extensions.md).
+
 ## The transmission/distribution maturity gap
 
 Power-system software is often discussed as one ecosystem, but transmission and
@@ -71,3 +79,8 @@ BMOPFTools is intended to help create the conditions for it — reusable benchma
 feeders, common network representations, transparent model transformations, and
 cross-framework interoperability — so the broader distribution-optimization
 ecosystem can mature, without replacing the optimization frameworks at its core.
+
+For the full argument — why the missing benchmarks mislead algorithmic
+research, why utilities are right to reject methods that work for "80% of the
+networks, 80% of the time", and the literature supporting that view — see
+[Why benchmarks matter: the 80% problem](benchmarking_gap.md).

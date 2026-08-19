@@ -51,15 +51,17 @@ function adds its contribution to the KCL accumulator dicts `(kcl_r, kcl_i)`;
 | `load.jl`           | Constant-power load constraints (WYE / DELTA)     |
 | `generator.jl`      | Generator P/Q bounds                              |
 | `source.jl`         | Voltage-source voltage fixing + slack current/bounds |
-| `objective.jl`      | Generation-cost objective (linear + quadratic)    |
+| `objective.jl`      | Linear-in-power generation-cost-rate objective    |
 | `results.jl`        | Solution extraction to `Dict{String,Any}`         |
-| `feasibility_opf.jl`| Elastic KCL-slack formulation (always feasible)   |
+| `feasibility_opf.jl`| Elastic KCL-slack diagnostic formulation          |
 """
 module BMOPFOpfExt
 
 using BMOPFTools
 using JuMP
 using Ipopt
+using LinearAlgebra
+using SHA
 using StatsFuns: log1pexp, logistic
 
 include("data_utils.jl")
@@ -85,7 +87,8 @@ include("feasibility_opf.jl")
 include("pf.jl")
 
 """
-    BMOPFTools.solve_opf(net; optimizer=Ipopt.Optimizer, t_index=1) -> Dict
+    BMOPFTools.solve_opf(net; optimizer=Ipopt.Optimizer, t_index=1,
+        build_spec=OpfBuildSpec(), softplus=:user_defined) -> Dict
 
 Four-wire rectangular current-voltage (IVR-EN) OPF on a BMOPF network dict.
 
@@ -108,33 +111,43 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
                                per_unit::Bool=true,
                                s_base::Float64=1e6,
                                volt_var_watt_eps::Float64=2e-3,
+                               softplus::Symbol=:user_defined,
+                               build_spec::BMOPFTools.OpfBuildSpec=BMOPFTools.OpfBuildSpec(),
                                verbose::Bool=false,
                                solver_options=(),
-                               model_hook!::Union{Function,Nothing}=nothing)
+                               model_hook!::Union{Function,Nothing}=nothing,
+                               solution_hook!::Union{Function,Nothing}=nothing)
     _build_and_solve(net; optimizer=optimizer, t_index=t_index,
-                     per_unit=per_unit, s_base=s_base, build! = build_opf!,
+                     per_unit=per_unit, s_base=s_base, problem=:opf,
+                     build_spec=build_spec,
+                     build! = build_opf!,
                      relu_eps=volt_var_watt_eps,
-                     verbose, solver_options, model_hook!)
+                     softplus=softplus,
+                     verbose, solver_options, model_hook!, solution_hook!)
 end
 
 """
-    build_opf!(ctx)
+    build_opf!(ctx; add_objective=true)
 
-Build recipe for the standard generation-cost OPF.
+Build recipe for the standard generation-cost OPF. With `add_objective=false`
+the device model and bounds are built but the generation-cost objective is *not*
+set on the model — used by the public `build_opf_model` when a caller (e.g. a
+multi-period wrapper) will assemble and set a combined objective itself. The
+per-recipe cost is still recoverable via `generation_cost(ctx)`.
 """
-function build_opf!(ctx::OpfContext)
+function build_opf!(ctx::OpfContext; add_objective::Bool=true)
     # Warm-start: set phase-angle-correct initial values so Ipopt can find
     # the physical (high-voltage) solution without a load-flow pre-solve.
-    _set_voltage_start_values!(ctx.vars, ctx.net, ctx.bus_terminals, ctx.grounded)
+    BMOPFTools.set_opf_start_values!(ctx)
 
     # Hard operational voltage and bus-limit bounds.
-    _add_voltage_and_bus_bounds!(ctx)
+    BMOPFTools.add_opf_operational_limits!(ctx)
 
     # Source + all device constraints and their KCL contributions.
-    _add_device_constraints!(ctx)
+    BMOPFTools.add_opf_device_constraints!(ctx)
 
     # Objective: minimise total generation cost.
-    _add_objective!(ctx.model, ctx.net, ctx.vars)
+    add_objective && BMOPFTools.set_opf_objective!(ctx)
 end
 
 end # module BMOPFOpfExt

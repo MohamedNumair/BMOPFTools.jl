@@ -88,6 +88,12 @@ function from_dss(path::AbstractString;
     _remap_opendss_terminals!(net)
     _normalize_transformer_no_load_shunts!(net, dn)
 
+    # Record the terminal-role convention explicitly (phases a/b/c…, neutral n;
+    # no earth wire — the OpenDSS earth node is routed to neutral, ground stays
+    # implicit). from_dss knows the mapping it just applied, so this is declared
+    # rather than left to be inferred downstream (W.CONV.TERMINAL_ROLES_INFERRED).
+    get!(net, "terminal_conventions", _terminal_conventions_dict(net))
+
     # Store conversion warnings so callers can inspect fidelity losses, and
     # surface an aggregate @warn so the losses are visible even when the
     # caller never looks at _meta.
@@ -143,7 +149,7 @@ end
     powerio_version() -> String
 
 Return the version of the PowerIO.jl package backing [`from_dss`](@ref),
-e.g. `"PowerIO.jl 0.2.0"`. Useful for pinning test expectations and bug reports.
+e.g. `"PowerIO.jl 0.7.2"`. Useful for pinning test expectations and bug reports.
 """
 function powerio_version()::String
     string("PowerIO.jl ", pkgversion(PowerIO))
@@ -220,11 +226,18 @@ function _canonicalize_identifiers!(net::Dict{String,Any})
         foldref!(c, "bus_from"); foldref!(c, "bus_to")
     end
     if xfmr isa Dict
-        for (_, sub) in xfmr
+        for (subtype, sub) in xfmr
             sub isa Dict || continue
             for (_, c) in sub
                 c isa Dict || continue
                 foldref!(c, "bus_from"); foldref!(c, "bus_to")
+                # Winding-list (n_winding) transformers reference their buses via
+                # windings[i].bus, which the bus_from/bus_to fold does not reach.
+                if subtype in WINDING_LIST_SUBTYPES
+                    for w in get(c, "windings", Any[])
+                        w isa AbstractDict && foldref!(w, "bus")
+                    end
+                end
             end
         end
     end
@@ -278,7 +291,12 @@ function _remap_opendss_terminals!(net::Dict{String,Any})
         let g = get(bus, "perfectly_grounded_terminals", nothing)
             g isa Vector &&
                 (bus["perfectly_grounded_terminals"] =
-                     unique(t == "4" ? "n" : string(t) for t in g))
+                     unique(t == "4" ? "n" : string(t)
+                            for t in g if string(t) != "5"))
+            # "5" is the earth terminal: it is routed to the neutral and recorded
+            # under _meta (grounded THROUGH the neutral, not solidly), so it must
+            # be dropped here rather than left as a dangling reference to a
+            # terminal that "5"→"n" removed from terminal_names.
         end
         rename_maps[bus_id] = rmap
         "5" in str_names && push!(earth_routed, bus_id)

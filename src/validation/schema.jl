@@ -287,7 +287,7 @@ function _catalogue_unknown_fields(net::Dict{String,Any},
                      "load", "generator", "shunt", "capacitor", "switch",
                      "transformer", "ibr", "control_profile",
                      "wire_data", "line_geometry",
-                     "time_series", "_meta"])
+                     "time_series", "terminal_conventions", "_meta"])
     unknown_top = [k for k in keys(net) if !(k in known_top) && !startswith(k, "_")]
     isempty(unknown_top) ||
         (unknown_by_type["(top-level)"] = Dict(k => 1 for k in unknown_top))
@@ -329,6 +329,16 @@ a fallback.
 function schema_check(net::Dict{String,Any},
                       findings::Vector{Finding})::Dict{String,Any}
     result = Dict{String,Any}()
+
+    # Drop tool-derived, non-spec bus fields (e.g. the materialised
+    # `neutral_terminal`, re-derivable from `terminal_conventions`) before both
+    # validation layers — they are stripped on write and must not read as
+    # schema violations here. `_meta`/`_pmd` etc. are handled by `_strip_internal`.
+    buses = get(net, "bus", nothing)
+    if buses isa Dict && any(b isa Dict && any(haskey(b, k) for k in _DERIVED_BUS_FIELDS)
+                             for b in values(buses))
+        net = merge(net, Dict{String,Any}("bus" => _strip_derived_bus_fields(buses)))
+    end
 
     # ── Layer 1: JSONSchema structural validation ─────────────────────────────
     version = _detect_spec_version(net)
@@ -373,7 +383,7 @@ end
 const _META_KNOWN_FIELDS = Set([
     "\$schema", "version", "title", "description",
     "created", "modified", "license", "frequency",
-    "authors", "sources", "generator", "provenance",
+    "authors", "data_sources", "case_study_generator", "provenance",
 ])
 const _META_AUTHOR_FIELDS  = Set(["name", "email", "orcid"])
 const _META_SOURCE_FIELDS  = Set(["name", "url", "format", "doi", "version"])
@@ -432,28 +442,28 @@ function _check_meta(meta::Dict, findings::Vector{Finding})
         end
     end
 
-    sources = get(meta, "sources", nothing)
+    sources = get(meta, "data_sources", nothing)
     if sources isa Vector
         for (i, src) in enumerate(sources)
             src isa Dict || continue
             bad = [k for k in keys(src) if !(k in _META_SOURCE_FIELDS)]
             isempty(bad) || push!(findings, Finding(INFO, "I.SCHEMA.UNKNOWN_FIELDS",
                 :schema, :network, nothing,
-                "meta.sources[$i] has unknown field(s): $(join(sort(bad), ", "))."))
+                "meta.data_sources[$i] has unknown field(s): $(join(sort(bad), ", "))."))
             url = get(src, "url", nothing)
             if url isa String && !occursin(_URI_RE, url)
                 push!(findings, Finding(WARNING, "W.SCHEMA.META_SOURCE_URL", :schema,
                     :network, nothing,
-                    "meta.sources[$i].url does not look like a URI: \"$url\"."))
+                    "meta.data_sources[$i].url does not look like a URI: \"$url\"."))
             end
         end
     end
 
-    gen = get(meta, "generator", nothing)
+    gen = get(meta, "case_study_generator", nothing)
     if gen isa Dict
         bad = [k for k in keys(gen) if !(k in _META_GEN_FIELDS)]
         isempty(bad) || push!(findings, Finding(INFO, "I.SCHEMA.UNKNOWN_FIELDS",
             :schema, :network, nothing,
-            "meta.generator has unknown field(s): $(join(sort(bad), ", "))."))
+            "meta.case_study_generator has unknown field(s): $(join(sort(bad), ", "))."))
     end
 end

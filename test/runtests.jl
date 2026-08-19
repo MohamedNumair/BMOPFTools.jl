@@ -30,6 +30,8 @@ function _strip_xfmr_ratings!(net)
     net
 end
 
+include("piecewise_linear_tests.jl")
+
 # ---------------------------------------------------------------------------
 # Minimal IEEE 13-bus inspired fixture — enough to exercise all analysis paths
 # ---------------------------------------------------------------------------
@@ -273,8 +275,8 @@ const IEEE13_FIXTURE = """
         m = parse_bmopf(json_auto; from_string=true)["meta"]
         @test m["\$schema"] == BMOPFTools._BMOPF_SCHEMA_URI
         @test haskey(m, "created")
-        @test m["generator"]["tool"] == "BMOPFTools.jl"
-        @test !isempty(m["generator"]["version"])
+        @test m["case_study_generator"]["tool"] == "BMOPFTools.jl"
+        @test !isempty(m["case_study_generator"]["version"])
 
         # _meta (tool-private) is not serialised
         @test !occursin("\"_meta\"", json_auto)
@@ -287,7 +289,7 @@ const IEEE13_FIXTURE = """
                 "authors" => [Dict("name" => "Test Author",
                                    "email" => "test@example.com",
                                    "orcid" => "0000-0001-2345-6789")],
-                "sources" => [Dict("name" => "IEEE 13-bus", "format" => "OpenDSS",
+                "data_sources" => [Dict("name" => "IEEE 13-bus", "format" => "OpenDSS",
                                    "doi"  => "10.1109/TPWRS.2012.2209630")],
             ))
             String(take!(buf))
@@ -295,9 +297,9 @@ const IEEE13_FIXTURE = """
         m2 = parse_bmopf(json_caller; from_string=true)["meta"]
         @test m2["title"] == "IEEE 13-bus mini"
         @test m2["authors"][1]["orcid"] == "0000-0001-2345-6789"
-        @test m2["sources"][1]["doi"] == "10.1109/TPWRS.2012.2209630"
+        @test m2["data_sources"][1]["doi"] == "10.1109/TPWRS.2012.2209630"
         @test haskey(m2, "\$schema")      # auto-filled
-        @test haskey(m2, "generator")     # auto-filled
+        @test haskey(m2, "case_study_generator")     # auto-filled
 
         # existing created is preserved across write → parse → write
         net4 = parse_bmopf(json_auto; from_string=true)
@@ -312,7 +314,7 @@ const IEEE13_FIXTURE = """
                 "title"   => "t",
                 "license" => "https://example.com/license",
                 "authors" => [Dict("name" => "A", "orcid" => "0000-0001-2345-6789")],
-                "sources" => [Dict("name" => "S", "url" => "https://example.com/data")],
+                "data_sources" => [Dict("name" => "S", "url" => "https://example.com/data")],
             ))
             parse_bmopf(String(take!(buf)); from_string=true)
         end
@@ -388,6 +390,73 @@ const IEEE13_FIXTURE = """
         # The zero-load should not crash anything
         ld = result["load"]
         @test ld["analysed"] == true
+    end
+
+    @testset "Analysis — false-positive regressions (#292)" begin
+        # (a) A degree-1 bus hosting only an IBR is NOT dangling.
+        net_ibr = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "src" => Dict{String,Any}("terminal_names"=>["1","n"],"perfectly_grounded_terminals"=>["n"]),
+                "b1"  => Dict{String,Any}("terminal_names"=>["1","n"],"perfectly_grounded_terminals"=>["n"])),
+            "voltage_source" => Dict{String,Any}("vs"=>Dict{String,Any}("bus"=>"src",
+                "terminal_map"=>["1"],"v_magnitude"=>[230.0],"v_angle"=>[0.0])),
+            "linecode" => Dict{String,Any}("lc"=>Dict{String,Any}("R_series_1_1"=>0.1)),
+            "line" => Dict{String,Any}("l"=>Dict{String,Any}("bus_from"=>"src","bus_to"=>"b1",
+                "linecode"=>"lc","length"=>10.0,"terminal_map_from"=>["1","n"],"terminal_map_to"=>["1","n"])),
+            "ibr" => Dict{String,Any}("pv"=>Dict{String,Any}("bus"=>"b1","terminal_map"=>["1","n"],
+                "topology"=>"SINGLE_PHASE","prime_mover"=>"PV","s_max"=>[5000.0])))
+        c = connectivity_analysis(net_ibr, Finding[])
+        @test !("b1" in c["dangling_buses"])
+
+        # (b) An open switch whose bus is still fed by a closed line is NOT isolated.
+        net_sw = deepcopy(net_ibr); delete!(net_sw, "ibr")
+        net_sw["load"] = Dict{String,Any}("ld"=>Dict{String,Any}("bus"=>"b1",
+            "terminal_map"=>["1","n"],"configuration"=>"SINGLE_PHASE","p_nom"=>[1e3],"q_nom"=>[0.0]))
+        net_sw["switch"] = Dict{String,Any}("sw"=>Dict{String,Any}("bus_from"=>"src","bus_to"=>"b1",
+            "open_switch"=>true,"terminal_map_from"=>["1","n"],"terminal_map_to"=>["1","n"]))
+        @test isempty(connectivity_analysis(net_sw, Finding[])["open_switch_isolated_buses"])
+
+        # (c) CV of negative-mean varying data reflects real variation (not 0), so
+        # diversity does not falsely report "all loads identical".
+        @test BMOPFTools._scalar_stats([-500.0,-1000.0,-1500.0])["cv"] > 0.4
+        mkl(p) = Dict{String,Any}("bus"=>"b","terminal_map"=>["1","n"],
+            "configuration"=>"SINGLE_PHASE","p_nom"=>[p],"q_nom"=>[0.0])
+        fdiv = Finding[]
+        diversity_analysis(Dict{String,Any}("load"=>Dict{String,Any}(
+            "a"=>mkl(-500.0),"b"=>mkl(-1000.0),"c"=>mkl(-1500.0))), fdiv)
+        @test !any(x -> x.code == "I.DIV.LOAD_CV_LOW", fdiv)
+
+        # (d) A SWER (phase-to-phase-tapped 1-phase) transformer is not flagged
+        # with an inconsistent turns ratio.
+        net_swer = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "mv"=>Dict{String,Any}("terminal_names"=>["a","b","c","n"],"perfectly_grounded_terminals"=>["n"]),
+                "lv"=>Dict{String,Any}("terminal_names"=>["1","n"],"perfectly_grounded_terminals"=>["n"])),
+            "voltage_source" => Dict{String,Any}("vs"=>Dict{String,Any}("bus"=>"mv",
+                "terminal_map"=>["a","b","c"],"v_magnitude"=>[6350.0,6350.0,6350.0],
+                "v_angle"=>[0.0,-2.0944,2.0944])),
+            "transformer" => Dict{String,Any}("single_phase"=>Dict{String,Any}("tx"=>Dict{String,Any}(
+                "bus_from"=>"mv","bus_to"=>"lv","terminal_map_from"=>["a","b"],"terminal_map_to"=>["1","n"],
+                "v_nom_from"=>11000.0,"v_nom_to"=>230.0,"s_rating"=>50000.0,
+                "r_series_from"=>1.0,"r_series_to"=>0.01,"x_series_from"=>5.0,"x_series_to"=>0.05))))
+        fv = Finding[]; voltage_level_analysis(net_swer, fv)
+        @test !any(x -> x.code == "W.VOLT.XFMR_RATIO", fv)
+
+        # (e) A dc_bus fed through a dc_branch from a converter is NOT islanded;
+        # a truly source-less DC island still is.
+        net_dc = Dict{String,Any}(
+            "dc_bus" => Dict{String,Any}("c"=>Dict{String,Any}("terminal_names"=>["p","n"]),
+                                          "j"=>Dict{String,Any}("terminal_names"=>["p","n"])),
+            "dc_branch" => Dict{String,Any}("br"=>Dict{String,Any}("dc_bus_from"=>"c","dc_bus_to"=>"j",
+                "terminal_map_from"=>["p","n"],"terminal_map_to"=>["p","n"])),
+            "ibr" => Dict{String,Any}("conv"=>Dict{String,Any}("bus"=>"ac","dc_bus"=>"c",
+                "terminal_map"=>["1","n"],"topology"=>"SINGLE_PHASE","prime_mover"=>"PV","s_max"=>[5000.0])))
+        fdc = Finding[]; domain_rules_check(net_dc, fdc)
+        @test !any(x -> x.code == "W.DOM.DC_BUS_NO_CONVERTER", fdc)
+        fdc2 = Finding[]
+        domain_rules_check(Dict{String,Any}("dc_bus"=>Dict{String,Any}(
+            "x"=>Dict{String,Any}("terminal_names"=>["p","n"]))), fdc2)
+        @test any(x -> x.code == "W.DOM.DC_BUS_NO_CONVERTER", fdc2)
     end
 
     @testset "Analysis — zone topology (split-phase & SWER)" begin
@@ -945,6 +1014,39 @@ const IEEE13_FIXTURE = """
             f2 = Finding[]
             domain_rules_check(net2, f2)
             @test any(f_ -> f_.code == "W.DOM.INV_PV_ABSORBS", f2)
+
+            # Per-phase VECTOR bounds (the spec-conformant shape). The checks
+            # were dead on arrays before — they guarded on `isa Number` while the
+            # schema mandates arrays. Empty range / over-s_max on one phase fires.
+            netv = parse_bmopf(INV_FIXTURE; from_string=true)
+            netv["ibr"]["pv1"]["p_min"] = [0.0, 0.0, 0.0]
+            netv["ibr"]["pv1"]["p_max"] = [-100.0, 0.0, 0.0]        # empty on phase 1
+            netv["ibr"]["pv1"]["q_max"] = [20000.0, 3000.0, 3000.0] # phase 1 > s_max
+            fv = Finding[]
+            domain_rules_check(netv, fv)
+            @test any(f_ -> f_.code == "E.DOM.INV_P_BOUNDS", fv)
+            @test any(f_ -> f_.code == "W.DOM.INV_BOUND_EXCEEDS_SMAX", fv)
+
+            netv2 = parse_bmopf(INV_FIXTURE; from_string=true)
+            netv2["ibr"]["pv1"]["q_min"] = [3000.0, 0.0, 0.0]
+            netv2["ibr"]["pv1"]["q_max"] = [-3000.0, 0.0, 0.0]      # empty on phase 1
+            netv2["ibr"]["pv1"]["p_min"] = [-1000.0, 0.0, 0.0]      # PV absorbs on phase 1
+            fv2 = Finding[]
+            domain_rules_check(netv2, fv2)
+            @test any(f_ -> f_.code == "E.DOM.INV_Q_BOUNDS", fv2)
+            @test any(f_ -> f_.code == "W.DOM.INV_PV_ABSORBS", fv2)
+
+            # Clean per-phase bounds fire none of the capability findings.
+            netc = parse_bmopf(INV_FIXTURE; from_string=true)
+            netc["ibr"]["pv1"]["p_min"] = [0.0, 0.0, 0.0]
+            netc["ibr"]["pv1"]["p_max"] = [4000.0, 4000.0, 4000.0]
+            netc["ibr"]["pv1"]["q_min"] = [-3000.0, -3000.0, -3000.0]
+            netc["ibr"]["pv1"]["q_max"] = [3000.0, 3000.0, 3000.0]
+            fc = Finding[]
+            domain_rules_check(netc, fc)
+            @test !any(f_ -> f_.code in ("E.DOM.INV_P_BOUNDS", "E.DOM.INV_Q_BOUNDS",
+                                         "W.DOM.INV_BOUND_EXCEEDS_SMAX",
+                                         "W.DOM.INV_PV_ABSORBS"), fc)
         end
 
         @testset "i_max field: schema, arity, sign" begin
@@ -1340,6 +1442,37 @@ const IEEE13_FIXTURE = """
         @test any(x -> x.code == "W.DOM.ANGLE_UNITS", f7)
         @test any(x -> x.code == "I.DOM.NEGATIVE_LOAD", f7)
 
+        # i_max completeness (#288): an element-level i_max OR any s_max (line or
+        # linecode) counts as a thermal limit — a branch is only "absent" when
+        # NONE of them is present. Previously only the linecode's i_max was read,
+        # so a line-level override or an s_max-only branch was a false positive.
+        _absent(n) = (fa = Finding[]; provenance_analysis(n, fa);
+                      Set(x.code for x in fa
+                          if x.code in ("W.PROV.I_MAX_ABSENT", "W.PROV.I_MAX_ABSENT_SWITCH")))
+        _mkln(le, sce) = Dict{String,Any}(
+            "bus" => Dict{String,Any}(
+                "a" => Dict{String,Any}("terminal_names" => ["1","2","3","n"]),
+                "b" => Dict{String,Any}("terminal_names" => ["1","2","3","n"])),
+            "linecode" => Dict{String,Any}("lc" => merge(Dict{String,Any}("R_series_1_1"=>0.1), sce)),
+            "line" => Dict{String,Any}("l" => merge(Dict{String,Any}(
+                "bus_from"=>"a", "bus_to"=>"b", "linecode"=>"lc",
+                "terminal_map_from"=>["1","2","3","n"], "terminal_map_to"=>["1","2","3","n"]), le)))
+        # line-level i_max only (no linecode i_max) → NOT absent
+        @test isempty(_absent(_mkln(Dict{String,Any}("i_max"=>[100.0,100.0,100.0,100.0]),
+                                    Dict{String,Any}())))
+        # s_max only → NOT absent
+        @test isempty(_absent(_mkln(Dict{String,Any}("s_max"=>[5e4,5e4,5e4,5e4]),
+                                    Dict{String,Any}())))
+        # no limit anywhere → absent
+        @test "W.PROV.I_MAX_ABSENT" in _absent(_mkln(Dict{String,Any}(), Dict{String,Any}()))
+        # closed switch with only s_max → NOT absent
+        swnet = _mkln(Dict{String,Any}(), Dict{String,Any}("i_max"=>[100.0,100.0,100.0,100.0]))
+        swnet["switch"] = Dict{String,Any}("sw" => Dict{String,Any}(
+            "bus_from"=>"a", "bus_to"=>"b", "open_switch"=>false,
+            "terminal_map_from"=>["1","2","3","n"], "terminal_map_to"=>["1","2","3","n"],
+            "s_max"=>[5e4,5e4,5e4,5e4]))
+        @test "W.PROV.I_MAX_ABSENT_SWITCH" ∉ _absent(swnet)
+
         # combined thermal limits (i_max + s_max) on a line → redundancy warning
         net_dual = deepcopy(base)
         net_dual["line"]["l650632"]["i_max"] = [600.0, 600.0, 600.0]
@@ -1416,6 +1549,100 @@ const IEEE13_FIXTURE = """
         @test adequacy["total_ibr_cap_w"] ≈ 4000.0      # p_max preferred over s_max
         @test adequacy["adequacy_ratio"] ≈ 4.0
         @test adequacy["import_dependent"] == false
+    end
+
+    @testset "Line model topology" begin
+        # Unit-test the π-model classifier directly on minimal networks so the
+        # topology of each element is isolated from the rest of the fixture.
+        lm(net) = (f = Finding[]; r = BMOPFTools._classify_line_models(net, f);
+                   (Set(x.code for x in f), r))
+        _lc(d) = Dict{String,Any}("linecode" => Dict{String,Any}("lc" => merge(
+            Dict{String,Any}("R_series_1_1"=>0.1, "R_series_2_2"=>0.1,
+                             "X_series_1_1"=>0.3, "X_series_2_2"=>0.3), d)))
+
+        # pure series → uniform series, no per-element callouts
+        codes, r = lm(_lc(Dict{String,Any}()))
+        @test r["counts"]["series"] == 1
+        @test r["by_element"]["linecode:lc"]["model"] == "series"
+        @test "I.PROV.LINE_MODEL_UNIFORM" in codes
+        @test !("W.PROV.ASYMMETRIC_PI" in codes)
+        @test !("I.PROV.GAMMA_SECTION" in codes)
+
+        # symmetric π (from == to) → symmetric_pi, uniform, no warnings
+        codes, r = lm(_lc(Dict{String,Any}(
+            "B_from_1_1"=>1e-6, "B_from_2_2"=>1e-6,
+            "B_to_1_1"=>1e-6,   "B_to_2_2"=>1e-6)))
+        @test r["by_element"]["linecode:lc"]["model"] == "symmetric_pi"
+        @test "I.PROV.LINE_MODEL_UNIFORM" in codes
+        @test !("W.PROV.ASYMMETRIC_PI" in codes)
+        @test !("I.PROV.SHUNT_CONDUCTANCE" in codes)
+
+        # asymmetric π (from ≠ to) → suspicious, warning
+        codes, r = lm(_lc(Dict{String,Any}(
+            "B_from_1_1"=>1e-6, "B_from_2_2"=>1e-6,
+            "B_to_1_1"=>2e-6,   "B_to_2_2"=>2e-6)))
+        @test r["by_element"]["linecode:lc"]["model"] == "asymmetric_pi"
+        @test r["by_element"]["linecode:lc"]["fromto_asymmetry"] > 1e-6
+        @test "W.PROV.ASYMMETRIC_PI" in codes
+
+        # Γ-section (shunt on one end only) → info, records the end
+        codes, r = lm(_lc(Dict{String,Any}("B_from_1_1"=>1e-6, "B_from_2_2"=>1e-6)))
+        @test r["by_element"]["linecode:lc"]["model"] == "gamma"
+        @test r["by_element"]["linecode:lc"]["shunt_end"] == "from"
+        @test "I.PROV.GAMMA_SECTION" in codes
+
+        # shunt conductance (dielectric loss) atop a symmetric π → info
+        codes, r = lm(_lc(Dict{String,Any}(
+            "G_from_1_1"=>1e-8, "G_to_1_1"=>1e-8,
+            "B_from_1_1"=>1e-6, "B_to_1_1"=>1e-6)))
+        @test r["by_element"]["linecode:lc"]["has_shunt_conductance"] == true
+        @test "I.PROV.SHUNT_CONDUCTANCE" in codes
+
+        # mixed models across definitions → MIXED, never UNIFORM
+        codes, r = lm(Dict{String,Any}("linecode" => Dict{String,Any}(
+            "s"  => Dict{String,Any}("R_series_1_1"=>0.1, "X_series_1_1"=>0.3),
+            "pi" => Dict{String,Any}("R_series_1_1"=>0.1, "X_series_1_1"=>0.3,
+                                     "B_from_1_1"=>1e-6, "B_to_1_1"=>1e-6))))
+        @test "I.PROV.LINE_MODEL_MIXED" in codes
+        @test !("I.PROV.LINE_MODEL_UNIFORM" in codes)
+        @test r["counts"]["series"] == 1 && r["counts"]["symmetric_pi"] == 1
+
+        # inline lines are classified too, keyed as "line:<id>"
+        codes, r = lm(Dict{String,Any}("line" => Dict{String,Any}("l" =>
+            Dict{String,Any}("bus_from"=>"a", "bus_to"=>"b",
+                "terminal_map_from"=>["1"], "terminal_map_to"=>["1"],
+                "R_series_1_1"=>0.1, "X_series_1_1"=>0.3,
+                "B_from_1_1"=>1e-6, "B_to_1_1"=>2e-6))))
+        @test r["by_element"]["line:l"]["model"] == "asymmetric_pi"
+        @test "W.PROV.ASYMMETRIC_PI" in codes
+
+        # integration: wired into provenance_analysis end-to-end
+        base = parse_bmopf(IEEE13_FIXTURE; from_string=true)
+        netg = deepcopy(base)
+        netg["linecode"]["lc_asym"] = Dict{String,Any}(
+            "R_series_1_1"=>0.3, "X_series_1_1"=>0.9,
+            "B_from_1_1"=>1e-6, "B_to_1_1"=>5e-6)
+        fg = Finding[]
+        rg = provenance_analysis(netg, fg)
+        @test haskey(rg, "line_models")
+        @test any(x -> x.code == "W.PROV.ASYMMETRIC_PI" &&
+                       x.component_id == "lc_asym", fg)
+
+        # inline line shunt-block physics: a non-PSD B block is now audited and
+        # reported against the line (previously only linecode shunts were gated)
+        neti = deepcopy(base)
+        lid  = first(keys(neti["line"]))
+        li   = neti["line"][lid]
+        delete!(li, "linecode"); delete!(li, "length")
+        merge!(li, Dict{String,Any}(
+            "R_series_1_1"=>0.1, "R_series_2_2"=>0.1,
+            "X_series_1_1"=>0.3, "X_series_2_2"=>0.3,
+            "B_from_1_1"=>1e-7, "B_from_2_2"=>1e-7,
+            "B_from_1_2"=>-1e-6, "B_from_2_1"=>-1e-6))   # eig < 0
+        fi = Finding[]
+        provenance_analysis(neti, fi)
+        @test any(x -> x.code == "W.PROV.B_SIGN" &&
+                       x.component_type == :line && x.component_id == lid, fi)
     end
 
     @testset "Integrity checks" begin
@@ -1911,6 +2138,42 @@ const IEEE13_FIXTURE = """
         integrity_check(net4, f4)            # no MethodError
         provenance_analysis(net4, Finding[]) # no MethodError
         @test !any(x -> x.code == "E.INT.UNKNOWN_TERMINAL", f4)
+
+        # (#280) capacitor terminal_map and n_winding windings[].terminal_map are
+        # coerced too — the ingest walker previously skipped both categories.
+        raw5 = """
+        {"bus": {"b": {"terminal_names": [1,2,3,4]}},
+         "capacitor": {"c": {"bus": "b", "terminal_map": [1,2,3,4],
+            "configuration": "WYE", "q_rated": [1000.0,1000.0,1000.0], "v_nom": 230.0}},
+         "transformer": {"n_winding": {"t": {"s_rating": 1000000.0, "x_sc": {"1_2": 0.05},
+            "windings": [{"bus": "b", "terminal_map": [1,2,3,4], "v_nom": 230.0, "configuration": "WYE"},
+                         {"bus": "b", "terminal_map": [1,2,3,4], "v_nom": 115.0, "configuration": "WYE"}]}}}}
+        """
+        net5 = parse_bmopf(raw5; from_string=true)
+        @test net5["capacitor"]["c"]["terminal_map"] == ["1","2","3","n"]
+        @test net5["transformer"]["n_winding"]["t"]["windings"][1]["terminal_map"] == ["1","2","3","n"]
+    end
+
+    @testset "from_dss ingest walkers — n_winding + earth-5 (#280)" begin
+        # n_winding winding bus references are case-folded like every other id.
+        net = Dict{String,Any}(
+            "bus" => Dict{String,Any}("HV"=>Dict{String,Any}("terminal_names"=>["a"]),
+                                      "LV"=>Dict{String,Any}("terminal_names"=>["a"])),
+            "transformer" => Dict{String,Any}("n_winding"=>Dict{String,Any}("T1"=>Dict{String,Any}(
+                "windings"=>[Dict{String,Any}("bus"=>"HV"), Dict{String,Any}("bus"=>"LV")]))))
+        BMOPFTools._canonicalize_identifiers!(net)
+        wbus = [w["bus"] for w in net["transformer"]["n_winding"]["t1"]["windings"]]
+        @test wbus == ["hv", "lv"]
+
+        # The OpenDSS earth terminal "5" is routed to the neutral in terminal_names
+        # and DROPPED from perfectly_grounded_terminals (no dangling reference to a
+        # terminal "5"→"n" removed).
+        net2 = Dict{String,Any}("bus"=>Dict{String,Any}("b"=>Dict{String,Any}(
+            "terminal_names"=>["1","2","3","5"], "perfectly_grounded_terminals"=>["5"])))
+        BMOPFTools._remap_opendss_terminals!(net2)
+        b = net2["bus"]["b"]
+        @test !("5" in b["terminal_names"]) && ("n" in b["terminal_names"])
+        @test isempty(get(b, "perfectly_grounded_terminals", String[]))
     end
 
     @testset "Terminal-name conventions" begin
@@ -3228,6 +3491,7 @@ const IEEE13_FIXTURE = """
     # (PowerIO.jl). PowerIO is a hard dependency, so this always runs.
     # --------------------------------------------------------------------------
     @testset "OpenDSS generator conversion via PowerIO" begin
+        @test startswith(BMOPFTools.powerio_version(), "PowerIO.jl 0.7.")
         net = from_dss(joinpath(@__DIR__, "data", "issue190_generator.dss"))
 
         @test haskey(net, "generator")
@@ -3541,9 +3805,20 @@ const IEEE13_FIXTURE = """
     include("write_bmopf_tests.jl")
 
     # -----------------------------------------------------------------------
+    # Terminal-role conventions (phase/neutral/earth) — resolver, ingestion,
+    # validation findings, export; OPF solve gated on JuMP/Ipopt internally.
+    # -----------------------------------------------------------------------
+    include("terminal_conventions_tests.jl")
+
+    # -----------------------------------------------------------------------
     # Time-series support — snapshot semantics plus a gated OPF sweep
     # -----------------------------------------------------------------------
     include("timeseries_tests.jl")
+
+    # -----------------------------------------------------------------------
+    # COMPONENT_COLLECTIONS registry — completeness against the schema
+    # -----------------------------------------------------------------------
+    include("registry_tests.jl")
 
     # -----------------------------------------------------------------------
     # Network simplification
@@ -3716,6 +3991,26 @@ const IEEE13_FIXTURE = """
     include("projection_tests.jl")
 
     include("admittance_tests.jl")
+
+    # -----------------------------------------------------------------------
+    # System nodal admittance matrix (ybus_passive): per-primitive analytic
+    # checks + structural (symmetry/conservation/aliasing) always run; the
+    # OpenDSS getYsparse cross-check self-gates on _HAS_ODS.
+    # -----------------------------------------------------------------------
+    include("ybus_tests.jl")
+
+    # -----------------------------------------------------------------------
+    # Linearized nodal admittance (ybus_linearized): load-folding analytic
+    # checks always run; the OpenDSS power-flow-residual cross-check self-gates.
+    # -----------------------------------------------------------------------
+    include("ybus_linearized_tests.jl")
+
+    # -----------------------------------------------------------------------
+    # Augmented nodal admittance (ybus_augmented): ideal switch/transformer
+    # constraint rows — switch invariant, dedupe, ideal-limit checks. Analytic,
+    # always runs.
+    # -----------------------------------------------------------------------
+    include("ybus_augmented_tests.jl")
 
     # -----------------------------------------------------------------------
     # General n-winding (3+) transformers — accessors, validation, Yprim, and

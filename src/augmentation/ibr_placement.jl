@@ -136,7 +136,7 @@ run internally.
 
 The placed IBRs are dispatched by [`solve_opf`](@ref) once
 [`augment_case`](@ref) has filled their P/Q box. The OPF engine supports IBRs,
-and PowerIO v0.6.2 can import IBR/control data where the source carries it.
+and PowerIO v0.7 can import IBR/control data where the source carries it.
 BMOPFTools still treats `to_pmd` and `to_dss` IBR export as a follow up.
 
 # Example
@@ -232,10 +232,11 @@ function add_statcom!(net::Dict{String,Any}, bus::AbstractString;
     length(tm) >= 2 ||
         throw(ArgumentError("add_statcom!: bus '$bus' needs ≥2 terminals " *
                             "(got $(length(tm))); pass terminal_map explicitly"))
-    n_phase = length(tm) - 1
-
     topo = topology !== nothing ? uppercase(String(topology)) :
-           (length(tm) <= 2 ? "SINGLE_PHASE" : "FOUR_LEG")
+           _infer_ibr_topology(tm)
+    # Phase-current count follows the topology, not `length(tm) - 1` (which
+    # assumes a neutral): a 3-wire delta STATCOM is THREE_LEG with 3 phases.
+    n_phase, _ = _ibr_phase_count(topo, tm)
 
     smax_vec = s_max isa AbstractVector ? Float64.(collect(s_max)) :
                                           fill(Float64(s_max), n_phase)
@@ -293,7 +294,9 @@ function _apply_ibr_placement!(net′::Dict{String,Any},
             (lvl === nothing || !(lvl in recipe.voltage_levels)) && continue
         end
         agg = loads[bus]
-        sum(agg.p_nom) < recipe.min_local_load_va && continue
+        # min_local_load_va is a VA threshold — compare against apparent power
+        # |S| = √(ΣP² + ΣQ²), not active power alone.
+        hypot(sum(agg.p_nom), sum(agg.q_nom)) < recipe.min_local_load_va && continue
         if !recipe.overwrite_existing && _bus_has_ibr(net′, bus)
             continue
         end
@@ -387,7 +390,10 @@ function _ibr_basis_total(recipe::IBRRecipe, bus::String, agg, xfmr)
     elseif recipe.size_basis == :fraction_of_downstream_load
         info = get(xfmr.bus_info, bus, nothing)
         info === nothing && return local_total, "s_max = $(recipe.s_fraction) × local load (no downstream context)"
-        return local_total, "s_max = $(recipe.s_fraction) × downstream-load share at bus"
+        # Size from the load DOWNSTREAM of the feeding transformer, not the local
+        # bus load (which was returned before, making this identical to
+        # :fraction_of_local_load).
+        return info.down_total, "s_max = $(recipe.s_fraction) × downstream load $(round(info.down_total)) VA"
     else
         error("unknown IBRRecipe.size_basis = $(recipe.size_basis)")
     end
@@ -401,9 +407,13 @@ function _size_ibr(recipe::IBRRecipe, p_nom::Vector{Float64},
     total = recipe.size_basis == :fixed_tiers ?
         get(recipe.fixed_tier_va, level, 0.0) :
         recipe.s_fraction * basis_total
-    s = sum(p_nom)
-    weights = s > 0 ? p_nom ./ s : fill(1.0 / n, n)
-    total .* weights
+    # Distribute by per-phase load MAGNITUDE and keep the result non-negative:
+    # a phase with negative p_nom (embedded generation) or a negative basis must
+    # not produce a negative s_max (a schema-invalid, inverted rating).
+    w  = abs.(p_nom)
+    sw = sum(w)
+    weights = sw > 0 ? w ./ sw : fill(1.0 / n, n)
+    abs(total) .* weights
 end
 
 # Per-phase linear dispatch cost, mirroring _cost_der (der_placement.jl). Kept
@@ -431,8 +441,7 @@ function _resolve_topology(recipe::IBRRecipe, terminal_map::Vector{String})::Str
     if recipe.inverter_topology !== :infer
         return uppercase(string(recipe.inverter_topology))
     end
-    n = length(terminal_map)
-    n <= 2 ? "SINGLE_PHASE" : "FOUR_LEG"
+    _infer_ibr_topology(terminal_map)
 end
 
 # ── Findings ──────────────────────────────────────────────────────────────────

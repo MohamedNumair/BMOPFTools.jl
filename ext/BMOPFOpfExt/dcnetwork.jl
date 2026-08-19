@@ -202,13 +202,13 @@ function _add_dc_network_constraints!(model, net, vars)
             # current flows from→to: leaves "from" (−i into node), enters "to" (+i)
             _dc_kcl_add!(kcl, bf, tmf[k], -i)
             _dc_kcl_add!(kcl, bt, tmt[k],  i)
-            k <= length(imax) && @constraint(model, i^2 <= imax[k]^2)
+            k <= length(imax) && _soc_norm!(model, i, imax[k])
         end
         pmax = get(br, "p_max", nothing)
         if pmax !== nothing && n >= 1 && haskey(v_dc, (bf, tmf[1]))
             # bound the pole-conductor power |v·i| ≤ p_max
             i1 = idc_br[(id, 1)]
-            @constraint(model, (v_dc[(bf, tmf[1])] * i1)^2 <= Float64(pmax)^2)
+            _soc_norm!(model, (v_dc[(bf, tmf[1])] * i1), Float64(pmax))
         end
     end
 
@@ -376,6 +376,7 @@ function _couple_converter_to_dc!(model, vars, inv_id, inv, p_ac_expr, smax,
                                   p_min, p_max;
                                   relu_eps::Float64=2e-3,
                                   relu_ops::Dict{Float64,Any}=Dict{Float64,Any}(),
+                                  softplus::Symbol=:user_defined,
                                   net=nothing)
     haskey(vars, :kcl_dc) || return
     kcl = vars[:kcl_dc]
@@ -418,7 +419,7 @@ function _couple_converter_to_dc!(model, vars, inv_id, inv, p_ac_expr, smax,
         xs, ys = bp
         base, triples = breakpoints_to_triples(xs, ys)
         ε  = max(relu_eps * (xs[end] - xs[1]), 1e-6)
-        op = relu_operator_for!(relu_ops, model, ε)
+        op = relu_operator_for!(relu_ops, model, ε; mode=softplus)
         @constraint(model, p_ac_expr == curve_expr(op, Uport, base, triples))
     end
 end

@@ -9,7 +9,9 @@ built to match OpenDSS's own `Yprim` term-by-term wherever OpenDSS is unambiguou
 
 The companion [Transformer primitive admittance](spec/transformer-admittance.md)
 spec page carries the full symbolic matrix derivations; this page is the
-model-level contract.
+model-level contract. For the workflow that *produces* these fields — turning
+short-circuit/open-circuit test data into a validated model — see the
+[transformer test-data tutorial](tutorial_transformer_tests.md).
 
 ## Supported subtypes
 
@@ -96,7 +98,7 @@ is hidden.
 | Area | Status |
 |---|---|
 | **`n_winding` tap** | No tap optimisation — the ratio is held at nominal. Tap fields on an `n_winding` transformer are warned and ignored. Model a regulated winding with a two-bus subtype instead. |
-| **4+ winding import** | `from_dss` imports the validated `n_winding` cases emitted by PowerIO v0.6.2. Unsupported winding sets refuse loudly, not built wrong. |
+| **4+ winding import** | `from_dss` imports the validated `n_winding` cases emitted by PowerIO v0.7. Unsupported winding sets refuse loudly, not built wrong. |
 | **Discrete taps** | Optimised taps are continuous; there is no discrete-step (`numtaps`) model. |
 | **Per-winding ratings** | A two-bus transformer carries one `s_rating` (winding-1 base). Distinct per-winding kVA is retained only on `n_winding` (per-winding `s_max`). |
 

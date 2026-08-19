@@ -109,11 +109,14 @@ Impedance comes from the line's single source: the referenced linecode
 (per-metre matrices × `length`) or inline absolute matrices on the line
 (Ω/S, used as-is). Shunt conductance (`G_from`, `G_to`) and susceptance
 (`B_from`, `B_to`) follow the same rule. Missing or all-zero shunt fields
-are a no-op.
+are a no-op. `coefficient`, when supplied, resolves each existing `R_series`
+and `X_series` matrix entry in model working coordinates; it cannot alter the
+matrix dimension or terminal mapping.
 """
 function _add_line_constraints!(model, net, vars, kcl_r, kcl_i;
                                 grounded::Set{Tuple{String,String}}=Set{Tuple{String,String}}(),
-                                branch_inj=nothing)
+                                branch_inj=nothing,
+                                coefficient=nothing)
     linecodes = get(net, "linecode", Dict())
     buses = get(net, "bus", Dict())
     vr = vars[:vr]; vi = vars[:vi]
@@ -147,15 +150,28 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i;
         end
         n_map = n_c
 
+        # Each existing matrix entry is a scalar coefficient location. Providers
+        # may replace its value or return a JuMP parameter/expression, but may
+        # not change the matrix dimensions or conductor mapping. The defaults
+        # are already in model working coordinates (ohms in SI, pu otherwise).
+        R_model = coefficient === nothing ? R : Any[
+            coefficient(:physics, :line, lid, :R_series, (k, j), R[k, j])
+            for k in 1:n_map, j in 1:n_map]
+        X_model = coefficient === nothing ? X : Any[
+            coefficient(:physics, :line, lid, :X_series, (k, j), X[k, j])
+            for k in 1:n_map, j in 1:n_map]
+
         # ── KVL ───────────────────────────────────────────────────────────────
         for k in 1:n_map
             t_fr = tmfr[k]; t_to = tmto[k]
             @constraint(model,
                 vr[(b_fr, t_fr)] - vr[(b_to, t_to)] ==
-                sum(R[k,j]*cr_fr[(lid,j)] - X[k,j]*ci_fr[(lid,j)] for j in 1:n_map))
+                sum(R_model[k,j]*cr_fr[(lid,j)] -
+                    X_model[k,j]*ci_fr[(lid,j)] for j in 1:n_map))
             @constraint(model,
                 vi[(b_fr, t_fr)] - vi[(b_to, t_to)] ==
-                sum(R[k,j]*ci_fr[(lid,j)] + X[k,j]*cr_fr[(lid,j)] for j in 1:n_map))
+                sum(R_model[k,j]*ci_fr[(lid,j)] +
+                    X_model[k,j]*cr_fr[(lid,j)] for j in 1:n_map))
         end
 
         # ── π-shunt currents (linear in voltage variables) ────────────────────
@@ -181,10 +197,14 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i;
         end
 
         # ── Thermal current limits on total current at each end ───────────────
-        # When the to-side π-shunt is zero, cr_to = −cr_fr and ish_to = 0, so
-        # the to-side magnitude equals the from-side magnitude and only one
-        # constraint is needed. Both are added only when G_to or B_to is present.
-        has_to_shunt = !(G_to === nothing && B_to === nothing)
+        # The to-side total current is cr_to + ish_to = −cr_fr + ish_to. It has
+        # the same magnitude as the from-side total (cr_fr + ish_fr) only when
+        # BOTH π-shunts vanish (then both ends are ±cr_fr). If either side has a
+        # shunt the two magnitudes differ, so the to-side needs its own cone;
+        # otherwise the from-side cone alone would leave |cr_fr| unbounded up to
+        # i_max + |ish_fr|. Add the to-side cone whenever any shunt is present.
+        has_any_shunt = !(G_fr === nothing && B_fr === nothing &&
+                          G_to === nothing && B_to === nothing)
         lc = get(linecodes, get(line, "linecode", ""), nothing)
         # line-level i_max overrides the linecode's (and is the only rating
         # source for lines carrying inline absolute matrices)
@@ -202,21 +222,38 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i;
                 vmax_fr = Union{Float64,Nothing}[
                     _terminal_vmax_to_ground(bus_fr, tmfr[j], grounded, b_fr)
                     for j in 1:n_map]
+                bus_to = get(buses, b_to, Dict{String,Any}())
+                vmax_to = Union{Float64,Nothing}[
+                    _terminal_vmax_to_ground(bus_to, tmto[j], grounded, b_to)
+                    for j in 1:n_map]
                 for k in 1:min(n_map, length(i_max))
                     ilim = Float64(i_max[k])
                     cfr_r = @expression(model, cr_fr[(lid,k)] + ish_fr_r[k])
                     cfr_i = @expression(model, ci_fr[(lid,k)] + ish_fr_i[k])
-                    @constraint(model, cfr_r^2 + cfr_i^2 <= ilim^2)
-                    if has_to_shunt
+                    _soc_norm!(model, cfr_r, cfr_i, ilim)
+                    if has_any_shunt
                         cto_r = @expression(model, cr_to[(lid,k)] + ish_to_r[k])
                         cto_i = @expression(model, ci_to[(lid,k)] + ish_to_i[k])
-                        @constraint(model, cto_r^2 + cto_i^2 <= ilim^2)
+                        _soc_norm!(model, cto_r, cto_i, ilim)
                     end
 
-                    # Series-current variable box (from-side shunt determines it).
-                    ish_bound = _line_shunt_row_bound(G_fr, B_fr, vmax_fr, k, n_map)
-                    ish_bound === nothing && continue
-                    _limit_current_box!(cr_fr[(lid,k)], ci_fr[(lid,k)], ilim + ish_bound)
+                    # Series-current variable boxes. The one series current
+                    # appears at both ends: the from-total is cr_fr + ish_fr and
+                    # the to-total is −cr_fr + ish_to, so a valid outer box on the
+                    # bare series variable is |cr_fr| ≤ ilim + |ish_end| at each
+                    # end. Applying both keeps the tighter (min). These hard
+                    # variable bounds backstop the (soft) SOC cones: at a large
+                    # per-unit base the cone values fall below Ipopt's constraint
+                    # tolerance, so without a to-side box a from-side-only shunt
+                    # would leave the to-end current effectively unconstrained
+                    # (issue #299). With no to-side shunt the to-side box is a
+                    # tight |cr_fr| ≤ ilim.
+                    ish_fr_bound = _line_shunt_row_bound(G_fr, B_fr, vmax_fr, k, n_map)
+                    ish_fr_bound !== nothing &&
+                        _limit_current_box!(cr_fr[(lid,k)], ci_fr[(lid,k)], ilim + ish_fr_bound)
+                    ish_to_bound = _line_shunt_row_bound(G_to, B_to, vmax_to, k, n_map)
+                    ish_to_bound !== nothing &&
+                        _limit_current_box!(cr_fr[(lid,k)], ci_fr[(lid,k)], ilim + ish_to_bound)
                 end
             end
         end
@@ -237,7 +274,7 @@ function _add_line_constraints!(model, net, vars, kcl_r, kcl_i;
                 _apparent_power_limit!(model,
                     vr[(b_fr, tmfr[k])], vi[(b_fr, tmfr[k])], cfr_r, cfr_i, slim;
                     base_name = "$(lid)_fr_$(k)")
-                if has_to_shunt
+                if has_any_shunt
                     cto_r = @expression(model, cr_to[(lid,k)] + ish_to_r[k])
                     cto_i = @expression(model, ci_to[(lid,k)] + ish_to_i[k])
                     _apparent_power_limit!(model,
@@ -253,8 +290,7 @@ end
     _add_line_angle_constraints!(model, net, vars)
 
 Enforce per-line angle-difference bounds (`va_diff_min`, `va_diff_max`, radians) between
-the from- and to-end voltages on each conductor. Only called from `solve_opf` (operational
-limits, not the feasibility formulation).
+the from- and to-end voltages on each conductor. Shared by OPF and feasibility OPF.
 
 For each conductor k:
   s = vr_fr·vi_to − vi_fr·vr_to   (imaginary part of V_fr · conj(V_to))
@@ -329,7 +365,7 @@ function _add_switch_constraints!(model, net, vars, kcl_r, kcl_i)
             _kcl_add!(kcl_r, kcl_i, b_to, tmto[k],  cr_sw[(sid,k)],  ci_sw[(sid,k)])
             if i_max !== nothing && k <= length(i_max)
                 ilim = Float64(i_max[k])
-                @constraint(model, cr_sw[(sid,k)]^2 + ci_sw[(sid,k)]^2 <= ilim^2)
+                _soc_norm!(model, cr_sw[(sid,k)], ci_sw[(sid,k)], ilim)
                 _limit_current_box!(cr_sw[(sid,k)], ci_sw[(sid,k)], ilim)
             end
             # Apparent-power limit (ground-referenced per conductor). A switch has

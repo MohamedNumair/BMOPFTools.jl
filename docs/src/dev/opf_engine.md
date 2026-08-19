@@ -108,6 +108,102 @@ transformer leakage to exact zero (pass 9) — and the
 [zero-voltage / ill-conditioning traps](../bounds/known_traps.md) page catalogues
 what happens when this is gotten wrong.
 
+## Extending the engine without forking it
+
+The "not a model zoo" stance above is only tenable because the engine is
+extensible from *outside*: a downstream package can add devices, swap the
+objective, couple time steps, or pose an entirely different problem — reusing all
+the device physics, per-unit handling, and result extraction — without a new
+constraint landing in `ext/BMOPFOpfExt/`. Three seams, in increasing order of
+reach (full detail under
+[extending the formulation](../opf.md#extending-the-formulation)):
+
+- **`model_hook!(ctx)` / `solution_hook!(ctx, result)`** — add custom variables,
+  constraints, or objective terms to a single solve, then read their solved
+  values. A hook device stamps its current with `add_terminal_injection!` and may
+  register its net injection as `result["custom_injection"]` so the power-balance
+  check in [`profile_solution`](../validation.md) stays honest. This is how a
+  battery, EV charger, or bespoke limit is added **without touching the JSON
+  spec**.
+- **The staged API** ([`build_opf_model`](@ref) → [`enforce_kcl!`](@ref) →
+  [`extract_result`](@ref), with [`generation_cost`](@ref) for the objective) —
+  unfuses build/solve/extract so several snapshots share one JuMP model. This is
+  what makes **inter-temporal** coupling (battery state of charge across a
+  horizon) expressible, which the single-shot [`solve_opf`](@ref) cannot do; see
+  [the staged API](../opf.md#staged-api).
+- **A different problem specification entirely.** Because `build_opf_model` adds
+  operational limits only where the net *declares* them, a bounds-free net yields
+  a pure physics model with free voltages; with `add_objective=false` and a
+  `model_hook!` objective this hosts **state estimation**, parameter estimation,
+  and other model-fitting problems that are not dispatch optimisation. See
+  [Beyond OPF](../opf.md#beyond-opf).
+
+Internally the same seam is the `build!` *recipe* (`build_opf!`, `build_pf!`,
+`build_feasibility!`): a fourth problem type is a fourth recipe over the
+invariant `_build_and_solve` pipeline. Promoting that recipe entry point to a
+public `build_custom_model` is the natural step **if** such a formulation
+graduates from a downstream experiment to accepted practice — the same "fold it
+back in via the spec" path the model-zoo warning describes. Until then, the
+public hooks and staged API let you build it in your own package.
+
+### Authoring a `model_hook!`
+
+A `model_hook!(ctx)` runs **after** the standard build (`_add_device_constraints!`
+has already stamped every element in the net and populated the KCL accumulators)
+and **before** [`enforce_kcl!`](@ref) turns those accumulators into constraints. Two
+conventions trip up first-time hook authors.
+
+**Hooks are additive.** A hook may add current with `add_terminal_injection!`, add
+variables and constraints, and set the objective. It **cannot replace** a
+constraint already stamped for a network element — by the time the hook runs, that
+element's Ohm's-law/KCL contribution is already in the model. There are therefore
+two ways to make an element's parameter a decision variable:
+
+- **Native free variable — preferred where it exists.** Some element parameters are
+  already exposed as optional free variables when the case declares bounds. A
+  transformer **tap** is the worked example: set `tap_min`/`tap_max` on the
+  transformer, retrieve the effective from→to ratio with
+  `opf_object(ctx, opf_transformer_tap_key(tid))`, and let the engine thread it
+  through the per-unit-correct,
+  base-referred winding constraints. The hook just *reads* (and, across a staged
+  multi-snapshot build, *couples*) the handle — the engine keeps ownership of
+  per-unit, limits, and native loss/flow bookkeeping.
+
+- **Use a coefficient provider, or omit-and-re-stamp when no native location
+  exists.** Native scalar line `R_series`/`X_series` matrix entries can now be
+  supplied by typed coefficient providers without replacing the branch. If the
+  quantity has no provider-aware native location (for example a line's length),
+  **omit that element from the net** and re-stamp its constraint in the hook with
+  your own variable, injecting its current into the KCL accumulators. The caveats
+  are the flip side of the above: for that element *you* now own the per-unit
+  scaling (`opf_bases(ctx)`), any current/power limit, and native loss/flow bookkeeping —
+  none of it is applied for an element the engine never saw.
+
+**Terminal injections are positive _into_ the terminal.** `enforce_kcl!` sets
+the sum at each `(bus, terminal)` to zero. So a series element from
+bus `f` to bus `g` carrying current `I = cr + j·ci` in the `f → g` direction
+**subtracts** at its from-terminal (current leaves `f`) and **adds** at its
+to-terminal (current enters `g`):
+
+```julia
+# series element f → g on conductor c, current I = cr + j·ci
+add_terminal_injection!(ctx, f, c, -cr, -ci)
+add_terminal_injection!(ctx, g, c,  cr,  ci)
+```
+
+A shunt or user injection `I` into `(bus, phase)`, referenced to the bus neutral,
+adds at the phase terminal and subtracts the return at the neutral:
+
+```julia
+add_terminal_injection!(ctx, bus, phase,    cr,  ci)
+add_terminal_injection!(ctx, bus, neutral, -cr, -ci)
+```
+
+The native flow/loss ledger uses the same "into bus" sign, so an element's complex loss is
+`S_loss = −Σ V·conj(I_into_bus)`. In per-unit mode (`per_unit=true`, the default)
+the accumulator currents are per-unit; a SI current/voltage literal in a hook must
+be scaled by the matching `opf_bases(ctx)` base.
+
 ## Keep it behind the extension boundary
 
 !!! warning "The OPF engine may be carved out into its own package"
@@ -126,6 +222,9 @@ what happens when this is gotten wrong.
 ## See also
 
 - [Optimal power flow](../opf.md) — running the engine and the formulation.
+- [Parameterized and differentiable extensions](../differentiable_extensions.md) —
+  the stable downstream-extension contract, scientific scope, native coverage,
+  and known limitations.
 - [OPF result dictionary](../results.md) — the result-dict shape (part of the
   public API; see [Versioning](versioning.md)).
 - [Validating the OPF](../validation.md) and

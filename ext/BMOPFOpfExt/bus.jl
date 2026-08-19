@@ -46,6 +46,7 @@ neutral terminals (their voltage is determined by physics, not operational limit
 function _add_voltage_bounds!(model, net, bus_terminals, grounded, vars)
     vr = vars[:vr]; vi = vars[:vi]
     fixed = _source_fixed_terminals(net)
+    nlabels = BMOPFTools._neutral_labels(net)
 
     for (bid, bus) in get(net, "bus", Dict())
         v_min = get(bus, "v_min", nothing)
@@ -53,7 +54,7 @@ function _add_voltage_bounds!(model, net, bus_terminals, grounded, vars)
         (v_min === nothing && v_max === nothing) && continue
 
         terminals = get(bus_terminals, bid, String[])
-        neutral   = BMOPFTools._neutral_terminal(terminals)
+        neutral   = BMOPFTools._neutral_terminal(terminals, nlabels)
         # Phase terminals in declaration order (neutral excluded). v_min/v_max are
         # per-phase arrays indexed by this order, so the phase index k is kept
         # aligned to the array even when a phase is grounded/source-fixed (those
@@ -78,7 +79,7 @@ end
 """
     _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
 
-Enforce operational bus-level voltage limits (not called from feasibility OPF):
+Enforce operational bus-level voltage limits (shared by OPF and feasibility OPF):
 
 - Neutral voltage upper bound (`vn_max`, V): |v_n|² ≤ vn_max² when neutral is ungrounded.
 - Phase-to-neutral voltage magnitude bounds (`vpn_min`, `vpn_max`): applied to each
@@ -110,7 +111,7 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
         vn_max = get(bus, "vn_max", nothing)
         if vn_max !== nothing && neutral !== nothing && !((bid, neutral) in grounded)
             vr_n = vr[(bid, neutral)]; vi_n = vi[(bid, neutral)]
-            @constraint(model, vr_n^2 + vi_n^2 <= Float64(vn_max)^2)
+            _soc_norm!(model, vr_n, vi_n, Float64(vn_max))
         end
 
         # ── b. Phase-to-neutral voltage magnitude bounds ─────────────────────
@@ -250,13 +251,13 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
                     (dvr1 - 0.5*dvr2 + s3*dvi2 - 0.5*dvr3 - s3*dvi3) / 3)
                 V2_i = @expression(model,
                     (dvi1 - s3*dvr2 - 0.5*dvi2 + s3*dvr3 - 0.5*dvi3) / 3)
-                @constraint(model, V2_r^2 + V2_i^2 <= Float64(vneg_max)^2)
+                _soc_norm!(model, V2_r, V2_i, Float64(vneg_max))
             end
 
             if vzero_max !== nothing
                 V0_r = @expression(model, (dvr1 + dvr2 + dvr3) / 3)
                 V0_i = @expression(model, (dvi1 + dvi2 + dvi3) / 3)
-                @constraint(model, V0_r^2 + V0_i^2 <= Float64(vzero_max)^2)
+                _soc_norm!(model, V0_r, V0_i, Float64(vzero_max))
             end
         end
     end
@@ -268,10 +269,13 @@ end
 Enforce KCL: for every (bus, terminal) accumulator, add == 0 constraints.
 """
 function _add_kcl_constraints!(model, kcl_r, kcl_i)
+    refs_r = Dict{Any,Any}()
+    refs_i = Dict{Any,Any}()
     for key in keys(kcl_r)
-        @constraint(model, kcl_r[key] == 0)
-        @constraint(model, kcl_i[key] == 0)
+        refs_r[key] = @constraint(model, kcl_r[key] == 0)
+        refs_i[key] = @constraint(model, kcl_i[key] == 0)
     end
+    return refs_r, refs_i
 end
 
 # ---------------------------------------------------------------------------

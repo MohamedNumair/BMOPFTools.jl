@@ -46,6 +46,13 @@ they can be versioned and licensed independently of this tooling. This
 repository keeps only the small fixtures the test suite needs (under
 `test/data/`).
 
+The embedded IVR-EN engine is also extensible from downstream Julia packages:
+it supports staged JuMP construction, typed device-formulation replacement,
+semantic parameter/coefficient registries, and explicit integration with
+DiffOpt-compatible models. BMOPFTools supplies the physics substrate and
+diagnostics; downstream research packages retain ownership of bilevel semantics
+and sensitivity algorithms.
+
 ## Licensing
 
 **Code** — BSD-3-Clause License.
@@ -134,8 +141,30 @@ OpenDSS .dss ──(from_dss / PowerIO.jl)──► BMOPF Dict{String,Any} ◄�
 
 ## Installation
 
-BMOPFTools requires **Julia ≥ 1.10**.  It is not yet in the General registry,
-so install it from this Git URL:
+### Prerequisites
+
+BMOPFTools requires **Julia ≥ 1.10**. If you don't have Julia yet, install it
+with [juliaup](https://github.com/JuliaLang/juliaup), the official version
+manager — on Windows via the
+[Microsoft Store](https://apps.microsoft.com/detail/9NJNWW8PVKMN) (or
+`winget install julia -s msstore`), on macOS/Linux via
+`curl -fsSL https://install.julialang.org | sh` — or grab an installer from
+[julialang.org/downloads](https://julialang.org/downloads/).
+
+A note on the code blocks below: `julia` blocks are **Julia code** — run
+`julia` in your terminal first, then type them at the `julia>` prompt — while
+`sh` blocks go in your system terminal (Command Prompt / PowerShell / bash).
+Completely new to Julia? The
+[Installation & first steps](https://frederikgeth.github.io/BMOPFTools.jl/docs/installation/)
+docs page walks through all of this, and the official
+[Getting Started](https://docs.julialang.org/en/v1/manual/getting-started/)
+guide and [julialang.org/learning](https://julialang.org/learning/) cover the
+language basics.
+
+### Installing the package
+
+BMOPFTools is not yet in the General registry (Julia's default package
+catalogue), so install it from this Git URL:
 
 ```julia
 using Pkg
@@ -264,3 +293,11 @@ code you agree to the BSD-3-Clause licence.
 This repository is not static; please include the version number when citing
 it in scholarly work.  Case files carry original-source attribution in their
 headers — cite those sources when using specific networks.
+
+## Special thanks to 
+(in alphabetic order)
+Archie Chapman
+Mohamed Numair
+Samuel Talkington
+Sleiman Mhanna
+Tomislav Antić 

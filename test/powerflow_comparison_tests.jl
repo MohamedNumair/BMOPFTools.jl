@@ -2696,7 +2696,7 @@ end
         ("pf_dy_xfmr.dss",  "delta_wye",    1.0),
         ("pf_dy_xfmr.dss",  "delta_wye",    0.97),
         # rneut/xneut fixture: unbalanced load + internal neutral grounding
-        # carried through by PowerIO v0.6.2.
+        # carried through by PowerIO v0.7.
         ("pf_dy_xfmr_rneut.dss", "delta_wye", 1.0),
     )
     for (fname, sub, tapm) in cases
@@ -2736,7 +2736,7 @@ end
 
 @testset "PF comparison — from_dss transformer fidelity (single_phase/Yd/Dy)" begin
     # The single_phase/Yd/Dy models are validated above with hand-built nets;
-    # this guards the from_dss PARSE path. PowerIO v0.6.2 carries the delta_wye
+    # this guards the from_dss PARSE path. PowerIO v0.7 carries the delta_wye
     # leakage in the BMOPF export; BMOPFTools normalizes no-load shunts to its
     # OPF convention. The grounding reactors also need an explicit `phases=1` in
     # the .dss to survive PowerIO's parser (without it the LV neutral floats and
@@ -2760,7 +2760,7 @@ end
 end
 
 @testset "PF comparison — from_dss fixed off-nominal tap import (Dy)" begin
-    # PowerIO v0.6.2 carries OpenDSS `taps=` through the BMOPF export.
+    # PowerIO v0.7 carries OpenDSS `taps=` through the BMOPF export.
     # End-to-end: parse → `tap` present → solve_pf matches the OpenDSS solve of
     # the same tapped unit (which also validates the OPF's fixed off-nominal
     # Dy tap referral against OpenDSS — previously only exercised at nominal).
@@ -2789,7 +2789,7 @@ end
     # engines put lv.4 at ≈0 V — the PF-level assertions are convergence of
     # the otherwise-floating island and node-for-node agreement with OpenDSS;
     # the branch's numerical sensitivity is carried by the entry-wise Yprim
-    # gate below. PowerIO v0.6.2 emits the BMOPF neutral grounding fields
+    # gate below. PowerIO v0.7 emits the BMOPF neutral grounding fields
     # directly.
     path = joinpath(_PF_CMP_DIR, "pf_dy_xfmr_rneut.dss")
     net  = from_dss(path)
@@ -2812,7 +2812,7 @@ end
 end
 
 @testset "PF comparison — from_dss n_winding (native PowerIO export)" begin
-    # PowerIO v0.6.2 exports the validated 3-phase 3+-winding transformers
+    # PowerIO v0.7 exports the validated 3-phase 3+-winding transformers
     # directly as BMOPF `n_winding` units. End-to-end agreement with OpenDSS on
     # the same fixtures the hand-built n_winding nets above validate (YYY, Dyn,
     # Dyn-unbalanced) means the native import is equivalent in effect to the
@@ -3229,4 +3229,74 @@ end
     oid = first(keys(no["transformer"]["open_delta_regulator"]))
     aopt = ro["transformer"][oid]["tap_ratio"]
     @test all(0.9 - 1e-6 .<= aopt .<= 1.1 + 1e-6)
+end
+
+# ── Passive Ybus decks reused as OPF/PF cases ─────────────────────────────────
+# The load-free decks under test/data/ybus/ (authored for the ybus_passive vs
+# OpenDSS getYsparse cross-check) also make clean end-to-end solver cases: with
+# no PC elements the only flow is the shunt/capacitor and transformer
+# magnetising current, so the feasibility OPF (slack ≈ 0 ⇒ valid power flow) and
+# solve_pf must both reproduce OpenDSS's node voltages. These exercise the same
+# line-Π / transformer / shunt models the Ybus assembly does, but through the
+# full nonlinear solver rather than the linear admittance stamp.
+const _YBUS_DIR = joinpath(@__DIR__, "data", "ybus")
+
+# from_dss yields terminals a/b/c/n; OpenDSS AllNodeNames uses .1/.2/.3/.4.
+const _FD_NODE = Dict("a" => "1", "b" => "2", "c" => "3", "n" => "4",
+                      "1" => "1", "2" => "2", "3" => "3", "4" => "4")
+
+"""
+    _bmopf_volts_fd(net) -> (Dict{String,ComplexF64}, Float64)
+
+Feasibility-OPF voltages for a from_dss network, mapping a/b/c/n → 1/2/3/4 so the
+node keys align with OpenDSS `AllNodeNames`. Returns `(volts, slack_A)`.
+"""
+function _bmopf_volts_fd(net::Dict{String,Any})
+    res = solve_feasibility_opf(net; optimizer=Ipopt.Optimizer)
+    volts = Dict{String,ComplexF64}()
+    for (bid, t_dict) in res["bus"], (t, tv) in t_dict
+        volts[bid * "." * _FD_NODE[t]] = tv["vr"] + im * tv["vi"]
+    end
+    return volts, res["total_slack_magnitude_A"]
+end
+
+function _bmopf_volts_pf_fd(net::Dict{String,Any})
+    res = solve_pf(net; optimizer=Ipopt.Optimizer)
+    volts = Dict{String,ComplexF64}()
+    for (bid, t_dict) in res["bus"], (t, tv) in t_dict
+        volts[bid * "." * _FD_NODE[t]] = tv["vr"] + im * tv["vi"]
+    end
+    return volts
+end
+
+@testset "PF comparison — passive 3φ line + shunt capacitor (no load)" begin
+    path = joinpath(_YBUS_DIR, "passive_line3ph.dss")
+    net  = from_dss(path)
+    V_ods         = _ods_volts(path)
+    V_bm, slack_A = _bmopf_volts_fd(net)
+
+    # No PC elements → the source supplies only the (small) shunt current, so
+    # the feasibility slack must still vanish for a valid power flow.
+    @test slack_A < 1e-3
+    _cmp_volts(V_ods, V_bm; label="passive-line3ph: ")
+
+    # Determined power flow agrees with the feasibility OPF.
+    V_pf = _bmopf_volts_pf_fd(net)
+    for k in ("lb.1", "lb.2", "lb.3")
+        @test isapprox(V_pf[k], V_bm[k]; atol=0.5)
+    end
+end
+
+@testset "PF comparison — passive Yd transformer (no load)" begin
+    path = joinpath(_YBUS_DIR, "passive_yd_xfmr.dss")
+    net  = from_dss(path)
+    V_ods         = _ods_volts(path)
+    V_bm, slack_A = _bmopf_volts_fd(net)
+
+    @test slack_A < 1e-3
+    _cmp_volts(V_ods, V_bm; label="passive-yd-xfmr: ")
+
+    # HV wye neutral is grounded through a near-solid reactor (imported as a
+    # shunt): its voltage is pinned near zero in both tools.
+    @test abs(V_bm["hv.4"]) < 1.0
 end

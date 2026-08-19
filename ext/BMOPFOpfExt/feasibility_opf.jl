@@ -3,37 +3,44 @@
 # Identical to solve_opf except:
 #   1. A free slack current (cs_r, cs_i) is added at every ungrounded,
 #      non-source bus terminal and injected directly into KCL.
-#      This makes the KCL system always satisfiable regardless of loading.
+#      This lets those KCL equations absorb residual current; it does not relax
+#      the remaining hard constraints or guarantee NLP feasibility/convergence.
 #   2. The objective minimises the L2² norm of all slack injections rather
-#      than generation cost.
+#      than generation cost, with a documented transformer tie-break term.
 #
-# Interpretation: non-zero slacks after solving indicate terminals where the
-# network cannot balance KCL under its physical constraints — i.e. the origin
-# and magnitude of infeasibility. Pass the result to diagnose_infeasibility()
-# for a ranked, classified breakdown.
+# Interpretation: at a converged local solution, non-zero slacks indicate where
+# that relaxed point uses residual current. This is a local diagnostic, not a
+# proof that the original feasible set is empty. Pass the result to
+# diagnose_infeasibility() for a ranked, classified breakdown.
 
 """
-    BMOPFTools.solve_feasibility_opf(net; optimizer, t_index) -> Dict
+    BMOPFTools.solve_feasibility_opf(net; optimizer, t_index,
+        softplus=:user_defined, build_spec=OpfBuildSpec()) -> Dict
 
 Feasibility-relaxed four-wire IVR-EN OPF. Adds an elastic slack current
 injection (the nodal current residual) at every non-source bus terminal and
-minimises ∑ |sₖ|² (L2² over all slack terminals).
+uses ∑ |sₖ|² (L2² over all slack terminals) as its primary objective, plus the
+documented transformer degeneracy tie-break.
 
-The model carries the **same hard constraints as [`solve_opf`](@ref)** — voltage
-bounds, bus/line angle limits, and all device current limits — so its feasible
-set is identical to the OPF's. The current residual is the *only* relaxation, and
-it relaxes **KCL**: at each node it injects whatever current is needed to balance
-power. Because of this, voltages still satisfy their hard bounds (a constrained
-bus voltage simply sits at its bound), and the resulting power mismatch surfaces
-as a non-zero residual at that node — so a network infeasible on either power
-balance *or* a voltage/angle bound is diagnosed by the residual pattern, not by a
-solver failure. The problem therefore stays solvable in the usual case; a
-genuine solver-infeasible status is reserved for hard bounds that even an
-arbitrary nodal current cannot reconcile (e.g. a fixed source voltage directly
-contradicting a bound on the same terminal), which `feasible == false` flags.
+The model retains [`solve_opf`](@ref)'s **non-KCL hard constraints** — voltage
+bounds, bus/line angle limits, and device limits — while the nodal-current
+variables enlarge the feasible set by relaxing **KCL**. They can absorb residual
+current wherever they are present, but cannot reconcile mutually contradictory
+hard constraints or guarantee convergence of the nonconvex NLP.
 
-Non-zero residuals localise and quantify the infeasibility. Pass the result to
-[`BMOPFTools.diagnose_infeasibility`](@ref) to interpret it.
+For a converged solve, non-zero residuals localise and quantify where that local
+relaxed point pays to violate KCL. They do not certify that the original problem
+has no zero-residual solution elsewhere. The raw `"objective"` is the squared
+slack norm in the model's working coordinates (plus the documented transformer
+tie-break); use the SI-valued `"slack_injections"` and
+`"total_slack_magnitude_A"` fields for physical interpretation. Pass the result
+to [`BMOPFTools.diagnose_infeasibility`](@ref) for a ranked breakdown.
+`build_spec` follows the same ownership contract as `solve_opf`; custom terminal
+injections participate in the KCL equation relaxed by the elastic current.
+For cases with Volt-var/Volt-watt profiles, `softplus=:user_defined` uses the
+stable registered nonlinear operator. Pass `softplus=:builtin` explicitly for
+current DiffOpt nonlinear wrappers; the built-in expression has a narrower
+overflow-safe range.
 """
 function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
                                            optimizer=Ipopt.Optimizer,
@@ -41,22 +48,27 @@ function BMOPFTools.solve_feasibility_opf(net::Dict{String,Any};
                                            per_unit::Bool=true,
                                            s_base::Float64=1e6,
                                            volt_var_watt_eps::Float64=2e-3,
+                                           softplus::Symbol=:user_defined,
+                                           build_spec::BMOPFTools.OpfBuildSpec=BMOPFTools.OpfBuildSpec(),
                                            verbose::Bool=false,
                                            solver_options=(),
-                                           model_hook!::Union{Function,Nothing}=nothing)
+                                           model_hook!::Union{Function,Nothing}=nothing,
+                                           solution_hook!::Union{Function,Nothing}=nothing)
     # cs_r/cs_i are created inside build! and read again in extract!; share them
     # across the two hooks via this closed-over scratch dict.
     slack = Dict{Symbol,Any}()
     _build_and_solve(net; optimizer=optimizer, t_index=t_index,
                      per_unit=per_unit, s_base=s_base, relu_eps=volt_var_watt_eps,
+                     softplus=softplus, build_spec=build_spec,
+                     problem=:feasibility_opf,
                      configure! = _configure_feasibility!,
                      build! = ctx -> build_feasibility!(ctx, slack),
                      extract! = (ctx, result) -> extract_feasibility!(ctx, result, slack),
-                     verbose, solver_options, model_hook!)
+                     verbose, solver_options, model_hook!, solution_hook!)
 end
 
-# Disable "acceptable level" early stopping so Ipopt always converges to the
-# regular tolerance (1e-8).  Without this, problems with bilinear P/Q
+# Disable "acceptable level" early stopping so Ipopt must meet the regular
+# tolerance (1e-8) before reporting normal convergence. Without this, problems with bilinear P/Q
 # constraints and active thermal limits can exit prematurely, producing
 # inaccurate voltages. Ipopt-specific: skipped (with a warning) for any other
 # optimizer instead of erroring on an unsupported attribute.
@@ -83,22 +95,22 @@ function build_feasibility!(ctx::OpfContext, slack::Dict{Symbol,Any})
     kcl_r = ctx.kcl_r; kcl_i = ctx.kcl_i
 
     # Use level-aware start values so that LV buses are initialised at ~250 V
-    # rather than at the source voltage (~6350 V). Without voltage bounds the
-    # unconstrained NLP has a degenerate high-voltage local minimum; correct
-    # initialisation ensures Ipopt finds the physical solution instead.
-    _set_level_aware_start_values!(vars, working, bus_terminals, grounded)
-    _set_yd_dy_start_values!(vars, working, grounded)
+    # rather than at the source voltage (~6350 V). When a case lacks useful
+    # voltage bounds, this reduces attraction to a degenerate high-voltage local
+    # minimum; it is an initialisation heuristic, not a convergence guarantee.
+    _run_opf_stage!(ctx, :start_values, () -> begin
+        _set_level_aware_start_values!(vars, working, bus_terminals, grounded)
+        _set_yd_dy_start_values!(vars, working, grounded)
+    end; required=(:variables,))
 
-    # Bound parity with solve_opf: the feasibility model carries the *identical*
-    # hard constraints (voltage bounds, bus limits, line/bus angle limits, and
-    # all device current limits) so its feasible set equals the OPF's. The ONLY
-    # relaxation is the free nodal current residual (cs_r, cs_i) added to KCL
-    # below and penalised in the least-squares objective. Voltages thus respect
-    # their hard bounds; any resulting power imbalance shows up as residual
-    # current at the affected node rather than as an unbounded voltage.
-    _add_voltage_and_bus_bounds!(ctx)
+    # Bound parity with solve_opf: the feasibility model carries the same
+    # non-KCL hard constraints (voltage bounds, bus limits, line/bus angle limits,
+    # and device limits). Its feasible set is larger only because the free nodal
+    # residual (cs_r, cs_i) relaxes KCL below. Voltages still respect their hard
+    # bounds; contradictory remaining hard constraints can still be infeasible.
+    BMOPFTools.add_opf_operational_limits!(ctx)
 
-    _add_device_constraints!(ctx)
+    BMOPFTools.add_opf_device_constraints!(ctx)
 
     # ── Slack current injections ──────────────────────────────────────────────
     # One (cs_r, cs_i) pair per KCL node. Grounded terminals are excluded
@@ -154,7 +166,9 @@ function build_feasibility!(ctx::OpfContext, slack::Dict{Symbol,Any})
             end
         end
     end
-    @objective(model, Min, slack_obj)
+    _run_opf_stage!(ctx, :objective,
+        () -> @objective(model, Min, slack_obj);
+        required=(:device_physics,))
 end
 
 """
