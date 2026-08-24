@@ -143,7 +143,12 @@ function _powerio_mapping_policy(field::AbstractString,
 end
 
 function _powerio_warning_scope(message)
-    tokens = split(strip(String(message)))
+    # PowerIO 0.9 renders diagnostics as `CODE: message` (e.g.
+    # `EMIT.BMOPF.FIELD_DROPPED: load ld1: ...`). Reuse the writer-side splitter
+    # so the ledger and `powerio_findings` agree on what counts as a code;
+    # an uncoded line comes back whole and parses as it always did.
+    _, text = _split_powerio_line(strip(String(message)))
+    tokens = split(text)
     length(tokens) >= 3 || return "unknown"
     if tokens[1] == "voltage" && tokens[2] == "source"
         return _powerio_scope("source", replace(tokens[3], ":" => ""))
@@ -297,6 +302,34 @@ function powerio_source_behavior_contract(
     )
 end
 
+"""
+Demonstrate that an OpenDSS load `pf` actually reached the converted load, by
+reproducing it: BMOPF carries no power factor, so the only evidence that `pf`
+was honoured is `q_nom` standing in the ratio `pf` prescribes to `p_nom`. A
+weaker "both vectors are finite" test would be satisfied by every converted
+load whether or not `pf` was read, which is exactly the silent fidelity gap the
+ledger exists to rule out. Magnitudes only: the lead/lag sign convention is the
+parser's, and a sign flip is not evidence that `pf` was ignored.
+"""
+function _powerio_pf_is_demonstrated(raw_pf, converted::AbstractDict)::Bool
+    pf = _powerio_float(raw_pf)
+    (pf === nothing || abs(pf) > 1.0) && return false
+    p_nom = get(converted, "p_nom", nothing)
+    q_nom = get(converted, "q_nom", nothing)
+    (p_nom isa AbstractVector && q_nom isa AbstractVector) || return false
+    (isempty(p_nom) || length(p_nom) != length(q_nom)) && return false
+    tan_phi = tan(acos(abs(pf)))
+    for (p_raw, q_raw) in zip(p_nom, q_nom)
+        p = _powerio_float(p_raw)
+        q = _powerio_float(q_raw)
+        (p === nothing || q === nothing) && return false
+        expected = abs(p) * tan_phi
+        isapprox(abs(q), expected; rtol = 1e-6, atol = 1e-6 * (1.0 + abs(p))) ||
+            return false
+    end
+    return true
+end
+
 """Record source fields that are demonstrably represented by BMOPF fields."""
 function _powerio_bmopf_field_mapping(dn, net)
     by_field = Dict{String,Any}()
@@ -304,10 +337,16 @@ function _powerio_bmopf_field_mapping(dn, net)
     for (field, target, transform) in (
         ("kv", "load.v_nom", "kV_to_volts"),
         ("phases", "load.terminal_map/configuration", "source_phase_count_to_terminal_structure"),
+        # PowerIO 0.9 drops `pf` from the BMOPF output (BMOPF has no power
+        # factor field), so without a record here it would be classified by the
+        # catch-all "unrecognized field stays blocking" rule — even though the
+        # information is fully carried, as q_nom.
+        ("pf", "load.p_nom/q_nom", "active_power_and_power_factor_to_reactive_power"),
     )
         scopes = String[]
         for item in PowerIO.loads(dn)
-            _powerio_extra(item, field) === nothing && continue
+            raw = _powerio_extra(item, field)
+            raw === nothing && continue
             name = lowercase(string(getproperty(item, :name)))
             converted = get(load_net, name, nothing)
             converted isa AbstractDict || continue
@@ -316,8 +355,10 @@ function _powerio_bmopf_field_mapping(dn, net)
                 vals = converted["v_nom"]
                 vals isa AbstractVector && !isempty(vals) || continue
                 all(value -> value isa Real && isfinite(Float64(value)), vals) || continue
-            else
+            elseif field == "phases"
                 haskey(converted, "terminal_map") && haskey(converted, "configuration") || continue
+            else
+                _powerio_pf_is_demonstrated(raw, converted) || continue
             end
             push!(scopes, _powerio_scope("load", name))
         end
@@ -578,11 +619,21 @@ is set to `"n"` on every affected bus.
   BMOPF); it is metadata that makes the case self-contained and feeds the
   cross-object consistency checks (`W.DOM.FREQUENCY_MISMATCH`).
 
-# Conversion warnings
+- `findings`: optional `Vector{Finding}` to append the conversion's findings to
+  (the same pattern the analysis passes follow). The findings are recorded on
+  the network regardless; this is for a caller that wants them in hand at ingest.
+
+# Conversion findings
 PowerIO reports every piece of information that cannot be represented in BMOPF
 JSON (e.g. shunt admittance, load shape time series, RegControl OLTC taps).
-These are surfaced on `_meta["powerio_warnings"]` in the returned dict, so
-callers can inspect them without losing the converted data.
+Two views of the same list are recorded on the returned dict:
+
+- `_meta["powerio_warnings"]` — every diagnostic verbatim, as its
+  `CODE: message` line, untruncated and ungrouped.
+- `_meta["powerio_diagnostics"]` — the same diagnostics folded into one record
+  per `(code, severity, component type)` class, which
+  [`powerio_findings`](@ref) reads back as [`Finding`](@ref)s and
+  [`analyze`](@ref) reports alongside every other finding.
 
 # Errors
 - `ArgumentError` if the DSS file does not exist.
@@ -597,7 +648,8 @@ render(report, stdout)
 """
 function from_dss(path::AbstractString;
                   name::Union{AbstractString,Nothing}=nothing,
-                  frequency::Union{Real,Nothing}=nothing)::Dict{String,Any}
+                  frequency::Union{Real,Nothing}=nothing,
+                  findings::Union{Vector{Finding},Nothing}=nothing)::Dict{String,Any}
 
     abspath_dss = abspath(path)
     isfile(abspath_dss) || throw(ArgumentError("DSS file not found: $abspath_dss"))
@@ -620,19 +672,30 @@ function from_dss(path::AbstractString;
     # no earth wire — the OpenDSS earth node is routed to neutral, ground stays
     # implicit). from_dss knows the mapping it just applied, so this is declared
     # rather than left to be inferred downstream (W.CONV.TERMINAL_ROLES_INFERRED).
-    get!(net, "terminal_conventions", _terminal_conventions_dict(net))
+    # PowerIO's own BMOPF export already carries a `terminal_conventions` block
+    # keyed to ITS pre-remap numeric terminal names (e.g. phase=["1","2","4"],
+    # neutral=[]) — stale the instant `_remap_opendss_terminals!` renames every
+    # terminal to a/b/c/n. Discard it before recomputing, or `_terminal_roles`
+    # treats the stale numeric block as authoritative (`get!` never overwrites an
+    # existing key) and every a/b/c/n bus resolves to an empty neutral set.
+    delete!(net, "terminal_conventions")
+    net["terminal_conventions"] = _terminal_conventions_dict(net)
 
-    # Store conversion warnings so callers can inspect fidelity losses, and
-    # surface an aggregate @warn so the losses are visible even when the
-    # caller never looks at _meta.
+    # Record the conversion's fidelity losses both ways: verbatim lines for
+    # provenance, and the diagnostic records that `powerio_findings` reads back
+    # as Findings. Identifiers are folded to lower case above, so the records
+    # name their components the way the rest of the dict does.
     net["_meta"] = get(net, "_meta", Dict{String,Any}())
     net["_meta"]["powerio_warnings"] = collect(String, warnings_list)
+    net["_meta"]["powerio_diagnostics"] =
+        _powerio_diagnostic_records(warnings_list; fold_ids=true)
     net["_meta"]["powerio_source"]   = abspath_dss
     net["_meta"]["powerio_source_metadata"] = _powerio_source_metadata(dn)
     source_mapping = _powerio_bmopf_field_mapping(dn, net)
     net["_meta"]["powerio_source_mapped_fields"] = source_mapping["fields"]
     net["_meta"]["powerio_source_mapping"] = source_mapping
     net["_meta"]["powerio_source_semantics"] = _powerio_source_semantics(dn)
+    findings === nothing || append!(findings, powerio_findings(net))
 
     # Capture the system frequency PowerIO parsed from the DSS circuit
     # (OpenDSS `Set DefaultBaseFreq`, itself defaulting to 60 Hz), or the
@@ -662,12 +725,13 @@ function from_dss(path::AbstractString;
         end
     end
     if !isempty(warnings_list)
-        n_w = length(warnings_list)
-        preview = join(first(collect(String, warnings_list), 5), "\n  ")
-        n_w > 5 && (preview *= "\n  … and $(n_w - 5) more")
-        @warn "from_dss: $n_w piece(s) of OpenDSS information could not be " *
-              "represented in BMOPF (full list on net[\"_meta\"][\"powerio_warnings\"]):\n  " *
-              preview
+        # One preview line per diagnostic class rather than the first five of a
+        # list whose head is often five near-identical dropped fields.
+        records = net["_meta"]["powerio_diagnostics"]
+        preview = join(("$(r["code"]): $(r["message"])" for r in records), "\n  ")
+        @warn "from_dss: $(length(warnings_list)) piece(s) of OpenDSS information " *
+              "could not be represented in BMOPF, in $(length(records)) class(es) " *
+              "(full list on net[\"_meta\"][\"powerio_warnings\"]):\n  " * preview
     end
     if !isnothing(name)
         net["name"] = name

@@ -100,6 +100,7 @@ to_pmd
 from_dss
 powerio_source_behavior_contract
 to_dss
+powerio_findings
 project_solution
 dispatch_as_loads
 ```

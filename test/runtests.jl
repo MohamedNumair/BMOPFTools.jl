@@ -2509,6 +2509,14 @@ const IEEE13_FIXTURE = """
         # form (as emitted by from_dss/PowerIO) must be normalised on parse to
         # the per-winding fields the OPF/Ybus builders read — otherwise they
         # default to zero and the leakage impedance silently vanishes.
+        #
+        # r_series/x_series is referred to the WYE winding's base regardless of
+        # which side (from/to) it sits on (powerio-dist's `referred_resistance`/
+        # `referred_ohms`); the migration routes it onto the wye winding's own
+        # field. delta_wye has wye = to, so the lump lands on r/x_series_to —
+        # putting it on r/x_series_from instead double-refers it through
+        # `_yprim_yd`'s delta-side (n_ph/n_eff0²) scaling and understates the
+        # leakage by roughly that factor.
         json = """
         {"bus":{"hv":{"terminal_names":["a","b","c"]},
                 "lv":{"terminal_names":["a","b","c","n"]}},
@@ -2521,20 +2529,46 @@ const IEEE13_FIXTURE = """
         net = parse_bmopf(json; from_string=true)
         tx  = net["transformer"]["delta_wye"]["t1"]
         @test !haskey(tx, "r_series") && !haskey(tx, "x_series")
-        @test tx["r_series_from"] ≈ 0.015
-        @test tx["x_series_from"] ≈ 0.0007
-        @test tx["r_series_to"] == 0.0 && tx["x_series_to"] == 0.0
+        @test tx["r_series_to"] ≈ 0.015
+        @test tx["x_series_to"] ≈ 0.0007
+        @test tx["r_series_from"] == 0.0 && tx["x_series_from"] == 0.0
         @test any(n -> n["code"] == "W.MIGRATE.XFMR_SERIES_FIELDS",
                   net["_meta"]["migration_notes"])
 
         # Per-winding input is left untouched (no spurious migration note).
         json2 = replace(json,
             "\"r_series\":0.015,\"x_series\":0.0007" =>
-            "\"r_series_from\":0.015,\"r_series_to\":0.0,\"x_series_from\":0.0007,\"x_series_to\":0.0")
+            "\"r_series_from\":0.0,\"r_series_to\":0.015,\"x_series_from\":0.0,\"x_series_to\":0.0007")
         net2  = parse_bmopf(json2; from_string=true)
         notes = get(get(net2, "_meta", Dict()), "migration_notes", [])
         @test !any(n -> n["code"] == "W.MIGRATE.XFMR_SERIES_FIELDS", notes)
-        @test net2["transformer"]["delta_wye"]["t1"]["r_series_from"] ≈ 0.015
+        @test net2["transformer"]["delta_wye"]["t1"]["r_series_to"] ≈ 0.015
+    end
+
+    @testset "Migration — wye-referred lump, checked against real DSS fixtures" begin
+        # The testset above pins the routing on hand-written dicts. This pins
+        # the BASE the value arrives on, end to end through PowerIO, on the two
+        # fixtures that discriminate all three candidate readings of "which
+        # side": a wrong-side referral is off by (v_from/v_to)^2 (~700x here).
+        dir = joinpath(@__DIR__, "data", "pf_comparison")
+
+        # pf_yd_xfmr.dss: 500 kVA, 11 kV wye / 415 V delta, %r=1.0 per winding
+        # (2 % total), xhl=4.0. Wye is the FROM side — and also winding 1, and
+        # also HV, so on its own this case cannot tell the three apart.
+        yd = first(values(from_dss(joinpath(dir, "pf_yd_xfmr.dss"))["transformer"]["wye_delta"]))
+        z_base_hv = 11.0^2 / 0.5                      # Ω, on kVLL / MVA
+        @test yd["r_series_from"] ≈ 0.02 * z_base_hv  # 4.84 Ω
+        @test yd["x_series_from"] ≈ 0.04 * z_base_hv  # 9.68 Ω
+        @test yd["r_series_to"] == 0.0 && yd["x_series_to"] == 0.0
+
+        # pf_dy_xfmr.dss: same ratings, 11 kV delta / 415 V wye. Here wye is the
+        # TO side while winding 1 and HV are the FROM side, so agreeing with the
+        # wye rule here rules out both other readings.
+        dy = first(values(from_dss(joinpath(dir, "pf_dy_xfmr.dss"))["transformer"]["delta_wye"]))
+        z_base_lv = 0.415^2 / 0.5                     # Ω
+        @test dy["r_series_to"] ≈ 0.02 * z_base_lv    # 0.006889 Ω
+        @test dy["x_series_to"] ≈ 0.04 * z_base_lv    # 0.013778 Ω
+        @test dy["r_series_from"] == 0.0 && dy["x_series_from"] == 0.0
     end
 
     @testset "Schema — own output validates (layer drift)" begin
@@ -3491,7 +3525,7 @@ const IEEE13_FIXTURE = """
     # (PowerIO.jl). PowerIO is a hard dependency, so this always runs.
     # --------------------------------------------------------------------------
     @testset "OpenDSS generator conversion via PowerIO" begin
-        @test startswith(BMOPFTools.powerio_version(), "PowerIO.jl 0.7.")
+        @test startswith(BMOPFTools.powerio_version(), "PowerIO.jl 0.9.")
         net = from_dss(joinpath(@__DIR__, "data", "issue190_generator.dss"))
 
         @test haskey(net, "generator")
@@ -3701,12 +3735,13 @@ const IEEE13_FIXTURE = """
         end
         @test mapping["blocking_unmapped_fields"] == String[]
 
-        # PowerIO caps its warning channel, so on this feeder the ledger is
-        # built from a truncated list and has to say so rather than presenting
-        # an empty blocking list as a fidelity proof.
-        @test any(contains("warning list truncated"), net["_meta"]["powerio_warnings"])
-        @test mapping["warnings_truncated_upstream"] == true
-        @test mapping["warning_status"] == "truncated_upstream"
+        # PowerIO 0.9 returns owned diagnostic records rather than capping a
+        # per-call channel, so even this feeder's long list arrives complete and
+        # the ledger's empty blocking list IS a fidelity statement. (Under
+        # PowerIO <= 0.7 the list was truncated and the status had to say so.)
+        @test !any(contains("warning list truncated"), net["_meta"]["powerio_warnings"])
+        @test mapping["warnings_truncated_upstream"] == false
+        @test mapping["warning_status"] == "parsed"
 
         # The same field name is only benign for the kind it was classified on:
         # a `length` dropped from a line would still block.
@@ -3765,11 +3800,12 @@ const IEEE13_FIXTURE = """
             tx = first(values(xfmr["delta_wye"]))
             @test tx["v_nom_from"] > tx["v_nom_to"]               # step-down
             @test tx["v_nom_from"] / tx["v_nom_to"] ≈ 11.0/0.433  rtol=0.02
-            # PowerIO emits a lumped Γ-model; the parse-time migration normalises
-            # it to the per-winding fields the OPF/Ybus builders consume, so a
-            # nonzero leakage impedance reaches them (not silently zero).
-            @test haskey(tx, "r_series_from") && tx["r_series_from"] > 0
-            @test haskey(tx, "x_series_from") && tx["x_series_from"] > 0
+            # PowerIO emits a lumped Γ-model, wye-base-referred; the parse-time
+            # migration normalises it onto the wye winding's own field (delta_wye
+            # has wye = to) so a nonzero leakage impedance reaches the OPF/Ybus
+            # builders (not silently zero, and not double-referred).
+            @test haskey(tx, "r_series_to") && tx["r_series_to"] > 0
+            @test haskey(tx, "x_series_to") && tx["x_series_to"] > 0
             @test !haskey(tx, "r_series") && !haskey(tx, "x_series")
             # spec arity: delta side 3 terminals, wye side 4 (incl. neutral)
             @test length(tx["terminal_map_from"]) == 3
@@ -3989,6 +4025,18 @@ const IEEE13_FIXTURE = """
             @test isapprox(bvm["swer_2"], 12700.0; rtol=0.02)
         end
     end
+
+    # -----------------------------------------------------------------------
+    # powerio v0.8.0 BMOPF ingest — new $schema URI, uppercase load models,
+    # transformer fields relocated under extras (BMOPF schema 0.1.0).
+    # -----------------------------------------------------------------------
+    include("powerio_v08_tests.jl")
+    include("powerio_v09_tests.jl")
+
+    # -----------------------------------------------------------------------
+    # PowerIO conversion diagnostics lifted into Findings
+    # -----------------------------------------------------------------------
+    include("powerio_findings_tests.jl")
 
     # -----------------------------------------------------------------------
     # write_bmopf JSON validity

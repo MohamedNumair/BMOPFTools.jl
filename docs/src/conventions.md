@@ -451,7 +451,7 @@ loading correctly produces different voltages on the two legs.
     leakage values, not `XHL/2` — the OpenDSS pair-wise values must be converted
     via the Steinmetz star formula. Using the 2-winding shortcut (e.g. all of
     `XHL` on the HV side, `x_series_to = 0`) drops the LV-side leakage and spreads
-    the leg voltages apart under load. PowerIO v0.7's BMOPF export carries the
+    the leg voltages apart under load. PowerIO v0.9's BMOPF export carries the
     correct star split for [`from_dss`](@ref); BMOPFTools normalizes the no-load
     shunt convention. See
     [Conversion guide § Transformer impedance bases](conversion.md#Transformer-impedance-bases)
@@ -669,7 +669,8 @@ downstream code should treat them as advisory.
 | `parsed_at` | [`parse_bmopf`](@ref) | Timestamp when the JSON was parsed. |
 | `terminal_coercions` | [`parse_bmopf`](@ref) | `{"n": <count>, "mode": "<alias|verbatim>"}` — populated when non-string terminal IDs were normalised. See `W.SPEC.TERMINAL_TYPES`. |
 | `powerio_source` | `from_dss` | Absolute path of the `.dss` file that was converted. |
-| `powerio_warnings` | `from_dss` | Array of warning strings emitted by the DSS→JSON converter. |
+| `powerio_warnings` | `from_dss` | Array of `CODE: message` lines, one per diagnostic the DSS→JSON converter emitted, verbatim and ungrouped. |
+| `powerio_diagnostics` | `from_dss` | The same diagnostics folded to one record per `(code, severity, component type)` class, each with its count, element paths and example messages. [`powerio_findings`](@ref) reads these back as `Finding`s and [`analyze`](@ref) reports them. |
 | `frequency_source` | `from_dss` | `"powerio"` when `meta.frequency` was captured from the parsed OpenDSS base frequency, or `"override"` when the `frequency=` keyword supplied it. |
 | `frequency_powerio` | `from_dss` | The parsed base frequency, recorded only when a `frequency=` override differs from it. |
 | `migration_notes` | [`BMOPFTools.migrate`](@ref) | Array of `W.MIGRATE.UPGRADED` finding dicts appended when a forward migration is applied. |
