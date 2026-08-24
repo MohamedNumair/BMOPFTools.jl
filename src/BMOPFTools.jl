@@ -2309,6 +2309,336 @@ function opf_dual end
 function opf_objective_value end
 
 """
+    OpfObjectiveTerm(name, expr; weight=1.0, units=:dimensionless, purpose="")
+
+One named, weighted contribution to a composed OPF objective.
+
+`expr` must be in the PHYSICAL unit named by `units` — watts, volts, V², or
+currency/hour — not in the model's working (per-unit) coordinates. That is what
+makes a composed objective mean the same thing in `per_unit=true` and
+`per_unit=false`: the term constructors ([`opf_loss_term`](@ref),
+[`opf_sequence_term`](@ref), [`opf_generation_cost_term`](@ref)) convert for you
+via [`opf_physical_scale`](@ref), and a hand-built term should do the same.
+
+`weight` is then in objective-units per physical-unit, so a weight tuned once
+stays correct across unit modes and under a future nondimensionalisation.
+
+`units` is recorded rather than checked: it reaches the regularization
+declaration and [`opf_research_hashes`](@ref), so what was combined — and in
+what units — is auditable after the fact.
+
+`valid_sense` records whether the term's expression means what it says under
+either optimisation direction (`:any`) or only when pushed DOWN (`:min`). An
+epigraph reduction such as `norm=:max` is `:min`: its variable is bounded from
+below by the targets and from above by nothing, so it equals the maximum only
+while it is being minimised with a non-negative weight. Maximising it, or giving
+it a negative weight, is unbounded rather than wrong-by-a-little.
+[`set_opf_objective!`](@ref) rejects those combinations instead of handing the
+solver an unbounded problem.
+"""
+struct OpfObjectiveTerm
+    name::Symbol
+    expr
+    weight::Float64
+    units::Symbol
+    purpose::String
+    valid_sense::Symbol
+end
+
+function OpfObjectiveTerm(name::Symbol, expr; weight::Real=1.0,
+                          units::Symbol=:dimensionless,
+                          purpose::AbstractString="",
+                          valid_sense::Symbol=:any)
+    isfinite(Float64(weight)) || throw(ArgumentError(
+        "objective term '$name': weight must be finite, got $weight"))
+    valid_sense in (:any, :min) || throw(ArgumentError(
+        "objective term '$name': valid_sense must be :any or :min, got " *
+        "$valid_sense"))
+    return OpfObjectiveTerm(name, expr, Float64(weight), units, String(purpose),
+                            valid_sense)
+end
+export OpfObjectiveTerm
+
+"""
+    opf_physical_scale(ctx, unit; bus=nothing) -> Float64
+
+Physical value of one working unit of `unit` — the factor converting an
+expression in the model's working coordinates into SI. Returns `1.0` throughout
+when the model was built in SI, so a term written against it needs no branch.
+
+`unit` is `:W`, `:var`, `:VA`, `:V`, `:V2`, `:A`, `:A2`, or `:dimensionless`.
+Voltage and current bases are PER BUS, so `bus` is required for those and
+omitting it throws — a system-wide voltage scale would be wrong on any network
+with more than one voltage level.
+
+Implemented in the `BMOPFOpfExt` extension.
+"""
+function opf_physical_scale end
+export opf_physical_scale
+
+"""
+    opf_reduce_norm(ctx, pairs; norm=:squared, scale=1.0, eps_rel=1e-3, name="")
+
+Reduce complex quantities `pairs` (a vector of `(re, im)` expression pairs) to
+one scalar, by `:squared` (L2), `:magnitude` (group-lasso, via
+[`smooth_norm`](@ref)) or `:max` (L∞ through a convex-quadratic epigraph, minimisation only).
+
+The choice changes the answer, not just the arithmetic: `:squared` improves
+every target a little, `:magnitude` drives a few to zero, `:max` protects the
+worst one. `:squared` and `:max` return the SQUARE of the input unit;
+`:magnitude` returns the input unit.
+
+Implemented in the `BMOPFOpfExt` extension.
+"""
+function opf_reduce_norm end
+export opf_reduce_norm
+
+"""
+    opf_loss_term(ctx; blocks, weight=1.0, name=:losses)
+    opf_sequence_term(ctx, buses; component=:negative, norm=:squared, weight=1.0)
+    opf_generation_cost_term(ctx; weight=1.0)
+
+Ready-made [`OpfObjectiveTerm`](@ref)s, in physical units (W, V²/V,
+currency/hour respectively), for [`set_opf_objective!`](@ref).
+
+Implemented in the `BMOPFOpfExt` extension.
+"""
+function opf_loss_term end
+export opf_loss_term
+
+@doc (@doc opf_loss_term)
+function opf_sequence_term end
+export opf_sequence_term
+
+@doc (@doc opf_loss_term)
+function opf_generation_cost_term end
+export opf_generation_cost_term
+
+"""
+    opf_branch_currents(ctx, block, id; side=:from) -> Vector{(terminal, re, im)}
+    opf_neutral_current(ctx, block, id; side=:from) -> (re, im)
+    opf_sequence_current(ctx, block, id; side=:from, component=:zero) -> (re, im)
+
+Conductor currents at one end of a two-port element, in the model's working
+units. The sign is the current flowing INTO the element (out of the bus) — the
+conductor current, not the ledger's "into bus" convention.
+
+`opf_neutral_current` is the current in the neutral terminal: the quantity that
+physically heats a neutral conductor, and usually what a 4-wire unbalance study
+wants to reduce. For a 4-wire element with no parallel earth path it equals
+`−3·I₀`, so it and a zero-sequence penalty are the same objective up to a
+factor of three — but this one is in amps of real conductor current. It throws
+on a three-wire element rather than returning a zero that would silently make
+the penalty vanish.
+
+`opf_sequence_current` uses the same Fortescue convention as
+[`opf_sequence_voltage`](@ref) and requires exactly three phase terminals.
+
+Implemented in the `BMOPFOpfExt` extension.
+"""
+function opf_branch_currents end
+export opf_branch_currents
+
+@doc (@doc opf_branch_currents)
+function opf_neutral_current end
+export opf_neutral_current
+
+@doc (@doc opf_branch_currents)
+function opf_sequence_current end
+export opf_sequence_current
+
+"""
+    opf_current_term(ctx, elements; quantity=:neutral, component=:zero,
+                     norm=:squared, weight=1.0)
+
+An [`OpfObjectiveTerm`](@ref) penalising branch currents over `elements`, each
+`(block, id)` or `(block, id, side)`. `quantity` is `:neutral` or `:sequence`.
+
+Converted to amps before reduction, so elements at different voltage levels are
+weighted on one physical footing and the weight is unit-mode independent.
+
+Implemented in the `BMOPFOpfExt` extension.
+"""
+function opf_current_term end
+export opf_current_term
+
+"""
+    opf_report_sequence_voltage(ctx, bus; component=:negative) -> Float64
+    opf_report_vuf(ctx, bus; percent=true) -> Float64
+    opf_report_current(ctx, block, id; side=:from, quantity=:neutral) -> Float64
+
+Post-solve reporting for the objective building blocks: solved magnitudes in
+PHYSICAL units (volts, percent, amps) in either unit mode. Call after
+`JuMP.optimize!`.
+
+`opf_report_vuf` is the counterpart to [`opf_vuf_term`](@ref), which minimises
+the SQUARED ratio — this returns the unsquared, directly comparable percentage.
+Reading a squared-VUF objective value as if it were a VUF is the mistake these
+helpers exist to prevent.
+
+Implemented in the `BMOPFOpfExt` extension.
+"""
+function opf_report_sequence_voltage end
+export opf_report_sequence_voltage
+
+@doc (@doc opf_report_sequence_voltage)
+function opf_report_vuf end
+export opf_report_vuf
+
+@doc (@doc opf_report_sequence_voltage)
+function opf_report_current end
+export opf_report_current
+
+"""
+    opf_control_effort_term(ctx, devices; reference=nothing, norm=:magnitude,
+                            weight=1.0)
+
+An [`OpfObjectiveTerm`](@ref) penalising how far dispatchable devices move from
+a reference operating point, as injected-current deviation in amps. `devices` is
+a collection of `(block, id)` with `block` `"ibr"` or `"generator"`.
+
+Current rather than P/Q deliberately: injected current is LINEAR in the decision
+variables, so the penalty is a norm of affine expressions.
+
+With the default `norm=:magnitude` each device contributes ONE grouped norm over
+all its phases, making the penalty a group-lasso over devices: it drives whole
+devices to their reference rather than nudging every device slightly. That is
+the difference between "re-dispatch these two units" and "re-dispatch all forty
+by 3% each", which `:squared` cannot express.
+
+Implemented in the `BMOPFOpfExt` extension.
+"""
+function opf_control_effort_term end
+export opf_control_effort_term
+
+"""
+    opf_vuf_term(ctx, buses; weight=1.0, percent=true)
+
+An [`OpfObjectiveTerm`](@ref) penalising the SQUARED voltage unbalance factor,
+`Σ (|V2|/|V1|)^2`, in percent-squared by default (EN 50160 §3.5 and
+IEC 61000-2-2 state their limit as 2%, i.e. 4.0 here).
+
+Squared deliberately. VUF looks like the one objective that must contain a
+square root, and building it from [`smooth_norm`](@ref) is actively wrong: the
+shift subtracts `eps` from numerator and denominator alike, and an `eps` sized
+to condition a norm heading to zero is comparable to the numerator itself — a
+true `|V2|` of 0.6 V against `eps = 0.26 V` mis-states the ratio by over 40%.
+The squared ratio needs no `eps`, is exact and smooth, and is strictly monotone
+in VUF so it orders solutions identically. Take `sqrt` post-solve.
+
+The voltage base cancels in the ratio, so the term is identical in per-unit and
+SI by construction.
+
+!!! warning "Requires `vpos_min` on every listed bus"
+    A ratio is well posed only while its denominator is bounded away from zero,
+    and `|V1|` is decision-dependent. Every listed bus must declare `vpos_min`,
+    which `bus.jl` enforces as an actual constraint; this throws otherwise
+    rather than handing the solver a term it can drive to `0/0`.
+
+    Prefer [`opf_sequence_term`](@ref) unless you specifically need the ratio:
+    with `|V1|` near nominal the two order solutions almost identically, and the
+    plain magnitude is exact, convex, cheaper, and has no denominator to guard.
+
+Implemented in the `BMOPFOpfExt` extension.
+"""
+function opf_vuf_term end
+export opf_vuf_term
+
+"""
+    opf_element_loss(ctx, block, id) -> JuMP expression
+    opf_total_loss(ctx; blocks=("line","transformer","switch")) -> JuMP expression
+
+Active-power loss of one two-port element, or of the whole network, as a JuMP
+expression in the model's WORKING units (per-unit when `per_unit=true`).
+
+Built from the same per-device terminal-injection ledger the post-solve result
+uses, so these expressions and `result["losses"]["p_loss"]` are the same
+quantity: an objective built on one cannot silently disagree with the other.
+
+`S_loss = Σ V · conj(I_into_element)` is BILINEAR in voltage and current, hence
+an exact smooth quadratic. A loss objective needs no smoothing and no magnitude
+— [`smooth_norm`](@ref) has no business here. (Semiconductor CONDUCTION loss is
+a different quantity: it is linear in `|I|` and does need the norm, but that is
+a device model rather than a network loss.)
+
+!!! note "Losses are not generation cost"
+    Minimising loss is not minimising [`generation_cost`](@ref). With
+    heterogeneous generation prices the two disagree: least-loss dispatch will
+    source from an expensive nearby unit rather than transport cheap distant
+    power. Combine them deliberately with explicit weights.
+
+Implemented in the `BMOPFOpfExt` extension (requires JuMP and Ipopt loaded).
+"""
+function opf_element_loss end
+export opf_element_loss
+
+@doc (@doc opf_element_loss)
+function opf_total_loss end
+export opf_total_loss
+
+"""
+    opf_sequence_voltage(ctx, bus; component=:negative) -> (re, im)
+
+Symmetrical-component voltage at `bus` as a pair of affine JuMP expressions in
+the model's working units. `component` is `:zero`, `:positive`, or `:negative`.
+
+These are the same expressions the bus sequence BOUNDS are built from
+(`vneg_max`, `vzero_max`, `vpos_min`/`vpos_max`), so a penalty and a limit on
+the same quantity cannot drift apart.
+
+The reference is phase-to-neutral where the bus neutral floats and
+phase-to-ground otherwise; using phase-to-ground on a floating-neutral bus would
+fold the neutral displacement into the zero-sequence component. Requires a
+three-phase bus and throws otherwise, rather than reporting the unbalance of an
+imagined one.
+
+The Fortescue transform is linear in the rectangular voltage variables, so both
+returned expressions are affine. `re^2 + im^2` is therefore an exact smooth
+quadratic needing no smoothing; only a MAGNITUDE penalty needs
+[`smooth_norm`](@ref).
+
+Implemented in the `BMOPFOpfExt` extension (requires JuMP and Ipopt loaded).
+"""
+function opf_sequence_voltage end
+export opf_sequence_voltage
+
+"""
+    smooth_norm(ctx, x, y; scale, eps_rel=1e-3, annotate=true, name="")
+
+Smooth 2-norm `sqrt(x^2 + y^2 + eps^2) - eps` of a complex quantity `(x, y)`, as
+a JuMP expression on `ctx`'s model, with `eps = eps_rel * scale`.
+
+The building block for any objective or constraint that needs the MAGNITUDE of a
+phasor where the exact norm's gradient would be singular. It is C-infinity
+everywhere including the origin (the exact norm's AD gradient there is 0/0, which
+Ipopt rejects outright), and it underestimates the exact norm by at most `eps` —
+a closed-form one-sided error budget rather than a tuning knob.
+
+`scale` is the quantity's characteristic magnitude in the model's WORKING units
+(a conductor rating for a current, a nominal voltage for a voltage), so the
+relative smoothing is the same for every device in a heterogeneous fleet and the
+same in SI and per-unit. See `ctx.bases` for the conversion.
+
+`eps_rel`'s safe range depends on how the norm is used, and guidance correct in
+one regime is wrong in the other:
+
+  * The norm is being **minimised** (it is the objective, or a penalty term). The
+    solve's endgame happens inside the smoothed region, so `eps` controls
+    conditioning: keep it large, around the `1e-3` default. Shrinking it to
+    solver-tolerance scale is measurably unreliable.
+  * The norm is a **coefficient** in a term whose optimum is away from zero (a
+    current-linear conduction loss, say). The solver never enters the smoothed
+    region, `eps` costs nothing, and it can be as small as the accuracy target
+    wants.
+
+Implemented in the `BMOPFOpfExt` extension (requires JuMP and Ipopt loaded).
+See also [`register_opf_differentiability_annotation!`](@ref), which this
+records by default so the approximation is never silent.
+"""
+function smooth_norm end
+export smooth_norm
+
+"""
     register_opf_regularization!(ctx, name; method, weight, term_key,
         targets=[], purpose, units=:dimensionless, owner=:downstream,
         metadata=Dict(), replace=false)
@@ -2526,6 +2856,15 @@ foreach(enforce_kcl!, ctxs)
 JuMP.optimize!(model)
 results = [extract_result(c) for c in ctxs]
 ```
+
+!!! warning "`enforce_kcl!` is not optional"
+    `build_opf_model` deliberately does not stamp KCL, so that a `model_hook!`
+    can still contribute to the nodal accumulators. Until `enforce_kcl!` runs,
+    the network is electrically disconnected and bus voltages are free
+    variables. Skipping it does not error: the solve reports `LOCALLY_SOLVED`
+    and returns a physically meaningless answer. `solve_opf` handles this for
+    you; a staged caller must not omit the `foreach(enforce_kcl!, ctxs)` line
+    above.
 
 The full per-argument contract for each function is documented on its own entry
 below.
