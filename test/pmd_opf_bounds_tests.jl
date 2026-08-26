@@ -296,4 +296,43 @@
         @test res["generator"]["der_e"]["1"]["pg"] ≈ 3394.3 atol=10.0
         @test res["objective"] ≈ -84.3943 atol=1e-3   # (−3·27 − 1·3.3943) $/h
     end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Case G2 — phase-to-neutral LOWER bound (vpn_min) binds (#157).
+    # Mirror of Case C in the pn quantity: the same four-wire two-DER feeder,
+    # phase-2-heavy loads (busm [5,9,4] kW, buse [2,12,2] kW) sag the end-bus
+    # pn voltages; positive costs make generation a last resort, so the
+    # vpn_min = 218 V floor is what forces support. The cheap SINGLE-PHASE
+    # der_e (2–n, +1) saturates its 4 kW box; the dear three-phase der_m (+3)
+    # covers the remainder — dispatching per phase until every pn magnitude
+    # lands exactly on the floor (no overshoot: floors bind on all three).
+    # The displaced neutral keeps |V_pg| up to 0.30 V off the floor (30× the
+    # assert tolerance), so a phase-to-ground mis-encoding cannot pass.
+    # Fixture: test/data/pmd_bounds/G2_vpn_min.json. PMD IVREN target (flat
+    # start, identical digits): der_m Σpg = 23.7793 kW ([2.3358, 19.8182,
+    # 1.6253]), der_e Σpg = 4.0 kW. A der_e ×9 cost perturbation flips the
+    # split (der_m → 34.03 kW), so the arbitration is non-degenerate.
+    # Reproduce with scripts/pmd_reproduction/ivren_cases.jl.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "G2: vpn_min binds — der_e 4 kW (box), der_m 23.7793 kW, |Vpn|=218 V" begin
+        net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "G2_vpn_min.json"))
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        b  = res["bus"]["buse"]
+        vn = b["n"]["vr"] + im * b["n"]["vi"]
+        # binding bound: every pn magnitude held exactly at the vpn_min floor,
+        # recomputed from the primal
+        for (k, ph) in enumerate(("1", "2", "3"))
+            @test abs(b[ph]["vr"] + im * b[ph]["vi"] - vn) ≈ 218.0 atol=1e-2
+        end
+        # the pn quantity binds, NOT phase-to-ground
+        @test abs(b["1"]["vr"] + im * b["1"]["vi"]) ≈ 217.6962 atol=1e-2
+        @test abs(vn) ≈ 0.3131 atol=1e-2
+        # two-generator arbitration: cheap der_e saturated, dear der_m interior
+        @test res["generator"]["der_e"]["2"]["pg"] ≈ 4000.0 atol=1.0
+        for (ph, pg) in (("1", 2335.8), ("2", 19818.2), ("3", 1625.3))
+            @test res["generator"]["der_m"][ph]["pg"] ≈ pg atol=10.0
+        end
+        @test res["objective"] ≈ 75.3379 atol=1e-3   # (3·23.7793 + 1·4) $/h
+    end
 end

@@ -58,3 +58,23 @@ let
                                              im * sol["bus"]["buse"]["vi"][4]); digits=4))
     perturbation_check(c -> solve_g1(c)[1], costs0, ["der_m", "der_e"]; ratio=9.0)
 end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Case G2 — vpn_min binds (four-wire, two DERs, cost-minimised support).
+# Flat start; the der_e ×9 perturbation must flip the dispatch order.
+# ─────────────────────────────────────────────────────────────────────────────
+let
+    costs0 = Dict("der_m" => 3.0, "der_e" => 1.0)
+    function solve_g2(costs)
+        net = load_fixture("G2_vpn_min")
+        _, sol, _ = solve_pmd_en(net; gen_costs=costs)
+        pmd_dispatch(sol), sol
+    end
+    disp, sol = solve_g2(costs0)
+    v = sol["bus"]["buse"]["vr"] .+ im .* sol["bus"]["buse"]["vi"]
+    print_targets("G2_vpn_min", disp,
+                  "|V_pn|(buse)" => round.([abs(v[k] - v[4]) for k in 1:3]; digits=4),
+                  "|V_n|(buse)" => round(abs(v[4]); digits=4),
+                  "der_m per-ph pg (kW)" => round.(sol["generator"]["der_m"]["pg"] ./ 1000; digits=4))
+    perturbation_check(c -> solve_g2(c)[1], costs0, ["der_m", "der_e"]; ratio=9.0)
+end
