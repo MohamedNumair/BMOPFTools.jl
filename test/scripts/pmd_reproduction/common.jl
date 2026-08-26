@@ -117,6 +117,43 @@ function solve_pmd_en(net::Dict;
             vs["va"] = vcat(Float64.(vs["va"]), 0.0)
         end
     end
+    # Transformers: BMOPF's s_rating is ALWAYS enforced; to_pmd exports it
+    # only as the nominal sm_nom, so mirror it into PMD's thermal cap sm_ub
+    # (enforced by the custom builder that restores the commented-out
+    # constraint_mc_transformer_thermal_limit call). BMOPF's single_phase
+    # subtype uses 1-terminal ground-referenced winding maps; PMD wye
+    # windings want phase+neutral, so append the (grounded) neutral.
+    for (_, tr) in get(eng, "transformer", Dict())
+        haskey(tr, "sm_nom") && !haskey(tr, "sm_ub") && (tr["sm_ub"] = tr["sm_nom"][1])
+        if haskey(tr, "connections")
+            tr["connections"] = [length(c) == 1 ? vcat(c, 4) : c for c in tr["connections"]]
+        end
+        # the JSON-import fixer misses the per-winding configuration vector
+        if haskey(tr, "configuration")
+            tr["configuration"] = [c isa AbstractString ?
+                (c == "DELTA" ? PMD.DELTA : PMD.WYE) : c for c in tr["configuration"]]
+        end
+        # ideal-core / fixed-tap defaults PMD's decomposition requires but
+        # to_pmd omits (per-winding vectors sized by each winding's phases)
+        get!(tr, "noloadloss", 0.0)
+        get!(tr, "cmag", 0.0)
+        nw_ = length(tr["connections"])
+        nph = [length(c) - 1 for c in tr["connections"]]
+        get!(tr, "tm_nom", ones(nw_))
+        get!(tr, "tm_set", [fill(1.0, nph[w]) for w in 1:nw_])
+        get!(tr, "tm_fix", [fill(true, nph[w]) for w in 1:nw_])
+        get!(tr, "tm_lb", [fill(0.9, nph[w]) for w in 1:nw_])
+        get!(tr, "tm_ub", [fill(1.1, nph[w]) for w in 1:nw_])
+        get!(tr, "tm_step", [fill(1 / 32, nph[w]) for w in 1:nw_])
+        get!(tr, "polarity", fill(1, nw_))
+    end
+    # PMD's mappers expect parser-style source_id on every component
+    for ct in ("bus", "line", "linecode", "load", "generator", "voltage_source",
+               "transformer", "shunt", "switch")
+        for (id, c) in get(eng, ct, Dict())
+            c isa Dict && get!(c, "source_id", "$ct.$id")
+        end
+    end
     # `to_pmd` does not set the load model or vm_nom; all fixtures here are
     # constant power (vm_nom is structural — it only scales ZIP-type models).
     vnom = isempty(vb) ? 230.0 : maximum(values(vb))

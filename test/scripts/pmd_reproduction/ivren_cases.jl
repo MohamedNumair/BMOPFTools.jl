@@ -166,3 +166,30 @@ let
                                                 im .* sol["bus"]["buse"]["vi"])[1:3]; digits=4))
     perturbation_check(c -> solve_w1(c)[1], costs0, ["der_m", "der_e"]; ratio=9.0)
 end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Case X1 — transformer s_rating binds. PMD ships the transformer thermal
+# limit commented out of its EN build, so a custom builder restores it; the
+# helper mirrors BMOPF's always-enforced s_rating into eng sm_ub. Flat start.
+# The der_m ×9 perturbation must win phase 1's headroom back from der_e.
+# ─────────────────────────────────────────────────────────────────────────────
+function build_mc_opf_xfmr_thermal(pm)
+    PMD.build_mc_opf(pm)
+    for i in PMD.ids(pm, :transformer)
+        PMD.constraint_mc_transformer_thermal_limit(pm, i)
+    end
+end
+let
+    costs0 = Dict("der_m" => -1.0, "der_e" => -3.0)
+    function solve_x1(costs)
+        net = load_fixture("X1_srating")
+        _, sol, _ = solve_pmd_en(net; gen_costs=costs, build=build_mc_opf_xfmr_thermal)
+        pmd_dispatch(sol), sol
+    end
+    disp, sol = solve_x1(costs0)
+    v = sol["bus"]["buse"]["vr"] .+ im .* sol["bus"]["buse"]["vi"]
+    print_targets("X1_srating", disp,
+                  "der_m per-ph pg (kW)" => round.(sol["generator"]["der_m"]["pg"] ./ 1000; digits=4),
+                  "|V_pg|(buse)" => round.(abs.(v[1:3]); digits=4))
+    perturbation_check(c -> solve_x1(c)[1], costs0, ["der_m", "der_e"]; ratio=9.0)
+end

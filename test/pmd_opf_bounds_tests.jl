@@ -505,4 +505,52 @@
         end
         @test res["objective"] ≈ -80.5463 atol=1e-3   # (−3·24 − 1·8.5463) $/h
     end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Case X1 — transformer nameplate power (s_rating) binds (#138).
+    # Three single-phase 1:1 isolation transformers (10 kVA each) connect the
+    # mid and end buses — the single-phase subtype makes BMOPF's per-coil cap
+    # and PMD's per-transformer total cap the SAME quantity, so the encodings
+    # align for any dispatch. Both DERs sit behind the transformers: the
+    # single-phase der_e (−3) outbids der_m (−1) for phase 1's nameplate
+    # headroom (der_m phase 1 lands on its 0 floor), and der_m fills phases
+    # 2–3 to their nameplates. r_series is kept small (0.002 Ω/winding) so the
+    # coil-vs-terminal measurement conventions of the two engines agree well
+    # inside the lock tolerance.
+    # Fixture: test/data/pmd_bounds/X1_srating.json. PMD IVREN target via a
+    # custom builder that restores the constraint_mc_transformer_thermal_limit
+    # call PMD ships commented out (flat start): der_e = 12.0005 kW, der_m =
+    # 24.0010 kW, |V(buse)| = 239.9965 V — within 5 W / 5 mV of the BMOPF
+    # values asserted below. Reproduce with
+    # scripts/pmd_reproduction/ivren_cases.jl.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "X1: s_rating binds — 10 kVA/phase, der_e 12.0048 kW, der_m 24.0095 kW" begin
+        net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "X1_srating.json"))
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        # binding bound: every transformer's from-winding coil |S| at the
+        # nameplate — independently recomputed as |V_bus|·|I_winding| (coarse:
+        # the series drop separates coil and terminal by a few VA), and the
+        # reported coil s at s_max exactly
+        for t in ("tx1", "tx2", "tx3")
+            fr = res["transformer"][t]["fr"]["1"]
+            ph = t == "tx1" ? "1" : t == "tx2" ? "2" : "3"
+            bm = res["bus"]["busm"][ph]
+            vm = abs(bm["vr"] + im * bm["vi"])
+            @test vm * hypot(fr["cr"], fr["ci"]) ≈ 10000.0 atol=10.0
+            @test fr["s"] ≈ 10000.0 atol=1e-2
+            @test fr["s_max"] == 10000.0
+        end
+        # end-bus voltage well inside its guards
+        for ph in ("1", "2", "3")
+            b = res["bus"]["buse"][ph]
+            @test abs(b["vr"] + im * b["vi"]) ≈ 240.0016 atol=1e-2
+        end
+        # two-generator arbitration on phase 1's nameplate headroom
+        @test res["generator"]["der_e"]["1"]["pg"] ≈ 12004.8 atol=10.0
+        @test res["generator"]["der_m"]["1"]["pg"] ≈ 0.0     atol=1.0
+        @test res["generator"]["der_m"]["2"]["pg"] ≈ 12004.8 atol=10.0
+        @test res["generator"]["der_m"]["3"]["pg"] ≈ 12004.8 atol=10.0
+        @test res["objective"] ≈ -60.0239 atol=1e-3   # (−3·12.0048 − 1·24.0095) $/h
+    end
 end
