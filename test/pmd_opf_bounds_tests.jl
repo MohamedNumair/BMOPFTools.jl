@@ -373,4 +373,48 @@
         @test res["generator"]["der_m"]["3"]["pg"] ≈ 580.9 atol=10.0
         @test res["objective"] ≈ -2.1435 atol=1e-3   # (−3·0.5809 − 1·0.4008) $/h
     end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Case H1 — phase-to-phase UPPER bound (vpp_max) binds (#157).
+    # Three-wire grounded feeder (A–E style), vpp_max = 405 V on the end bus
+    # only. The three-phase der_m (−3) saturates its 9 kW/phase box; the
+    # SINGLE-PHASE der_e (1–n, −1) raises phase 1 until the (1,2) pair spread
+    # hits the cap. Because only one unit phase is free, the pairs cannot
+    # equalise: (1,2) binds at exactly 405 V while (1,3)/(2,3) stay strictly
+    # inside (403.2 / 373.1 V) and the phase magnitudes are wildly unequal
+    # (248.6 / 210.7 / 222.5 V — far from 405/√3 ≈ 233.8), so a √3-scaled
+    # per-phase mis-encoding cannot pass. The unbounded MID bus even carries
+    # pair spreads above 405 V (406.05), proving the bound is per-bus.
+    # Fixture: test/data/pmd_bounds/H1_vpp_max.json. PMD IVREN target (flat
+    # start, identical digits): der_m Σpg = 27.0 kW, der_e = 9.2675 kW. A
+    # der_e ×9 cost perturbation pulls der_m off its box (15.59 / 15.06 kW).
+    # Reproduce with scripts/pmd_reproduction/ivren_cases.jl.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "H1: vpp_max binds — pair (1,2) at 405 V, der_m 27 kW, der_e 9.2675 kW" begin
+        net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "H1_vpp_max.json"))
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        b = res["bus"]["buse"]
+        v = [b[ph]["vr"] + im * b[ph]["vi"] for ph in ("1", "2", "3")]
+        # binding bound: pair (1,2) spread at vpp_max, recomputed from the
+        # primal; the other pairs strictly inside
+        @test abs(v[1] - v[2]) ≈ 405.0    atol=1e-2
+        @test abs(v[1] - v[3]) ≈ 403.2167 atol=1e-2
+        @test abs(v[2] - v[3]) ≈ 373.1262 atol=1e-2
+        # phase magnitudes are far from 405/√3 — a per-phase mis-encoding fails
+        for (ph, vm) in (("1", 248.6102), ("2", 210.6816), ("3", 222.5378))
+            @test abs(b[ph]["vr"] + im * b[ph]["vi"]) ≈ vm atol=1e-2
+        end
+        # the unbounded mid bus carries a pair spread ABOVE the cap
+        bm = res["bus"]["busm"]
+        vm13 = abs(bm["1"]["vr"] + im * bm["1"]["vi"] - bm["3"]["vr"] - im * bm["3"]["vi"])
+        @test vm13 ≈ 406.0473 atol=1e-2
+        @test vm13 > 405.0
+        # two-generator arbitration: der_m saturated, der_e interior
+        for ph in ("1", "2", "3")
+            @test res["generator"]["der_m"][ph]["pg"] ≈ 9000.0 atol=1.0
+        end
+        @test res["generator"]["der_e"]["1"]["pg"] ≈ 9267.5 atol=10.0
+        @test res["objective"] ≈ -90.2675 atol=1e-3   # (−3·27 − 1·9.2675) $/h
+    end
 end

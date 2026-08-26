@@ -100,3 +100,24 @@ let
                   "|V_pg|(buse)" => round.(abs.(v[1:3]); digits=4))
     perturbation_check(c -> solve_f(c)[1], costs0, ["der_m", "der_e"]; ratio=9.0)
 end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Case H1 — vpp_max binds (three-wire grounded, pair (1,2) at the cap).
+# Flat start; the der_e ×9 perturbation must pull der_m off its box.
+# ─────────────────────────────────────────────────────────────────────────────
+let
+    costs0 = Dict("der_m" => -3.0, "der_e" => -1.0)
+    function solve_h1(costs)
+        net = load_fixture("H1_vpp_max")
+        _, sol, _ = solve_pmd_en(net; gen_costs=costs)
+        pmd_dispatch(sol), sol
+    end
+    disp, sol = solve_h1(costs0)
+    v = sol["bus"]["buse"]["vr"] .+ im .* sol["bus"]["buse"]["vi"]
+    vm = sol["bus"]["busm"]["vr"] .+ im .* sol["bus"]["busm"]["vi"]
+    print_targets("H1_vpp_max", disp,
+                  "|V_pp|(buse)" => round.([abs(v[1]-v[2]), abs(v[1]-v[3]), abs(v[2]-v[3])]; digits=4),
+                  "|V_pg|(buse)" => round.(abs.(v[1:3]); digits=4),
+                  "|V_pp|(busm) (unbounded)" => round.([abs(vm[1]-vm[2]), abs(vm[1]-vm[3]), abs(vm[2]-vm[3])]; digits=4))
+    perturbation_check(c -> solve_h1(c)[1], costs0, ["der_m", "der_e"]; ratio=9.0)
+end
