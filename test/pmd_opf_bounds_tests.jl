@@ -26,7 +26,8 @@
 #   · Source: a stiff 230 V phase-to-ground wye source at 0/-120/+120°, modelled
 #     as an ideal BMOPF voltage source; perfectly-grounded "n" terminal at every
 #     bus (ideal return), so phase-to-ground = phase-to-neutral.
-#   · A DER is a `generator` at the feeder end. A per-phase linear `cost` ($/W)
+#   · A DER is a `generator` at the feeder end. A per-phase linear `cost` ($/kWh;
+#     the objective is cost·P/1000 in $/h, see `_add_objective!`)
 #     sets the objective direction: cost < 0 maximises export (A, B, D), cost > 0
 #     minimises local injection (C); pricing the source while the DER is reactive
 #     -only drives reactive support to its ceiling (E). The binding-bound optimum
@@ -167,7 +168,7 @@
         end
         pg, _ = _gen_kw_kvar(res)
         @test pg ≈ 106.958  atol=1e-2
-        @test res["objective"] ≈ 106957.697  atol=1.0    # cost(+1)·Σpg
+        @test res["objective"] ≈ 106.957697  atol=1e-3   # cost(+1 /kWh)·Σpg/1000, currency/h
     end
 
     # ─────────────────────────────────────────────────────────────────────────
