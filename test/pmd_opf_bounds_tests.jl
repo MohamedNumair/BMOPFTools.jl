@@ -596,4 +596,106 @@
         @test pg_e ≈ 7652.8 atol=10.0
         @test res["objective"] ≈ -61.6528 atol=1e-3   # (−3·18 − 1·7.6528) $/h
     end
+
+    # Independent Fortescue expansion shared by the sequence cases S1–S3 —
+    # the same /3-normalised convention PMD's ACP constraints use.
+    _seq(vs) = ((vs[1] + vs[2] + vs[3]) / 3,
+                (vs[1] + cis(2π/3) * vs[2] + cis(-2π/3) * vs[3]) / 3,
+                (vs[1] + cis(-2π/3) * vs[2] + cis(2π/3) * vs[3]) / 3)
+    _phasors(res, bid) = [res["bus"][bid][ph]["vr"] + im * res["bus"][bid][ph]["vi"]
+                          for ph in ("1", "2", "3")]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Case S1 — POSITIVE-sequence upper bound (vpos_max) binds (#157).
+    # Cross-validated against PMD's ACP sequence constraints — which exist
+    # only for the three-wire ACP formulation and are wired into no shipped
+    # PMD problem (their template is additionally stale in v0.16), so the
+    # reference is ACPUPowerModel plus a custom builder calling the
+    # constraint functions directly. Definitions align (/3 Fortescue,
+    # squared magnitudes). Two three-phase DERs export until the collective
+    # voltage rise hits |V₊| = vpos_max = 236 V; tight vneg/vzero side-caps
+    # (4 V) stop the optimizer exploiting per-phase freedom, T10-style —
+    # vzero also binds, vneg stays strictly inside (3.9685 V), and the phase
+    # magnitudes are unequal (238.3/241.1/228.6 V), so |V₊| is genuinely the
+    # constrained quantity, not a per-phase cap.
+    # Fixture: test/data/pmd_bounds/S1_vpos_max.json. PMD ACP target (flat
+    # start, identical digits): der_m Σpg = 18.0 kW (box), der_e Σpg =
+    # 13.2433 kW. A der_e ×9 perturbation flips the split completely.
+    # Reproduce with scripts/pmd_reproduction/acp_sequence.jl.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "S1: vpos_max binds — |V₊|=236 V, der_m 18 kW, der_e 13.2433 kW" begin
+        net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "S1_vpos_max.json"))
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        v0, vp, vn = _seq(_phasors(res, "buse"))
+        @test abs(vp) ≈ 236.0   atol=1e-2    # binding
+        @test abs(v0) ≈ 4.0     atol=1e-2    # side-cap binding
+        @test abs(vn) ≈ 3.9685  atol=1e-2    # strictly inside its 4 V cap
+        # unequal phase magnitudes — |V₊| is not a per-phase bound in disguise
+        for (ph, vm) in (("1", 238.2594), ("2", 241.12), ("3", 228.6413))
+            b = res["bus"]["buse"][ph]
+            @test abs(b["vr"] + im * b["vi"]) ≈ vm atol=1e-2
+        end
+        for ph in ("1", "2", "3")
+            @test res["generator"]["der_m"][ph]["pg"] ≈ 6000.0 atol=1.0
+        end
+        pg_e = sum(res["generator"]["der_e"][ph]["pg"] for ph in ("1", "2", "3"))
+        @test pg_e ≈ 13243.3 atol=10.0
+        @test res["objective"] ≈ -67.2433 atol=1e-3   # (−3·18 − 1·13.2433) $/h
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Case S2 — NEGATIVE-sequence upper bound (vneg_max) binds (#157).
+    # Two SINGLE-PHASE exporters on different phases (der_e on 1, der_m on 3)
+    # of the end bus create negative-sequence voltage in different complex
+    # directions: |V₋| ≤ 3 V is a shared 2-D disc budget (the F-case pattern
+    # in sequence space) whose curved boundary arbitrates both units. The
+    # un-capped |V₀| lands nearby but free (2.9818 V), the mid-bus |V₋|
+    # (1.5185 V) shows the bound is per-bus.
+    # Fixture: test/data/pmd_bounds/S2_vneg_max.json. PMD ACP target (flat
+    # start, identical digits — phase_project off so the units keep their
+    # phase identity): der_m = 3.4101 kW, der_e = 2.4158 kW; a der_e ×9
+    # perturbation mirrors the split. Reproduce with
+    # scripts/pmd_reproduction/acp_sequence.jl.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "S2: vneg_max binds — |V₋|=3 V, der_m 3.4101 kW, der_e 2.4158 kW" begin
+        net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "S2_vneg_max.json"))
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        v0, vp, vn = _seq(_phasors(res, "buse"))
+        @test abs(vn) ≈ 3.0     atol=1e-2    # binding
+        @test abs(v0) ≈ 2.9818  atol=1e-2    # un-capped, strictly off 3.0
+        @test abs(vp) ≈ 221.6653 atol=1e-2
+        # the un-capped mid bus sits well inside
+        v0m, vpm, vnm = _seq(_phasors(res, "busm"))
+        @test abs(vnm) ≈ 1.5185 atol=1e-2
+        @test res["generator"]["der_m"]["3"]["pg"] ≈ 3410.1 atol=10.0
+        @test res["generator"]["der_e"]["1"]["pg"] ≈ 2415.8 atol=10.0
+        @test res["objective"] ≈ -12.6461 atol=1e-3   # (−3·3.4101 − 1·2.4158) $/h
+    end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Case S3 — ZERO-sequence upper bound (vzero_max) binds (#157).
+    # Mirror of S2 with the cap on |V₀| ≤ 3 V instead: the same two
+    # single-phase exporters drive the common-mode component onto its disc
+    # boundary. The un-capped |V₋| (3.0193 V) lands ABOVE the |V₀| cap —
+    # direct evidence the two components are distinct quantities and the
+    # right one is constrained.
+    # Fixture: test/data/pmd_bounds/S3_vzero_max.json. PMD ACP target (flat
+    # start, identical digits): der_m = 3.4467 kW, der_e = 2.3883 kW.
+    # Reproduce with scripts/pmd_reproduction/acp_sequence.jl.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "S3: vzero_max binds — |V₀|=3 V, der_m 3.4467 kW, der_e 2.3883 kW" begin
+        net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "S3_vzero_max.json"))
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        v0, vp, vn = _seq(_phasors(res, "buse"))
+        @test abs(v0) ≈ 3.0     atol=1e-2    # binding
+        @test abs(vn) ≈ 3.0193  atol=1e-2    # un-capped — sits ABOVE the V₀ cap
+        @test abs(vn) > 3.0
+        @test abs(vp) ≈ 221.6728 atol=1e-2
+        @test res["generator"]["der_m"]["3"]["pg"] ≈ 3446.7 atol=10.0
+        @test res["generator"]["der_e"]["1"]["pg"] ≈ 2388.3 atol=10.0
+        @test res["objective"] ≈ -12.7284 atol=1e-3   # (−3·3.4467 − 1·2.3883) $/h
+    end
 end

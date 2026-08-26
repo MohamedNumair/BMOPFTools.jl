@@ -190,8 +190,10 @@ function solve_pmd_en(net::Dict;
     eng_mod!(eng)
     # kron=true targets the three-wire Kron-reduced formulations (e.g. IVRU
     # for the angle-difference case, whose constraint has no EN counterpart)
+    # phase_project stays off: it would rebuild partial-phase units as rotated
+    # three-phase ones, changing the feasible set for single-phase DERs
     math = PMD.transform_data_model(eng; multinetwork=false,
-                                    kron_reduce=kron, phase_project=kron)
+                                    kron_reduce=kron, phase_project=false)
     kron || PMD.add_start_vrvi!(math)
     for (_, gen) in math["gen"]
         c = Float64(get(gen_costs, get(gen, "name", ""), 0.0))
