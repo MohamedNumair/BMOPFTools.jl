@@ -143,3 +143,26 @@ let
                   "der_m per-ph pg (kW)" => round.(sol["generator"]["der_m"]["pg"] ./ 1000; digits=4))
     perturbation_check(c -> solve_h2(c)[1], costs0, ["der_m", "der_e"]; ratio=9.0)
 end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Case W1 — line i_max with a from-side-only shunt binds. The rating and the
+# shunt live on the linecode (to_pmd exports linecode i_max → cm_ub; the
+# helper converts BMOPF's siemens shunts to PMD's nF-style eng fields).
+# Flat start; the der_e ×9 perturbation must flip the order completely.
+# ─────────────────────────────────────────────────────────────────────────────
+let
+    costs0 = Dict("der_m" => -3.0, "der_e" => -1.0)
+    function solve_w1(costs)
+        net = load_fixture("W1_imax_shunt")
+        _, sol, _ = solve_pmd_en(net; gen_costs=costs)
+        pmd_dispatch(sol), sol
+    end
+    disp, sol = solve_w1(costs0)
+    l1 = sol["line"]["l1"]
+    print_targets("W1_imax_shunt", disp,
+                  "|I_fr|(l1)" => round.(abs.(l1["cr_fr"] .+ im .* l1["ci_fr"]); digits=4),
+                  "|I_to|(l1)" => round.(abs.(l1["cr_to"] .+ im .* l1["ci_to"]); digits=4),
+                  "|V_pg|(buse)" => round.(abs.(sol["bus"]["buse"]["vr"] .+
+                                                im .* sol["bus"]["buse"]["vi"])[1:3]; digits=4))
+    perturbation_check(c -> solve_w1(c)[1], costs0, ["der_m", "der_e"]; ratio=9.0)
+end

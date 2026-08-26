@@ -459,4 +459,50 @@
         @test res["generator"]["der_m"]["3"]["pg"] ≈ 0.0    atol=1.0
         @test res["objective"] ≈ 45.5445 atol=1e-3   # (3·11.0412 + 1·12.4209) $/h
     end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Case W1 — line current limit WITH a line shunt binds (#138).
+    # Case-B companion: the bounded line l1 carries a FROM-side-only capacitive
+    # π-shunt (B_from = 0.02 S/phase on the linecode, which also carries the
+    # i_max = 25 A rating). Both engines bound the TOTAL current at each end,
+    # so the shunt asymmetry shows in the primal: the from-side magnitude sits
+    # exactly at 25 A while the to-side (= series current here, b_to = 0) is
+    # strictly below at 24.6235 A — a series-current-only mis-encoding would
+    # push the from-side total above the cap and fail. Both DERs export
+    # through l1: der_m (−3) saturates its 8 kW/phase box, der_e (−1) takes
+    # the remaining line headroom.
+    # Fixture: test/data/pmd_bounds/W1_imax_shunt.json. PMD IVREN target (flat
+    # start; eng shunts are nF-style, see the reproduction helper): der_m
+    # Σpg = 24.0 kW, der_e Σpg = 8.5463 kW (PMD 8.5491, within the 1e-2 kW
+    # lock tolerance). A der_e ×9 perturbation flips the order completely
+    # (der_e 33.87 kW, der_m 0). Reproduce with
+    # scripts/pmd_reproduction/ivren_cases.jl.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "W1: line i_max with shunt binds — |I_fr|=25 A, der_m 24 kW, der_e 8.5463 kW" begin
+        net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "W1_imax_shunt.json"))
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        # binding bound: TOTAL from-side current at the rating on every
+        # conductor, recomputed from the primal cr/ci; the to-side strictly
+        # below — the from-side shunt's contribution
+        for c in ("1", "2", "3")
+            ln = res["line"]["l1"][c]
+            @test hypot(ln["cr_fr"], ln["ci_fr"]) ≈ 25.0     atol=1e-2
+            @test hypot(ln["cr_to"], ln["ci_to"]) ≈ 24.6235  atol=1e-2
+        end
+        # voltages nowhere near their guards
+        for bid_vm in (("busm", 237.3733), ("buse", 238.4409))
+            bid, vm = bid_vm
+            for ph in ("1", "2", "3")
+                b = res["bus"][bid][ph]
+                @test abs(b["vr"] + im * b["vi"]) ≈ vm atol=1e-2
+            end
+        end
+        # two-generator arbitration on the shared line headroom
+        for ph in ("1", "2", "3")
+            @test res["generator"]["der_m"][ph]["pg"] ≈ 8000.0 atol=1.0
+            @test res["generator"]["der_e"][ph]["pg"] ≈ 2848.8 atol=10.0
+        end
+        @test res["objective"] ≈ -80.5463 atol=1e-3   # (−3·24 − 1·8.5463) $/h
+    end
 end

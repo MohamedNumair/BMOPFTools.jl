@@ -126,10 +126,16 @@ function solve_pmd_en(net::Dict;
     end
     # `to_pmd` emits shunt matrices only when the BMOPF linecode carries them,
     # but PMD's eng2math requires the keys — fill zeros of the series size.
-    for (_, lc) in get(eng, "linecode", Dict())
+    # Present values need a UNIT conversion: BMOPF B_from/G_from are siemens,
+    # while PMD's eng line shunt fields are capacitance-style nF/length —
+    # eng2math applies b = 2πf·val·1e-9·length (`_admittance_conversion`).
+    f_hz = eng["settings"]["base_frequency"]
+    s_to_nF = 1e9 / (2π * f_hz)
+    for comp in ("linecode", "line"), (_, lc) in get(eng, comp, Dict())
+        haskey(lc, "rs") || continue
         z = zero(lc["rs"])
         for k in ("g_fr", "g_to", "b_fr", "b_to")
-            haskey(lc, k) || (lc[k] = copy(z))
+            haskey(lc, k) ? (lc[k] = lc[k] .* s_to_nF) : (lc[k] = copy(z))
         end
     end
     eng_mod!(eng)
