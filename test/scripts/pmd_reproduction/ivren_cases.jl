@@ -78,3 +78,25 @@ let
                   "der_m per-ph pg (kW)" => round.(sol["generator"]["der_m"]["pg"] ./ 1000; digits=4))
     perturbation_check(c -> solve_g2(c)[1], costs0, ["der_m", "der_e"]; ratio=9.0)
 end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Case F — vn_max binds (four-wire, two single-phase DERs on different phases
+# sharing the |Vₙ| ≤ 6 V disc budget). Flat start; both ×9 cost perturbations
+# must slide the split along the disc boundary.
+# ─────────────────────────────────────────────────────────────────────────────
+let
+    costs0 = Dict("der_m" => -3.0, "der_e" => -1.0)
+    function solve_f(costs)
+        net = load_fixture("F_vn_max")
+        _, sol, _ = solve_pmd_en(net; gen_costs=costs)
+        pmd_dispatch(sol), sol
+    end
+    disp, sol = solve_f(costs0)
+    v = sol["bus"]["buse"]["vr"] .+ im .* sol["bus"]["buse"]["vi"]
+    vm_busm_n = abs(sol["bus"]["busm"]["vr"][4] + im * sol["bus"]["busm"]["vi"][4])
+    print_targets("F_vn_max", disp,
+                  "|V_n|(buse)" => round(abs(v[4]); digits=4),
+                  "|V_n|(busm)" => round(vm_busm_n; digits=4),
+                  "|V_pg|(buse)" => round.(abs.(v[1:3]); digits=4))
+    perturbation_check(c -> solve_f(c)[1], costs0, ["der_m", "der_e"]; ratio=9.0)
+end

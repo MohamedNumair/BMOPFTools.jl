@@ -335,4 +335,42 @@
         end
         @test res["objective"] ≈ 75.3379 atol=1e-3   # (3·23.7793 + 1·4) $/h
     end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Case F — NEUTRAL voltage upper bound (vn_max) binds (#157).
+    # Same four-wire feeder, near-balanced loads (so the baseline neutral
+    # displacement stays well under the cap). Two SINGLE-PHASE exporters sit on
+    # different phases of the end bus (der_e on 1–n at −1, der_m on 3–n at −3):
+    # each unit's export displaces the ungrounded end-bus neutral in a
+    # different complex direction, so |Vₙ| ≤ vn_max = 6 V is a shared 2-D disc
+    # budget whose curved boundary arbitrates the two units continuously —
+    # both land interior with the cap exactly active. Cost-ratio perturbations
+    # slide the split along the boundary (×9 on either unit moves both
+    # dispatches), so the arbitration is non-degenerate.
+    # Fixture: test/data/pmd_bounds/F_vn_max.json. PMD IVREN target (flat
+    # start, identical digits): der_e = 0.4008 kW, der_m = 0.5809 kW,
+    # |Vₙ(buse)| = 6.0 V, |Vₙ(busm)| = 3.577 V (strictly inside — the bound is
+    # per-bus). Reproduce with scripts/pmd_reproduction/ivren_cases.jl.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "F: vn_max binds — |Vn|=6 V, der_e 0.4008 kW, der_m 0.5809 kW" begin
+        net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "F_vn_max.json"))
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        # binding bound: the neutral-to-ground magnitude at the cap, recomputed
+        # from the primal as √(vrₙ² + viₙ²)
+        bn = res["bus"]["buse"]["n"]
+        @test abs(bn["vr"] + im * bn["vi"]) ≈ 6.0 atol=1e-2
+        # the un-capped mid-bus neutral sits strictly inside
+        mn = res["bus"]["busm"]["n"]
+        @test abs(mn["vr"] + im * mn["vi"]) ≈ 3.577 atol=1e-2
+        # phase-to-ground magnitudes are nowhere near the cap or the guards
+        for (ph, vm) in (("1", 200.0687), ("2", 195.2269), ("3", 203.0483))
+            b = res["bus"]["buse"][ph]
+            @test abs(b["vr"] + im * b["vi"]) ≈ vm atol=1e-2
+        end
+        # two-generator arbitration on the shared disc budget
+        @test res["generator"]["der_e"]["1"]["pg"] ≈ 400.8 atol=10.0
+        @test res["generator"]["der_m"]["3"]["pg"] ≈ 580.9 atol=10.0
+        @test res["objective"] ≈ -2.1435 atol=1e-3   # (−3·0.5809 − 1·0.4008) $/h
+    end
 end
