@@ -56,6 +56,17 @@ function inject_pmd_bounds!(net::Dict; vscale::Real=1.0)
         isempty(pair_ub) || (extra["vm_pair_ub"] = pair_ub)
         isempty(extra) || (bus["_pmd"] = merge(get(bus, "_pmd", Dict{String,Any}()), extra))
     end
+    # Branch angle-difference bounds: BMOPF va_diff_min/max are per-line
+    # RADIANS; PMD's eng line vad_lb/ub are per-conductor DEGREES.
+    for (_, line) in get(net, "line", Dict())
+        extra = Dict{String,Any}()
+        nph = count(!=("n"), get(line, "terminal_map_from", String[]))
+        haskey(line, "va_diff_min") &&
+            (extra["vad_lb"] = fill(rad2deg(Float64(line["va_diff_min"])), nph))
+        haskey(line, "va_diff_max") &&
+            (extra["vad_ub"] = fill(rad2deg(Float64(line["va_diff_max"])), nph))
+        isempty(extra) || (line["_pmd"] = merge(get(line, "_pmd", Dict{String,Any}()), extra))
+    end
     net
 end
 
@@ -74,7 +85,8 @@ function solve_pmd_en(net::Dict;
                       eng_mod!::Function=identity,
                       math_mod!::Function=identity,
                       form=PMD.IVRENPowerModel,
-                      build=PMD.build_mc_opf)
+                      build=PMD.build_mc_opf,
+                      kron::Bool=false)
     vscale_probe = BMOPFTools.to_pmd(net)["settings"]["voltage_scale_factor"]
     inject_pmd_bounds!(net; vscale=vscale_probe)
     eng = BMOPFTools.to_pmd(net)
@@ -176,9 +188,11 @@ function solve_pmd_en(net::Dict;
         end
     end
     eng_mod!(eng)
+    # kron=true targets the three-wire Kron-reduced formulations (e.g. IVRU
+    # for the angle-difference case, whose constraint has no EN counterpart)
     math = PMD.transform_data_model(eng; multinetwork=false,
-                                    kron_reduce=false, phase_project=false)
-    PMD.add_start_vrvi!(math)
+                                    kron_reduce=kron, phase_project=kron)
+    kron || PMD.add_start_vrvi!(math)
     for (_, gen) in math["gen"]
         c = Float64(get(gen_costs, get(gen, "name", ""), 0.0))
         gen["cost"] = [c, 0.0]

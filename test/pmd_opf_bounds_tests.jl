@@ -553,4 +553,47 @@
         @test res["generator"]["der_m"]["3"]["pg"] ≈ 12004.8 atol=10.0
         @test res["objective"] ≈ -60.0239 atol=1e-3   # (−3·12.0048 − 1·24.0095) $/h
     end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Case D1 — branch ANGLE-DIFFERENCE bound (va_diff_*) binds (#138, and
+    # closes the branch-angle row of the limit inventory).
+    # Three-wire grounded feeder with reactive lines (X/R = 7); export swings
+    # the source-line angle until Δθ = θ_from − θ_to hits va_diff_min =
+    # −0.03 rad (−1.7189°) on every phase — the export direction makes the
+    # LOWER bound the active side, pinning the sign convention. der_m (−3)
+    # saturates its 6 kW/phase box; der_e (−1) takes the remaining angle
+    # budget. The mid line's angle (−0.207°) sits far inside its own default
+    # band, showing the bound is per-branch. The recompute uses atan2 of the
+    # complex voltage ratio — independent of the cross/dot-product encoding.
+    # Fixture: test/data/pmd_bounds/D1_va_diff.json. PMD reference is the
+    # THREE-WIRE IVRUPowerModel (stock build; PMD's explicit-neutral models
+    # implement no angle-difference constraint), Kron-reduced — the grounded
+    # fixture makes the models coincide. Targets (flat start, identical
+    # digits): der_m Σpg = 18.0 kW, der_e Σpg = 7.6528 kW. A der_e ×9
+    # perturbation flips the split completely (25.63 / 0 kW). Reproduce with
+    # scripts/pmd_reproduction/ivru_angle.jl.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "D1: branch va_diff binds — Δθ(l1) = −1.7189°, der_m 18 kW, der_e 7.6528 kW" begin
+        net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "D1_va_diff.json"))
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        dtheta(b1, b2, ph) = angle(
+            (res["bus"][b1][ph]["vr"] + im * res["bus"][b1][ph]["vi"]) /
+            (res["bus"][b2][ph]["vr"] + im * res["bus"][b2][ph]["vi"]))
+        for ph in ("1", "2", "3")
+            # binding bound: the l1 angle difference at va_diff_min, recomputed
+            # from the primal via atan2 — the export direction makes it the
+            # LOWER side (θ_from − θ_to < 0)
+            @test dtheta("sourcebus", "busm", ph) ≈ -0.03 atol=1e-4
+            # the unbounded mid line sits far inside
+            @test dtheta("busm", "buse", ph) ≈ deg2rad(-0.2072) atol=1e-4
+        end
+        # two-generator arbitration on the shared angle budget
+        for ph in ("1", "2", "3")
+            @test res["generator"]["der_m"][ph]["pg"] ≈ 6000.0 atol=1.0
+        end
+        pg_e = sum(res["generator"]["der_e"][ph]["pg"] for ph in ("1", "2", "3"))
+        @test pg_e ≈ 7652.8 atol=10.0
+        @test res["objective"] ≈ -61.6528 atol=1e-3   # (−3·18 − 1·7.6528) $/h
+    end
 end
