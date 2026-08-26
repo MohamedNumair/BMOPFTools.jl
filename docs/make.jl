@@ -18,6 +18,7 @@ makedocs(
         "Home"                    => "index.md",
         "Getting started"         => [
             "Installation & first steps" => "installation.md",
+            "Use with AI coding assistants" => "ai_assistants.md",
             "End-to-end tutorial"      => "tutorial_end_to_end.md",
             "Choose your tutorial"     => "choose_tutorial.md",
             "Positioning & ecosystem"  => "positioning.md",
@@ -34,6 +35,7 @@ makedocs(
         ],
         "Analysis & diagnostics"  => [
             "Analysis & reports"       => "analysis.md",
+            "Scientific contracts"     => "scientific_contracts.md",
             "Finding-code reference"   => "findings.md",
             "Findings triage tutorial" => "tutorial_triage.md",
             "Trust but verify: validating a solve" => "tutorial_trust_but_verify.md",

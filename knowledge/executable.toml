@@ -1,0 +1,781 @@
+schema_version = "0.1.0"
+
+[[contract]]
+id = "parallel_member_limit_preservation"
+knowledge_ids = ["PSK-000001"]
+title = "Parallel member-current-limit preservation"
+entrypoint = "check_parallel_member_limit_preservation"
+scope = "Scalar, fixed-linear, series-only parallel lines with an explicit source-member to target-aggregate mapping."
+applicability = [
+  "Every source member and the target aggregate connect the same scalar terminal pair, allowing reversed orientation.",
+  "Every included line has a finite, nonzero scalar series impedance and no shunt model.",
+  "Every source member and the target aggregate has a nonnegative scalar current rating.",
+]
+checked_dimensions = ["terminal_behavior", "scalar_member_current_limits"]
+unassessed_dimensions = [
+  "member_identity",
+  "independent_outage_state",
+  "switching_decisions",
+  "asset_provenance",
+  "individual_measurements",
+  "protection_quantities",
+]
+finding_codes = [
+  "E.CONTRACT.PARALLEL_TERMINAL_RELATION_MISMATCH",
+  "W.CONTRACT.PARALLEL_MEMBER_LIMIT_LOSS",
+  "I.CONTRACT.NOT_APPLICABLE",
+  "W.CONTRACT.INDETERMINATE",
+]
+fixture_ids = ["parallel-rating-outer-relaxation-001"]
+source_paths = [
+  "src/knowledge/contracts.jl",
+  "docs/src/findings.md",
+  "test/scientific_contract_tests.jl",
+]
+
+[[finding]]
+code = "E.CONTRACT.PARALLEL_TERMINAL_RELATION_MISMATCH"
+severity = "ERROR"
+meaning = "The declared target aggregate does not preserve the summed scalar source admittance."
+
+[[finding]]
+code = "W.CONTRACT.PARALLEL_MEMBER_LIMIT_LOSS"
+severity = "WARNING"
+meaning = "The target aggregate rating defines an inner restriction or outer relaxation of the source member-current-limit region."
+
+[[finding]]
+code = "I.CONTRACT.NOT_APPLICABLE"
+severity = "INFO"
+meaning = "The input lies outside the contract's declared scalar, fixed-linear, series-only domain."
+
+[[finding]]
+code = "W.CONTRACT.INDETERMINATE"
+severity = "WARNING"
+meaning = "Required mapped components or scalar ratings are unavailable, so preservation cannot be decided."
+
+[[contract]]
+id = "neutral_ground_reference_preservation"
+knowledge_ids = ["PSK-000002"]
+title = "Neutral, ground, and reference preservation"
+entrypoint = "check_neutral_ground_reference_preservation"
+scope = "Representation-level comparison of explicit neutral identity, neutral continuity, perfect grounding, scalar finite grounding shunts, and voltage-source reference incidence across an explicit bus mapping."
+applicability = [
+  "At least two source buses with identifiable explicit neutral terminals map one-to-one to target buses.",
+  "Neutral continuity is represented by line, closed-switch, or single-phase-autotransformer terminal maps.",
+  "Finite grounding is represented by resolvable scalar neutral-only shunts; coupled grounding models are outside this initial contract.",
+]
+checked_dimensions = ["neutral_terminal_identity", "neutral_continuity", "ground_reference_relations"]
+unassessed_dimensions = [
+  "electrical_terminal_behavior",
+  "explicit_earth_conductor_behavior",
+  "soil_and_electrode_model",
+  "grounding_asset_identity_and_state",
+  "fault_current",
+  "touch_voltage",
+  "protection_operation",
+]
+finding_codes = [
+  "E.CONTRACT.NEUTRAL_IDENTITY_LOSS",
+  "E.CONTRACT.NEUTRAL_CONTINUITY_MISMATCH",
+  "E.CONTRACT.GROUND_REFERENCE_RELATION_MISMATCH",
+  "I.CONTRACT.NEUTRAL_GROUND_NOT_APPLICABLE",
+  "W.CONTRACT.NEUTRAL_GROUND_INDETERMINATE",
+]
+fixture_ids = ["neutral-ground-reference-conflation-001"]
+source_paths = [
+  "src/knowledge/contracts.jl",
+  "docs/src/findings.md",
+  "test/scientific_contract_tests.jl",
+]
+
+[[finding]]
+code = "E.CONTRACT.NEUTRAL_IDENTITY_LOSS"
+severity = "ERROR"
+meaning = "A mapped target bus has no identifiable explicit neutral terminal, so the source neutral representation was discarded."
+
+[[finding]]
+code = "E.CONTRACT.NEUTRAL_CONTINUITY_MISMATCH"
+severity = "ERROR"
+meaning = "The target changes whether mapped bus neutrals are connected through declared neutral-carrying components."
+
+[[finding]]
+code = "E.CONTRACT.GROUND_REFERENCE_RELATION_MISMATCH"
+severity = "ERROR"
+meaning = "The target changes a mapped neutral's perfect-ground, finite-grounding, or voltage-source-reference relation."
+
+[[finding]]
+code = "I.CONTRACT.NEUTRAL_GROUND_NOT_APPLICABLE"
+severity = "INFO"
+meaning = "The input lies outside the contract's explicit-neutral and scalar neutral-only grounding domain."
+
+[[finding]]
+code = "W.CONTRACT.NEUTRAL_GROUND_INDETERMINATE"
+severity = "WARNING"
+meaning = "A mapped bus or resolvable grounding relation is unavailable, so preservation cannot be decided."
+
+[[contract]]
+id = "claimed_solution_validity"
+knowledge_ids = ["PSK-000003"]
+title = "Claimed-feasible solution validity"
+entrypoint = "check_claimed_solution_validity"
+scope = "Independent validation of a claimed-feasible result's complete bus-terminal numeric data and declared bus voltage-magnitude, sequence-voltage, and angle-difference limits."
+applicability = [
+  "The result declares LOCALLY_SOLVED, OPTIMAL, or ALMOST_LOCALLY_SOLVED.",
+  "The network declares at least one bus terminal.",
+  "The result provides numeric vr, vi, and vm fields for every declared bus terminal.",
+]
+checked_dimensions = [
+  "termination_status",
+  "result_numeric_finiteness",
+  "declared_bus_voltage_and_angle_limits",
+]
+unassessed_dimensions = [
+  "network_equation_residuals",
+  "branch_thermal_limits",
+  "transformer_limits",
+  "generator_and_ibr_limits",
+  "load_model_residuals",
+  "network_power_balance",
+  "objective_optimality",
+  "local_or_global_optimality",
+  "solver_derivative_quality",
+]
+finding_codes = [
+  "E.CONTRACT.CLAIMED_FEASIBLE_SOLUTION_INVALID",
+  "I.CONTRACT.SOLUTION_STATUS_NOT_APPLICABLE",
+  "W.CONTRACT.SOLUTION_VALIDATION_INDETERMINATE",
+]
+fixture_ids = ["claimed-feasible-invalid-solution-001"]
+source_paths = [
+  "src/knowledge/contracts.jl",
+  "src/validation/solution.jl",
+  "docs/src/findings.md",
+  "test/scientific_contract_tests.jl",
+]
+
+[[finding]]
+code = "E.CONTRACT.CLAIMED_FEASIBLE_SOLUTION_INVALID"
+severity = "ERROR"
+meaning = "A result with a claimed-feasible termination status contains non-finite values or violates a declared bus voltage or angle limit under independent profiling."
+
+[[finding]]
+code = "I.CONTRACT.SOLUTION_STATUS_NOT_APPLICABLE"
+severity = "INFO"
+meaning = "The solver did not claim a feasible solution, or the network has no declared bus terminals, so the initial claimed-solution contract is not applicable."
+
+[[finding]]
+code = "W.CONTRACT.SOLUTION_VALIDATION_INDETERMINATE"
+severity = "WARNING"
+meaning = "Termination status or required bus-terminal result data is missing, so the implemented validation dimensions cannot be decided."
+
+[[contract]]
+id = "load_voltage_base_consistency"
+knowledge_ids = ["PSK-000004"]
+title = "Load connection voltage-base consistency"
+entrypoint = "check_load_voltage_base_consistency"
+scope = "Voltage-dependent WYE and DELTA loads with finite positive nominal anchors and source-reachable phase-to-neutral bus bases."
+applicability = [
+  "At least one selected load uses a voltage-dependent model and declares WYE or DELTA configuration.",
+  "Every selected load has a finite positive scalar or per-subload v_nom.",
+  "Every selected load bus has a nominal phase-to-neutral voltage reachable from a declared source through BMOPFTools voltage-level propagation.",
+]
+checked_dimensions = [
+  "source_propagated_bus_voltage_base",
+  "declared_load_connection_voltage_coordinate",
+  "load_nominal_voltage_anchor",
+]
+unassessed_dimensions = [
+  "source_voltage_declaration_correctness",
+  "transformer_ratio_declaration_correctness",
+  "terminal_map_correctness",
+  "load_law_and_coefficient_correctness",
+  "operating_voltage",
+  "network_equation_feasibility",
+  "equipment_limits",
+  "unit_provenance",
+]
+finding_codes = [
+  "E.CONTRACT.LOAD_VOLTAGE_BASE_MISMATCH",
+  "I.CONTRACT.LOAD_VOLTAGE_BASE_NOT_APPLICABLE",
+  "W.CONTRACT.LOAD_VOLTAGE_BASE_INDETERMINATE",
+]
+fixture_ids = ["load-voltage-base-mismatch-001"]
+source_paths = [
+  "src/knowledge/contracts.jl",
+  "src/validation/domain_rules.jl",
+  "docs/src/findings.md",
+  "test/scientific_contract_tests.jl",
+]
+
+[[finding]]
+code = "E.CONTRACT.LOAD_VOLTAGE_BASE_MISMATCH"
+severity = "ERROR"
+meaning = "A voltage-dependent load's nominal anchor lies outside the declared ratio band for its source-propagated WYE phase-to-neutral or DELTA line-to-line voltage base."
+
+[[finding]]
+code = "I.CONTRACT.LOAD_VOLTAGE_BASE_NOT_APPLICABLE"
+severity = "INFO"
+meaning = "No unique voltage-dependent WYE or DELTA load is selected, so the initial load voltage-base contract is not applicable."
+
+[[finding]]
+code = "W.CONTRACT.LOAD_VOLTAGE_BASE_INDETERMINATE"
+severity = "WARNING"
+meaning = "A selected load, numeric nominal anchor, or source-reachable bus voltage base is unavailable, so consistency cannot be decided."
+
+[[contract]]
+id = "transformer_tap_domain_preservation"
+knowledge_ids = ["PSK-000005"]
+title = "Adjustable transformer tap-domain preservation"
+entrypoint = "check_transformer_tap_domain_preservation"
+scope = "Continuous scalar tap intervals on explicitly mapped two-winding isolating transformers whose subtype and non-tap declarations are unchanged."
+applicability = [
+  "Source and target map one transformer with the same supported single_phase, center_tap, wye_delta, or delta_wye subtype.",
+  "The source declares finite positive tap_min < tap_max and a tap start inside that continuous interval.",
+  "All mapped non-tap transformer declarations are identical; target bounds may be explicit or omitted to represent a fixed tap singleton.",
+]
+checked_dimensions = [
+  "mapped_transformer_base_factor_identity",
+  "tap_start_admissibility",
+  "continuous_tap_decision_domain",
+]
+unassessed_dimensions = [
+  "pointwise_terminal_equations",
+  "tap_dependent_leakage_or_excitation",
+  "discrete_tap_positions",
+  "mechanical_or_per_phase_coupling",
+  "automatic_control_logic",
+  "network_feasible_set",
+  "objective_value",
+  "optimal_tap",
+  "solver_status_or_optimality",
+]
+finding_codes = [
+  "E.CONTRACT.TRANSFORMER_TAP_DOMAIN_LOSS",
+  "I.CONTRACT.TRANSFORMER_TAP_NOT_APPLICABLE",
+  "W.CONTRACT.TRANSFORMER_TAP_INDETERMINATE",
+]
+fixture_ids = ["transformer-tap-domain-loss-001"]
+source_paths = [
+  "src/knowledge/contracts.jl",
+  "docs/src/findings.md",
+  "test/scientific_contract_tests.jl",
+]
+
+[[finding]]
+code = "E.CONTRACT.TRANSFORMER_TAP_DOMAIN_LOSS"
+severity = "ERROR"
+meaning = "The target transformer tap interval differs from the mapped adjustable source interval, creating an inner restriction, outer extension, shifted overlap, or disjoint decision domain."
+
+[[finding]]
+code = "I.CONTRACT.TRANSFORMER_TAP_NOT_APPLICABLE"
+severity = "INFO"
+meaning = "The source is not an adjustable continuous transformer in the implemented domain, or mapped subtype and non-tap declarations differ."
+
+[[finding]]
+code = "W.CONTRACT.TRANSFORMER_TAP_INDETERMINATE"
+severity = "WARNING"
+meaning = "A mapped transformer, complete numeric tap interval, or admissible tap start is unavailable, so domain preservation cannot be decided."
+
+[[contract]]
+id = "transformer_winding_convention_preservation"
+knowledge_ids = ["PSK-000006"]
+title = "Transformer winding convention preservation"
+entrypoint = "check_transformer_winding_convention_preservation"
+scope = "Fixed-tap single_phase, wye_delta, and delta_wye records with the same subtype, explicit one-to-one bus mapping, and stable or explicitly mapped terminal labels."
+applicability = [
+  "Source and target each contain one mapped fixed-tap transformer with the same supported subtype.",
+  "Both transformers connect two distinct buses and declare finite positive v_nom_from and v_nom_to values.",
+  "The source bus mapping and optional global terminal-label mapping are one-to-one and complete for the transformer terminals.",
+]
+checked_dimensions = [
+  "mapped_winding_side_identity_and_orientation",
+  "ordered_terminal_to_coil_incidence",
+  "nominal_winding_reference_voltages",
+  "fixed_effective_coil_ratio",
+]
+unassessed_dimensions = [
+  "series_leakage_parameters",
+  "excitation_shunt_placement_and_value",
+  "internal_or_external_grounding",
+  "tap_decision_domain",
+  "current_and_apparent_power_limits",
+  "complete_terminal_admittance_or_ideal_constraints",
+  "automatic_control_logic",
+  "network_feasible_set",
+  "objective_value",
+  "solver_status_or_optimality",
+]
+finding_codes = [
+  "E.CONTRACT.TRANSFORMER_WINDING_INCIDENCE_MISMATCH",
+  "E.CONTRACT.TRANSFORMER_WINDING_BASE_RATIO_MISMATCH",
+  "I.CONTRACT.TRANSFORMER_WINDING_NOT_APPLICABLE",
+  "W.CONTRACT.TRANSFORMER_WINDING_INDETERMINATE",
+]
+fixture_ids = ["transformer-winding-role-swap-001"]
+source_paths = [
+  "src/knowledge/contracts.jl",
+  "src/io/to_ybus.jl",
+  "docs/src/findings.md",
+  "test/scientific_contract_tests.jl",
+]
+
+[[finding]]
+code = "E.CONTRACT.TRANSFORMER_WINDING_INCIDENCE_MISMATCH"
+severity = "ERROR"
+meaning = "The target changes a mapped winding side, orientation, or ordered terminal-to-coil incidence relation."
+
+[[finding]]
+code = "E.CONTRACT.TRANSFORMER_WINDING_BASE_RATIO_MISMATCH"
+severity = "ERROR"
+meaning = "The target changes a mapped winding reference-voltage declaration or resulting fixed effective coil ratio."
+
+[[finding]]
+code = "I.CONTRACT.TRANSFORMER_WINDING_NOT_APPLICABLE"
+severity = "INFO"
+meaning = "The transformer subtype, tap state, bus mapping, or terminal mapping lies outside the initial fixed-convention contract domain."
+
+[[finding]]
+code = "W.CONTRACT.TRANSFORMER_WINDING_INDETERMINATE"
+severity = "WARNING"
+meaning = "A mapped transformer, bus, terminal map, positive winding reference, fixed tap, or incidence relation is unavailable, so convention preservation cannot be decided."
+
+[[contract]]
+id = "decision_preservation_manifest_completeness"
+knowledge_ids = ["PSK-000007"]
+title = "Decision-preservation manifest completeness"
+entrypoint = "check_decision_preservation_manifest"
+scope = "Version 0.1.0 transformation manifests that explicitly claim exact decision equivalence and declare source and target model identities."
+applicability = [
+  "The manifest uses schema_version 0.1.0 and names a transformation, source model, and target model.",
+  "The claim exactness_object is decision_equivalence and its classification is exact.",
+  "Each required dimension is an object with a supported disposition.",
+]
+checked_dimensions = [
+  "manifest_identity_and_claim_scope",
+  "required_dimension_dispositions",
+  "verified_evidence_reference_presence",
+  "not_required_justification_presence",
+]
+unassessed_dimensions = [
+  "truth_or_independence_of_cited_evidence",
+  "source_and_target_equation_equivalence",
+  "source_and_target_feasible_set_equivalence",
+  "objective_value_or_optimizer_equivalence",
+  "correctness_of_constraint_decision_or_recovery_maps",
+  "provenance_completeness_beyond_declared_references",
+  "solver_status_or_optimality",
+]
+finding_codes = [
+  "E.CONTRACT.DECISION_MANIFEST_EVIDENCE_GAP",
+  "E.CONTRACT.DECISION_MANIFEST_UNRESOLVED_OBLIGATION",
+  "I.CONTRACT.DECISION_MANIFEST_NOT_APPLICABLE",
+  "W.CONTRACT.DECISION_MANIFEST_INDETERMINATE",
+]
+fixture_ids = ["decision-manifest-terminal-only-001"]
+source_paths = [
+  "src/knowledge/contracts.jl",
+  "docs/src/findings.md",
+  "test/scientific_contract_tests.jl",
+]
+
+[[finding]]
+code = "E.CONTRACT.DECISION_MANIFEST_EVIDENCE_GAP"
+severity = "ERROR"
+meaning = "A manifest claiming exact decision equivalence omits a required admissible-domain, terminal, observation, constraint, decision-variable, objective, or recovery disposition, or lacks the evidence reference or justification required by that disposition."
+
+[[finding]]
+code = "E.CONTRACT.DECISION_MANIFEST_UNRESOLVED_OBLIGATION"
+severity = "ERROR"
+meaning = "A manifest claiming exact decision equivalence explicitly marks a required dimension as unassessed or not preserved."
+
+[[finding]]
+code = "I.CONTRACT.DECISION_MANIFEST_NOT_APPLICABLE"
+severity = "INFO"
+meaning = "The manifest does not claim exact decision equivalence; a narrower terminal, inner, outer, or approximate claim is outside this completeness gate and is not treated as a failure."
+
+[[finding]]
+code = "W.CONTRACT.DECISION_MANIFEST_INDETERMINATE"
+severity = "WARNING"
+meaning = "The manifest schema, identity, claim, dimension object, or disposition is missing, malformed, or unsupported, so declaration completeness cannot be decided."
+
+[[contract]]
+id = "kron_boundary_recovery_preservation"
+knowledge_ids = ["PSK-000008"]
+title = "Kron boundary and recovery preservation"
+entrypoint = "check_kron_boundary_recovery"
+scope = "One four-conductor fixed series source line reduced to a three-conductor target by eliminating a neutral that is perfectly grounded at both source endpoints, with aligned phase coordinates and an explicit recovery map."
+applicability = [
+  "The source and target lines are explicitly mapped and connect two distinct mapped buses.",
+  "The source has four ordered conductors containing three declared phases and one neutral; the target has three aligned phase conductors.",
+  "Both lines are series-only with finite matrices, and the source neutral is declared perfectly grounded at both endpoints.",
+]
+checked_dimensions = [
+  "perfect_grounding_at_eliminated_terminal",
+  "kron_boundary_impedance_relation",
+  "target_terminal_coordinate_alignment",
+  "recovery_obligation_declared",
+]
+unassessed_dimensions = [
+  "internal_asset_identity_and_state",
+  "internal_equipment_limits",
+  "internal_protection_quantities",
+  "state_dependent_or_nonlinear_factors",
+  "complete_network_feasible_set",
+  "objective_or_optimizer_equivalence",
+  "solver_status_or_optimality",
+]
+finding_codes = [
+  "E.CONTRACT.KRON_BOUNDARY_RELATION_MISMATCH",
+  "E.CONTRACT.KRON_GROUNDING_PRECONDITION",
+  "I.CONTRACT.KRON_NOT_APPLICABLE",
+  "W.CONTRACT.KRON_INDETERMINATE",
+  "W.CONTRACT.KRON_RECOVERY_INDETERMINATE",
+]
+fixture_ids = ["kron-boundary-grounding-001"]
+source_paths = [
+  "src/knowledge/contracts.jl",
+  "src/io/ybus.jl",
+  "docs/src/findings.md",
+  "test/scientific_contract_tests.jl",
+]
+
+[[finding]]
+code = "E.CONTRACT.KRON_BOUNDARY_RELATION_MISMATCH"
+severity = "ERROR"
+meaning = "The target series impedance differs from the source Schur-complement boundary relation in the declared phase coordinate order."
+
+[[finding]]
+code = "E.CONTRACT.KRON_GROUNDING_PRECONDITION"
+severity = "ERROR"
+meaning = "The eliminated source neutral is not perfectly grounded at every source line endpoint, so the three-wire Kron target is not exact for the declared network boundary."
+
+[[finding]]
+code = "I.CONTRACT.KRON_NOT_APPLICABLE"
+severity = "INFO"
+meaning = "The initial Kron contract does not cover the supplied conductor count, terminal order, endpoint mapping, line shunts, or self-loop shape. No reduction conclusion is drawn."
+
+[[finding]]
+code = "W.CONTRACT.KRON_INDETERMINATE"
+severity = "WARNING"
+meaning = "A mapped line, bus, conductor order, impedance matrix, or endpoint declaration is missing or unresolved, so the Kron boundary cannot be decided."
+
+[[finding]]
+code = "W.CONTRACT.KRON_RECOVERY_INDETERMINATE"
+severity = "WARNING"
+meaning = "The required eliminated-terminal recovery map is missing, malformed, or names a different terminal, so internal recovery obligations cannot be decided."
+
+[[contract]]
+id = "positive_sequence_collapse_applicability"
+knowledge_ids = ["PSK-000009"]
+title = "Positive-sequence collapse applicability"
+entrypoint = "check_positive_sequence_collapse"
+scope = "Three-conductor fixed linear series factors reduced to a scalar positive-sequence relation under explicit balanced-domain, grounding, device, decision, and observation declarations."
+applicability = [
+  "The source and scalar target lines are explicitly mapped and use the declared ordered three-phase source terminals.",
+  "The source series and any supplied shunt matrices are finite 3x3 circulant factors; the target is a finite scalar series factor.",
+  "Balanced boundary data, sequence-compatible grounding, two-terminal closure, phase-symmetric decisions, and positive-sequence observations are explicitly declared.",
+]
+checked_dimensions = [
+  "source_series_cyclic_symmetry",
+  "source_shunt_cyclic_symmetry",
+  "balanced_boundary_data",
+  "sequence_compatible_grounding",
+  "two_terminal_factor_closure",
+  "phase_symmetric_decisions",
+  "positive_sequence_observations",
+  "positive_sequence_relation",
+]
+unassessed_dimensions = [
+  "phase_specific_limits_and_controls",
+  "neutral_or_explicit_earth_observations",
+  "unbalanced_boundary_data",
+  "internal_device_and_protection_quantities",
+  "complete_network_feasible_set",
+  "objective_or_optimizer_equivalence",
+  "solver_status_or_optimality",
+]
+finding_codes = [
+  "E.CONTRACT.SEQUENCE_SYMMETRY_MISMATCH",
+  "E.CONTRACT.SEQUENCE_DOMAIN_MISMATCH",
+  "E.CONTRACT.SEQUENCE_RELATION_MISMATCH",
+  "I.CONTRACT.SEQUENCE_NOT_APPLICABLE",
+  "W.CONTRACT.SEQUENCE_INDETERMINATE",
+]
+fixture_ids = ["positive-sequence-collapse-001"]
+source_paths = [
+  "src/knowledge/contracts.jl",
+  "docs/src/findings.md",
+  "test/scientific_contract_tests.jl",
+]
+
+[[finding]]
+code = "E.CONTRACT.SEQUENCE_SYMMETRY_MISMATCH"
+severity = "ERROR"
+meaning = "A source series or shunt factor is not circulant in the declared phase order, so it can mix positive, negative, and zero sequence components."
+
+[[finding]]
+code = "E.CONTRACT.SEQUENCE_DOMAIN_MISMATCH"
+severity = "ERROR"
+meaning = "The declared boundary, grounding, device, decision, or observation domain is not closed under the positive-sequence restriction."
+
+[[finding]]
+code = "E.CONTRACT.SEQUENCE_RELATION_MISMATCH"
+severity = "ERROR"
+meaning = "The scalar target relation differs from the source positive-sequence eigenvalue in the declared convention."
+
+[[finding]]
+code = "I.CONTRACT.SEQUENCE_NOT_APPLICABLE"
+severity = "INFO"
+meaning = "The initial positive-sequence contract does not cover the supplied conductor count, terminal order, factor shape, or unsupported shunt structure."
+
+[[finding]]
+code = "W.CONTRACT.SEQUENCE_INDETERMINATE"
+severity = "WARNING"
+meaning = "A source or target factor, terminal map, or required collapse-domain declaration is missing or unresolved."
+
+[[contract]]
+id = "state_dependent_equivalent_provenance"
+knowledge_ids = ["PSK-000010"]
+title = "State-dependent equivalent provenance"
+entrypoint = "check_state_dependent_equivalent"
+scope = "Declaration-level comparison of a state-dependent source equivalent and a target over a declared parameter domain, base state, and update-rule provenance."
+applicability = [
+  "Both records declare a state_dependent object with a parameter, finite two-point domain, and base state inside that domain.",
+  "The target either preserves the source domain and parameter with an explicit update_rule_id or is reported as a frozen overclaim.",
+]
+checked_dimensions = [
+  "state_domain_declared",
+  "state_parameter_alignment",
+  "base_state_alignment",
+  "update_provenance_declared",
+]
+unassessed_dimensions = [
+  "state_domain_preservation_beyond_declared_parameter",
+  "nonlinear_or_topology_update_correctness",
+  "complete_network_feasible_set",
+  "objective_or_optimizer_equivalence",
+  "solver_status_or_optimality",
+]
+finding_codes = [
+  "E.CONTRACT.STATE_UPDATE_PROVENANCE_LOSS",
+  "E.CONTRACT.STATE_DOMAIN_MISMATCH",
+  "E.CONTRACT.STATE_BASE_ALIGNMENT_MISMATCH",
+  "I.CONTRACT.STATE_EQUIVALENT_NOT_APPLICABLE",
+  "W.CONTRACT.STATE_EQUIVALENT_INDETERMINATE",
+]
+fixture_ids = ["state-dependent-equivalent-001"]
+source_paths = [
+  "src/knowledge/contracts.jl",
+  "docs/src/findings.md",
+  "test/scientific_contract_tests.jl",
+]
+
+[[finding]]
+code = "E.CONTRACT.STATE_UPDATE_PROVENANCE_LOSS"
+severity = "ERROR"
+meaning = "The target freezes or omits update provenance for a source equivalent that varies over a non-singleton state domain."
+
+[[finding]]
+code = "E.CONTRACT.STATE_DOMAIN_MISMATCH"
+severity = "ERROR"
+meaning = "The target state domain differs from the source domain, so the declared equivalent does not cover the same state range."
+
+[[finding]]
+code = "E.CONTRACT.STATE_BASE_ALIGNMENT_MISMATCH"
+severity = "ERROR"
+meaning = "The target calibration state differs from the source base state."
+
+[[finding]]
+code = "I.CONTRACT.STATE_EQUIVALENT_NOT_APPLICABLE"
+severity = "INFO"
+meaning = "The initial state-dependent-equivalent contract does not cover the supplied domain declaration."
+
+[[finding]]
+code = "W.CONTRACT.STATE_EQUIVALENT_INDETERMINATE"
+severity = "WARNING"
+meaning = "A required state parameter, domain, base state, or update declaration is missing or malformed."
+
+[[contract]]
+id = "reference_singularity_validation"
+knowledge_ids = ["PSK-000011"]
+title = "Floating-reference and singularity validation"
+entrypoint = "check_reference_singularity"
+scope = "Declaration-level comparison of mapped connected-island voltage references and rank evidence before accepting a transformed model."
+applicability = [
+  "Both models provide reference_analysis.islands records with stable ids, reference incidence, dimension, and rank.",
+  "Every source island maps to one target island, and source full-rank/reference declarations are the preservation baseline.",
+]
+checked_dimensions = ["island_mapping", "voltage_reference_incidence", "rank_deficiency"]
+unassessed_dimensions = [
+  "physical_reference_asset_identity",
+  "equation_and_solver_rank_details",
+  "complete_network_feasible_set",
+  "objective_or_optimizer_equivalence",
+  "solver_status_or_optimality",
+]
+finding_codes = [
+  "E.CONTRACT.REFERENCE_LOSS",
+  "E.CONTRACT.SINGULARITY_CHANGE",
+  "I.CONTRACT.REFERENCE_SINGULARITY_NOT_APPLICABLE",
+  "W.CONTRACT.REFERENCE_SINGULARITY_INDETERMINATE",
+]
+fixture_ids = ["reference-singularity-001"]
+source_paths = [
+  "src/knowledge/contracts.jl",
+  "docs/src/findings.md",
+  "test/scientific_contract_tests.jl",
+]
+
+[[finding]]
+code = "E.CONTRACT.REFERENCE_LOSS"
+severity = "ERROR"
+meaning = "A target island loses a voltage reference present in the source island."
+
+[[finding]]
+code = "E.CONTRACT.SINGULARITY_CHANGE"
+severity = "ERROR"
+meaning = "A target island becomes rank-deficient relative to a full-rank source island."
+
+[[finding]]
+code = "I.CONTRACT.REFERENCE_SINGULARITY_NOT_APPLICABLE"
+severity = "INFO"
+meaning = "No connected-island reference evidence was supplied, so this initial validation bundle is not applicable."
+
+[[finding]]
+code = "W.CONTRACT.REFERENCE_SINGULARITY_INDETERMINATE"
+severity = "WARNING"
+meaning = "Reference-analysis island records or their mapping are missing or malformed."
+
+[[contract]]
+id = "terminal_permutation_invariance"
+knowledge_ids = ["PSK-000012"]
+title = "Terminal and conductor permutation invariance"
+entrypoint = "check_terminal_permutation_invariance"
+scope = "Fixed linear series primitives with ordered endpoint terminal maps and an explicit one-based permutation."
+applicability = [
+  "The declared permutation is a nonempty bijection over the source matrix coordinates.",
+  "Both endpoint terminal maps are available and the target maps follow the same permutation.",
+  "Source and target series primitives are square matrices of the declared conductor count.",
+]
+checked_dimensions = ["permutation_bijection", "endpoint_terminal_map_alignment", "series_matrix_permutation_relation"]
+unassessed_dimensions = [
+  "asset_identity_and_provenance",
+  "nonlinear_or_state_dependent_factors",
+  "complete_network_feasible_set",
+  "objective_or_optimizer_equivalence",
+  "solver_status_or_optimality",
+]
+finding_codes = [
+  "E.CONTRACT.TERMINAL_ORDER_MISMATCH",
+  "E.CONTRACT.PERMUTATION_RELATION_MISMATCH",
+  "I.CONTRACT.PERMUTATION_NOT_APPLICABLE",
+  "W.CONTRACT.PERMUTATION_INDETERMINATE",
+]
+fixture_ids = ["terminal-permutation-001"]
+source_paths = [
+  "src/knowledge/contracts.jl",
+  "docs/src/findings.md",
+  "test/scientific_contract_tests.jl",
+]
+
+[[finding]]
+code = "E.CONTRACT.TERMINAL_ORDER_MISMATCH"
+severity = "ERROR"
+meaning = "Target endpoint terminal maps do not follow the declared permutation."
+
+[[finding]]
+code = "E.CONTRACT.PERMUTATION_RELATION_MISMATCH"
+severity = "ERROR"
+meaning = "The target series primitive is not the source primitive conjugated by the declared permutation."
+
+[[finding]]
+code = "I.CONTRACT.PERMUTATION_NOT_APPLICABLE"
+severity = "INFO"
+meaning = "The explicit permutation contract does not apply because a bijection, line, or compatible matrix dimensions are unavailable."
+
+[[finding]]
+code = "W.CONTRACT.PERMUTATION_INDETERMINATE"
+severity = "WARNING"
+meaning = "A required source or target line primitive or terminal-map record is missing or malformed."
+
+[[contract]]
+id = "solved_network_feasibility_validation"
+knowledge_ids = ["PSK-000013"]
+title = "Independent solved-network feasibility witness"
+entrypoint = "check_solved_network_feasibility"
+scope = "Claimed solved results with independently computed equation, KCL, power-balance, device-limit, and recovery evidence."
+applicability = [
+  "The result reports a claimed solved status such as OPTIMAL or LOCALLY_SOLVED.",
+  "The result carries finite residual norms and a nonnegative device-limit violation count.",
+]
+checked_dimensions = ["termination_status", "equation_residual_norm", "kcl_residual_norm", "power_balance_residual_norm", "device_limit_violations", "recovery_residual_norm"]
+unassessed_dimensions = ["residual_computation_independence", "model_equation_coverage", "complete_feasible_set", "objective_or_optimizer_equivalence", "solver_status_or_optimality"]
+finding_codes = [
+  "E.CONTRACT.FEASIBILITY_RESIDUAL_VIOLATION",
+  "E.CONTRACT.FEASIBILITY_DEVICE_LIMIT_VIOLATION",
+  "I.CONTRACT.FEASIBILITY_NOT_APPLICABLE",
+  "W.CONTRACT.FEASIBILITY_INDETERMINATE",
+]
+fixture_ids = ["solved-network-feasibility-001"]
+source_paths = ["src/knowledge/contracts.jl", "docs/src/findings.md", "test/scientific_contract_tests.jl"]
+
+[[finding]]
+code = "E.CONTRACT.FEASIBILITY_RESIDUAL_VIOLATION"
+severity = "ERROR"
+meaning = "An independently computed equation, KCL, power-balance, or recovery residual exceeds its declared tolerance."
+
+[[finding]]
+code = "E.CONTRACT.FEASIBILITY_DEVICE_LIMIT_VIOLATION"
+severity = "ERROR"
+meaning = "Independent device-limit validation reports one or more violations."
+
+[[finding]]
+code = "I.CONTRACT.FEASIBILITY_NOT_APPLICABLE"
+severity = "INFO"
+meaning = "No solved/feasible solver status was supplied for the residual-witness contract."
+
+[[finding]]
+code = "W.CONTRACT.FEASIBILITY_INDETERMINATE"
+severity = "WARNING"
+meaning = "A solved result lacks finite, independently computed residual or device-limit witness fields."
+
+[[contract]]
+id = "unit_base_serialization_invariance"
+knowledge_ids = ["PSK-000014"]
+title = "Unit/base and serialization invariance"
+entrypoint = "check_unit_base_serialization_invariance"
+scope = "Serialization pairs with explicit unit-system, base-map, and canonical semantic-hash metadata."
+applicability = [
+  "Both records declare a unit system, base map, and canonical semantic payload hash.",
+  "The target is claimed to represent the same serialized semantic payload as the source.",
+]
+checked_dimensions = ["canonical_payload_identity", "source_hash_binding", "physical_unit_semantics"]
+unassessed_dimensions = ["hash_computation_authenticity", "unit_inference_from_magnitude", "complete_network_equivalence", "objective_or_optimizer_equivalence"]
+finding_codes = [
+  "E.CONTRACT.UNIT_SYSTEM_MISMATCH",
+  "E.CONTRACT.BASE_MAP_MISMATCH",
+  "E.CONTRACT.SERIALIZED_PAYLOAD_MISMATCH",
+  "W.CONTRACT.UNIT_BASE_SERIALIZATION_INDETERMINATE",
+]
+fixture_ids = ["unit-base-serialization-001"]
+source_paths = ["src/knowledge/contracts.jl", "docs/src/findings.md", "test/scientific_contract_tests.jl"]
+
+[[finding]]
+code = "E.CONTRACT.UNIT_SYSTEM_MISMATCH"
+severity = "ERROR"
+meaning = "Target serialization declares a different unit system."
+
+[[finding]]
+code = "E.CONTRACT.BASE_MAP_MISMATCH"
+severity = "ERROR"
+meaning = "Target serialization does not preserve the declared unit/base map."
+
+[[finding]]
+code = "E.CONTRACT.SERIALIZED_PAYLOAD_MISMATCH"
+severity = "ERROR"
+meaning = "Target serialization has a different canonical semantic payload hash."
+
+[[finding]]
+code = "W.CONTRACT.UNIT_BASE_SERIALIZATION_INDETERMINATE"
+severity = "WARNING"
+meaning = "Required unit/base or canonical semantic-hash metadata is missing or malformed."

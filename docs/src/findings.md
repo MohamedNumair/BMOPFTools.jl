@@ -5,7 +5,11 @@ The complete catalogue of finding codes, grouped by family. Codes are
 prefix: `E.` error, `W.` warning, `I.` info (see
 [Analysis & reports](analysis.md) for the severity semantics).
 
-A case imported through [`from_dss`](@ref) also carries findings this package
+Two families on this page are **not** produced by [`analyze`](@ref). The
+`CONTRACT.` codes at the end come from the explicit source-versus-target
+[scientific contracts](scientific_contracts.md), which must be invoked directly
+with a source, a target, and a mapping. And a case imported through
+[`from_dss`](@ref) carries findings this package
 did not author: PowerIO's conversion diagnostics, kept under their own codes
 (`EMIT.`, `READ.`, `PARSE.`, `LOWER.`, …, one namespace per pipeline stage) and
 catalogued by [powerio](https://powerio.dev) rather than here. They report what
@@ -211,7 +215,6 @@ and [`load_model_analysis`](@ref) (`load_models` pass).
 | `I.RED.PARALLEL_LINES` | I | Two or more lines sharing the same bus pair (direction-agnostic). Parallel lines are unusual in distribution networks and more commonly indicate a data conversion artefact than a genuine double-circuit feeder. |
 | `I.RED.UNUSED_LINECODES` | I | Linecodes never referenced by a line — a cable library shipped with the case; harmless, but distinguishes library data from network data. |
 | `I.RED.DUPLICATE_LINECODES` | I | Groups of linecodes with identical `R/X_series_1_1` fingerprints (codes lacking impedance data are excluded — absence is not evidence of duplication). |
-
 ## PROV — provenance & conventions
 
 The largest family; full derivations in the
@@ -504,3 +507,71 @@ Checks for the DC side: `dc_bus` nodes (signed line-to-ground voltage, no angle)
 | `W.RED.DC_REDUNDANT_GROUNDING` | W | A `dc_grounding` earths a terminal already in the dc_bus's `perfectly_grounded_terminals`. |
 | `E.SOL.DC_VOLT_VIOLATION` | E | Post-solve: a signed DC node voltage lies outside its `[v_dc_min, v_dc_max]` band. |
 | `E.SOL.DC_THERMAL_VIOLATION` | E | Post-solve: a DC branch conductor current exceeds its `i_max`. |
+
+## CONTRACT — executable scientific contracts
+
+These findings do **not** come from [`analyze`](@ref). They are produced only by
+the explicit source-versus-target [scientific contracts](scientific_contracts.md),
+which need a source, a target, and an explicit mapping — a reduced target cannot
+reveal source information that has already been discarded. Ordinary single-case
+analysis never emits them.
+
+| Code | Sev | Trigger & rationale |
+|---|---|---|
+| `E.CONTRACT.PARALLEL_TERMINAL_RELATION_MISMATCH` | E | The declared scalar aggregate line's admittance differs from the sum of the explicitly mapped source-member admittances. The target therefore fails even the unconstrained terminal-current relation. |
+| `W.CONTRACT.PARALLEL_MEMBER_LIMIT_LOSS` | W | The aggregate preserves the summed scalar terminal admittance but its current rating defines an inner restriction or outer relaxation of the source member-current-limit region. Detail includes `PSK-000001`, the classification, exact voltage-drop bounds, and a concrete current witness. |
+| `I.CONTRACT.NOT_APPLICABLE` | I | A declared executable contract is outside its implemented domain, for example because the initial parallel-member check received a multiconductor or shunted line. No preservation conclusion is drawn. |
+| `W.CONTRACT.INDETERMINATE` | W | Required source, target, mapping, impedance, or rating evidence is missing or unresolved. No preservation conclusion is drawn; detail names the missing evidence and recommended follow-up. |
+| `E.CONTRACT.NEUTRAL_IDENTITY_LOSS` | E | A mapped target bus has no identifiable explicit neutral terminal. Omitting it does not establish that its voltage, current, limits, or grounding relation are represented by the mathematical reference. |
+| `E.CONTRACT.NEUTRAL_CONTINUITY_MISMATCH` | E | The target changes whether mapped bus neutrals are connected through neutral-bearing lines, closed switches, or single-phase autotransformers. A matching simple bus graph is not sufficient. |
+| `E.CONTRACT.GROUND_REFERENCE_RELATION_MISMATCH` | E | The target changes a mapped neutral's declared perfect-ground, scalar finite-grounding-shunt, or voltage-source-reference relation. Those declarations are not interchangeable. |
+| `I.CONTRACT.NEUTRAL_GROUND_NOT_APPLICABLE` | I | The neutral/ground/reference check is outside its implemented domain, for example because the source lacks explicit neutrals or a grounding shunt couples multiple terminals. No preservation conclusion is drawn. |
+| `W.CONTRACT.NEUTRAL_GROUND_INDETERMINATE` | W | A mapped bus or scalar grounding relation is missing or unresolved. No preservation conclusion is drawn; detail names the missing evidence and recommended follow-up. |
+| `E.CONTRACT.CLAIMED_FEASIBLE_SOLUTION_INVALID` | E | A result labelled `LOCALLY_SOLVED`, `OPTIMAL`, or `ALMOST_LOCALLY_SOLVED` contains non-finite values or violates a declared bus voltage or angle limit when independently recomputed by `profile_solution`. The contract finding retains the underlying `E.SOL.*` evidence. |
+| `I.CONTRACT.SOLUTION_STATUS_NOT_APPLICABLE` | I | The solver did not claim a feasible result, or the network has no declared bus terminals. The initial claimed-solution contract therefore makes no validity conclusion. |
+| `W.CONTRACT.SOLUTION_VALIDATION_INDETERMINATE` | W | Termination status or required `vr`/`vi`/`vm` data for a declared bus terminal is missing. No validation conclusion is drawn; detail identifies the missing evidence. |
+| `E.CONTRACT.LOAD_VOLTAGE_BASE_MISMATCH` | E | Scientific contract `load_voltage_base_consistency` found that a voltage-dependent load's `v_nom` lies outside the declared ratio band for its source-propagated connection-coordinate base. |
+| `I.CONTRACT.LOAD_VOLTAGE_BASE_NOT_APPLICABLE` | I | The initial contract has no unique voltage-dependent WYE or DELTA load to check. |
+| `W.CONTRACT.LOAD_VOLTAGE_BASE_INDETERMINATE` | W | A selected load, numeric `v_nom`, or source-reachable bus voltage base is unavailable, so connection-coordinate consistency cannot be decided. |
+| `E.CONTRACT.TRANSFORMER_TAP_DOMAIN_LOSS` | E | The mapped target transformer has a different continuous tap interval from the adjustable source: an inner restriction, outer extension, shifted overlap, or disjoint decision domain. Detail includes `PSK-000005`, both intervals, the classification, and a tap witness admitted by only one domain. |
+| `I.CONTRACT.TRANSFORMER_TAP_NOT_APPLICABLE` | I | The source is not an adjustable continuous tap transformer in the implemented domain, the subtype is unsupported or changes, or mapped non-tap declarations differ. No domain-preservation conclusion is drawn. |
+| `W.CONTRACT.TRANSFORMER_TAP_INDETERMINATE` | W | A mapped transformer, complete numeric tap interval, or admissible start is missing or invalid. No domain-preservation conclusion is drawn. |
+| `E.CONTRACT.TRANSFORMER_WINDING_INCIDENCE_MISMATCH` | E | The target changes a mapped transformer winding side, stored orientation, or ordered terminal-to-coil incidence. A bare `bus_from`/`bus_to` swap is not a complete typed transformer reversal. |
+| `E.CONTRACT.TRANSFORMER_WINDING_BASE_RATIO_MISMATCH` | E | The target changes a mapped `v_nom_from`/`v_nom_to` winding reference or the resulting fixed effective coil ratio under the subtype's connection convention. |
+| `I.CONTRACT.TRANSFORMER_WINDING_NOT_APPLICABLE` | I | The initial winding-convention contract does not cover the subtype, adjustable tap, non-bijective mapping, or subtype-changing reversal. No preservation conclusion is drawn. |
+| `W.CONTRACT.TRANSFORMER_WINDING_INDETERMINATE` | W | A mapped transformer, bus, terminal map, positive winding reference, fixed tap, or constructible incidence relation is missing. No preservation conclusion is drawn. |
+| `E.CONTRACT.DECISION_MANIFEST_EVIDENCE_GAP` | E | A manifest claiming exact decision equivalence omits a required admissible-domain, terminal, observation, constraint, decision-variable, objective, or recovery disposition, or lacks the evidence reference or justification required by that disposition. Terminal evidence alone is insufficient. |
+| `E.CONTRACT.DECISION_MANIFEST_UNRESOLVED_OBLIGATION` | E | A manifest claiming exact decision equivalence explicitly marks a required dimension as `unassessed` or `not_preserved`, contradicting the unqualified exactness claim. |
+| `I.CONTRACT.DECISION_MANIFEST_NOT_APPLICABLE` | I | The manifest does not claim exact decision equivalence. A narrower terminal, inner, outer, or approximate claim lies outside this completeness gate and is not mislabeled as a failure. |
+| `W.CONTRACT.DECISION_MANIFEST_INDETERMINATE` | W | The manifest schema, identity, claim, dimension object, or disposition is missing, malformed, or unsupported. No declaration-completeness conclusion is drawn. |
+| `E.CONTRACT.KRON_BOUNDARY_RELATION_MISMATCH` | E | The target series impedance differs from the source Schur-complement boundary relation in the declared phase coordinate order. |
+| `E.CONTRACT.KRON_GROUNDING_PRECONDITION` | E | The eliminated source neutral is not perfectly grounded at every source line endpoint, so the three-wire Kron target is not exact for the declared network boundary. |
+| `I.CONTRACT.KRON_NOT_APPLICABLE` | I | The initial Kron contract does not cover the supplied conductor count, terminal order, endpoint mapping, line shunts, or self-loop shape. No reduction conclusion is drawn. |
+| `W.CONTRACT.KRON_INDETERMINATE` | W | A mapped line, bus, conductor order, impedance matrix, or endpoint declaration is missing or unresolved, so the Kron boundary cannot be decided. |
+| `W.CONTRACT.KRON_RECOVERY_INDETERMINATE` | W | The required eliminated-terminal recovery map is missing, malformed, or names a different terminal, so internal recovery obligations cannot be decided. |
+| `E.CONTRACT.SEQUENCE_SYMMETRY_MISMATCH` | E | A source series or shunt factor is not circulant in the declared phase order and can mix positive, negative, and zero sequence components. |
+| `E.CONTRACT.SEQUENCE_DOMAIN_MISMATCH` | E | The declared boundary, grounding, device, decision, or observation domain is not closed under the positive-sequence restriction. |
+| `E.CONTRACT.SEQUENCE_RELATION_MISMATCH` | E | The scalar target relation differs from the source positive-sequence eigenvalue in the declared convention. |
+| `I.CONTRACT.SEQUENCE_NOT_APPLICABLE` | I | The initial positive-sequence contract does not cover the supplied conductor count, terminal order, factor shape, or unsupported shunt structure. |
+| `W.CONTRACT.SEQUENCE_INDETERMINATE` | W | A source or target factor, terminal map, or required collapse-domain declaration is missing or unresolved. |
+| `E.CONTRACT.STATE_UPDATE_PROVENANCE_LOSS` | E | The target freezes or omits update provenance for a source equivalent that varies over a non-singleton state domain. |
+| `E.CONTRACT.STATE_DOMAIN_MISMATCH` | E | The target state domain differs from the source domain, so the declared equivalent does not cover the same state range. |
+| `E.CONTRACT.STATE_BASE_ALIGNMENT_MISMATCH` | E | The target calibration state differs from the source base state. |
+| `I.CONTRACT.STATE_EQUIVALENT_NOT_APPLICABLE` | I | The initial state-dependent-equivalent contract does not cover the supplied domain declaration. |
+| `W.CONTRACT.STATE_EQUIVALENT_INDETERMINATE` | W | A required state parameter, domain, base state, or update declaration is missing or malformed. |
+| `E.CONTRACT.REFERENCE_LOSS` | E | A target island loses a voltage reference present in the source island. |
+| `E.CONTRACT.SINGULARITY_CHANGE` | E | A target island becomes rank-deficient relative to a full-rank source island. |
+| `I.CONTRACT.REFERENCE_SINGULARITY_NOT_APPLICABLE` | I | No connected-island reference evidence was supplied, so this initial validation bundle is not applicable. |
+| `W.CONTRACT.REFERENCE_SINGULARITY_INDETERMINATE` | W | Reference-analysis island records or their mapping are missing or malformed. |
+| `E.CONTRACT.TERMINAL_ORDER_MISMATCH` | E | Target endpoint terminal maps do not follow the declared permutation. |
+| `E.CONTRACT.PERMUTATION_RELATION_MISMATCH` | E | The target series primitive is not the source primitive conjugated by the declared permutation. |
+| `I.CONTRACT.PERMUTATION_NOT_APPLICABLE` | I | The explicit permutation contract does not apply because a bijection, line, or compatible matrix dimensions are unavailable. |
+| `W.CONTRACT.PERMUTATION_INDETERMINATE` | W | A required source or target line primitive or terminal-map record is missing or malformed. |
+| `E.CONTRACT.FEASIBILITY_RESIDUAL_VIOLATION` | E | An independently computed equation, KCL, power-balance, or recovery residual exceeds its declared tolerance. |
+| `E.CONTRACT.FEASIBILITY_DEVICE_LIMIT_VIOLATION` | E | Independent device-limit validation reports one or more violations. |
+| `I.CONTRACT.FEASIBILITY_NOT_APPLICABLE` | I | No solved/feasible solver status was supplied for the residual-witness contract. |
+| `W.CONTRACT.FEASIBILITY_INDETERMINATE` | W | A solved result lacks finite, independently computed residual or device-limit witness fields. |
+| `E.CONTRACT.UNIT_SYSTEM_MISMATCH` | E | Target serialization declares a different unit system. |
+| `E.CONTRACT.BASE_MAP_MISMATCH` | E | Target serialization does not preserve the declared unit/base map. |
+| `E.CONTRACT.SERIALIZED_PAYLOAD_MISMATCH` | E | Target serialization has a different canonical semantic payload hash. |
+| `W.CONTRACT.UNIT_BASE_SERIALIZATION_INDETERMINATE` | W | Required unit/base or canonical semantic-hash metadata is missing or malformed. |

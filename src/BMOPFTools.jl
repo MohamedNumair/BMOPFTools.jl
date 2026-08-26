@@ -751,6 +751,8 @@ include("validation/integrity.jl")
 include("validation/spec_conformance.jl")
 include("validation/solution.jl")
 
+include("knowledge/contracts.jl")
+
 include("network/simplify.jl")
 
 include("report/formatting.jl")
@@ -2926,6 +2928,21 @@ export extract_result
 
 export Severity, ERROR, WARNING, INFO
 export Finding, SummaryReport, SolutionReport
+export ScientificContractResult, contract_result_to_dict
+export check_parallel_member_limit_preservation
+export check_neutral_ground_reference_preservation
+export check_claimed_solution_validity
+export check_load_voltage_base_consistency
+export check_transformer_tap_domain_preservation
+export check_transformer_winding_convention_preservation
+export check_decision_preservation_manifest
+export check_kron_boundary_recovery
+export check_positive_sequence_collapse
+export check_state_dependent_equivalent
+export check_reference_singularity
+export check_terminal_permutation_invariance
+export check_solved_network_feasibility
+export check_unit_base_serialization_invariance
 export errors, warnings, infos
 export profile_solution, render_solution, solution_check
 export parse_bmopf, write_bmopf
