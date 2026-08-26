@@ -8,12 +8,17 @@ makedocs(
     format   = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",  # pretty URLs on CI, plain files locally
         edit_link  = "main",                             # "Edit on GitHub" links point at main
-        size_threshold_ignore = ["findings.md"],
+        # Both are exhaustive reference pages whose size is the point: findings.md
+        # is the full finding catalogue, api.md the full docstring index. api.md
+        # was already over the WARN limit before the objective building blocks
+        # were added; splitting it would scatter the reference people search.
+        size_threshold_ignore = ["findings.md", "api.md"],
     ),
     pages = [
         "Home"                    => "index.md",
         "Getting started"         => [
             "Installation & first steps" => "installation.md",
+            "Use with AI coding assistants" => "ai_assistants.md",
             "End-to-end tutorial"      => "tutorial_end_to_end.md",
             "Choose your tutorial"     => "choose_tutorial.md",
             "Positioning & ecosystem"  => "positioning.md",
@@ -30,6 +35,7 @@ makedocs(
         ],
         "Analysis & diagnostics"  => [
             "Analysis & reports"       => "analysis.md",
+            "Scientific contracts"     => "scientific_contracts.md",
             "Finding-code reference"   => "findings.md",
             "Findings triage tutorial" => "tutorial_triage.md",
             "Trust but verify: validating a solve" => "tutorial_trust_but_verify.md",
@@ -46,6 +52,8 @@ makedocs(
         ],
         "Optimal power flow"      => [
             "Optimal power flow"       => "opf.md",
+            "Choosing an objective"    => "objectives.md",
+            "Objectives tutorial"      => "tutorial_objectives.md",
             "Parameterized & differentiable extensions" => "differentiable_extensions.md",
             "Transformer models"       => "transformer_models.md",
             "Impedance models & OPF decisions" => "tutorial_impedance_models.md",

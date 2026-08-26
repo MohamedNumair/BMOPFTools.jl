@@ -61,6 +61,7 @@ using BMOPFTools
 using JuMP
 using Ipopt
 using LinearAlgebra
+using SparseArrays
 using SHA
 using StatsFuns: log1pexp, logistic
 
@@ -83,6 +84,7 @@ include("results.jl")
 include("profile.jl")
 include("per_unit.jl")
 include("core.jl")
+include("objectives.jl")   # needs OpfContext from core.jl
 include("feasibility_opf.jl")
 include("pf.jl")
 
@@ -110,6 +112,8 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
                                t_index::Int=1,
                                per_unit::Bool=true,
                                s_base::Float64=1e6,
+                               scaling_policy::Union{
+                                   BMOPFTools.AbstractOpfScalingPolicy,Nothing}=nothing,
                                volt_var_watt_eps::Float64=2e-3,
                                softplus::Symbol=:user_defined,
                                build_spec::BMOPFTools.OpfBuildSpec=BMOPFTools.OpfBuildSpec(),
@@ -118,7 +122,8 @@ function BMOPFTools.solve_opf(net::Dict{String,Any};
                                model_hook!::Union{Function,Nothing}=nothing,
                                solution_hook!::Union{Function,Nothing}=nothing)
     _build_and_solve(net; optimizer=optimizer, t_index=t_index,
-                     per_unit=per_unit, s_base=s_base, problem=:opf,
+                     per_unit=per_unit, s_base=s_base, scaling_policy,
+                     problem=:opf,
                      build_spec=build_spec,
                      build! = build_opf!,
                      relu_eps=volt_var_watt_eps,

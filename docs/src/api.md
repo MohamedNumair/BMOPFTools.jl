@@ -10,6 +10,7 @@ the whole sequence on one feeder.
 |---|---|---|
 | Ingest a case | [`from_dss`](@ref), [`parse_bmopf`](@ref) | [Conversion guide](conversion.md) |
 | Analyse & diagnose it | [`analyze`](@ref), [`render`](@ref), [`errors`](@ref)/[`warnings`](@ref)/[`infos`](@ref) | [Analysis & reports](analysis.md), [Findings](findings.md) |
+| Check a scientific preservation contract | [`check_parallel_member_limit_preservation`](@ref), [`check_neutral_ground_reference_preservation`](@ref), [`check_claimed_solution_validity`](@ref), [`check_load_voltage_base_consistency`](@ref), [`check_transformer_tap_domain_preservation`](@ref), [`check_transformer_winding_convention_preservation`](@ref), [`check_decision_preservation_manifest`](@ref), [`check_kron_boundary_recovery`](@ref), [`check_positive_sequence_collapse`](@ref), [`check_state_dependent_equivalent`](@ref), [`check_reference_singularity`](@ref), [`check_terminal_permutation_invariance`](@ref), [`check_solved_network_feasibility`](@ref), [`check_unit_base_serialization_invariance`](@ref) | [Scientific contracts](scientific_contracts.md) |
 | Repair structure | [`fix_case`](@ref) ([`FixRecipe`](@ref)) | [Case augmentation](augmentation.md) |
 | Place DERs | [`add_generators`](@ref), [`add_ibrs`](@ref) | [DER placement](tutorial_ders.md) |
 | Fill bounds, limits, costs | [`augment_case`](@ref) ([`AugmentationRecipe`](@ref)) | [Case augmentation](augmentation.md) |
@@ -46,6 +47,7 @@ OpfDeviceBuilder
 OpfBuildSpec
 OpfCoefficientKey
 OpfCoefficientProvider
+ScientificContractResult
 ```
 
 ## Finding accessors
@@ -54,6 +56,27 @@ OpfCoefficientProvider
 errors
 warnings
 infos
+```
+
+## Scientific contracts
+
+```@docs
+BMOPFTools.check_parallel_member_limit_preservation
+BMOPFTools.check_neutral_ground_reference_preservation
+BMOPFTools.check_claimed_solution_validity
+BMOPFTools.check_load_voltage_base_consistency
+BMOPFTools.check_transformer_tap_domain_preservation
+BMOPFTools.check_transformer_winding_convention_preservation
+BMOPFTools.check_decision_preservation_manifest
+BMOPFTools.check_kron_boundary_recovery
+BMOPFTools.check_positive_sequence_collapse
+BMOPFTools.check_state_dependent_equivalent
+BMOPFTools.check_reference_singularity
+
+BMOPFTools.check_terminal_permutation_invariance
+BMOPFTools.check_solved_network_feasibility
+BMOPFTools.check_unit_base_serialization_invariance
+BMOPFTools.contract_result_to_dict
 ```
 
 ## IO
@@ -98,7 +121,9 @@ compile_linecodes!
 ```@docs
 to_pmd
 from_dss
+powerio_source_behavior_contract
 to_dss
+powerio_findings
 project_solution
 dispatch_as_loads
 ```
@@ -126,6 +151,8 @@ BMOPFTools.voltage_zone_summary
 ## Staged OPF extension interface
 
 ```@docs
+OpfScaling
+OpfDiagnosticSchema
 OpfRegularization
 OpfDifferentiabilityAnnotation
 opf_bus_voltage_key
@@ -153,6 +180,8 @@ opf_network
 opf_bases
 piecewise_linear_value
 opf_piecewise_linear_expression
+opf_coordinate_bases
+opf_diagnostic_schema
 opf_neutral_labels
 opf_lifecycle
 opf_build_manifest
@@ -194,11 +223,61 @@ extension_state!
 add_terminal_injection!
 ```
 
+## Objective building blocks
+
+Composable, individually weighted objective terms — losses, sequence-component
+unbalance, and the magnitude primitive behind them. See
+[Choosing an objective](objectives.md) for what each one does to the answer and
+when not to use it.
+
+```@docs
+OpfObjectiveTerm
+opf_loss_term
+opf_sequence_term
+opf_generation_cost_term
+opf_total_loss
+opf_element_loss
+opf_sequence_voltage
+opf_current_term
+opf_branch_currents
+opf_neutral_current
+opf_sequence_current
+opf_reduce_norm
+opf_control_effort_term
+opf_vuf_term
+opf_report_sequence_voltage
+opf_report_vuf
+opf_report_current
+smooth_norm
+opf_physical_scale
+```
+
 ## Configuration
 
 ```@docs
 load_config
 ```
+
+## Advanced OPF semantic extension seam
+
+The semantic-block registry is intentionally an advanced, qualified API rather
+than an exported convenience layer. Downstream builders that need to publish
+custom coordinate or residual semantics may call these names explicitly:
+
+```@docs
+BMOPFTools.OpfSemanticBlock
+BMOPFTools.register_opf_semantic_block!
+BMOPFTools.opf_semantic_blocks
+```
+
+Native semantic blocks are registered lazily on the first schema/provenance
+request after KCL finalisation, or when `register_opf_semantic_block!` is
+called after KCL finalisation. Ordinary solves therefore do not pay for
+diagnostic metadata they never inspect, while post-KCL custom registration
+incurs the same materialisation cost and surfaces overlaps at that call.
+Before KCL finalisation the schema reports `semantic_blocks_available=false`; a
+complete native registry is only claimed once the KCL rows and late auxiliary
+bounds exist.
 
 ## Network simplification
 

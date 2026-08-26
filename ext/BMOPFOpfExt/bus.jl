@@ -43,8 +43,11 @@ Add |v|² ∈ [v_min², v_max²] at every ungrounded phase terminal that has bou
 Grounded terminals (fixed at 0) and source-fixed terminals are skipped, as are
 neutral terminals (their voltage is determined by physics, not operational limits).
 """
-function _add_voltage_bounds!(model, net, bus_terminals, grounded, vars)
+function _add_voltage_bounds!(model, net, bus_terminals, grounded, vars;
+                              constraint_context=nothing)
     vr = vars[:vr]; vi = vars[:vi]
+    register(family, index, cref) = _register_semantic_constraint!(
+        constraint_context, family, index, cref)
     fixed = _source_fixed_terminals(net)
     nlabels = BMOPFTools._neutral_labels(net)
 
@@ -70,8 +73,10 @@ function _add_voltage_bounds!(model, net, bus_terminals, grounded, vars)
             v2 = @expression(model, vr_t^2 + vi_t^2)
             lb = v_min isa AbstractVector ? get(v_min, k, nothing) : v_min
             ub = v_max isa AbstractVector ? get(v_max, k, nothing) : v_max
-            lb !== nothing && @constraint(model, v2 >= Float64(lb)^2)
-            ub !== nothing && @constraint(model, v2 <= Float64(ub)^2)
+            lb !== nothing && register(:bus_voltage_lower, (bid, k),
+                @constraint(model, v2 >= Float64(lb)^2))
+            ub !== nothing && register(:bus_voltage_upper, (bid, k),
+                @constraint(model, v2 <= Float64(ub)^2))
         end
     end
 end
@@ -89,9 +94,12 @@ Enforce operational bus-level voltage limits (shared by OPF and feasibility OPF)
 - Intra-bus angle-difference bounds (`va_diff_min`, `va_diff_max`, radians): bilinear
   constraints enforcing the angle between every pair of phase terminals.
 """
-function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
+function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars;
+                                     constraint_context=nothing)
     vr    = vars[:vr]; vi = vars[:vi]
     fixed = _source_fixed_terminals(net)
+    register(family, index, cref) = _register_semantic_constraint!(
+        constraint_context, family, index, cref)
 
     for (bid, bus) in get(net, "bus", Dict())
         terminals = get(bus_terminals, bid, String[])
@@ -111,7 +119,8 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
         vn_max = get(bus, "vn_max", nothing)
         if vn_max !== nothing && neutral !== nothing && !((bid, neutral) in grounded)
             vr_n = vr[(bid, neutral)]; vi_n = vi[(bid, neutral)]
-            _soc_norm!(model, vr_n, vi_n, Float64(vn_max))
+            register(:bus_neutral_voltage_upper, (bid, neutral),
+                _soc_norm!(model, vr_n, vi_n, Float64(vn_max)))
         end
 
         # ── b. Phase-to-neutral voltage magnitude bounds ─────────────────────
@@ -133,8 +142,10 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
                     dvi = @expression(model, vi_t - vi[(bid, neutral)])
                     v2  = @expression(model, dvr^2 + dvi^2)
                 end
-                vpn_min !== nothing && @constraint(model, v2 >= Float64(vpn_min[k])^2)
-                vpn_max !== nothing && @constraint(model, v2 <= Float64(vpn_max[k])^2)
+                vpn_min !== nothing && register(:bus_vpn_lower, (bid, k),
+                    @constraint(model, v2 >= Float64(vpn_min[k])^2))
+                vpn_max !== nothing && register(:bus_vpn_upper, (bid, k),
+                    @constraint(model, v2 <= Float64(vpn_max[k])^2))
             end
         end
 
@@ -157,8 +168,10 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
                     dvr = @expression(model, vr[(bid,tk)] - vr[(bid,tj)])
                     dvi = @expression(model, vi[(bid,tk)] - vi[(bid,tj)])
                     v2  = @expression(model, dvr^2 + dvi^2)
-                    vpp_min !== nothing && @constraint(model, v2 >= Float64(vpp_min[pair_idx])^2)
-                    vpp_max !== nothing && @constraint(model, v2 <= Float64(vpp_max[pair_idx])^2)
+                    vpp_min !== nothing && register(:bus_vpp_lower, (bid, pair_idx),
+                        @constraint(model, v2 >= Float64(vpp_min[pair_idx])^2))
+                    vpp_max !== nothing && register(:bus_vpp_upper, (bid, pair_idx),
+                        @constraint(model, v2 <= Float64(vpp_max[pair_idx])^2))
                 end
             end
         end
@@ -193,8 +206,10 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
                     c0 = @expression(model, vr[(bid,tk)]*vr[(bid,tj)] + vi[(bid,tk)]*vi[(bid,tj)])
                     s = @expression(model, s0*cosΔ - c0*sinΔ)
                     c = @expression(model, c0*cosΔ + s0*sinΔ)
-                    tan_min !== nothing && @constraint(model, tan_min * c <= s)
-                    tan_max !== nothing && @constraint(model, s <= tan_max * c)
+                    tan_min !== nothing && register(:bus_angle_lower, (bid, ki, kj),
+                        @constraint(model, tan_min * c <= s))
+                    tan_max !== nothing && register(:bus_angle_upper, (bid, ki, kj),
+                        @constraint(model, s <= tan_max * c))
                 end
             end
         end
@@ -218,46 +233,55 @@ function _add_bus_limit_constraints!(model, net, bus_terminals, grounded, vars)
         # so use phase_all — not a grounded/fixed-filtered subset.
         if n_phase == 3 &&
                 (vpos_min !== nothing || vpos_max !== nothing ||
-                 vneg_max !== nothing || vzero_max !== nothing)
-            s3 = sqrt(3.0) / 2.0
-            neutral_floating = neutral !== nothing && !((bid, neutral) in grounded)
-
-            # Δv helper: phase-to-neutral if neutral floats, else phase-to-ground
-            function _dv(t)
-                if neutral_floating
-                    return (@expression(model, vr[(bid,t)] - vr[(bid,neutral)]),
-                            @expression(model, vi[(bid,t)] - vi[(bid,neutral)]))
-                else
-                    return (vr[(bid,t)], vi[(bid,t)])
-                end
-            end
-
-            (dvr1, dvi1) = _dv(phase_all[1])
-            (dvr2, dvi2) = _dv(phase_all[2])
-            (dvr3, dvi3) = _dv(phase_all[3])
+                 vneg_max !== nothing || vzero_max !== nothing ||
+                 get(bus, "vuf_max", nothing) !== nothing)
+            # One shared definition of the Fortescue transform, so these bounds
+            # and the sequence OBJECTIVE terms cannot drift apart. See
+            # `_sequence_voltage_terms` in objectives.jl for the reference
+            # convention (phase-to-neutral on a floating-neutral bus).
+            seq = _sequence_voltage_terms(model, vr, vi, bid,
+                                          phase_all, neutral, grounded)
 
             if vpos_min !== nothing || vpos_max !== nothing
-                V1_r = @expression(model,
-                    (dvr1 - 0.5*dvr2 - s3*dvi2 - 0.5*dvr3 + s3*dvi3) / 3)
-                V1_i = @expression(model,
-                    (dvi1 + s3*dvr2 - 0.5*dvi2 - s3*dvr3 - 0.5*dvi3) / 3)
+                (V1_r, V1_i) = seq.positive
                 v1_sq = @expression(model, V1_r^2 + V1_i^2)
-                vpos_min !== nothing && @constraint(model, v1_sq >= Float64(vpos_min)^2)
-                vpos_max !== nothing && @constraint(model, v1_sq <= Float64(vpos_max)^2)
+                vpos_min !== nothing && register(:bus_positive_sequence_lower, bid,
+                    @constraint(model, v1_sq >= Float64(vpos_min)^2))
+                vpos_max !== nothing && register(:bus_positive_sequence_upper, bid,
+                    @constraint(model, v1_sq <= Float64(vpos_max)^2))
             end
 
             if vneg_max !== nothing
-                V2_r = @expression(model,
-                    (dvr1 - 0.5*dvr2 + s3*dvi2 - 0.5*dvr3 - s3*dvi3) / 3)
-                V2_i = @expression(model,
-                    (dvi1 - s3*dvr2 - 0.5*dvi2 + s3*dvr3 - 0.5*dvi3) / 3)
+                (V2_r, V2_i) = seq.negative
                 _soc_norm!(model, V2_r, V2_i, Float64(vneg_max))
             end
 
             if vzero_max !== nothing
-                V0_r = @expression(model, (dvr1 + dvr2 + dvr3) / 3)
-                V0_i = @expression(model, (dvi1 + dvi2 + dvi3) / 3)
+                (V0_r, V0_i) = seq.zero
                 _soc_norm!(model, V0_r, V0_i, Float64(vzero_max))
+            end
+
+            # ── VUF: a true ratio limit, |V2|/|V1| <= u ────────────────────────
+            # `vneg_max` bounds |V2| ABSOLUTELY, so it only coincides with a
+            # standard's unbalance limit if |V1| is treated as fixed at nominal.
+            # |V1| is a decision variable, so that is an approximation. The exact
+            # instantaneous constraint needs no square roots:
+            #
+            #     |V2|^2 <= u^2 |V1|^2
+            #
+            # Both sides scale as voltage squared, so `vuf_max` is dimensionless
+            # and -- alone among the bus voltage bounds -- needs no per-unit
+            # conversion.
+            vuf_max = get(bus, "vuf_max", nothing)
+            if vuf_max !== nothing
+                u = Float64(vuf_max)
+                u >= 0 || throw(ArgumentError(
+                    "bus '$bid': vuf_max must be non-negative, got $u"))
+                (V2_r, V2_i) = seq.negative
+                (V1_r, V1_i) = seq.positive
+                register(:bus_voltage_unbalance_factor, bid,
+                    @constraint(model,
+                        V2_r^2 + V2_i^2 <= u^2 * (V1_r^2 + V1_i^2)))
             end
         end
     end

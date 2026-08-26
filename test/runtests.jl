@@ -2509,6 +2509,14 @@ const IEEE13_FIXTURE = """
         # form (as emitted by from_dss/PowerIO) must be normalised on parse to
         # the per-winding fields the OPF/Ybus builders read — otherwise they
         # default to zero and the leakage impedance silently vanishes.
+        #
+        # r_series/x_series is referred to the WYE winding's base regardless of
+        # which side (from/to) it sits on (powerio-dist's `referred_resistance`/
+        # `referred_ohms`); the migration routes it onto the wye winding's own
+        # field. delta_wye has wye = to, so the lump lands on r/x_series_to —
+        # putting it on r/x_series_from instead double-refers it through
+        # `_yprim_yd`'s delta-side (n_ph/n_eff0²) scaling and understates the
+        # leakage by roughly that factor.
         json = """
         {"bus":{"hv":{"terminal_names":["a","b","c"]},
                 "lv":{"terminal_names":["a","b","c","n"]}},
@@ -2521,20 +2529,46 @@ const IEEE13_FIXTURE = """
         net = parse_bmopf(json; from_string=true)
         tx  = net["transformer"]["delta_wye"]["t1"]
         @test !haskey(tx, "r_series") && !haskey(tx, "x_series")
-        @test tx["r_series_from"] ≈ 0.015
-        @test tx["x_series_from"] ≈ 0.0007
-        @test tx["r_series_to"] == 0.0 && tx["x_series_to"] == 0.0
+        @test tx["r_series_to"] ≈ 0.015
+        @test tx["x_series_to"] ≈ 0.0007
+        @test tx["r_series_from"] == 0.0 && tx["x_series_from"] == 0.0
         @test any(n -> n["code"] == "W.MIGRATE.XFMR_SERIES_FIELDS",
                   net["_meta"]["migration_notes"])
 
         # Per-winding input is left untouched (no spurious migration note).
         json2 = replace(json,
             "\"r_series\":0.015,\"x_series\":0.0007" =>
-            "\"r_series_from\":0.015,\"r_series_to\":0.0,\"x_series_from\":0.0007,\"x_series_to\":0.0")
+            "\"r_series_from\":0.0,\"r_series_to\":0.015,\"x_series_from\":0.0,\"x_series_to\":0.0007")
         net2  = parse_bmopf(json2; from_string=true)
         notes = get(get(net2, "_meta", Dict()), "migration_notes", [])
         @test !any(n -> n["code"] == "W.MIGRATE.XFMR_SERIES_FIELDS", notes)
-        @test net2["transformer"]["delta_wye"]["t1"]["r_series_from"] ≈ 0.015
+        @test net2["transformer"]["delta_wye"]["t1"]["r_series_to"] ≈ 0.015
+    end
+
+    @testset "Migration — wye-referred lump, checked against real DSS fixtures" begin
+        # The testset above pins the routing on hand-written dicts. This pins
+        # the BASE the value arrives on, end to end through PowerIO, on the two
+        # fixtures that discriminate all three candidate readings of "which
+        # side": a wrong-side referral is off by (v_from/v_to)^2 (~700x here).
+        dir = joinpath(@__DIR__, "data", "pf_comparison")
+
+        # pf_yd_xfmr.dss: 500 kVA, 11 kV wye / 415 V delta, %r=1.0 per winding
+        # (2 % total), xhl=4.0. Wye is the FROM side — and also winding 1, and
+        # also HV, so on its own this case cannot tell the three apart.
+        yd = first(values(from_dss(joinpath(dir, "pf_yd_xfmr.dss"))["transformer"]["wye_delta"]))
+        z_base_hv = 11.0^2 / 0.5                      # Ω, on kVLL / MVA
+        @test yd["r_series_from"] ≈ 0.02 * z_base_hv  # 4.84 Ω
+        @test yd["x_series_from"] ≈ 0.04 * z_base_hv  # 9.68 Ω
+        @test yd["r_series_to"] == 0.0 && yd["x_series_to"] == 0.0
+
+        # pf_dy_xfmr.dss: same ratings, 11 kV delta / 415 V wye. Here wye is the
+        # TO side while winding 1 and HV are the FROM side, so agreeing with the
+        # wye rule here rules out both other readings.
+        dy = first(values(from_dss(joinpath(dir, "pf_dy_xfmr.dss"))["transformer"]["delta_wye"]))
+        z_base_lv = 0.415^2 / 0.5                     # Ω
+        @test dy["r_series_to"] ≈ 0.02 * z_base_lv    # 0.006889 Ω
+        @test dy["x_series_to"] ≈ 0.04 * z_base_lv    # 0.013778 Ω
+        @test dy["r_series_from"] == 0.0 && dy["x_series_from"] == 0.0
     end
 
     @testset "Schema — own output validates (layer drift)" begin
@@ -3491,7 +3525,7 @@ const IEEE13_FIXTURE = """
     # (PowerIO.jl). PowerIO is a hard dependency, so this always runs.
     # --------------------------------------------------------------------------
     @testset "OpenDSS generator conversion via PowerIO" begin
-        @test startswith(BMOPFTools.powerio_version(), "PowerIO.jl 0.7.")
+        @test startswith(BMOPFTools.powerio_version(), "PowerIO.jl 0.9.")
         net = from_dss(joinpath(@__DIR__, "data", "issue190_generator.dss"))
 
         @test haskey(net, "generator")
@@ -3556,6 +3590,198 @@ const IEEE13_FIXTURE = """
         @test parse_bmopf(path)["meta"]["frequency"] == 50.0
     end
 
+    @testset "from_dss — source provenance and BMOPF field mapping" begin
+        source_path = joinpath(@__DIR__, "data", "pf_comparison", "pf_delta_load.dss")
+        net = from_dss(source_path)
+        source_meta = net["_meta"]["powerio_source_metadata"]
+        @test source_meta["source_format"] == "dss"
+        @test source_meta["field_count"] == 9
+        @test Set(source_meta["fields"]) == Set([
+            "angle", "basekv", "conn", "kv", "model", "phases", "units", "vmaxpu", "vminpu",
+        ])
+        @test haskey(source_meta["by_scope"], "load:d12")
+        @test "vminpu" in source_meta["by_scope"]["load:d12"]
+
+        mapping = net["_meta"]["powerio_source_mapping"]
+        @test net["_meta"]["powerio_source_mapped_fields"] ==
+              ["angle", "basekv", "kv", "model", "phases", "vmaxpu", "vminpu"]
+        @test mapping["fields"] ==
+              ["angle", "basekv", "kv", "model", "phases", "vmaxpu", "vminpu"]
+        @test mapping["by_field"]["kv"]["target"] == "load.v_nom"
+        @test mapping["by_field"]["kv"]["transform"] == "kV_to_volts"
+        @test mapping["by_field"]["phases"]["target"] == "load.terminal_map/configuration"
+        @test mapping["by_field"]["basekv"]["status"] == "mapped_with_transform"
+        @test mapping["by_field"]["angle"]["target"] == "voltage_source.v_angle"
+        @test mapping["unmapped_fields"] == ["units"]
+        @test isempty(mapping["blocking_unmapped_fields"])
+        @test mapping["by_field"]["model"]["status"] == "mapped_with_contract"
+        @test mapping["by_field"]["model"]["target"] == "voltage_source.v_magnitude/v_angle"
+        @test mapping["by_field"]["model"]["scopes"] == ["source:source"]
+        @test mapping["by_field"]["vminpu"]["status"] == "mapped_with_contract"
+        @test mapping["by_field"]["vmaxpu"]["status"] == "mapped_with_contract"
+        @test mapping["by_field"]["vminpu"]["impact"] == "physical_or_operating_point"
+        @test mapping["by_field"]["vminpu"]["reason"] ==
+              "preserved_as_load_behavior_contract_not_bus_voltage_bound"
+        @test mapping["by_field"]["vminpu"]["active_in_original_model"] == false
+        @test mapping["by_field"]["vminpu"]["target"] ==
+              "_meta.powerio_source_semantics.load_voltage_thresholds"
+        @test mapping["by_field"]["units"]["physical_readiness_blocking"] == false
+        semantics = net["_meta"]["powerio_source_semantics"]
+        @test semantics["load_voltage_thresholds"][1]["status"] == "observed_ordered"
+        @test semantics["load_voltage_thresholds"][1]["vminpu"] == 0.0
+        @test semantics["load_voltage_thresholds"][1]["vmaxpu"] == 2.0
+        @test semantics["voltage_source_models"][1]["status"] ==
+              "represented_as_fixed_voltage_boundary"
+
+        behavior = powerio_source_behavior_contract(net)
+        @test behavior["contract_version"] == "powerio_source_behavior/v1"
+        @test behavior["mutation_policy"] == "non_mutating"
+        @test behavior["constraint_policy"] == "observation_only"
+        @test behavior["source_semantics_available"] == true
+        @test behavior["active_constraints_added"] == false
+        @test behavior["threshold_observation_count"] == 3
+        @test behavior["eligible_candidate_count"] == 3
+        @test behavior["auxiliary_constraint_candidates"] == Dict{String,Any}[]
+        @test behavior["load_voltage_behavior"][1]["bus"] == "lb"
+        @test behavior["load_voltage_behavior"][1]["constraint_candidate_status"] ==
+              "eligible_terminal_voltage_ratio_candidate"
+
+        planned = powerio_source_behavior_contract(net;
+            plan_auxiliary_constraints = true)
+        @test planned["constraint_policy"] == "candidate_plan"
+        @test length(planned["auxiliary_constraint_candidates"]) == 3
+        @test all(!candidate["active_in_original_model"] for candidate in
+                  planned["auxiliary_constraint_candidates"])
+        @test all(candidate["materialization"] == "not_materialized" for candidate in
+                  planned["auxiliary_constraint_candidates"])
+
+        roundtrip_path = joinpath(mktempdir(), "source_mapping.json")
+        write_bmopf(net, roundtrip_path)
+        roundtrip = parse_bmopf(roundtrip_path)
+        @test roundtrip["_meta"]["powerio_source_mapping"]["fields"] == mapping["fields"]
+        @test roundtrip["_meta"]["powerio_source_metadata"]["field_count"] == 9
+    end
+
+    @testset "from_dss — source ledger is case-folded and honest" begin
+        source_path = joinpath(@__DIR__, "data", "pf_comparison", "pf_delta_load.dss")
+        # OpenDSS identifiers are case-insensitive, and the ledger joins scopes
+        # built from the converted objects against scopes parsed out of PowerIO's
+        # warning text. Both sides must fold case or a complete mapping reads as
+        # a partial one and lands in blocking_unmapped_fields.
+        mixed_path = joinpath(mktempdir(), "pf_delta_load_mixed_case.dss")
+        write(mixed_path, replace(read(source_path, String),
+            "d12" => "D12", "d23" => "D23", "d31" => "D31"))
+        lower = from_dss(source_path)["_meta"]
+        mixed = from_dss(mixed_path)["_meta"]
+        @test any(contains("load D12"), mixed["powerio_warnings"])
+        @test mixed["powerio_source_mapping"]["by_field"] ==
+              lower["powerio_source_mapping"]["by_field"]
+        @test mixed["powerio_source_mapping"]["blocking_unmapped_fields"] == String[]
+        @test mixed["powerio_source_metadata"]["by_scope"] ==
+              lower["powerio_source_metadata"]["by_scope"]
+        @test haskey(mixed["powerio_source_metadata"]["by_scope"], "load:d12")
+        for field in ("kv", "phases", "vminpu", "vmaxpu")
+            @test mixed["powerio_source_mapping"]["by_field"][field]["unmapped_scopes"] ==
+                  String[]
+        end
+
+        # Scope keys are the join key across all three _meta blocks.
+        semantics_scopes = Set(String[record["scope"] for record in
+            mixed["powerio_source_semantics"]["load_voltage_thresholds"]])
+        @test issubset(semantics_scopes,
+                       Set(keys(mixed["powerio_source_metadata"]["by_scope"])))
+
+        # Every by_field record carries the same keys, whether or not a warning
+        # happened to fire for that field.
+        for (field, record) in mixed["powerio_source_mapping"]["by_field"]
+            for key in ("status", "target", "transform", "mapped_scopes",
+                        "warned_scopes", "unmapped_scopes", "scopes", "scope_count",
+                        "impact", "physical_readiness_blocking", "reason")
+                @test haskey(record, key)
+            end
+            @test record["scopes"] ==
+                  sort!(union(record["mapped_scopes"], record["warned_scopes"]))
+            @test record["scope_count"] == length(record["scopes"])
+            @test record["unmapped_scopes"] ==
+                  sort!(setdiff(record["warned_scopes"], record["mapped_scopes"]))
+        end
+
+        mapping = mixed["powerio_source_mapping"]
+        @test mapping["warning_status"] == "parsed"
+        @test mapping["warnings_truncated_upstream"] == false
+        @test mapping["unclassified_warnings"] == String[]
+        @test mapping["warnings_classified"] == mapping["warnings_seen"]
+        @test mixed["powerio_source_metadata"]["extras_status"] == "available"
+        @test mixed["powerio_source_metadata"]["objects_with_extras"] > 0
+    end
+
+    @testset "from_dss — source ledger on a real feeder" begin
+        net = from_dss(joinpath(@__DIR__, "data", "LV", "LV1_14bus", "Master.dss"))
+        mapping = net["_meta"]["powerio_source_mapping"]
+        # OpenDSS carries a length and a linecode on a switch-as-line. BMOPF
+        # models a switch as an ideal closure, so dropping them changes no
+        # physics — the catch-all "unknown field ⇒ blocking" rule must not fire.
+        @test "length" in mapping["unmapped_fields"]
+        @test "linecode" in mapping["unmapped_fields"]
+        @test "length" ∉ mapping["blocking_unmapped_fields"]
+        @test "linecode" ∉ mapping["blocking_unmapped_fields"]
+        for field in ("length", "linecode")
+            record = mapping["by_field"][field]
+            @test record["physical_readiness_blocking"] == false
+            @test record["impact"] == "representational"
+            @test record["reason"] ==
+                  "switch_is_an_ideal_closure_with_no_series_impedance"
+            @test all(startswith("switch:"), record["unmapped_scopes"])
+        end
+        @test mapping["blocking_unmapped_fields"] == String[]
+
+        # PowerIO 0.9 returns owned diagnostic records rather than capping a
+        # per-call channel, so even this feeder's long list arrives complete and
+        # the ledger's empty blocking list IS a fidelity statement. (Under
+        # PowerIO <= 0.7 the list was truncated and the status had to say so.)
+        @test !any(contains("warning list truncated"), net["_meta"]["powerio_warnings"])
+        @test mapping["warnings_truncated_upstream"] == false
+        @test mapping["warning_status"] == "parsed"
+
+        # The same field name is only benign for the kind it was classified on:
+        # a `length` dropped from a line would still block.
+        @test BMOPFTools._powerio_mapping_policy("length", ["switch:s1"]).blocking == false
+        @test BMOPFTools._powerio_mapping_policy("length", ["line:l1"]).blocking == true
+        @test BMOPFTools._powerio_mapping_policy(
+            "length", ["switch:s1", "line:l1"]).blocking == true
+    end
+
+    @testset "from_dss — unclassifiable fidelity losses are surfaced" begin
+        net = from_dss(joinpath(@__DIR__, "data", "SWER", "Master.dss"))
+        mapping = net["_meta"]["powerio_source_mapping"]
+        # A transformer %noloadloss drop is a real fidelity loss that names no
+        # single source field, so it cannot enter by_field. It must still be
+        # visible instead of silently vanishing from the ledger.
+        @test mapping["warning_status"] == "partially_classified"
+        @test !isempty(mapping["unclassified_warnings"])
+        @test any(contains("%noloadloss"), mapping["unclassified_warnings"])
+        @test all(warning -> isnothing(match(r"`([^`]+)`", warning)),
+                  mapping["unclassified_warnings"])
+        @test mapping["warnings_classified"] + length(mapping["unclassified_warnings"]) ==
+              mapping["warnings_seen"]
+    end
+
+    @testset "from_dss — ZIP load semantics are mapped by scope" begin
+        source_path = joinpath(@__DIR__, "data", "pf_comparison", "pf_zip_3ph.dss")
+        net = from_dss(source_path)
+        mapping = net["_meta"]["powerio_source_mapping"]
+        @test "zipv" in mapping["fields"]
+        @test mapping["by_field"]["zipv"]["target"] ==
+              "load.model/alpha_z/alpha_i/alpha_p/beta_z/beta_i/beta_p"
+        @test mapping["by_field"]["zipv"]["status"] == "mapped"
+        @test mapping["by_field"]["model"]["status"] == "mapped_with_contract"
+        @test mapping["by_field"]["model"]["mapped_scopes"] ==
+              ["load:ld1", "load:ld2", "load:ld3", "source:source"]
+        @test mapping["by_field"]["model"]["unmapped_scopes"] == String[]
+        @test "zipv" ∉ mapping["blocking_unmapped_fields"]
+        @test "model" ∉ mapping["blocking_unmapped_fields"]
+    end
+
     @testset "LV1_14bus — OpenDSS integration" begin
         dss_master = joinpath(@__DIR__, "data", "LV", "LV1_14bus", "Master.dss")
 
@@ -3574,11 +3800,12 @@ const IEEE13_FIXTURE = """
             tx = first(values(xfmr["delta_wye"]))
             @test tx["v_nom_from"] > tx["v_nom_to"]               # step-down
             @test tx["v_nom_from"] / tx["v_nom_to"] ≈ 11.0/0.433  rtol=0.02
-            # PowerIO emits a lumped Γ-model; the parse-time migration normalises
-            # it to the per-winding fields the OPF/Ybus builders consume, so a
-            # nonzero leakage impedance reaches them (not silently zero).
-            @test haskey(tx, "r_series_from") && tx["r_series_from"] > 0
-            @test haskey(tx, "x_series_from") && tx["x_series_from"] > 0
+            # PowerIO emits a lumped Γ-model, wye-base-referred; the parse-time
+            # migration normalises it onto the wye winding's own field (delta_wye
+            # has wye = to) so a nonzero leakage impedance reaches the OPF/Ybus
+            # builders (not silently zero, and not double-referred).
+            @test haskey(tx, "r_series_to") && tx["r_series_to"] > 0
+            @test haskey(tx, "x_series_to") && tx["x_series_to"] > 0
             @test !haskey(tx, "r_series") && !haskey(tx, "x_series")
             # spec arity: delta side 3 terminals, wye side 4 (incl. neutral)
             @test length(tx["terminal_map_from"]) == 3
@@ -3800,6 +4027,18 @@ const IEEE13_FIXTURE = """
     end
 
     # -----------------------------------------------------------------------
+    # powerio v0.8.0 BMOPF ingest — new $schema URI, uppercase load models,
+    # transformer fields relocated under extras (BMOPF schema 0.1.0).
+    # -----------------------------------------------------------------------
+    include("powerio_v08_tests.jl")
+    include("powerio_v09_tests.jl")
+
+    # -----------------------------------------------------------------------
+    # PowerIO conversion diagnostics lifted into Findings
+    # -----------------------------------------------------------------------
+    include("powerio_findings_tests.jl")
+
+    # -----------------------------------------------------------------------
     # write_bmopf JSON validity
     # -----------------------------------------------------------------------
     include("write_bmopf_tests.jl")
@@ -3819,6 +4058,13 @@ const IEEE13_FIXTURE = """
     # COMPONENT_COLLECTIONS registry — completeness against the schema
     # -----------------------------------------------------------------------
     include("registry_tests.jl")
+
+    # -----------------------------------------------------------------------
+    # Executable scientific contracts — algebraic, no solver required
+    # -----------------------------------------------------------------------
+include("scientific_contract_tests.jl")
+
+include("executable_knowledge_tests.jl")
 
     # -----------------------------------------------------------------------
     # Network simplification
@@ -3854,10 +4100,14 @@ const IEEE13_FIXTURE = """
         if !_HAS_JUMP_IPOPT
             @test_skip "JuMP/Ipopt not in load path — skipping OPF tests"
         else
+            include("scaling_policy_tests.jl")
+            include("semantic_block_tests.jl")
             include("opf_tests.jl")
             include("pmd_opf_port_tests.jl")
             include("pmd_opf_bounds_tests.jl")
             include("volt_var_watt_tests.jl")
+            include("objective_tests.jl")
+            include("kcl_guard_tests.jl")
             include("network_limit_tests.jl")
             include("dc_network_tests.jl")
         end
