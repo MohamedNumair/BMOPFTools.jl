@@ -35,16 +35,25 @@ function inject_pmd_bounds!(net::Dict; vscale::Real=1.0)
             # eng `phases` is required by PMD's pairwise-bound compilation
             extra["phases"] = [i for i in eachindex(tnames) if i != n_idx]
         end
-        # PMD eng pairwise bounds are scalars per bus; BMOPF's are per-phase
-        # arrays — only uniform arrays can be represented.
-        uniform(v, k) = (u = unique(Float64.(v));
-                         length(u) == 1 || error("non-uniform $k cannot map to PMD");
-                         u[1])
+        # BMOPF's vpn/vpp bounds are per-phase/per-pair arrays; PMD's scalar
+        # vm_pn_*/vm_pp_* fields cannot express that, so emit the explicit
+        # per-pair tuple lists (vm_pair_lb/ub) that PMD compiles them into.
+        # BMOPF pair order (bus.jl): (1,2), (1,3), (2,3) — i<j over phases.
         haskey(bus, "vn_max") && (extra["vm_ng_ub"] = Float64(bus["vn_max"]) / vscale)
-        haskey(bus, "vpn_min") && (extra["vm_pn_lb"] = uniform(bus["vpn_min"], "vpn_min") / vscale)
-        haskey(bus, "vpn_max") && (extra["vm_pn_ub"] = uniform(bus["vpn_max"], "vpn_max") / vscale)
-        haskey(bus, "vpp_min") && (extra["vm_pp_lb"] = uniform(bus["vpp_min"], "vpp_min") / vscale)
-        haskey(bus, "vpp_max") && (extra["vm_pp_ub"] = uniform(bus["vpp_max"], "vpp_max") / vscale)
+        pair_lb = Tuple{Any,Any,Real}[]
+        pair_ub = Tuple{Any,Any,Real}[]
+        pn_pairs = [(k, 4) for k in 1:3]
+        pp_pairs = [(1, 2), (1, 3), (2, 3)]
+        for (bk, pairs, dest) in (("vpn_min", pn_pairs, pair_lb),
+                                  ("vpn_max", pn_pairs, pair_ub),
+                                  ("vpp_min", pp_pairs, pair_lb),
+                                  ("vpp_max", pp_pairs, pair_ub))
+            haskey(bus, bk) || continue
+            vals = Float64.(bus[bk]) ./ vscale
+            append!(dest, [(a, b, vals[i]) for (i, (a, b)) in enumerate(pairs)])
+        end
+        isempty(pair_lb) || (extra["vm_pair_lb"] = pair_lb)
+        isempty(pair_ub) || (extra["vm_pair_ub"] = pair_ub)
         isempty(extra) || (bus["_pmd"] = merge(get(bus, "_pmd", Dict{String,Any}()), extra))
     end
     net

@@ -417,4 +417,46 @@
         @test res["generator"]["der_e"]["1"]["pg"] ≈ 9267.5 atol=10.0
         @test res["objective"] ≈ -90.2675 atol=1e-3   # (−3·27 − 1·9.2675) $/h
     end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Case H2 — phase-to-phase LOWER bound (vpp_min) binds (#157).
+    # Same three-wire feeder, per-pair floors [395, 375, 375] V on the end bus
+    # (BMOPF's vpp_min is per-pair — the non-uniform floors travel to PMD as
+    # explicit vm_pair_lb tuples, the exact per-pair semantics). Heavy loads
+    # sag the spreads; positive costs make support a last resort. The cheap
+    # der_e (+1) saturates phases 1–2 of its 5 kW box, the dear der_m (+3)
+    # covers the remainder: pairs (1,2) and (2,3) land exactly on their
+    # different floors while (1,3) stays slack at 385.86 V, and the phase
+    # magnitudes are visibly unequal — a √3-scaled per-phase mis-encoding
+    # cannot produce two different binding pair values at once.
+    # Fixture: test/data/pmd_bounds/H2_vpp_min.json. PMD IVREN target (flat
+    # start, identical digits): der_e Σpg = 12.4209 kW, der_m Σpg = 11.0412 kW.
+    # A der_e ×9 perturbation flips the order (der_m → 33.62 kW, der_e → 0).
+    # Reproduce with scripts/pmd_reproduction/ivren_cases.jl.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "H2: vpp_min binds — pairs at 395/375 V, der_e 12.4209 kW, der_m 11.0412 kW" begin
+        net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "H2_vpp_min.json"))
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        b = res["bus"]["buse"]
+        v = [b[ph]["vr"] + im * b[ph]["vi"] for ph in ("1", "2", "3")]
+        # binding bounds: two pairs on their (different) floors, one slack —
+        # recomputed from the primal
+        @test abs(v[1] - v[2]) ≈ 395.0    atol=1e-2
+        @test abs(v[1] - v[3]) ≈ 385.8594 atol=1e-2   # strictly inside
+        @test abs(v[2] - v[3]) ≈ 375.0    atol=1e-2
+        # unequal phase magnitudes — not a per-phase bound in disguise
+        for (ph, vm) in (("1", 234.7999), ("2", 217.5709), ("3", 214.8865))
+            @test abs(b[ph]["vr"] + im * b[ph]["vi"]) ≈ vm atol=1e-2
+        end
+        # two-generator arbitration: der_e box-saturated on phases 1–2,
+        # der_m interior (phase 3 at its 0 floor)
+        @test res["generator"]["der_e"]["1"]["pg"] ≈ 5000.0 atol=1.0
+        @test res["generator"]["der_e"]["2"]["pg"] ≈ 5000.0 atol=1.0
+        @test res["generator"]["der_e"]["3"]["pg"] ≈ 2420.8 atol=10.0
+        @test res["generator"]["der_m"]["1"]["pg"] ≈ 8821.7 atol=10.0
+        @test res["generator"]["der_m"]["2"]["pg"] ≈ 2219.6 atol=10.0
+        @test res["generator"]["der_m"]["3"]["pg"] ≈ 0.0    atol=1.0
+        @test res["objective"] ≈ 45.5445 atol=1e-3   # (3·11.0412 + 1·12.4209) $/h
+    end
 end
