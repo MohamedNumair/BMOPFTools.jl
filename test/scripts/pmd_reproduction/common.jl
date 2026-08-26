@@ -30,12 +30,21 @@ function inject_pmd_bounds!(net::Dict; vscale::Real=1.0)
         extra = Dict{String,Any}()
         tnames = get(bus, "terminal_names", String[])
         n_idx = findfirst(==("n"), tnames)
-        n_idx !== nothing && (extra["neutral"] = n_idx)
-        haskey(bus, "vn_max") && (extra["vm_ng_ub"] = bus["vn_max"] / vscale)
-        haskey(bus, "vpn_min") && (extra["vm_pn_lb"] = Float64.(bus["vpn_min"]) ./ vscale)
-        haskey(bus, "vpn_max") && (extra["vm_pn_ub"] = Float64.(bus["vpn_max"]) ./ vscale)
-        haskey(bus, "vpp_min") && (extra["vm_pp_lb"] = Float64.(bus["vpp_min"]) ./ vscale)
-        haskey(bus, "vpp_max") && (extra["vm_pp_ub"] = Float64.(bus["vpp_max"]) ./ vscale)
+        if n_idx !== nothing
+            extra["neutral"] = n_idx
+            # eng `phases` is required by PMD's pairwise-bound compilation
+            extra["phases"] = [i for i in eachindex(tnames) if i != n_idx]
+        end
+        # PMD eng pairwise bounds are scalars per bus; BMOPF's are per-phase
+        # arrays — only uniform arrays can be represented.
+        uniform(v, k) = (u = unique(Float64.(v));
+                         length(u) == 1 || error("non-uniform $k cannot map to PMD");
+                         u[1])
+        haskey(bus, "vn_max") && (extra["vm_ng_ub"] = Float64(bus["vn_max"]) / vscale)
+        haskey(bus, "vpn_min") && (extra["vm_pn_lb"] = uniform(bus["vpn_min"], "vpn_min") / vscale)
+        haskey(bus, "vpn_max") && (extra["vm_pn_ub"] = uniform(bus["vpn_max"], "vpn_max") / vscale)
+        haskey(bus, "vpp_min") && (extra["vm_pp_lb"] = uniform(bus["vpp_min"], "vpp_min") / vscale)
+        haskey(bus, "vpp_max") && (extra["vm_pp_ub"] = uniform(bus["vpp_max"], "vpp_max") / vscale)
         isempty(extra) || (bus["_pmd"] = merge(get(bus, "_pmd", Dict{String,Any}()), extra))
     end
     net
@@ -81,6 +90,30 @@ function solve_pmd_en(net::Dict;
                 bus[key] = [t == 4 ? neutral_val : Float64(bus[key]) for t in terms]
             end
         end
+        # `to_pmd` omits "grounded" on ungrounded buses; PMD requires the key.
+        haskey(bus, "grounded") || (bus["grounded"] = Int[];
+                                    bus["rg"] = Float64[]; bus["xg"] = Float64[])
+    end
+    # A 3-wire source on a bus that has a neutral terminal must carry that
+    # neutral as an explicit 4th connection at 0 V (PMD's own DSS-parser
+    # convention). Without it PMD still enforces KCL on the source-bus neutral
+    # but gives it no absorber, silently breaking the network's neutral return
+    # (symptom: zero neutral current on the source line, wrong unbalanced
+    # voltages, LOCALLY_INFEASIBLE on determined cases).
+    for (_, vs) in get(eng, "voltage_source", Dict())
+        bus = eng["bus"][vs["bus"]]
+        if 4 in bus["terminals"] && !(4 in vs["connections"])
+            push!(vs["connections"], 4)
+            vs["vm"] = vcat(Float64.(vs["vm"]), 0.0)
+            vs["va"] = vcat(Float64.(vs["va"]), 0.0)
+        end
+    end
+    # `to_pmd` does not set the load model or vm_nom; all fixtures here are
+    # constant power (vm_nom is structural — it only scales ZIP-type models).
+    vnom = isempty(vb) ? 230.0 : maximum(values(vb))
+    for (_, ld) in get(eng, "load", Dict())
+        haskey(ld, "model") || (ld["model"] = PMD.POWER)
+        haskey(ld, "vm_nom") || (ld["vm_nom"] = vnom)
     end
     # `to_pmd` emits shunt matrices only when the BMOPF linecode carries them,
     # but PMD's eng2math requires the keys — fill zeros of the series size.

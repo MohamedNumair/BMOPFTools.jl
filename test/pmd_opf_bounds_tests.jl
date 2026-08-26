@@ -257,4 +257,43 @@
         ps, _ = _source_kw_kvar(res)
         @test ps ≈ 59.304  atol=1e-2     # grid supplies all real power
     end
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Case G1 — phase-to-neutral UPPER bound (vpn_max) binds (#157).
+    # Four-wire feeder (explicit neutral conductor, grounded ONLY at the
+    # source), two DERs: a three-phase der_m at the mid bus whose reward
+    # (cost −3) saturates its 9 kW/phase box, and a SINGLE-PHASE der_e (1–n)
+    # at the end bus (cost −1) whose export displaces the neutral until the
+    # phase-1 PHASE-TO-NEUTRAL magnitude hits vpn_max = 240 V. The displaced
+    # neutral (|Vₙ| ≈ 19.5 V) keeps the phase-to-ground magnitude ~10 V away
+    # from the cap, so a phase-to-ground mis-encoding cannot pass.
+    # Fixture: test/data/pmd_bounds/G1_vpn_max.json (shared with the
+    # reproduction script). PMD IVREN target (flat start, identical digits):
+    # der_m Σpg = 27.0 kW, der_e Σpg = 3.3943 kW, |V_pn(buse)| =
+    # [240.0, 188.6497, 233.4057] V. Cost-ratio perturbations move the split
+    # (der_e at −9 pulls der_m phase 1 off its box), so the arbitration is
+    # non-degenerate. Reproduce with scripts/pmd_reproduction/ivren_cases.jl.
+    # ─────────────────────────────────────────────────────────────────────────
+    @testset "G1: vpn_max binds — der_m 27 kW (box), der_e 3.3943 kW, |Vpn|=240 V" begin
+        net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "G1_vpn_max.json"))
+        res = solve_opf(net)
+        @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
+        # binding bound: phase-1 pn magnitude at vpn_max, recomputed from the
+        # primal (vr/vi differences), never from the constraint expression
+        b  = res["bus"]["buse"]
+        vn = b["n"]["vr"] + im * b["n"]["vi"]
+        vpn = [abs(b[ph]["vr"] + im * b[ph]["vi"] - vn) for ph in ("1", "2", "3")]
+        @test vpn[1] ≈ 240.0    atol=1e-2
+        @test vpn[2] ≈ 188.6497 atol=1e-2    # strictly inside the cap
+        @test vpn[3] ≈ 233.4057 atol=1e-2
+        # it is the pn quantity that binds, NOT phase-to-ground
+        @test abs(b["1"]["vr"] + im * b["1"]["vi"]) ≈ 229.7744 atol=1e-2
+        @test abs(vn) ≈ 19.5308 atol=1e-2
+        # two-generator arbitration: der_m saturated, der_e interior
+        for ph in ("1", "2", "3")
+            @test res["generator"]["der_m"][ph]["pg"] ≈ 9000.0 atol=1.0
+        end
+        @test res["generator"]["der_e"]["1"]["pg"] ≈ 3394.3 atol=10.0
+        @test res["objective"] ≈ -84.3943 atol=1e-3   # (−3·27 − 1·3.3943) $/h
+    end
 end

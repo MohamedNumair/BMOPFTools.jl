@@ -36,3 +36,25 @@ let
             round.(vm[1:3]; digits=3))
     ok || error("pipeline check failed — do not derive new targets with these helpers")
 end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Case G1 — vpn_max binds (four-wire, two DERs). See the testset provenance
+# comment. PMD converges to the BMOPF optimum from a FLAT start; the two
+# cost-ratio perturbations must move the dispatch split (non-degeneracy gate).
+# ─────────────────────────────────────────────────────────────────────────────
+let
+    costs0 = Dict("der_m" => -3.0, "der_e" => -1.0)
+    function solve_g1(costs)
+        net = load_fixture("G1_vpn_max")
+        _, sol, _ = solve_pmd_en(net; gen_costs=costs)
+        pmd_dispatch(sol), sol
+    end
+    disp, sol = solve_g1(costs0)
+    vpn = [abs((sol["bus"]["buse"]["vr"][k] + im * sol["bus"]["buse"]["vi"][k]) -
+               (sol["bus"]["buse"]["vr"][4] + im * sol["bus"]["buse"]["vi"][4])) for k in 1:3]
+    print_targets("G1_vpn_max", disp,
+                  "|V_pn|(buse)" => round.(vpn; digits=4),
+                  "|V_n|(buse)" => round(abs(sol["bus"]["buse"]["vr"][4] +
+                                             im * sol["bus"]["buse"]["vi"][4]); digits=4))
+    perturbation_check(c -> solve_g1(c)[1], costs0, ["der_m", "der_e"]; ratio=9.0)
+end
