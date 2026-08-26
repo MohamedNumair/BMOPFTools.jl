@@ -1,0 +1,38 @@
+# Reproduce the explicit-neutral (IVREN) bound-binding targets of
+# test/pmd_opf_bounds_tests.jl. See README.md. Not run in CI.
+#
+# Produced with: PowerModelsDistribution v0.16.0 (dev checkout), Ipopt via JuMP.
+
+include(joinpath(@__DIR__, "common.jl"))
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pipeline check — Case A (locked in the testset): the helpers must reproduce
+# Σpg = 11.7642 kW with the load bus pinned at v_max = 235 V before any new
+# case is trusted.
+# ─────────────────────────────────────────────────────────────────────────────
+let
+    net = parse_bmopf("""
+    {"bus":{
+        "sourcebus":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
+        "loadbus":  {"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"],
+                     "v_min":[220.0,220.0,220.0],"v_max":[235.0,235.0,235.0]}},
+     "voltage_source":{"source":{"bus":"sourcebus","terminal_map":["1","2","3"],
+         "v_magnitude":[230.0,230.0,230.0],"v_angle":[0.0,-2.0943951,2.0943951]}},
+     "linecode":{"lc":{"R_series_1_1":0.3,"R_series_2_2":0.3,"R_series_3_3":0.3,
+                       "X_series_1_1":0.1,"X_series_2_2":0.1,"X_series_3_3":0.1}},
+     "line":{"l1":{"bus_from":"sourcebus","bus_to":"loadbus",
+         "terminal_map_from":["1","2","3"],"terminal_map_to":["1","2","3"],"linecode":"lc","length":1.0}},
+     "generator":{"der":{"bus":"loadbus","terminal_map":["1","2","3","n"],"configuration":"WYE",
+         "p_min":[0.0,0.0,0.0],"p_max":[100000.0,100000.0,100000.0],
+         "q_min":[0.0,0.0,0.0],"q_max":[0.0,0.0,0.0],"cost":[-1.0,-1.0,-1.0]}}}
+    """; from_string=true)
+    res, sol, _ = solve_pmd_en(net; gen_costs=Dict("der" => -1.0))
+    disp = pmd_dispatch(sol)
+    vm = pmd_vm(sol, "loadbus")
+    ok = isapprox(disp["der"].pg, 11.7642; atol=1e-3) &&
+         all(isapprox.(vm[1:3], 235.0; atol=1e-2))
+    println("pipeline check (Case A): ", ok ? "OK" : "FAILED",
+            "  Σpg = ", round(disp["der"].pg; digits=4), " kW, |V| = ",
+            round.(vm[1:3]; digits=3))
+    ok || error("pipeline check failed — do not derive new targets with these helpers")
+end

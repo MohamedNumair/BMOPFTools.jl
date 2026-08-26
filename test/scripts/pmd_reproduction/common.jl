@@ -1,0 +1,164 @@
+# Shared helpers for the PMD reproduction scripts in this directory.
+# See README.md for the environment and conventions. Not run in CI.
+
+import PowerModelsDistribution as PMD
+import Ipopt
+import JuMP
+using BMOPFTools
+
+const IPOPT = JuMP.optimizer_with_attributes(
+    Ipopt.Optimizer, "print_level" => 0, "tol" => 1e-10, "acceptable_tol" => 1e-10)
+
+const FIXTURE_DIR = joinpath(@__DIR__, "..", "..", "data", "pmd_bounds")
+
+load_fixture(case::AbstractString) =
+    parse_bmopf(joinpath(FIXTURE_DIR, case * ".json"))
+
+"""
+    inject_pmd_bounds!(net) -> net
+
+Translate the BMOPF bus voltage bounds that `to_pmd` does NOT map — `vn_max`,
+`vpn_min`/`vpn_max`, `vpp_min`/`vpp_max` — into the PMD eng fields (`vm_ng_ub`,
+`vm_pn_lb/ub`, `vm_pp_lb/ub`) via the `"_pmd"` passthrough, together with the
+eng `neutral` index required for the `vm_ng_ub` fold. Values are divided by the
+eng `voltage_scale_factor` at export time inside `solve_pmd_en` (PMD eng
+voltages are `voltage_scale_factor`-scaled; `to_pmd` defaults to settings with
+that factor). Mutates and returns `net`.
+"""
+function inject_pmd_bounds!(net::Dict; vscale::Real=1.0)
+    for (_, bus) in get(net, "bus", Dict())
+        extra = Dict{String,Any}()
+        tnames = get(bus, "terminal_names", String[])
+        n_idx = findfirst(==("n"), tnames)
+        n_idx !== nothing && (extra["neutral"] = n_idx)
+        haskey(bus, "vn_max") && (extra["vm_ng_ub"] = bus["vn_max"] / vscale)
+        haskey(bus, "vpn_min") && (extra["vm_pn_lb"] = Float64.(bus["vpn_min"]) ./ vscale)
+        haskey(bus, "vpn_max") && (extra["vm_pn_ub"] = Float64.(bus["vpn_max"]) ./ vscale)
+        haskey(bus, "vpp_min") && (extra["vm_pp_lb"] = Float64.(bus["vpp_min"]) ./ vscale)
+        haskey(bus, "vpp_max") && (extra["vm_pp_ub"] = Float64.(bus["vpp_max"]) ./ vscale)
+        isempty(extra) || (bus["_pmd"] = merge(get(bus, "_pmd", Dict{String,Any}()), extra))
+    end
+    net
+end
+
+"""
+    solve_pmd_en(net; gen_costs, source_costs, eng_mod!, math_mod!, form, build)
+
+Export the BMOPF `net` with `to_pmd`, transform to the four-wire math model
+(`kron_reduce=false, phase_project=false`), set per-generator linear costs, and
+solve. `gen_costs` maps BMOPF generator/source ids to the linear coefficient
+`c₁` (`cost = [c₁, 0]`); every gen not listed — including the PMD slack gen for
+the voltage source — gets zero cost. Returns `(result, sol_si, math)`;
+`sol_si` is in PMD SI units (kW, V).
+"""
+function solve_pmd_en(net::Dict;
+                      gen_costs::Dict{String,<:Real}=Dict{String,Float64}(),
+                      eng_mod!::Function=identity,
+                      math_mod!::Function=identity,
+                      form=PMD.IVRENPowerModel,
+                      build=PMD.build_mc_opf)
+    vscale_probe = BMOPFTools.to_pmd(net)["settings"]["voltage_scale_factor"]
+    inject_pmd_bounds!(net; vscale=vscale_probe)
+    eng = BMOPFTools.to_pmd(net)
+    # `to_pmd` emits JSON-flavoured data (string enums); apply PMD's JSON-import
+    # correction to get native enums/matrices, exactly as PMD's own reader does.
+    PMD.correct_json_import!(eng)
+    eng["data_model"] = PMD.ENGINEERING
+    # `to_pmd` leaves `vbases_default` empty; PMD's voltage-base discovery needs
+    # a seed at each source bus. Phase-to-ground magnitude is the natural base.
+    vb = Dict{String,Real}()
+    for (_, vs) in get(eng, "voltage_source", Dict())
+        vb[vs["bus"]] = maximum(vs["vm"])
+    end
+    eng["settings"]["vbases_default"] = vb
+    # `to_pmd` exports bus vm_lb/vm_ub as scalars (pre-0.16 PMD convention);
+    # PMD 0.16 wants per-terminal vectors. Phases get the bound, the neutral
+    # (terminal 4) stays unbounded here — `vn_max` travels via `vm_ng_ub`.
+    for (_, bus) in get(eng, "bus", Dict())
+        terms = bus["terminals"]
+        for (key, neutral_val) in (("vm_lb", 0.0), ("vm_ub", Inf))
+            if haskey(bus, key) && bus[key] isa Real
+                bus[key] = [t == 4 ? neutral_val : Float64(bus[key]) for t in terms]
+            end
+        end
+    end
+    # `to_pmd` emits shunt matrices only when the BMOPF linecode carries them,
+    # but PMD's eng2math requires the keys — fill zeros of the series size.
+    for (_, lc) in get(eng, "linecode", Dict())
+        z = zero(lc["rs"])
+        for k in ("g_fr", "g_to", "b_fr", "b_to")
+            haskey(lc, k) || (lc[k] = copy(z))
+        end
+    end
+    eng_mod!(eng)
+    math = PMD.transform_data_model(eng; multinetwork=false,
+                                    kron_reduce=false, phase_project=false)
+    PMD.add_start_vrvi!(math)
+    for (_, gen) in math["gen"]
+        c = Float64(get(gen_costs, get(gen, "name", ""), 0.0))
+        gen["cost"] = [c, 0.0]
+    end
+    math_mod!(math)
+    pm  = PMD.instantiate_mc_model(math, form, build)
+    res = PMD.optimize_model!(pm; optimizer=IPOPT)
+    sol = PMD.transform_solution(res["solution"], math; make_si=true)
+    return res, sol, math
+end
+
+"""
+Per-generator dispatch from a reproduction solution (eng-keyed by
+`transform_solution`; power in W because `to_pmd` exports
+`power_scale_factor = 1`): id ⇒ (pg = Σ kW, qg = Σ kvar).
+"""
+function pmd_dispatch(sol)
+    Dict{String,NamedTuple}(
+        id => (pg = sum(g["pg"]) / 1000.0, qg = sum(g["qg"]) / 1000.0)
+        for (id, g) in get(sol, "generator", Dict()))
+end
+
+"Voltage magnitudes (V) at an eng bus of a reproduction solution."
+pmd_vm(sol, bus::AbstractString) =
+    abs.(sol["bus"][bus]["vr"] .+ im .* sol["bus"][bus]["vi"])
+
+"Per-generator dispatch from a BMOPF result: id ⇒ (pg = Σ kW, qg = Σ kvar)."
+function bmopf_dispatch(res)
+    out = Dict{String,NamedTuple}()
+    for (gid, g) in get(res, "generator", Dict())
+        out[gid] = (pg = sum(g[ph]["pg"] for ph in keys(g)) / 1000.0,
+                    qg = sum(g[ph]["qg"] for ph in keys(g)) / 1000.0)
+    end
+    out
+end
+
+"""
+    perturbation_check(solve_fn, costs::Dict, der_ids; ratio=1.5)
+
+Non-degeneracy gate for two-generator cases (plan §4): re-solve with each DER's
+cost scaled by `ratio` (one at a time) and print the dispatch splits. The split
+must move with the cost ratio; a static split means the arbitration is
+degenerate and the case must be redesigned before its numbers are locked.
+`solve_fn(costs) -> Dict(name ⇒ (pg, qg))`.
+"""
+function perturbation_check(solve_fn::Function, costs::Dict, der_ids; ratio=1.5)
+    base = solve_fn(costs)
+    println("  base split: ", [(id, round(base[id].pg; digits=4)) for id in der_ids])
+    for id in der_ids
+        c = copy(costs); c[id] *= ratio
+        alt = solve_fn(c)
+        println("  ", id, " cost ×", ratio, ": ",
+                [(i, round(alt[i].pg; digits=4)) for i in der_ids])
+    end
+    nothing
+end
+
+"Print a paste-ready block of locked targets."
+function print_targets(case::AbstractString, disp::Dict, extras::Pair...)
+    println("── locked targets — ", case, " ──")
+    for (id, d) in sort(collect(disp); by=first)
+        println("  ", id, ": Σpg = ", round(d.pg; digits=4), " kW, Σqg = ",
+                round(d.qg; digits=4), " kvar")
+    end
+    for (k, v) in extras
+        println("  ", k, " = ", v)
+    end
+end
