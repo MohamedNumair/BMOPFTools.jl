@@ -669,7 +669,7 @@ row is one unit test to develop, and the *status* column tracks coverage.
 | Branch total current (`i_max`) | A | `cr²+ci² ≤ i_max²` (total current, both ends) | `branch.jl` | covered (Tier-4 W1 with shunt; scaffold L-A5) |
 | Branch apparent power (`s_max`) | D | `P²+Q² ≤ s_max²`, `S=v∘conj(I_tot)` ground-referenced per conductor (both ends) | `branch.jl` | covered (L-SMAX-LINE) |
 | Branch angle difference (`va_diff_*`) | B | `tan·c ≤ s ≤ tan·c` | `branch.jl` | covered (Tier-4 D1) |
-| Switch current | A | `cr_sw²+ci_sw² ≤ ilim²` | `branch.jl` | gap |
+| Switch current | A | `cr_sw²+ci_sw² ≤ ilim²` | `branch.jl` | covered (Tier-4 D) |
 | Switch apparent power (`s_max`) | D | `P²+Q² ≤ s_max²` ground-referenced per conductor | `branch.jl` | covered (L-SMAX-SW) |
 | Transformer winding/terminal currents | A | `Is²,It²,In² ≤ i_max²` (native); post-solve per-winding `cm ≤ i_max_from/to` | `transformer.jl`, `solution.jl` | covered (post-solve) |
 | Transformer nameplate power (`s_rating`, required → always enforced) | D | per-winding coil `P²+Q² ≤ (s_rating/n_ph)²` (native); post-solve coil `\|S\| ≤ s_max` from result `s`/`s_max` | `transformer.jl`, `solution.jl` | covered (L-SMAX-XFMR, Tier-4 X1) |

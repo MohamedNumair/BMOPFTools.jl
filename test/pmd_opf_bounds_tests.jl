@@ -16,10 +16,11 @@
 # (IVRENPowerModel) — the PMD model whose wye nodal equations,
 #   pg = (vr_p - vr_n)·crg + (vi_p - vi_n)·cig,
 #   qg = (vi_p - vi_n)·crg - (vr_p - vr_n)·cig,
-# are identical to BMOPF's own IVR-EN engine. The two solvers agree on every
-# dispatch and voltage to < 1e-2 W / 1e-3 V. As in pmd_opf_port_tests.jl the
-# numbers are hardcoded, so the suite needs no PMD/PowerIO dependency at test
-# time; each network is built directly in BMOPF's native JSON schema.
+# are identical to BMOPF's own IVR-EN engine. Agreement between the two
+# solvers is digit-exact except where a case comment records a small documented
+# convention residual (W1, X1), always within the 1e-2 kW / 1e-2 V lock
+# tolerances. As in pmd_opf_port_tests.jl the numbers are hardcoded, so the
+# suite needs no PMD/PowerIO dependency at test time.
 #
 # Modelling notes
 # ---------------
@@ -272,7 +273,7 @@
     # der_m Σpg = 27.0 kW, der_e Σpg = 3.3943 kW, |V_pn(buse)| =
     # [240.0, 188.6497, 233.4057] V. Cost-ratio perturbations move the split
     # (der_e at −9 pulls der_m phase 1 off its box), so the arbitration is
-    # non-degenerate. Reproduce with scripts/pmd_reproduction/ivren_cases.jl.
+    # non-degenerate. Reproduce with test/scripts/pmd_reproduction/ivren_cases.jl.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "G1: vpn_max binds — der_m 27 kW (box), der_e 3.3943 kW, |Vpn|=240 V" begin
         net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "G1_vpn_max.json"))
@@ -312,7 +313,7 @@
     # start, identical digits): der_m Σpg = 23.7793 kW ([2.3358, 19.8182,
     # 1.6253]), der_e Σpg = 4.0 kW. A der_e ×9 cost perturbation flips the
     # split (der_m → 34.03 kW), so the arbitration is non-degenerate.
-    # Reproduce with scripts/pmd_reproduction/ivren_cases.jl.
+    # Reproduce with test/scripts/pmd_reproduction/ivren_cases.jl.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "G2: vpn_min binds — der_e 4 kW (box), der_m 23.7793 kW, |Vpn|=218 V" begin
         net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "G2_vpn_min.json"))
@@ -350,7 +351,7 @@
     # Fixture: test/data/pmd_bounds/F_vn_max.json. PMD IVREN target (flat
     # start, identical digits): der_e = 0.4008 kW, der_m = 0.5809 kW,
     # |Vₙ(buse)| = 6.0 V, |Vₙ(busm)| = 3.577 V (strictly inside — the bound is
-    # per-bus). Reproduce with scripts/pmd_reproduction/ivren_cases.jl.
+    # per-bus). Reproduce with test/scripts/pmd_reproduction/ivren_cases.jl.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "F: vn_max binds — |Vn|=6 V, der_e 0.4008 kW, der_m 0.5809 kW" begin
         net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "F_vn_max.json"))
@@ -388,7 +389,7 @@
     # Fixture: test/data/pmd_bounds/H1_vpp_max.json. PMD IVREN target (flat
     # start, identical digits): der_m Σpg = 27.0 kW, der_e = 9.2675 kW. A
     # der_e ×9 cost perturbation pulls der_m off its box (15.59 / 15.06 kW).
-    # Reproduce with scripts/pmd_reproduction/ivren_cases.jl.
+    # Reproduce with test/scripts/pmd_reproduction/ivren_cases.jl.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "H1: vpp_max binds — pair (1,2) at 405 V, der_m 27 kW, der_e 9.2675 kW" begin
         net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "H1_vpp_max.json"))
@@ -432,7 +433,7 @@
     # Fixture: test/data/pmd_bounds/H2_vpp_min.json. PMD IVREN target (flat
     # start, identical digits): der_e Σpg = 12.4209 kW, der_m Σpg = 11.0412 kW.
     # A der_e ×9 perturbation flips the order (der_m → 33.62 kW, der_e → 0).
-    # Reproduce with scripts/pmd_reproduction/ivren_cases.jl.
+    # Reproduce with test/scripts/pmd_reproduction/ivren_cases.jl.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "H2: vpp_min binds — pairs at 395/375 V, der_e 12.4209 kW, der_m 11.0412 kW" begin
         net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "H2_vpp_min.json"))
@@ -476,7 +477,7 @@
     # Σpg = 24.0 kW, der_e Σpg = 8.5463 kW (PMD 8.5491, within the 1e-2 kW
     # lock tolerance). A der_e ×9 perturbation flips the order completely
     # (der_e 33.87 kW, der_m 0). Reproduce with
-    # scripts/pmd_reproduction/ivren_cases.jl.
+    # test/scripts/pmd_reproduction/ivren_cases.jl.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "W1: line i_max with shunt binds — |I_fr|=25 A, der_m 24 kW, der_e 8.5463 kW" begin
         net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "W1_imax_shunt.json"))
@@ -522,7 +523,7 @@
     # call PMD ships commented out (flat start): der_e = 12.0005 kW, der_m =
     # 24.0010 kW, |V(buse)| = 239.9965 V — within 5 W / 5 mV of the BMOPF
     # values asserted below. Reproduce with
-    # scripts/pmd_reproduction/ivren_cases.jl.
+    # test/scripts/pmd_reproduction/ivren_cases.jl.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "X1: s_rating binds — 10 kVA/phase, der_e 12.0048 kW, der_m 24.0095 kW" begin
         net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "X1_srating.json"))
@@ -571,7 +572,7 @@
     # fixture makes the models coincide. Targets (flat start, identical
     # digits): der_m Σpg = 18.0 kW, der_e Σpg = 7.6528 kW. A der_e ×9
     # perturbation flips the split completely (25.63 / 0 kW). Reproduce with
-    # scripts/pmd_reproduction/ivru_angle.jl.
+    # test/scripts/pmd_reproduction/ivru_angle.jl.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "D1: branch va_diff binds — Δθ(l1) = −1.7189°, der_m 18 kW, der_e 7.6528 kW" begin
         net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "D1_va_diff.json"))
@@ -621,7 +622,7 @@
     # Fixture: test/data/pmd_bounds/S1_vpos_max.json. PMD ACP target (flat
     # start, identical digits): der_m Σpg = 18.0 kW (box), der_e Σpg =
     # 13.2433 kW. A der_e ×9 perturbation flips the split completely.
-    # Reproduce with scripts/pmd_reproduction/acp_sequence.jl.
+    # Reproduce with test/scripts/pmd_reproduction/acp_sequence.jl.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "S1: vpos_max binds — |V₊|=236 V, der_m 18 kW, der_e 13.2433 kW" begin
         net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "S1_vpos_max.json"))
@@ -656,7 +657,7 @@
     # start, identical digits — phase_project off so the units keep their
     # phase identity): der_m = 3.4101 kW, der_e = 2.4158 kW; a der_e ×9
     # perturbation mirrors the split. Reproduce with
-    # scripts/pmd_reproduction/acp_sequence.jl.
+    # test/scripts/pmd_reproduction/acp_sequence.jl.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "S2: vneg_max binds — |V₋|=3 V, der_m 3.4101 kW, der_e 2.4158 kW" begin
         net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "S2_vneg_max.json"))
@@ -683,7 +684,7 @@
     # right one is constrained.
     # Fixture: test/data/pmd_bounds/S3_vzero_max.json. PMD ACP target (flat
     # start, identical digits): der_m = 3.4467 kW, der_e = 2.3883 kW.
-    # Reproduce with scripts/pmd_reproduction/acp_sequence.jl.
+    # Reproduce with test/scripts/pmd_reproduction/acp_sequence.jl.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "S3: vzero_max binds — |V₀|=3 V, der_m 3.4467 kW, der_e 2.3883 kW" begin
         net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "S3_vzero_max.json"))
