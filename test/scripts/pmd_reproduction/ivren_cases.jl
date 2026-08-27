@@ -11,22 +11,8 @@ include(joinpath(@__DIR__, "common.jl"))
 # case is trusted.
 # ─────────────────────────────────────────────────────────────────────────────
 let
-    net = parse_bmopf("""
-    {"bus":{
-        "sourcebus":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
-        "loadbus":  {"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"],
-                     "v_min":[220.0,220.0,220.0],"v_max":[235.0,235.0,235.0]}},
-     "voltage_source":{"source":{"bus":"sourcebus","terminal_map":["1","2","3"],
-         "v_magnitude":[230.0,230.0,230.0],"v_angle":[0.0,-2.0943951,2.0943951]}},
-     "linecode":{"lc":{"R_series_1_1":0.3,"R_series_2_2":0.3,"R_series_3_3":0.3,
-                       "X_series_1_1":0.1,"X_series_2_2":0.1,"X_series_3_3":0.1}},
-     "line":{"l1":{"bus_from":"sourcebus","bus_to":"loadbus",
-         "terminal_map_from":["1","2","3"],"terminal_map_to":["1","2","3"],"linecode":"lc","length":1.0}},
-     "generator":{"der":{"bus":"loadbus","terminal_map":["1","2","3","n"],"configuration":"WYE",
-         "p_min":[0.0,0.0,0.0],"p_max":[100000.0,100000.0,100000.0],
-         "q_min":[0.0,0.0,0.0],"q_max":[0.0,0.0,0.0],"cost":[-1.0,-1.0,-1.0]}}}
-    """; from_string=true)
-    res, sol, _ = solve_pmd_en(net; gen_costs=Dict("der" => -1.0))
+    net = load_fixture("A_vmax")
+    res, sol, _ = solve_pmd_en(net; gen_costs=gen_costs_from_fixture(net))
     disp = pmd_dispatch(sol)
     vm = pmd_vm(sol, "loadbus")
     ok = isapprox(disp["der"].pg, 11.7642; atol=1e-3) &&
@@ -43,7 +29,7 @@ end
 # cost-ratio perturbations must move the dispatch split (non-degeneracy gate).
 # ─────────────────────────────────────────────────────────────────────────────
 let
-    costs0 = Dict("der_m" => -3.0, "der_e" => -1.0)
+    costs0 = gen_costs_from_fixture(load_fixture("G1_vpn_max"))
     function solve_g1(costs)
         net = load_fixture("G1_vpn_max")
         _, sol, _ = solve_pmd_en(net; gen_costs=costs)
@@ -64,7 +50,7 @@ end
 # Flat start; the der_e ×9 perturbation must flip the dispatch order.
 # ─────────────────────────────────────────────────────────────────────────────
 let
-    costs0 = Dict("der_m" => 3.0, "der_e" => 1.0)
+    costs0 = gen_costs_from_fixture(load_fixture("G2_vpn_min"))
     function solve_g2(costs)
         net = load_fixture("G2_vpn_min")
         _, sol, _ = solve_pmd_en(net; gen_costs=costs)
@@ -85,7 +71,7 @@ end
 # must slide the split along the disc boundary.
 # ─────────────────────────────────────────────────────────────────────────────
 let
-    costs0 = Dict("der_m" => -3.0, "der_e" => -1.0)
+    costs0 = gen_costs_from_fixture(load_fixture("F_vn_max"))
     function solve_f(costs)
         net = load_fixture("F_vn_max")
         _, sol, _ = solve_pmd_en(net; gen_costs=costs)
@@ -106,7 +92,7 @@ end
 # Flat start; the der_e ×9 perturbation must pull der_m off its box.
 # ─────────────────────────────────────────────────────────────────────────────
 let
-    costs0 = Dict("der_m" => -3.0, "der_e" => -1.0)
+    costs0 = gen_costs_from_fixture(load_fixture("H1_vpp_max"))
     function solve_h1(costs)
         net = load_fixture("H1_vpp_max")
         _, sol, _ = solve_pmd_en(net; gen_costs=costs)
@@ -128,7 +114,7 @@ end
 # Flat start; the der_e ×9 perturbation must flip the dispatch order.
 # ─────────────────────────────────────────────────────────────────────────────
 let
-    costs0 = Dict("der_m" => 3.0, "der_e" => 1.0)
+    costs0 = gen_costs_from_fixture(load_fixture("H2_vpp_min"))
     function solve_h2(costs)
         net = load_fixture("H2_vpp_min")
         _, sol, _ = solve_pmd_en(net; gen_costs=costs)
@@ -151,7 +137,7 @@ end
 # Flat start; the der_e ×9 perturbation must flip the order completely.
 # ─────────────────────────────────────────────────────────────────────────────
 let
-    costs0 = Dict("der_m" => -3.0, "der_e" => -1.0)
+    costs0 = gen_costs_from_fixture(load_fixture("W1_imax_shunt"))
     function solve_w1(costs)
         net = load_fixture("W1_imax_shunt")
         _, sol, _ = solve_pmd_en(net; gen_costs=costs)
@@ -180,7 +166,7 @@ function build_mc_opf_xfmr_thermal(pm)
     end
 end
 let
-    costs0 = Dict("der_m" => -1.0, "der_e" => -3.0)
+    costs0 = gen_costs_from_fixture(load_fixture("X1_srating"))
     function solve_x1(costs)
         net = load_fixture("X1_srating")
         _, sol, _ = solve_pmd_en(net; gen_costs=costs, build=build_mc_opf_xfmr_thermal)

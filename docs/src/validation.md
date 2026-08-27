@@ -562,9 +562,12 @@ bound the binding (active) constraint at the optimum — a stable, non-degenerat
 boundary solution. DER generators driven by per-phase linear `cost` push the
 network onto the limit, and the dispatch and binding value are pinned. Each
 target is reproduced in a matching PMD formulation and hardcoded, so no PMD
-dependency is needed at test time; the committed scripts in
+dependency is needed at test time. The committed scripts in
 [`test/scripts/pmd_reproduction/`](https://github.com/frederikgeth/BMOPFTools.jl/tree/main/test/scripts/pmd_reproduction)
-regenerate every number. Cases A–E use a single DER; the later cases carry
+regenerate the numbers of every two-generator case (F onward) plus the Case-A
+pipeline gate; the remaining single-DER targets (B–E) were locked from the
+original IVREN reproduction and predate the scripts. Cases A–E use a single
+DER; the later cases carry
 **two generators** whose split the binding bound arbitrates, gated by a
 cost-ratio perturbation check (scaling one unit's cost must move the split).
 

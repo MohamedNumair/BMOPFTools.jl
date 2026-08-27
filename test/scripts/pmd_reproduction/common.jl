@@ -15,6 +15,26 @@ load_fixture(case::AbstractString) =
     parse_bmopf(joinpath(FIXTURE_DIR, case * ".json"))
 
 """
+    gen_costs_from_fixture(net) -> Dict{String,Float64}
+
+Per-generator linear cost coefficients read from the fixture itself, so the
+scripts cannot drift from the `cost` fields the testset solves with. Each
+generator's per-phase cost vector must be uniform (PMD's gen cost is per
+generator, not per phase).
+"""
+function gen_costs_from_fixture(net::Dict)
+    out = Dict{String,Float64}()
+    for (id, g) in get(net, "generator", Dict())
+        haskey(g, "cost") || continue
+        u = unique(Float64.(g["cost"]))
+        length(u) == 1 ||
+            error("generator '$id': non-uniform per-phase cost cannot map to PMD")
+        out[id] = u[1]
+    end
+    out
+end
+
+"""
     inject_pmd_bounds!(net) -> net
 
 Translate the BMOPF bus voltage bounds that `to_pmd` does NOT map — `vn_max`,

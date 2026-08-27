@@ -13,7 +13,7 @@
 include(joinpath(@__DIR__, "common.jl"))
 
 let
-    costs0 = Dict("der_m" => -3.0, "der_e" => -1.0)
+    costs0 = gen_costs_from_fixture(load_fixture("D1_va_diff"))
     function solve_d1(costs)
         net = load_fixture("D1_va_diff")
         _, sol, _ = solve_pmd_en(net; gen_costs=costs, form=PMD.IVRUPowerModel, kron=true)

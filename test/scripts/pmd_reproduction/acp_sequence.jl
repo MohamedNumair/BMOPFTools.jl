@@ -57,9 +57,8 @@ function solve_seq(case::AbstractString, costs; vbase=230.0)
     pmd_dispatch(sol), (v0=abs(v0), vp=abs(vp), vn=abs(vn), vm=abs.(vs[1:3]))
 end
 
-for (case, costs) in (("S1_vpos_max", Dict("der_m" => -3.0, "der_e" => -1.0)),
-                      ("S2_vneg_max", Dict("der_m" => -3.0, "der_e" => -1.0)),
-                      ("S3_vzero_max", Dict("der_m" => -3.0, "der_e" => -1.0)))
+for case in ("S1_vpos_max", "S2_vneg_max", "S3_vzero_max")
+    costs = gen_costs_from_fixture(load_fixture(case))
     disp, s = solve_seq(case, costs)
     print_targets(case, disp,
                   "|V+| |V−| |V0| (buse)" => round.([s.vp, s.vn, s.v0]; digits=4),

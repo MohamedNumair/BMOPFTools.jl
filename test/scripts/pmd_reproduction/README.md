@@ -1,11 +1,14 @@
 # PMD reproduction scripts for the bound-binding OPF tests
 
-These scripts regenerate the hardcoded PowerModelsDistribution (PMD) targets in
-[`test/pmd_opf_bounds_tests.jl`](../../pmd_opf_bounds_tests.jl). They are **not**
+These scripts regenerate the hardcoded PowerModelsDistribution (PMD) targets of
+the two-generator cases (F, G1/G2, H1/H2, W1, X1, D1, S1–S3) in
+[`test/pmd_opf_bounds_tests.jl`](../../pmd_opf_bounds_tests.jl), plus the
+Case-A pipeline gate. The remaining single-DER targets (B–E) were locked from
+the original IVREN reproduction and predate these scripts. They are **not**
 part of the test suite and are **never run in CI** — the suite needs no PMD
-dependency, which is the point of hardcoding the targets. Run them when adding a
-new bound-binding case or when re-deriving the locked numbers after a modelling
-change.
+dependency, which is the point of hardcoding the targets. Run them when adding
+a new bound-binding case or when re-deriving the locked numbers after a
+modelling change.
 
 ## Environment
 
@@ -45,7 +48,9 @@ include("test/scripts/pmd_reproduction/ivren_cases.jl")
   duplicate a fixture inline.
 - Generator costs: BMOPF's `cost` field is currency/kWh (objective
   `cost·P/1000`); PMD math gens get `cost = [c, 0.0]` with the **same sign and
-  ratio** between units (absolute scale does not move a linear argmax). The PMD
+  ratio** between units (absolute scale does not move a linear argmax). Scripts
+  derive the coefficients from the fixture's own `cost` fields via
+  `gen_costs_from_fixture` — never from a hardcoded parallel copy. The PMD
   slack gen created for the voltage source gets cost `[0, 0]` unless the case
   prices the source.
 - Compare **dispatch (per unit and total), voltages, and the recomputed binding

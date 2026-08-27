@@ -66,24 +66,13 @@
     # with p_max slack at 100 kW the export is capped by v_max = 235 V, binding
     # on every phase.
     # PMD IVREN target: Σpg = 11.7642 kW, load-bus |U| = v_max, Σps = -11.5136 kW.
+    # The fixture lives in test/data/pmd_bounds/A_vmax.json because it doubles
+    # as the reproduction pipeline's gate case (ivren_cases.jl refuses to
+    # derive new targets unless it reproduces this dispatch) — a single copy
+    # keeps the gate and the testset validating the same network.
     # ─────────────────────────────────────────────────────────────────────────
     @testset "A: v_max binds — Σpg=11.7642 kW, |U|=235 V" begin
-        net = parse_bmopf("""
-        {"bus":{
-            "sourcebus":{"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"]},
-            "loadbus":  {"terminal_names":["1","2","3","n"],"perfectly_grounded_terminals":["n"],
-                         "v_min":[220.0,220.0,220.0],"v_max":[235.0,235.0,235.0]}},
-         "voltage_source":{"source":{"bus":"sourcebus","terminal_map":["1","2","3"],
-             "v_magnitude":[$(V_PH),$(V_PH),$(V_PH)],"v_angle":[0.0,-2.0943951,2.0943951]}},
-         "linecode":{"lc":{"R_series_1_1":0.3,"R_series_2_2":0.3,"R_series_3_3":0.3,
-                           "X_series_1_1":0.1,"X_series_2_2":0.1,"X_series_3_3":0.1}},
-         "line":{"l1":{"bus_from":"sourcebus","bus_to":"loadbus",
-             "terminal_map_from":["1","2","3"],"terminal_map_to":["1","2","3"],"linecode":"lc","length":1.0}},
-         "generator":{"der":{"bus":"loadbus","terminal_map":["1","2","3","n"],"configuration":"WYE",
-             "p_min":[0.0,0.0,0.0],"p_max":[100000.0,100000.0,100000.0],
-             "q_min":[0.0,0.0,0.0],"q_max":[0.0,0.0,0.0],"cost":[-1.0,-1.0,-1.0]}}}
-        """; from_string=true)
-
+        net = parse_bmopf(joinpath(@__DIR__, "data", "pmd_bounds", "A_vmax.json"))
         res = solve_opf(net)
         @test res["termination_status"] in ("LOCALLY_SOLVED", "OPTIMAL")
         # binding bound: every load-bus phase sits exactly on v_max
