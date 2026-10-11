@@ -104,7 +104,7 @@ Symmetries in data create symmetric optima and degrade NLP convergence
 | `I.DIV.LOAD_CV_LOW` | I | Load `p_nom` coefficient of variation < 0.05 across ≥3 loads — essentially uniform loading. |
 | `I.DIV.LOAD_PF_DSS_DEFAULT` | I | Load power factor mean is within 1 % of 0.88 with CV < 0.05 — strongly suggests reactive power was never explicitly set and the OpenDSS default PF was inherited throughout. Compare with `I.PROV.DSS_DEFAULT_PF`, which detects the exact 0.88 value per load; this finding detects the statistical signature across all loads. |
 | `I.DIV.LOAD_IMBALANCE` | I | A multi-phase load with >20 % spread between its phase setpoints — noteworthy unbalance (often intended; this is context, not criticism). |
-| `I.DIV.LOAD_PHASE_BALANCED` | I | Aggregate load across all phase terminals in a galvanic zone is balanced within 2 % (max − min spread relative to max). The network is effectively balanced and a single-phase equivalent model would suffice; the unbalanced OPF formulation adds no value here. |
+| `I.DIV.LOAD_PHASE_BALANCED` | I | Aggregate active load is balanced within 2% across the observed phase labels in a galvanic zone. Spatial loading, impedances, connections and grounding remain unassessed; this does not establish single-phase-equivalent applicability (PSK-000009). |
 | `I.DIV.LOAD_UNIFORM_MODEL` | I | Across ≥3 loads, every load uses the *same* load model. When that model is `constant_power` (the default), no load exercises voltage dependence (ZIP/exponential) — the case does not test voltage-dependent load behaviour. Observational coverage signal, not a defect. |
 | `I.DIV.LOAD_UNIFORM_CONFIG` | I | Across ≥3 loads, every load shares the *same* `configuration` (e.g. all WYE) — no connection diversity. Observational; uniform connection is common and often legitimate. |
 | `I.DIV.LINE_SYMMETRIC` | I | ≥80 % of the lines sharing a linecode have lengths within ±10 % of the median — electrically near-identical sections. |
@@ -440,7 +440,7 @@ Checks on how component `terminal_map`s reference bus terminals.
 
 | Code | Sev | Trigger & rationale |
 |---|---|---|
-| `E.TMAP.PHASE_TO_NEUTRAL` | E | A component's `terminal_map` contains no phase terminal (e.g. `["n"]`) — it connects only to neutral, leaving no phase to inject into or draw from. |
+| `E.TMAP.PHASE_TO_NEUTRAL` | E | A nodal device maps a phase slot to neutral, or a branch has an all-neutral endpoint without a valid single-conductor neutral-to-neutral map. Symmetric metallic N-only lines and switches preserve explicit neutral continuity (PSK-000002) and are accepted. |
 | `I.TMAP.CROSS_PHASE_LINE` | I | A line or switch has different from/to terminal maps — the conductors are cross-connected between phases across the branch. Valid (e.g. an intentional phase swap) but flagged as context. |
 | `I.TMAP.PERMUTED_ORDER` | I | A component's `terminal_map` is a permutation of the bus's nodal terminal order — non-canonical ordering; verify the swap is deliberate rather than a data-entry slip. |
 
@@ -492,9 +492,9 @@ its network. See [`SolutionReport`](@ref) and [`render_solution`](@ref).
 | `W.SOL.ANGLE_ACTIVE` | W | A signed line angle or centered bus phase-pair angle difference is near a `va_diff` bound (near-active). |
 | `E.SOL.THERMAL_VIOLATION` | E | A thermal/loading limit is exceeded in the solved result: a **line** conductor current at either endpoint (including pi-shunts), or a **switch** conductor current, over `i_max` or its ground-referenced apparent power `\|S\|=v·cm` over `s_max` (element or linecode); a **transformer** per-winding current over `i_max_from`/`i_max_to`; or a **transformer** winding coil apparent power `\|S\|` over its nameplate cap (`s_max`, the per-winding share of `s_rating`; recorded in the result so no coil-voltage reconstruction is needed). |
 | `W.SOL.THERMAL_ACTIVE` | W | The same current or apparent-power quantity is within 1 % of its limit — the thermal limit is near-active. |
-| `E.SOL.GEN_VIOLATION` | E | A generator's solved operating point (per terminal) violates a declared limit: `pg`/`qg` outside `p_min`/`p_max`/`q_min`/`q_max`, the optional `s_max` apparent-power circle, or the optional `i_max` current-magnitude circle. |
+| `E.SOL.GEN_VIOLATION` | E | A generator's solved operating point (per terminal) violates a declared limit: `pg`/`qg` outside `p_min`/`p_max`/`q_min`/`q_max`, the optional `s_max` apparent-power circle, or the optional `i_max` current-magnitude circle. Apparent-power checks use `max(1e-6 × abs(s_max), 1e-6 VA)` tolerance, recorded with the excess in structured evidence. |
 | `W.SOL.GEN_ACTIVE` | W | Generator dispatch is within 1 % of a bound — the bound is near-active. |
-| `E.SOL.IBR_VIOLATION` | E | An IBR's solved operating point (per phase) violates a declared limit: `pg` outside `p_min`/`p_max`, the `s_max` apparent-power circle, or the optional `i_max` current-magnitude circle. |
+| `E.SOL.IBR_VIOLATION` | E | An IBR's solved operating point (per phase) violates a declared limit: `pg` outside `p_min`/`p_max`, the `s_max` apparent-power circle, or the optional `i_max` current-magnitude circle. Apparent-power checks use `max(1e-6 × abs(s_max), 1e-6 VA)` tolerance, recorded with the excess in structured evidence. |
 | `W.SOL.IBR_ACTIVE` | W | An IBR dispatch is within 1 % of a P bound — the bound is near-active. |
 | `W.SOL.IBR_PF_DEVIATION` | W | A constant-power-factor IBR's solved operating point deviates from its commanded PF beyond tolerance — the PF-coupling constraint residual is non-trivial. |
 | `W.SOL.LOAD_RESIDUAL` | W | For a `constant_power` load, solved `pd`/`qd` differs from `p_nom`/`q_nom` by more than 1 W / 1 var — the bilinear constant-power constraint has a non-trivial residual; the solver may not have converged tightly. Not emitted for voltage-dependent models (where `pd ≠ p_nom` is expected). |
@@ -531,8 +531,8 @@ its network. See [`SolutionReport`](@ref) and [`render_solution`](@ref).
 |---|---|---|
 | `I.BENCH.AUGMENTATION` | I | The case is not yet a non-trivial OPF benchmark; the message lists the concrete augmentation steps: no costed generation (degenerate objective), slack-only generation (trivial dispatch), absent voltage bounds, absent vpn/vpos bounds (which also aid solver robustness ([ref. 3](methodology.md#refs))), missing thermal limits. |
 | `W.BENCH.GEN_NO_DOF` | W | One or more generators have `p_min ≈ p_max` on every phase — fixed output, not dispatchable. These generators consume variables and constraints but cannot move in the optimal solution, and may mask the true binding constraints. |
-| `W.BENCH.GEN_ZERO_COST` | W | One or more dispatchable generators (`p_max > p_min` on at least one phase) have a cost vector of all zeros — the objective is flat in their dispatch direction, making the optimal solution primal non-unique. Assign a non-zero cost to each dispatchable unit. |
-| `W.BENCH.GEN_DEGENERATE_COST` | W | Two or more dispatchable generators on the same bus or one line/switch hop apart share an identical cost coefficient. The solver can redistribute power between them freely without changing the objective, producing primal non-uniqueness and benchmarks that are sensitive to solver tolerances. |
+| `W.BENCH.GEN_ZERO_COST` | W | Dispatchable generators have zero direct cost. This is a screening signal: network losses, upstream cost and constraints can still determine dispatch. Do not add arbitrary costs solely to silence it. |
+| `W.BENCH.GEN_DEGENERATE_COST` | W | Dispatchable generators on the same bus or one hop apart share a representative cost coefficient. Check control interchangeability; equal costs alone do not establish primal non-uniqueness. |
 | `I.BENCH.LOAD_ZERO_PNOM` | I | One or more loads have `p_nom = 0` on all phases — they impose no real power demand and are electrically inert. These loads may indicate missing data or placeholder entries that should be populated before benchmark use. |
 
 ## DC — MVDC/LVDC network

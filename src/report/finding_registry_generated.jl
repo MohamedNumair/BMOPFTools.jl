@@ -2,7 +2,7 @@
 const _FINDING_REGISTRY_SCHEMA_VERSION = "0.1.0"
 const _FINDING_REGISTRY_ID = "bmopftools-findings-0.1.0"
 const _FINDING_REGISTRY_SOURCE_PATH = "docs/src/findings.md"
-const _FINDING_REGISTRY_SOURCE_SHA256 = "8d59777196dc0701180e6a8252967774ce9648afd717e027e08e20f2102b63c1"
+const _FINDING_REGISTRY_SOURCE_SHA256 = "e304ee275acf246324b4cf06614aa76b5542ae5ce91366c0638bbb9cd69d6b05"
 const _FINDING_EXPLANATIONS = Dict{String,NamedTuple}(
     "E.COMP.MISSING_REQUIRED" => (
         severity="ERROR",
@@ -315,7 +315,7 @@ const _FINDING_EXPLANATIONS = Dict{String,NamedTuple}(
         namespace="DIV",
         catalogue_section="DIV",
         section_title="diversity & symmetry",
-        meaning="Aggregate load across all phase terminals in a galvanic zone is balanced within 2 % (max − min spread relative to max). The network is effectively balanced and a single-phase equivalent model would suffice; the unbalanced OPF formulation adds no value here.",
+        meaning="Aggregate active load is balanced within 2% across the observed phase labels in a galvanic zone. Spatial loading, impedances, connections and grounding remain unassessed; this does not establish single-phase-equivalent applicability (PSK-000009).",
         contract_id=nothing,
         knowledge_ids=String[],
     ),
@@ -1944,7 +1944,7 @@ const _FINDING_EXPLANATIONS = Dict{String,NamedTuple}(
         namespace="TMAP",
         catalogue_section="TMAP",
         section_title="terminal-map conventions",
-        meaning="A component's `terminal_map` contains no phase terminal (e.g. `[\"n\"]`) — it connects only to neutral, leaving no phase to inject into or draw from.",
+        meaning="A nodal device maps a phase slot to neutral, or a branch has an all-neutral endpoint without a valid single-conductor neutral-to-neutral map. Symmetric metallic N-only lines and switches preserve explicit neutral continuity (PSK-000002) and are accepted.",
         contract_id=nothing,
         knowledge_ids=String[],
     ),
@@ -2277,7 +2277,7 @@ const _FINDING_EXPLANATIONS = Dict{String,NamedTuple}(
         namespace="SOL",
         catalogue_section="SOL",
         section_title="solution profiling",
-        meaning="A generator's solved operating point (per terminal) violates a declared limit: `pg`/`qg` outside `p_min`/`p_max`/`q_min`/`q_max`, the optional `s_max` apparent-power circle, or the optional `i_max` current-magnitude circle.",
+        meaning="A generator's solved operating point (per terminal) violates a declared limit: `pg`/`qg` outside `p_min`/`p_max`/`q_min`/`q_max`, the optional `s_max` apparent-power circle, or the optional `i_max` current-magnitude circle. Apparent-power checks use `max(1e-6 × abs(s_max), 1e-6 VA)` tolerance, recorded with the excess in structured evidence.",
         contract_id=nothing,
         knowledge_ids=String[],
     ),
@@ -2295,7 +2295,7 @@ const _FINDING_EXPLANATIONS = Dict{String,NamedTuple}(
         namespace="SOL",
         catalogue_section="SOL",
         section_title="solution profiling",
-        meaning="An IBR's solved operating point (per phase) violates a declared limit: `pg` outside `p_min`/`p_max`, the `s_max` apparent-power circle, or the optional `i_max` current-magnitude circle.",
+        meaning="An IBR's solved operating point (per phase) violates a declared limit: `pg` outside `p_min`/`p_max`, the `s_max` apparent-power circle, or the optional `i_max` current-magnitude circle. Apparent-power checks use `max(1e-6 × abs(s_max), 1e-6 VA)` tolerance, recorded with the excess in structured evidence.",
         contract_id=nothing,
         knowledge_ids=String[],
     ),
@@ -2493,7 +2493,7 @@ const _FINDING_EXPLANATIONS = Dict{String,NamedTuple}(
         namespace="BENCH",
         catalogue_section="BENCH",
         section_title="benchmark readiness",
-        meaning="One or more dispatchable generators (`p_max > p_min` on at least one phase) have a cost vector of all zeros — the objective is flat in their dispatch direction, making the optimal solution primal non-unique. Assign a non-zero cost to each dispatchable unit.",
+        meaning="Dispatchable generators have zero direct cost. This is a screening signal: network losses, upstream cost and constraints can still determine dispatch. Do not add arbitrary costs solely to silence it.",
         contract_id=nothing,
         knowledge_ids=String[],
     ),
@@ -2502,7 +2502,7 @@ const _FINDING_EXPLANATIONS = Dict{String,NamedTuple}(
         namespace="BENCH",
         catalogue_section="BENCH",
         section_title="benchmark readiness",
-        meaning="Two or more dispatchable generators on the same bus or one line/switch hop apart share an identical cost coefficient. The solver can redistribute power between them freely without changing the objective, producing primal non-uniqueness and benchmarks that are sensitive to solver tolerances.",
+        meaning="Dispatchable generators on the same bus or one hop apart share a representative cost coefficient. Check control interchangeability; equal costs alone do not establish primal non-uniqueness.",
         contract_id=nothing,
         knowledge_ids=String[],
     ),

@@ -444,8 +444,8 @@ end
 #    a phase position but resolves to the bus neutral. "Phase position" is any
 #    slot that is not the expected neutral slot: for nodal WYE/SINGLE_PHASE
 #    components the neutral slot is the last entry; for DELTA components and
-#    lines/switches there is no neutral slot at all. Transformer maps are
-#    exempt (non-trivial neutral involvement is expected).
+#    lines/switches may carry a single identified neutral at both ends.
+#    Transformer maps are exempt (non-trivial neutral involvement is expected).
 #
 #  I.TMAP.CROSS_PHASE_LINE — terminal_map_from != terminal_map_to on a line
 #    or switch, implying cross-phase / transposed wiring.
@@ -570,6 +570,14 @@ function _check_terminal_map_conventions!(net, findings, result)
                                      "terminal_map_to"   => tmt)))
             end
 
+            # Preserve explicit metallic neutral continuity (PSK-000002).
+            # A single conductor connecting the identified neutral at both
+            # ends is a valid metallic neutral branch. Keep rejecting maps
+            # that are all-neutral on only one end or repeat neutral entries.
+            neutral_only_link = length(tmf) == 1 && length(tmt) == 1 &&
+                bus_neutral(get(c, "bus_from", nothing)) == only(tmf) &&
+                bus_neutral(get(c, "bus_to", nothing)) == only(tmt)
+
             # Phase-to-neutral check on each end
             for (side, tm, bus_key) in (("from", tmf, "bus_from"),
                                          ("to",   tmt, "bus_to"))
@@ -583,8 +591,9 @@ function _check_terminal_map_conventions!(net, findings, result)
                 # the other end's map at the same position (symmetric neutral
                 # return is fine). Asymmetric neutral involvement is flagged
                 # via the cross-phase rule already. Here we catch the case
-                # where ALL entries are the neutral (degenerate map).
-                if all(string(t) == nn for t in tm)
+                # where ALL entries are neutral without a valid one-conductor
+                # neutral-to-neutral branch.
+                if all(string(t) == nn for t in tm) && !neutral_only_link
                     n_phase_neutral += 1
                     push!(findings, Finding(ERROR, "E.TMAP.PHASE_TO_NEUTRAL", :spec,
                         Symbol(comp_type), id,
@@ -758,7 +767,7 @@ function benchmark_readiness_check(net::Dict{String,Any},
             Dict{String,Any}("generators" => sort(no_dof))))
     end
 
-    # (2) Generators with cost = 0 (flat objective direction)
+    # (2) Zero direct cost is a screening signal, not a feasible flat direction.
     zero_cost = String[]
     for (id, g) in gens
         g isa Dict || continue
@@ -773,13 +782,13 @@ function benchmark_readiness_check(net::Dict{String,Any},
         push!(findings, Finding(WARNING, "W.BENCH.GEN_ZERO_COST", :benchmark,
             :generator, nothing,
             "$(length(zero_cost)) dispatchable generator(s) have cost = 0 — " *
-            "their dispatch is underdetermined (flat objective direction): " *
+            "check dispatch sensitivity; zero direct cost alone does not establish non-uniqueness: " *
             "$(join(sort(zero_cost), ", ")).",
             Dict{String,Any}("generators" => sort(zero_cost))))
     end
 
     # (3) Same-cost dispatchable generators on the same bus or one hop away
-    #     (primal non-uniqueness: solver can exchange power between them freely)
+    #     (screening only: network losses and constraints can distinguish dispatch)
     bus_adj = Dict{String,Set{String}}()
     for (_, l) in lines
         f = get(l, "bus_from", nothing); t = get(l, "bus_to", nothing)
@@ -818,7 +827,7 @@ function benchmark_readiness_check(net::Dict{String,Any},
             :generator, nothing,
             "$(length(same_cost_pairs)) pair(s) of dispatchable generators share " *
             "the same cost and are electrically close (same bus or one hop) — " *
-            "optimal dispatch is primal non-unique: $(join(pair_strs, ", ")).",
+            "check for interchangeable controls; non-uniqueness is not established: $(join(pair_strs, ", ")).",
             Dict{String,Any}("pairs" => [[a, b] for (a, b, _) in same_cost_pairs])))
     end
 

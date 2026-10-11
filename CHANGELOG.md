@@ -4,6 +4,17 @@
 
 Initial General release candidate. Registration has not yet been requested.
 
+- Fix pilot-discovered verification false positives for zero-rated generator/IBR
+  phases and native switch current fields; accept integer-valued JSON powers.
+- Add independent demand/PV scenarios, callback-based sweeps retaining failures,
+  explicit DER bus/phase selections and new-capacity budgets, and optional
+  JSON/Markdown author logs with resolved recipes and structured Findings.
+- Add self-contained, tested case-development examples and a progressive tutorial.
+- Correct diagnostic overclaims about phase balance, costs, active constraints
+  and dimension counts; retain legacy profile keys as descriptive aliases.
+- Change low-impedance switch replacement to opt-in; retain shunts/additional
+  branch limits and inconsistent or unassessed source-voltage bounds.
+
 - Replace the IEEE-inspired inline analysis fixture with an original CC BY 4.0
   synthetic workshop feeder and migrate its diagnostic and serialization tests.
 - Parse, validate, analyze, and report BMOPF networks, with PowerIO ingestion.
@@ -22,6 +33,8 @@ Initial General release candidate. Registration has not yet been requested.
 - Verify line limits at both endpoints and signed branch-angle bounds; document
   and test the power-flow nameplate exception.
 - Separate exact and modeled Volt-watt controller compliance evidence.
+- Accept single-conductor metallic neutral-to-neutral lines and switches; retain
+  rejection of asymmetric neutral maps and neutral-only nodal devices.
 
 - Record the copyright holder's CC BY 4.0 grant for bundled fixtures; replace
   IEEE/Kersting geometry data with original synthetic overhead/CN/TS cases,

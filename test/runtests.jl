@@ -51,6 +51,8 @@ function _strip_xfmr_ratings!(net)
 end
 
 include("piecewise_linear_tests.jl")
+include("case_development_tests.jl")
+_HAS_JUMP_IPOPT && include("case_development_opf_tests.jl")
 
 # Original diagnostic fixture; provenance and intentional defects are documented
 # alongside the data. Each consumer parses its own independent copy.
@@ -3782,6 +3784,7 @@ include("mcp_execution_tests.jl")
     # Phase relabeling — static TMAP detection (no solver) + gated OPF invariance
     # -----------------------------------------------------------------------
     include("phase_relabel_tests.jl")
+    include("neutral_only_terminal_map_tests.jl")
 
     # -----------------------------------------------------------------------
     # OPF extension — requires JuMP and Ipopt

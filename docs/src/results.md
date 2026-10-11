@@ -411,3 +411,31 @@ reference for 4-wire networks where the neutral is not perfectly grounded.
 When `solve_opf` is called with `per_unit=true` the result is automatically
 converted back to SI before being returned. The caller always receives SI units
 regardless of the internal solver representation.
+
+## Interpreting optimization-profile screens
+
+`has_active_inequalities` reports whether any assessed inequality binds;
+`has_weakly_active_inequalities` reports small multipliers at binding inequalities.
+The legacy `is_opf` and `degenerate` keys are aliases for those screens, not task
+classifications or proofs of non-uniqueness. Unavailable evidence is `nothing`.
+`degrees_of_freedom` remains the count `n_variables - n_eq_constraints` for
+compatibility; `dimension_method` explicitly labels it as a count proxy, not
+an equality-Jacobian rank computation.
+
+`strict_complementarity` is a numerical screen in the solver's scaling and
+thresholds. Missing active duals or unassessed inequalities leave it unknown.
+It does not establish local uniqueness, second-order sufficiency or global
+optimality. The profile records its thresholds and coverage counts.
+
+### Zero ratings and numerical tolerance
+
+A phase with `s_max = 0` can return a tiny nonzero P/Q value after a numerical
+solve. Generator and IBR apparent-power checks use a relative tolerance of
+`1e-6` with an absolute floor of `1e-6 VA`; excess above that tolerance remains
+an ERROR. The Finding records `tolerance_VA` and `excess_VA`. This is a stated
+verification tolerance, not an increase in the equipment rating. JSON numeric
+zeros are accepted whether decoded as integers or floating-point values.
+
+Switch current magnitudes use `cm` in native results; line endpoint magnitudes
+use `cm_fr` and `cm_to`. Missing switch `cm` remains unassessed, while a supplied
+current exceeding its rating is checked normally.
