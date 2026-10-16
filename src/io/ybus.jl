@@ -436,8 +436,10 @@ module header for the sign/symmetry convention.
 A switch is closed unless its `open_switch` field is `true` (an absent field
 means closed); an `open_switch` that is not a `Bool` raises an `ArgumentError`.
 An open switch is neither aliased nor stamped, so the nodes on its two sides
-stay separate. A terminal reached only through open switches keeps an all-zero
-row (a singular `Y`); [`connectivity_analysis`](@ref) reports open-switch
+stay separate. A retained terminal with no remaining stamped admittance has an
+all-zero row (a singular `Y`). Local shunts can give an isolated terminal a
+nonzero row, so isolation alone does not imply a singular `Y`.
+[`connectivity_analysis`](@ref) reports open-switch
 endpoints without a closed path to a source as `open_switch_isolated_buses`.
 
 A zero-leakage transformer with a non-unity ratio has no finite admittance form;
